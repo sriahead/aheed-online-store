@@ -27,8 +27,9 @@ a second vendor's palette reaches the icons with no new tokens.
 
 ## What exists today (measured 2026-10-22, base `docs/1216-document-pass`)
 
-- 107 files import `lucide-react`; **141 distinct icons** are in use (a single-line grep reports 85 and
-  undercounts multi-line imports). Sizing is Tailwind classes on the icon (`h-4 w-4` appears 175 times).
+- 107 files import `lucide-react`; **102 distinct icons** are in use (a single-line grep reports fewer and
+  undercounts multi-line imports; the first audit said 141 because its script also walked the
+  `docs/ui-ref` mockups, corrected at Build). Sizing is Tailwind classes on the icon (`h-4 w-4` appears 175 times).
 - Icons are passed around as **component values**: `AccountNav`'s `NavLink` takes an `icon` component
   prop, `components/staff/nav-items.ts` types `icon: LucideIcon`, `ViewSwitcher` and `PanelNav` read
   `item.icon`, and `components/product/category-icon.ts` returns a component. These are the type leaks

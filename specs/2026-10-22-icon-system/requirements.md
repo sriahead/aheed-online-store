@@ -56,8 +56,9 @@ R10. [P1] `scripts/build-icons.ts` exits non-zero and prints the semantic name a
     of `<script`, `<foreignObject`, `javascript:` or an attribute matching `\son[a-z]+=`.
     `tests/icon-generator.test.ts` runs the real script as a child process for each case and asserts the
     exit code and stderr.
-R11. [P1] A registry entry for the Lucide id `trash-2` (stored in Iconify's data as an alias) builds
-    successfully and its generated body equals the body of the alias's parent icon.
+R11. [P1] A registry entry for the Lucide id `check-circle-2` (stored in Iconify's data as an alias of
+    `circle-check` in the pinned release) builds successfully and its generated body equals the body of the
+    alias's parent icon.
 R12. [P1] The set of semantic names in `components/icons/generated/icon-data.ts` equals the set of keys of
     `ICON_REGISTRY` (a unit test asserts equality in both directions).
 R13. [P1] For every registry entry whose provider is `lucide`, the `<svg>` that `Icon` renders carries
@@ -106,17 +107,23 @@ R25. [P1] No file under `components/icons/` contains a Tailwind alpha modifier o
 ## Licences
 
 R26. [P1] A unit test, `tests/icon-lucide-parity.test.ts`, compares for every registry entry with provider
-    `lucide` the geometry (the sequence of `d`, `cx`, `cy`, `r`, `x`, `y`, `x1`, `y1`, `x2`, `y2`, `width`,
-    `height`, `rx`, `ry` and `points` attributes in document order) of the generated body with that of the
-    installed `lucide-react` export of the same icon, and passes only if every divergence is listed in an
-    exported `LUCIDE_PARITY_EXCEPTIONS` array with a reason, and every listed exception still diverges.
+    `lucide` the geometry of the generated body with that of the installed `lucide-react` export of the same
+    icon, and passes only if every divergence is listed in an exported `LUCIDE_PARITY_EXCEPTIONS` array with
+    a reason, and every listed exception still diverges. Geometry is compared after normalisation
+    (`scripts/lib/svg-geometry.ts`): path data is re-expressed with absolute coordinates, the subpaths of all
+    `path`, `line`, `polyline` and `polygon` elements are compared as a sorted multiset, a closed subpath has
+    one canonical spelling, and every number must agree within 0.06 user units on the 24 unit grid; `circle`,
+    `rect` and `ellipse` attributes are compared in document order. A literal string comparison of the `d`,
+    `cx`, `cy`, `r`, `x`, `y`, `x1`, `y1`, `x2`, `y2`, `width`, `height`, `rx`, `ry` and `points` attributes
+    is not used: Iconify stores optimised, merged and rounded path data, so it would flag nearly every icon.
 R27. [P1] `public/third-party-icon-licenses.txt` has one section per set referenced by the registry or the
     illustration map, each giving the set name, SPDX identifier, author, source URL and the upstream
     `LICENSE` text reproduced verbatim from the URL in that set's `info.json` (all copyright lines
     included); `npm run icons:build` exits non-zero if a used set's SPDX identifier has no licence text
     file under `scripts/icon-licences/`.
 R28. [P1] On both vendors, a `GET /third-party-icon-licenses.txt` returns HTTP 200 with a `content-type`
-    beginning `text/plain`, and the body names `Lucide`, `Phosphor` and, from P4a, `Noto Emoji`.
+    beginning `text/plain`, and the body names `Lucide`, and `Phosphor` from P3 and `Noto Emoji` from P4a, as
+    each set first enters the registry or the illustration map.
 
 ## Migration (behaviour-preserving)
 
@@ -127,7 +134,7 @@ R30. [P1] `components/staff/nav-items.ts` types each item's `icon` as a semantic
     from `lucide-react`; `tests/staff-nav-parity.test.ts` and the existing `PanelNav` tests pass unchanged
     in meaning.
 R31. [P1] `tests/fixtures/lucide-icons-in-use.json` lists the Lucide icons imported anywhere under `app`,
-    `components`, `features` or `lib` at BASE (141 names at spec time; the file states how it was
+    `components`, `features` or `lib` at BASE (102 names; the first audit's figure of 141 also counted the `docs/ui-ref` mockups; the file states how it was
     produced), and a unit test asserts every name in it resolves to a registry entry (directly or
     through the documented mapping in that test).
 R32. [P2b] `tests/icon-imports.test.ts` (TypeScript AST, no allowlist) asserts that no file under `app`,
@@ -135,16 +142,20 @@ R32. [P2b] `tests/icon-imports.test.ts` (TypeScript AST, no allowlist) asserts t
     whose name starts with `@iconify`; the test also proves it can fail by running its checker against an
     in-memory file that violates the rule.
 R33. [P1] `scripts/verify-icon-markup.ts` accepts `--base <url>`, repeatable `--path <path>` and optional
-    `--sign-in <email>:<password>`, fetches each page's HTML, and prints to stdout one JSON array per
-    path whose elements, one per `<svg>`, are `{ geometry, width, height, className, ariaHidden }` where
-    `geometry` is a hash of the geometry attributes of R26 in document order and `className` is the class
-    list with every token starting `lucide` removed and the rest sorted; all progress text goes to
-    stderr; it exits 0 when every page returned 200.
+    `--sign-in <email>:<password>`, fetches each page's HTML, and prints to stdout one line of JSON per path:
+    an array whose elements, one per `<svg>`, are `{ geometry, width, height, className, ariaHidden }` where
+    `geometry` is the normalised geometry list of R26 joined by `;` (not a hash: a hash would call two
+    Lucide releases' differently rounded copies of one icon different) and `className` is the class list with
+    every token starting `lucide` removed and the rest sorted; all progress text goes to stderr; it exits 0
+    when every page returned 200 and 1 for any other status, a redirect included. `--compare <before>
+    <after>` reads two such outputs and exits 0 exactly when each page's two arrays pair up one to one on
+    `(width, height, className, ariaHidden)` with geometry equal within the tolerance of R26.
 R34. [P2a] The migration carries each icon's existing `className` over verbatim and sets no `size` prop, and
     for each of the storefront paths in `validation.md` on both vendors the output of R33 run against a
-    server built at BASE and against a server built at the PR head are identical once sorted.
+    server built at BASE and against a server built at the PR head are identical, meaning `--compare` of the
+    two outputs exits 0.
 R35. [P2b] The same holds for the signed-in and staff paths in `validation.md`, again on both vendors,
-    with no difference at all across the whole slice's P1 to P2b head.
+    with `--compare` exiting 0 for the whole slice's P1 to P2b head.
 R36. [P2b] `grep -rn "LucideIcon" app components features lib` prints nothing, and no component takes an
     icon as a component-valued prop (`AccountNav`'s `NavLink`, `ViewSwitcher`, `PanelNav` and the staff hub
     pass semantic names).

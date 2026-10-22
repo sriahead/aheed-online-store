@@ -19,7 +19,7 @@ Owner approval: 2026-10-22, issue `#1223` ("go ahead with recommendation"). Slic
 
 ## Context
 
-The storefront imports `lucide-react` in 107 files (141 distinct icons) and passes icon components
+The storefront imports `lucide-react` in 107 files (102 distinct icons) and passes icon components
 around as values. The owner wants colourful icons in the style of a modern delivery app, themed for each
 vendor (Aheed, SriMart), with the icon library swappable without rewriting components. Three facts in the
 repository constrain the design:
@@ -95,7 +95,7 @@ Twemoji) are excluded unless the owner approves a visible credit. The licence te
 
 - **Iconify API at runtime:** blocked by the CSP, a third-party runtime dependency, a visitor-IP
   disclosure, icon pop-in.
-- **One colourful set for everything:** loses the simple functional tier; no single set covers the 141
+- **One colourful set for everything:** loses the simple functional tier; no single set covers the 102
   icons in use.
 - **Colour by CSS only on Lucide:** viable but outline-only, so no two-hue look.
 - **AI-generated icons:** inconsistent, raster and unthemeable for glyphs; considered for illustrations
