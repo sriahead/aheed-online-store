@@ -72,7 +72,7 @@ export interface ImportTx {
   product: {
     createMany(args: { data: ProductWriteRow[] }): Promise<unknown>;
     update(args: {
-      where: { id: string };
+      where: { id: string; vendorId: string };
       data: { restriction: ProductRestriction; isActive: false };
     }): Promise<unknown>;
   };
@@ -363,7 +363,7 @@ export async function applyPlan(
 
           for (const t of tightenings) {
             await tx.product.update({
-              where: { id: t.id },
+              where: { id: t.id, vendorId },
               data: { restriction: t.to, isActive: false },
             });
           }

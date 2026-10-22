@@ -286,7 +286,10 @@ async function main() {
     }
     process.exit(1);
   }
-  console.log(`manifest ${path} is valid (vendor "${parsed.data.slug}")`);
+  // --check-ready and --emit-route promise a clean stdout (`--emit-route` output is pasted into
+  // wrangler.toml), so their progress line goes to stderr. #1216 R5.
+  const progress = checkReady || emitRoute ? console.error : console.log;
+  progress(`manifest ${path} is valid (vendor "${parsed.data.slug}")`);
 
   if (checkReady || emitRoute) {
     // Before any client construction: neither command touches a database.

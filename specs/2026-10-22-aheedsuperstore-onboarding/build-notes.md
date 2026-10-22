@@ -194,3 +194,30 @@ noted.
   but R34's storefront check (no products, no categories under the new `Host:`) needs it.
 - **Email, the deployed dev environment, category standardisation** are not in this slice; their
   issues are `#1217`, `#1219`, `#1218`.
+
+## Validation run 1 (2026-10-22) — NOT independent, and what /fix changed
+
+Run in the same conversation that built the slice (so not a fresh-context validation), on Sonnet 5.5.
+Pre-flight green; one requirement failed and one was met only loosely. **Both were corrections, not
+redesigns, and both are fixed.**
+
+- **R5 (a real defect).** `main()` in `scripts/provision-vendor.ts` printed `manifest … is valid (vendor
+  …)` to **stdout** before running `--check-ready` / `--emit-route`, so a refused `--emit-route` printed
+  ~160 bytes instead of nothing, and a successful one printed that line before the route block. The unit
+  tests passed because they call `checkReadyCommand` / `emitRouteCommand`, which return `{stdout,
+  stderr}` and never see `main()`'s own output. Fix: that line goes to stderr when either flag is given
+  (an ordinary provision still prints it to stdout). `tests/vendor-manifest-placeholders.test.ts` now also
+  runs the **real script** (`npx tsx`, DB variables removed) and asserts stdout for every R5 branch;
+  reverting the fix makes all four of those tests fail.
+- **R30 (met loosely).** `tx.product.update` in `lib/catalogue-import/apply.ts` used `where: { id }`. The
+  id came from a vendor-scoped lookup, so it was safe, but the spec says every write carries the target
+  `vendorId`. It now uses `where: { id, vendorId }`, `ImportTx` types it, and the stub-based test asserts
+  the scope.
+- **Not changed:** the noisy `vat.zeroRatedRestricted` list (a spec-text observation, see above) and
+  every database row, which remains **unverified** for want of `.env`/`secrets` in the cloud session.
+- **Checked independently of the unit tests during validation** (so the next validator can skip
+  re-deriving them): the real `.xls` dry run reproduces an independent Python count exactly (data rows
+  6,160; AGE_RESTRICTED 27, PROHIBITED 1, NOT_DELIVERABLE 22; NEEDS_REVIEW 1,085 = 1,089 DEFAULT rows − 5
+  duplicates + 1 zero-priced row; 6 rejected duplicates, 5 of them in DEFAULT); the guard refuses a host
+  named in `secrets/staging.vars` (shown with a temporary fake file, removed) and when the secrets files
+  are unreadable; no output of the importer or either verifier contained a connection string.

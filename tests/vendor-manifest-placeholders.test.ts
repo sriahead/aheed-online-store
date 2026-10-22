@@ -1,4 +1,7 @@
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { renderRoutesBlock } from "../scripts/verify-worker-routes";
 import {
@@ -170,4 +173,71 @@ describe("--emit-route (R5)", () => {
       expect(result.stdout).toBe("");
     }
   });
+});
+
+/**
+ * R5 at the COMMAND LINE. The functions above return `{ stdout, stderr }` and cannot see what
+ * `main()` itself prints; validation found that `main()` wrote its "is valid" line to stdout, so a
+ * refused `--emit-route` was not silent and a successful one was not exactly the route block. These
+ * run the real script.
+ */
+describe("the real command line keeps stdout clean (R5)", () => {
+  function run(manifest: unknown, ...args: string[]) {
+    const dir = mkdtempSync(join(tmpdir(), "manifest-cli-"));
+    try {
+      const path = join(dir, "manifest.json");
+      writeFileSync(path, JSON.stringify(manifest));
+      const env = { ...process.env };
+      delete env.DATABASE_URL;
+      delete env.DIRECT_URL;
+      return spawnSync("npx", ["tsx", "scripts/provision-vendor.ts", path, ...args], {
+        encoding: "utf8",
+        env,
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("--emit-route on a manifest that is not ready exits 1 with nothing on stdout", () => {
+    const result = run(EXAMPLE, "--emit-route", "--env", "staging");
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("NOT READY");
+  }, 60_000);
+
+  it("--emit-route on a ready, routable manifest prints exactly the route block", () => {
+    const manifest = { ...readyManifest(), host: "shop.example.com" };
+    const result = run(manifest, "--emit-route", "--env", "staging");
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe(renderRoutesBlock("staging", ["shop.example.com"]));
+  }, 60_000);
+
+  it("--emit-route refuses a localhost host and an unknown environment with nothing on stdout", () => {
+    const local = run(
+      { ...readyManifest(), host: "shop.localhost:8787" },
+      "--emit-route",
+      "--env",
+      "staging",
+    );
+    expect(local.status).toBe(1);
+    expect(local.stdout).toBe("");
+    const dev = run(
+      { ...readyManifest(), host: "shop.example.com" },
+      "--emit-route",
+      "--env",
+      "dev",
+    );
+    expect(dev.status).toBe(1);
+    expect(dev.stdout).toBe("");
+  }, 60_000);
+
+  it("--check-ready keeps stdout clean too: empty on failure, the single ready line on success", () => {
+    const failing = run(EXAMPLE, "--check-ready");
+    expect(failing.status).toBe(1);
+    expect(failing.stdout).toBe("");
+    const passing = run(readyManifest(), "--check-ready");
+    expect(passing.status).toBe(0);
+    expect(passing.stdout).toBe("manifest is ready: no placeholders remain\n");
+  }, 60_000);
 });

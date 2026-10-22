@@ -637,7 +637,7 @@ interface StubState {
   products: (ProductWriteRow & { id: string })[];
   inventory: InventoryWriteRow[];
   audit: AuditWriteRow[];
-  updates: { id: string; restriction: string; isActive: false }[];
+  updates: { id: string; vendorId: string; restriction: string; isActive: false }[];
 }
 
 function stubDb(
@@ -684,7 +684,7 @@ function stubDb(
             pending.products.push(...data);
           },
           update: async ({ where, data }) => {
-            pending.updates.push({ id: where.id, ...data });
+            pending.updates.push({ id: where.id, vendorId: where.vendorId, ...data });
           },
         },
         inventory: { createMany: async ({ data }) => void pending.inventory.push(...data) },
@@ -850,7 +850,10 @@ describe("applyPlan (R15, R21-R24)", () => {
     const result = await applyPlan(db, "v", plan);
 
     expect(state.products).toHaveLength(0); // nothing created
-    expect(state.updates).toEqual([{ id: "p1", restriction: "AGE_RESTRICTED", isActive: false }]);
+    // The update is scoped by the target vendor as well as the id (R30).
+    expect(state.updates).toEqual([
+      { id: "p1", vendorId: "v", restriction: "AGE_RESTRICTED", isActive: false },
+    ]);
     expect(state.audit).toHaveLength(1);
     expect(state.audit[0]).toMatchObject({
       productId: "p1",
