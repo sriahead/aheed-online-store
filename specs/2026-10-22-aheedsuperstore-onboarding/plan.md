@@ -18,6 +18,44 @@ Status: **PROPOSAL — awaiting owner approval. Nothing has been built, pushed o
 Written 2026-10-22, on `feature/client-onboarding-process` (local only, cut from `docs/1211-document-pass`).
 Prerequisites: `docs/developer-portal/client-onboarding-prerequisites.md`.
 
+## 0. Owner decisions of 2026-10-22 (supersede §6's recommendations where they differ)
+
+Tracking issue: **`#1216`**.
+
+| # | Decision |
+| --- | --- |
+| Environment | `aheedfoodcentre.co.uk` is the client's **future** production domain and is **not** an active zone in our Cloudflare account. The existing "production" is not Aheed Food Centre's live site. Nothing here touches that domain. |
+| D1/D2 | New vendor **Aheed Super Store**, alongside the existing vendors. |
+| D4 | A **deployed dev environment** is built as a **separate slice**, isolated from existing production infrastructure (own Worker name, own R2 bucket, own secrets, own database). See §5.4. |
+| D5 | Support **Excel and CSV**, with a **pinned** Excel-reading dependency. |
+| D6 | Description = source description, **blank if unavailable**. Unit = source unit preserved, else a **documented default**. |
+| D7 | Restrictions come from the **existing verified department map** (`#1200`). **Unmapped departments are flagged for review**, never guessed. |
+| D8 | Dev database `ep-dry-morning-zab7dx08`, **provided it is confirmed as a development database**. Vendor data stays isolated by `vendorId`. No deletion without approval. |
+| D9 | Check whether email is platform-wide or per vendor, and verify Resend. Do not assume the sending domain is verified. |
+| D10 | Marked placeholders for delivery fee, free-delivery threshold, minimum order, postcode prefixes, sender email, footer address. **Deployment is blocked while any required value is missing.** |
+| D11 | Tracking issue created: `#1216`. |
+| Rules | Validate before writing. Imported products hidden, stock `UNKNOWN`. Never fabricate. Document testing, validation and rollback. No push, deploy or production-infrastructure change without approval. |
+
+### Findings that follow from those decisions
+
+1. **Email is platform-wide (verified in code).** `lib/email.ts` sends with `from: RESEND_FROM_EMAIL`
+   from the environment. A vendor's `senderEmail` is stored in `VendorConfig` but is **not** the From
+   address; only `senderName` is per-vendor (subject copy). So a client cannot send from their own
+   domain today, and the sender-email placeholder has no effect on delivery. Per-vendor From would
+   need per-vendor Resend domain verification and a code change; it is **out of scope** and is
+   recorded here so nobody promises it. Resend verification state of the platform sender is
+   **unverified**: it lives in the Resend account and Worker secrets, neither visible from this
+   session.
+2. **The dev database cannot be confirmed from this session.** This container has no `.env`, no
+   `.dev.vars`, no `secrets/staging.vars` or `secrets/production.vars`, and no `DIRECT_URL` or
+   `DATABASE_URL` exported. The CLAUDE.md procedure (diff `.env` against both secrets files; read
+   `prisma migrate status`'s datasource host) cannot be run here, and the host guard
+   (`assertNotDeployedDatabase`) would correctly refuse to run for lack of the comparison files.
+   **Every database-touching step therefore has to run on your machine**, or in a session where those
+   files exist. Build and unit tests do not need a database and are unaffected.
+3. **`dev` is local-only today** (`env-setup.md`): no `[env.dev]`, no Worker, no custom domain, no CI
+   workflow, no GitHub environment. A deployed dev environment is new infrastructure.
+
 ## 1. What is being asked
 
 Onboard a shopfront on a new domain such as `aheedfoodcentre.co.uk`, and leave behind a reusable
@@ -113,6 +151,25 @@ One slice, three parts, each testable alone. Spec first (`/spec`, Gate 2); no so
   route and that no vendor row set is missing a host (a superset of today's check).
 - The prerequisites document becomes the permanent runbook once reviewed; this slice extends it with
   the orchestration steps and the rollback table.
+
+### 5.4 Slice 2 — a deployed, isolated dev environment (separate slice, own spec and approval)
+
+Purpose: review changes visually at your convenience without touching existing staging or production.
+It is infrastructure, so it **stops and lists what you must create** (CLAUDE.md hard stop); I do not
+invent resources or credentials.
+
+What the repo side would add: an `[env.dev]` block (own Worker name, own `custom_domain` route,
+own R2 binding), `[env.dev.vars]` without `SEO_INDEXABLE` (non-indexable by being unconfigured), a
+deploy workflow and GitHub environment mirroring staging's, and the verify-worker-routes step for
+`--env dev`. **What you must create or confirm first:** the hostname and that its zone is in the
+Cloudflare account (a one-label `‹name›.nocaped.com` host is the proven pattern); a separate Neon
+**branch or project** for dev data (deployed dev must not share staging's database; the
+`ep-dry-morning-zab7dx08` host may serve this, but the host guard treats a deployed Worker's
+database differently, so confirm); an R2 bucket and CDN host for dev; Worker secrets for dev
+(`DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, S3 keys, Resend, optional Stripe test
+keys); and the GitHub `dev` environment secrets. Isolation checks: its host, bucket, database and
+secrets share nothing with staging or production, and `wrangler deploy --env dev` cannot affect
+either other environment's routes.
 
 ### Not included
 - No wildcard route (ADR-004's 2026-10-21 note).
