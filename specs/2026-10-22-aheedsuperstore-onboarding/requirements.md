@@ -22,7 +22,8 @@ R2. The manifest schema stays strict: a manifest with an unknown key at any leve
     committed `prisma/manifests/example.json` still passes `--validate-only`.
 R3. `npx tsx scripts/provision-vendor.ts <manifest> --check-ready` needs no database, exits 0 only when
     `placeholders` is empty and no string field of the manifest contains the marker `OWNER TO CONFIRM`
-    (case-insensitive) or an e-mail/host ending `.invalid`, and otherwise exits 1 printing every offending
+    (case-insensitive), a string ending `.invalid`, or a string written entirely as a bracketed capitalised token such as
+    `[PHONE]` (the repository's existing convention for an unfilled value), and otherwise exits 1 printing every offending
     path, one per line.
 R4. Running `scripts/provision-vendor.ts <manifest>` (no `--check-ready`) against a dev database with a non-empty
     `placeholders` list succeeds and prints `placeholder value(s) still to confirm:` followed by each path; the
@@ -97,8 +98,10 @@ R18. Without `--apply` the importer opens no database connection (it runs with `
 R19. With `--apply` the importer calls `assertNotDeployedDatabase` before constructing any Prisma client, prints
      only the database host, and exits 1 without writing when the guard refuses, when the target vendor does not
      exist, when the file or profile is fatal under R9/R10, or when the source contains no valid row.
-R20. Rejected rows do not stop an apply: valid rows are written, every rejected row is reported, and the exit
-     code is 0 with no rejects, 2 with rejects and nothing failed, and 1 when any write failed.
+R20. Rejected rows do not stop an apply: valid rows are written and every rejected row is reported. A pure
+     `exitCodeFor(report)` returns 0 when nothing was rejected and no category spelling variant (R14) was
+     reported, 2 when something was rejected or a variant was reported and no write failed, and 1 when any write
+     failed; the importer exits with it (unit-tested for all three).
 R21. Writes use the WebSocket client (`PrismaNeon`) and one interactive `$transaction` per top-level department
      containing that department's categories, products, inventory rows and audit rows; a failure in one
      department rolls back that department only, is reported with the department name, and does not stop the
