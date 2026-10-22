@@ -217,6 +217,33 @@ change**; only what sits behind the factory does.
   declared per environment; `EMAIL_PROVIDER`/`EMAIL_FROM_ADDRESS` per environment; a rollback to Resend
   by changing `EMAIL_PROVIDER` only. No production environment changes without approval.
 
+**Decisions of 2026-10-22 (tracking issue `#1217`, separate from `#1216`):**
+
+1. **Separate issue and spec** for this slice; it is not folded into `#1216`.
+2. **Recipient policy.** Development and staging send **only to an approved test-address allowlist**
+   (`EMAIL_TEST_RECIPIENTS`, comma-separated, required outside production). A message to any other
+   address is **not sent** and the adapter returns `{ ok: false, reason: "RECIPIENT_NOT_ALLOWED" }`
+   (logged; no throw). Arbitrary recipients are allowed **only in production**, subject to the
+   selected provider's configuration and limits. The restriction lives in a wrapper around the
+   adapter, not inside each adapter, so every provider is covered by the same code and the same test.
+   The environment is read from configuration, never inferred from a hostname. An empty allowlist
+   outside production sends nothing (fail closed).
+3. **Draft stays local.** The branch is not pushed until explicitly approved.
+4. **Resend remains a supported fallback**, not a deprecated path: the Resend adapter ships in the
+   same slice as the Cloudflare one, with the same contract tests, and switching back is changing
+   `EMAIL_PROVIDER`. The Cloudflare adapter sits behind the existing `EmailService` interface and
+   no caller changes.
+
+**Cloudflare prerequisites still to verify before implementation** (none verified; the docs host was
+unreachable from the planning session): (a) the sending domain's onboarding steps and the exact
+SPF/DKIM records, and that they coexist with Email Routing's records on the same zone; (b) whether
+this account's plan permits sending to arbitrary recipients, and any beta or opt-in flag; (c) daily
+and per-second limits; (d) whether `from` must be on a verified domain or listed in
+`allowed_sender_addresses`; (e) local-dev behaviour of the binding (`remote` flag), which decides
+whether tests can exercise it without sending real mail; (f) how failures, bounces and complaints are
+observed; (g) the exact `wrangler.toml` binding syntax and that each environment declares its own.
+Build does not start until each is answered in the spec with its source.
+
 ### Not included
 - No wildcard route (ADR-004's 2026-10-21 note).
 - No change to the host guard, which keeps no override.
