@@ -145,14 +145,75 @@ tokens — close enough that a parallel token set would just be indirection:
 
 ## Icons
 
-> **Superseded in part (ADR-008, issue #1223, build pending).** The owner has approved an icon wrapper,
-> a semantic-name registry and colourful decorative icons; this section is rewritten to describe them at
-> Build (`specs/2026-10-22-icon-system/requirements.md` R2). Until that lands, the text below describes
-> the shipped state only, and new work must follow ADR-008, not the paragraph below.
+Icons are rendered by **one component, `components/icons/Icon.tsx`**, addressed by a **semantic name**
+from the registry, `components/icons/registry.ts` (ADR-008, #1223). A component never names an icon
+library and never receives an icon as a component value: navigation models and lookup tables carry
+**names** (strings), as `components/staff/nav-items.ts` and `components/product/category-icon.ts` do.
 
-**lucide-react** — confirmed as the mockup's actual choice (`docs/ui-ref/src/components/*.tsx`
-import every icon from it). Components import icons directly from `lucide-react`; no wrapper
-component, no hand-rolled SVG set.
+```tsx
+<Icon name="search" className="h-4 w-4" />               // decorative: aria-hidden by default
+<Icon name="search" label="Search" />                     // the sole content of a control: role="img"
+<Icon name="circle-check" tone="action" size="md" />      // vendor-themed colour, token-scale size
+```
+
+The artwork is Iconify data **bundled at build time** by `npm run icons:build` into
+`components/icons/generated/icon-data.ts`; nothing is fetched at runtime, which is why the CSP is
+unchanged. Changing a provider is an edit to one registry line followed by that command. CI runs
+`npm run icons:check` and fails on a stale generated file. Where each set comes from, and why, is in
+`specs/decisions/ADR-008-icon-system.md`.
+
+### Tiers
+
+| Tier | Use | Source | Colour |
+| --- | --- | --- | --- |
+| `functional` | controls and navigation: chevrons, close, plus, search, check, trash | Lucide only (a compile error otherwise) | `currentColor` |
+| `status` | alerts and confirmations; never colour alone, the glyph shape differs too | Lucide or Phosphor | semantic tone |
+| `decorative` | the meaning is in adjacent text | Lucide today; Phosphor duotone from Phase 3 | tone, with a second vendor hue on a duotone icon |
+
+A registry key is a generic noun (`trash`, `delivery`), never a provider id or a numeric suffix. An
+existing key never changes provider or tier: a decorative variant of an icon that is also used
+functionally gets a **new** name. Department illustrations (Noto Emoji, served as static files rather
+than inlined) are **Phase 4a of #1223 and not yet shipped**.
+
+### Size scale
+
+`size` takes a token and sets the SVG's `width` and `height`. With no `size` the icon is 24 pixels,
+the `lucide-react` default, so a caller's own `className` (`h-4 w-4`) keeps deciding the size.
+
+| Token | `xs` | `sm` | `md` | `lg` | `xl` | `2xl` |
+| --- | --- | --- | --- | --- | --- | --- |
+| Pixels | 12 | 16 | 20 | 24 | 32 | 48 |
+
+### Tone
+
+`tone` adds a text colour class from tokens that `brandStyle()` already emits per vendor and
+contrast-clamps, so **no new token exists and `brandStyle()` is unchanged**. A duotone icon's second
+layer reads `--icon-secondary`; when a tone is set, `Icon` points it at a second vendor token.
+
+| `tone` | Class | Second hue (duotone) |
+| --- | --- | --- |
+| `current` | none | none, drawn as designed |
+| `muted` | `text-primary-muted` | none |
+| `primary` | `text-primary` | `var(--color-accent)` |
+| `action` | `text-action` | `var(--color-accent)` |
+| `accent` | `text-accent` | `var(--color-action)` |
+| `danger` | `text-danger` | `var(--color-accent)` |
+
+No tone class carries an alpha modifier (see the alpha rule under Accessibility). Red is not used on a
+new decorative surface; `danger` exists for alerts and for the landing page's existing Order Updates
+tile.
+
+### Compatibility rules
+
+- **The presentation attributes sit on the root `<svg>`**, as `lucide-react` renders them, so a root
+  class such as `fill-current` (the favourite heart) or `fill-amber-400` (star ratings) still works.
+  Iconify's Lucide data repeats them on every child, which the generator hoists (R13 of
+  `specs/2026-10-22-icon-system/`).
+- **`@iconify-json/lucide` is held at the release matching the installed `lucide-react`**; a newer one
+  redrew several icons. `tests/icon-lucide-parity.test.ts` compares geometry, normalised, and fails on
+  any divergence not listed with a reason.
+- **`Icon` is decorative unless it has a `label`.** An icon-only control carries its own `aria-label`
+  and the icon inside stays `aria-hidden`.
 
 ## Shape
 
@@ -603,9 +664,9 @@ copied literally:
 - **The rating star deliberately uses stock Tailwind `amber-400`**, not a brand token — gold is a
   decorative, non-brand convention, and this file already defers all non-brand color to Tailwind's
   scale. It's the one "raw" color allowed in a card, and it's a utility class, not a hex literal.
-- **Icons** come from `lucide-react` (see below); `components/product/category-icon.ts` maps a
-  category slug to its icon with a generic-basket **default fallback**, so a category added to the
-  DB later still renders an icon without a schema change.
+- **Icons** come from `components/icons` (see Icons above); `components/product/category-icon.ts` maps
+  a category slug to an icon **name** with a neutral `tag` **default fallback**, so a category added to
+  the DB later still renders an icon without a schema change.
 - **The header is a Server Component** (`components/layout/Header.tsx`) — it reads the session and
   renders auth state (account link vs. sign-in) with zero client JS, the same
   progressive-enhancement stance as the GET-form search/filters.

@@ -39,6 +39,7 @@ const config = [
       ".wrangler/**",
       "node_modules/**",
       "prisma/generated/**",
+      "components/icons/generated/**",
       "kms/site-internal/**",
       "kms/site-public/**",
       "docs/ui-ref/**",

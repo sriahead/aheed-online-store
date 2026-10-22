@@ -1,5 +1,5 @@
-import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { ProductFilterForm } from "./ProductFilterForm";
+import { Icon } from "@/components/icons/Icon";
 
 type FilterPanelProps = React.ComponentProps<typeof ProductFilterForm> & {
   /** Sidebar heading, which differs between the two browse pages. */
@@ -43,12 +43,12 @@ export function FilterPanel({ heading, ...formProps }: FilterPanelProps) {
           className="flex min-h-tap cursor-pointer list-none items-center gap-3 rounded-xl px-4 py-3 font-semibold text-primary hover:bg-action-tint/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action [&::-webkit-details-marker]:hidden"
         >
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-action-tint">
-            <SlidersHorizontal className="h-4 w-4" aria-hidden />
+            <Icon name="sliders-horizontal" className="h-4 w-4" />
           </span>
           <span className="flex-1">{heading}</span>
-          <ChevronDown
+          <Icon
+            name="chevron-down"
             className="h-4 w-4 text-primary-muted transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
-            aria-hidden
           />
         </summary>
         <div className="border-t border-black/10 px-4 py-4">

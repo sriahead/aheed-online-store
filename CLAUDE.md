@@ -253,6 +253,11 @@ Policy: `specs/tech-stack.md`. Failures: `docs/developer-portal/runtime-pitfalls
   properties inline, and inline beats `:root`. Check whether `brandStyle()` lists the token too, and
   verify against a **second vendor**: SriMart's colours differ, and several checks false-positive
   against Aheed's.
+- **Icons are used only through `components/icons`** (`<Icon name="…" />`, a semantic name from the
+  registry); never import `lucide-react` or an Iconify package in a component, and never pass an icon
+  as a component value (#1223, ADR-008; files still importing `lucide-react` are being migrated, so do
+  not add new ones). Editing the registry means `npm run icons:build`; CI fails on a stale generated
+  file.
 - **UI copy comes from the vendor or is neutral** — vendors sell different things (Aheed groceries,
   SriMart electronics). Never write a vendor's name or a grocery example into a component or a
   default parameter; make the prop required. Rule and its guard test:

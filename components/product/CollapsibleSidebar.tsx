@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { PanelLeftClose, PanelLeftOpen, SlidersHorizontal } from "lucide-react";
+
 import { FILTERS_COLLAPSED_ATTRIBUTE, setFiltersCollapsed } from "./filters-collapsed";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * #1173 — the browse/filter column on `/search` and `/categories/[slug]`, collapsible at `md` and
@@ -56,7 +57,7 @@ export function CollapsibleSidebar({ id, children }: { id: string; children: Rea
           aria-controls={id}
           className="filters-sidebar-hide mb-3 hidden items-center gap-1.5 rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-primary hover:bg-action-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action md:inline-flex"
         >
-          <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+          <Icon name="panel-left-close" className="h-4 w-4" />
           Hide filters
         </button>
       )}
@@ -71,8 +72,8 @@ export function CollapsibleSidebar({ id, children }: { id: string; children: Rea
           title="Show filters"
           className="filters-sidebar-show hidden size-tap flex-col items-center justify-center gap-0.5 rounded-xl border border-black/10 bg-white text-primary shadow-sm hover:bg-action-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action md:flex"
         >
-          <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
-          <SlidersHorizontal className="h-3 w-3 text-primary-muted" aria-hidden="true" />
+          <Icon name="panel-left-open" className="h-4 w-4" />
+          <Icon name="sliders-horizontal" className="h-3 w-3 text-primary-muted" />
         </button>
       )}
       <div id={id} data-filters-content="">

@@ -149,7 +149,7 @@ describe("Header Sign In icon (#1173 R8)", () => {
     const { container } = render(await Header({}));
     const signIn = container.querySelector('a[href="/login"]');
     expect(signIn?.textContent).toContain("Sign In");
-    expect(signIn?.querySelector("svg.lucide-circle-user-round")).not.toBeNull();
-    expect(signIn?.querySelector("svg.lucide-log-in")).toBeNull();
+    expect(signIn?.querySelector('svg[data-icon="circle-user-round"]')).not.toBeNull();
+    expect(signIn?.querySelector('svg[data-icon="log-in"]')).toBeNull();
   });
 });

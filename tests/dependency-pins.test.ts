@@ -79,6 +79,15 @@ const PINNED: Record<string, string> = {
   // Exact-pinned because it is a community republication of SheetJS (the maintained builds are not
   // on npm) and its own parsing changes between releases would alter what an import reads.
   "@e965/xlsx": "0.20.3",
+  // #1223 — the icon generator's inputs. Exact-pinned because `components/icons/generated/icon-data.ts`
+  // is COMMITTED output of these packages: a floating range would let `npm install` change the artwork
+  // of every icon with no diff to review. `@iconify-json/lucide` is held at 1.2.122, the release
+  // published the same day as the installed lucide-react 1.30.0; the newest (1.2.147 at the time)
+  // redrew `circle-check`, `cookie`, `trash` and others, which `tests/icon-lucide-parity.test.ts` caught.
+  "@iconify/utils": "3.1.7",
+  "@iconify-json/lucide": "1.2.122",
+  "@iconify-json/ph": "1.2.2",
+  "@iconify-json/noto": "1.2.9",
 };
 
 /** Anything that lets npm resolve to something other than the literal. */
