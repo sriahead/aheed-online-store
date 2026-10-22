@@ -4,8 +4,8 @@ title: Tech Stack
 audience: [dev]
 type: doc
 status: approved
-version: "1.5.0"
-updated: 2026-09-07
+version: "1.6.0"
+updated: 2026-10-22
 visibility: internal
 summary: Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal.
 tags: [tech-stack, guardrails]
@@ -170,6 +170,15 @@ pointer to this section. The version-adjacent failures these policies exist to p
 Turbopack's resolver, the `proxy.ts` incompatibility, ESLint 9 flat config, the live-DB test guard
 — are in `docs/developer-portal/runtime-pitfalls.md`.
 
+- **Spreadsheet reading for catalogue imports (#1216): `@e965/xlsx` 0.20.3, exact-pinned, a
+  `devDependency`, Apache-2.0.** It is the one package that reads `.xls` (legacy BIFF), `.xlsx` and
+  `.csv` for `scripts/import-catalogue.ts`. It has no dependencies and `npm audit` reports no
+  advisory for it. **Provenance caveat:** it is a community republication of SheetJS (`xlsx` on npm
+  stopped at 0.18.5, which carries known advisories; the maintained builds are served from SheetJS's
+  own CDN, not npm), so it is exact-pinned and listed in `tests/dependency-pins.test.ts`. It may be
+  imported **only from `scripts/lib/read-spreadsheet.ts`**, so it can never reach the Worker bundle
+  (`tests/catalogue-import-guards.test.ts`). Replacing it means re-running the parse tests, which
+  generate all three formats with the package under test.
 - **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their
   declared semver ranges are looser than real compatibility. **Locked today, and enforced by
   `tests/dependency-pins.test.ts`:** `@neondatabase/serverless` = **1.1.0 exact**,

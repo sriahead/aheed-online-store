@@ -75,6 +75,10 @@ const PINNED: Record<string, string> = {
   "@neondatabase/serverless": "1.1.0",
   "@prisma/adapter-neon": "7.9.1",
   "@prisma/client": "6.19.3",
+  // #1216 — not infrastructure-adjacent, so CLAUDE.md does not list it; `specs/tech-stack.md` does.
+  // Exact-pinned because it is a community republication of SheetJS (the maintained builds are not
+  // on npm) and its own parsing changes between releases would alter what an import reads.
+  "@e965/xlsx": "0.20.3",
 };
 
 /** Anything that lets npm resolve to something other than the literal. */

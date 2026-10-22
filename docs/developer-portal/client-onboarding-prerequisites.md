@@ -4,7 +4,7 @@ title: "Client onboarding — prerequisites checklist (new vendor, own domain)"
 audience: [dev]
 type: doc
 status: draft
-version: "0.1.0"
+version: "0.2.0"
 updated: 2026-10-22
 visibility: internal
 summary: "Everything that must be true before a new client shopfront on its own domain can be provisioned, imported and deployed: domain and Cloudflare, vendor identity, branding, delivery, email, catalogue, deployment, rollback. Draft for owner review; nothing in it has been executed."
@@ -177,14 +177,98 @@ and is kept apart on purpose: the two never share configuration.
    `Hidden` + `UNKNOWN`; restricted rows carry their class.
 6. `deploy-staging` / `deploy-production` complete successfully; confirm, do not assume from the merge.
 
-## 10. Rollback
+## Procedure
+
+The commands run in this order. Each stops at the first failure. **Everything that writes runs against
+a dev database only**: the host guard (`scripts/lib/protected-hosts.ts`) refuses a host named in
+`secrets/staging.vars` or `secrets/production.vars`, has no override, and refuses to run at all if it
+cannot read them. The client's source file, the import profile and the vendor manifest live
+**outside the repository** (a git commit is permanent, and they are a client's commercial data);
+import reports are written to `.import-reports/`, which is gitignored.
+
+Before any database step, check the process environment one variable at a time (CLAUDE.md, Config &
+secrets): an exported `DIRECT_URL` beats `.env`. Never accept a `prisma migrate reset` (`#895`).
+
+1. **Validate the manifest** (no database): `npx tsx scripts/provision-vendor.ts <manifest.json> --validate-only`.
+   Exit 0 means the schema is satisfied. Values the owner has not confirmed are real values of the
+   right type, listed in the manifest's `placeholders` array (dotted paths such as
+   `config.deliveryFeePence`), and/or carrying the text `OWNER TO CONFIRM`.
+2. **Check readiness** (no database): `npx tsx scripts/provision-vendor.ts <manifest.json> --check-ready`.
+   Exit 1 lists every path still awaiting the owner. A test vendor is expected to fail this; a vendor
+   going anywhere deployed must pass it.
+3. **Provision** (dev database): `npx tsx scripts/provision-vendor.ts <manifest.json>`. Upserts the
+   vendor and its satellites; writes **no catalogue**. Placeholders are real values in the database
+   afterwards, and the command prints the list. Re-running changes nothing.
+4. **List departments** (no database): `npx tsx scripts/import-catalogue.ts <source> --profile <profile.json> --list-departments`.
+   Shows each department exactly as the client wrote it, its row count, and how the profile treats it
+   (a restriction class, `UNCERTAIN`, `UNRESTRICTED` or `UNREVIEWED`). Use it to build the profile's
+   department lists from the owner's rulings (ADR-007). Any `UNREVIEWED` department imports as
+   `NEEDS_REVIEW` until the owner lists it.
+5. **Dry run** (no database, the default): `npx tsx scripts/import-catalogue.ts <source> --profile <profile.json> --vendor-slug <slug>`.
+   Validates everything and writes the report; nothing is written to any database. Read the report
+   before going on: `rejected` (by source row number), `unreviewedDepartments`, `categoryNameVariants`
+   (names differing only by case or punctuation — reported for a person's review, never merged
+   silently), `flattenedSubDepartments`, `drift`, and the VAT summary (reported, never rewritten).
+   Exit 0 clean; **2** means rows were rejected or a category variant needs review; 1 means refused.
+6. **Apply** (dev database): the same command plus `--apply`. Prints the host, imports every valid row
+   **hidden with stock `UNKNOWN`** and every category **inactive**, one transaction per department,
+   and compares every other vendor's row counts before and after (any change exits 1).
+7. **Verify**: `npx tsx scripts/verify-onboarding.ts <slug> --expect-hidden` (exit 0 only if nothing is
+   active and every inventory row is `UNKNOWN`, quantity 0) and
+   `npx tsx scripts/verify-catalogue-import.ts --audit --vendor <slug>`.
+8. **Emit the route** (no database, only for a vendor going to a deployed host):
+   `npx tsx scripts/provision-vendor.ts <manifest.json> --emit-route --env staging|production`.
+   Prints the `wrangler.toml` block only if step 2 passes and the host is routable. Add it
+   **alongside** every existing route in a reviewed PR; never replace the file's routes.
+   `scripts/verify-worker-routes.ts` then checks the deploy.
+
+**What this gate is and is not.** A real manifest is never committed, so CI cannot see it. Steps 2 and
+8 are gates the operator runs, backed by the host guard, which already stops the provisioner writing
+to a deployed database. Nothing in CI fails a deploy because a manifest still has a placeholder.
+
+**Categories.** They are the client's own names (trimmed of leading and trailing whitespace only), not
+mapped to the platform's structure, which is a later phase. A sub-department equal to its department
+creates no child. Categories are created inactive, so staff activate each in the existing categories
+screen when ready; shoppers will then see the source spelling (for example `GROCERIES`) until the
+standardisation phase.
+
+**Re-import.** Safe to repeat: an existing product is never edited, activated or restocked. The only
+write is a **tightened** restriction (with an audit row). A changed price or name is reported as
+`drift`. Product identity is the slug (name, PLU and department), so if staff edit an imported
+product's slug, a later re-import would create it again; re-import before editing slugs.
+
+## Testing and validation
+
+- **Unit and structural tests** (no database; run alone, capped): `npx vitest run --maxWorkers=4`. The
+  relevant files are `tests/vendor-manifest-placeholders.test.ts`, `tests/catalogue-import-parse.test.ts`,
+  `tests/catalogue-import-plan.test.ts`, `tests/catalogue-import-guards.test.ts` and
+  `tests/dependency-pins.test.ts`. They generate their own `.csv`, `.xlsx` and `.xls` fixtures with
+  invented data; no client data is in the repository.
+- **Build-time smoke** (optional, throwaway): the write path can be run against a scratch local
+  Postgres through a plain `pg` adapter. It exercises the same `applyPlan` but is **not** a substitute
+  for the dev-database run below: the importer's real client is the Neon WebSocket adapter.
+- **Dev-database validation** (on a machine with `.env`; a session without it reports these rows
+  UNVERIFIED, never passed): the rows in `specs/2026-10-22-aheedsuperstore-onboarding/validation.md`,
+  in particular: apply twice (second run creates nothing), `verify-onboarding --expect-hidden`,
+  `verify-catalogue-import.ts --unique-probe` (prints the `.code` each Neon adapter really raises),
+  the isolation comparison, and a preview request with the new vendor's `Host:` header showing no
+  products and no categories. Use `npm run preview`, never `npm run dev`.
+- **Real-file dry run**: needs no database. Compare the report's counts with an independent count of
+  the same file before trusting it.
+
+## Rollback
+
+**No step above deletes data, and no script in this process can.** The importer and verifiers contain no
+`delete`, `deleteMany` or raw SQL (a test enforces it). Removing a test vendor, its categories or its
+products is a separate operation that needs **explicit owner approval** and its own reviewed change.
 
 | Layer | Rollback | Caution |
 | --- | --- | --- |
 | Routes | Revert the `wrangler.toml` commit and redeploy. | Reverting removes the new host's custom domain, which is the intent. Never revert by deleting an existing vendor's route. |
 | Vendor rows | Deactivate rather than delete: remove the `VendorDomain` row (`scripts/remove-vendor-domains.ts` exists) so the host falls to `/coming-soon`. | Deleting a vendor with orders fails on foreign keys by design. **No delete without explicit owner approval.** |
-| Catalogue | Imported products are hidden, so they are not customer-visible. Removal is a separate, approved operation. | Never `migrate reset` (`#895`). |
+| Catalogue | Imported products and categories are hidden and inactive, so they are not customer-visible; nothing needs rolling back to make a mistake invisible. A re-import only tightens restrictions. Removal is a separate, approved operation. | Never `migrate reset` (`#895`). Deleting a `Vendor` cascades to its `VendorDomain` rows, and the database refuses to delete a product that has audit rows. |
 | DNS | Detach the Custom Domain in Cloudflare. | Leave the registrar nameservers alone unless abandoning the zone. |
+
 
 ## 11. Manual actions that cannot be scripted
 
