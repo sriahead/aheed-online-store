@@ -135,3 +135,63 @@ neither scope nor acceptance intent:
   fixture markup and a static preview sheet exist), and whether `fill-current` on the favourite heart
   visibly fills in a browser. The markup contract is tested (`fill="none"` on the root, no child override);
   the pixels are not.
+
+## Validation run 1 (PR 1, Phase 1)
+
+Run on commit `8a0685d3`. **Not independent:** the same Sonnet 5.5 context that built the slice ran it,
+after no `/clear`; rows were checked against the files on disk, not against memory, but treat the result as
+a self-check and re-run after a real Clear if independence matters. P2a, P2b, P3 and P4a rows are not
+applicable to this PR. The result is **FAIL**: two findings below are real, and several rows are unverified.
+
+**Pre-flight, each alone, all exit 0:** `lint`, `format:check`, `icons:check`, `kms:validate`,
+`kms:check-generated`, `npx tsc --noEmit` (no output), `npm run build`. `npx vitest run --maxWorkers=4`:
+**306 files passed, 4540 tests passed, 3 skipped**; the known flake did not fire. The docs-site build
+(`kms:assemble:internal` then `next build --webpack` in `kms/site-internal`) exits 0.
+
+**Pass (confirmed by running the row's command, or reading the file it names):** R1, R2, R3, R4, R5, R6,
+R7, R8 (both files), R9, R10 (the three CLI cases and the by-hand bogus id), R11, R12, R13 (zero listed
+exceptions), R14, R15, R16 (type error confirmed on a temporary line, then reverted), R17, R18, R19, R20,
+R21 (type error confirmed, reverted), R23, R24, R25, R26 (pinned and installed both 1.2.122, zero parity
+exceptions), R27 (ISC and MIT texts byte-identical to upstream `main`; missing `ISC.txt` fails the build and
+names the file), R29, R30 (`tests/staff-nav-parity.test.ts` unchanged since BASE), R31 (re-derived from a real
+BASE worktree with `scripts/list-lucide-imports.ts`: 102 names, no diff), R37, R50 (git half), R52, R53, R54.
+
+**R37 numbers, fresh builds of both commits** (`npx opennextjs-cloudflare build`, then the two commands of
+`validation.md`): BASE client **546,214** bytes over 124 files, Worker `gzip:` **5,014.91 KiB**; HEAD client
+**546,895** over 123 files (**+681**, budget 15,360), Worker **5,019.49 KiB** (**+4.58 KiB**, budget 100).
+**The Build's own baseline was wrong:** it recorded 546,053 and 5,026.59 KiB and so reported the Worker as
+9.86 KiB smaller; the fresh BASE disagrees by 11.7 KiB, beyond the 2 KB tolerance, so the fresh run governs
+and the "shrank" claim (also in commit `8a0685d3`'s message) is incorrect. Both budgets are met either way.
+
+**FAIL 1: R22's third clause.** R22 requires that an existing client component (`DepartmentScroller`)
+renders `Icon` in its own test. **No test renders `DepartmentScroller`** (`grep -rl DepartmentScroller
+tests` is empty). The row points at `tests/department-illustrations.test.tsx`, a P4a file that does not exist,
+so this is also a spec defect: the row should name a P1 file. Fix: add a test that renders
+`DepartmentScroller` and asserts `svg[data-icon]`, and amend the row.
+
+**FAIL 2: R10 is not met as written, and the build notes did not say so.** R10 requires the real script, run
+as a child process, for each of: a missing id, a duotone icon without its layer, and unsafe markup. The first
+two are. **The unsafe-markup case goes through the library with a poisoned in-memory set, not through the
+process**, because the CLI reads real `node_modules` and offers no way to substitute a body. So the exit code
+for unsafe markup is untested at process level. Fix: give the CLI a way to read icon sets from a fixture
+directory and spawn it in that test.
+
+**Spec wording defects (not build defects):** **R55** says `kms:build-index` leaves `git status` unchanged,
+but `ARTIFACT_INDEX.md`'s footer embeds a timestamp and commit and always changes (`kms:check-generated`
+normalises it and passes); the row should require `kms:check-generated` exit 0. **R22's row** names a P4a
+file (above).
+
+**Cosmetic:** a missing licence text prints a stack trace (a plain `Error`, not `IconBuildError`); the message
+does name the file.
+
+**Unverified, with the reason (no `.env`, `.dev.vars` or `secrets/` in a cloud session, so no
+`npm run preview`):** **R28** (the licence file served on both hosts; it is present in `.open-next/assets/`),
+the live half of **R33** (`verify-icon-markup.ts --base http://localhost:8787`; its stdout shape, failures,
+sign-in headers and `--compare` are proved against a local server in `tests/verify-icon-markup.test.tsx`),
+**R34** and **R35** (BASE against HEAD markup on both vendors, signed in and staff pages: nothing was
+compared), and the HTML half of **R50**. **GitHub CI:** no run exists for this branch (the `gates` workflow
+runs on pull requests and no PR is open), so CI is not confirmed either way.
+
+**Call sites** (grep, since graft was unavailable): no remaining reference to the old `categoryIcon` outside
+historical specs; `nav-items.ts` has exactly two consumers, both migrated; `ViewSwitcher` still reads
+`view.icon` as a component, which is P2b work (R36).
