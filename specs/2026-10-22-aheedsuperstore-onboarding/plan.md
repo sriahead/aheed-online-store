@@ -1,18 +1,140 @@
 ---
 id: aheedsuperstore-onboarding-plan
-title: "Aheed Super Store test vendor and reusable onboarding automation (proposal)"
+title: "Aheed Super Store test vendor — placeholder manifests, catalogue importer, onboarding runbook (plan)"
 audience: [dev]
 type: spec
 status: draft
-version: "0.1.0"
+version: "1.0.0"
 updated: 2026-10-22
 visibility: internal
-summary: "Gate 1 proposal: add Aheed Super Store as a test vendor alongside the existing vendors, extend the provisioner for placeholder-bearing manifests, build the #1201 catalogue importer to its recorded rules, and add an onboarding runbook. Awaiting owner decisions; nothing built or deployed."
+summary: "Spec for #1216: manifests that carry marked owner-to-confirm placeholders and cannot yield a deploy route while any remain, a validate-before-write CSV/Excel importer (hidden, stock UNKNOWN), and the runbook, proven on a test vendor in the dev database."
 tags: [provisioning, onboarding, multi-tenancy, catalogue-import, p11]
-related: [client-onboarding-prerequisites, architecture, adr-004-multi-tenancy, env-setup, roadmap]
+related: [client-onboarding-prerequisites, architecture, adr-004-multi-tenancy, adr-007-storefront-scope-restrictions-stock-states, env-setup, tech-stack, roadmap]
 ---
 
-# Gate 1 proposal — Aheed Super Store test vendor and reusable onboarding automation (`#1201` and a new tracking issue)
+# Aheed Super Store test vendor — placeholders, importer, runbook (plan)
+
+Issue `#1216`. Approved by the owner on 2026-10-22 (decisions D1-D11 below and in Appendix A).
+`requirements.md` holds the checkable criteria; `validation.md` is what a fresh context runs.
+Email is **not** in this slice: it is `#1217`. A deployed dev environment is **not** in this slice
+either (Appendix A, 5.4).
+
+**Goal:** prove, on a throwaway test vendor in the dev database, that a new client can be provisioned
+from a manifest with honest placeholders, have a real stock export validated and imported **hidden
+with stock UNKNOWN**, and be blocked from any deploy route until every owner-to-confirm value is
+real. The proof is also the reusable process for the next client.
+
+**Scope (this slice):**
+
+1. **Placeholder-bearing manifests.** `scripts/provision-vendor.ts` gains an optional top-level
+   `placeholders` list (paths of fields still awaiting the owner), `--check-ready` (exit 1 while any
+   placeholder or `OWNER TO CONFIRM` marker remains) and `--emit-route --env staging|production`
+   (prints the `wrangler.toml` route block only for a ready manifest). The schema stays strict.
+   Numeric fields cannot carry a marker, so valid-but-fake numbers are listed in `placeholders`.
+   **Where the block is enforced, honestly:** manifests are never committed, so CI cannot see them.
+   The gate is the two commands above plus the host guard, which already stops the provisioner
+   writing to any deployed database. It is a gate the operator runs, not one CI enforces, and the
+   runbook says so.
+2. **`scripts/import-catalogue.ts`** (Node, never the Worker) and a pure core in
+   `lib/catalogue-import/`. Reads `.csv`, `.xlsx` and `.xls`. Driven by an **import profile** JSON
+   (column mapping, unit rule, the owner's department map), held outside the repository like a
+   manifest. **Dry-run by default and DB-free; `--apply` writes.** Every product is created
+   `isActive: false`, `stockMode: UNKNOWN`, quantity 0; every category is created `isActive: false`;
+   restrictions come from `classifyImportRow`; each restricted product gets one `IMPORT` audit row.
+   A re-run writes nothing except a **tightened** restriction. A report file lists every rejected
+   row by source row number, the VAT variants (reported, never rewritten), source drift and a
+   source-row-to-slug trace.
+3. **`scripts/verify-onboarding.ts`**, a read-only post-import check, and the importer's
+   **isolation guard** (row counts of every other vendor identical before and after).
+4. **Runbook**: `docs/developer-portal/client-onboarding-prerequisites.md` gains Procedure,
+   Testing and validation, and Rollback sections; `prisma/manifests/README.md` documents the new
+   flags; an `example-import-profile.json` with neutral names; `specs/tech-stack.md` records the
+   one new dependency.
+
+**Decisions this spec encodes (owner, 2026-10-22):**
+
+- Aheed Super Store is a **new vendor added alongside** the existing ones, in the **dev database**
+  `ep-dry-morning-zab7dx08`, provided the host guard confirms it is dev. Nothing is deleted or
+  overwritten. The test vendor stays until a separate approved cleanup.
+- Placeholders for delivery fee, free-delivery threshold, minimum order, postcode prefixes, sender
+  email and footer address; branding copied from the existing Aheed Food Centre seed values.
+- Description: the source description, **blank** if the profile maps none. **Name** comes from the
+  source column the profile maps to `name`. *For the supplied stock list this means the source's
+  only text column, "Description", becomes the product **name**, and the product description is
+  blank* — it has no longer text. Flagged in the summary so the owner can object.
+- Unit: the source unit token **verbatim** when the profile's pattern finds one, else the profile's
+  documented default (`each` in the example). Net-content columns stay null: deriving them is
+  `#900`/`#901`'s machinery, not this slice.
+- Restrictions: the owner's existing mapping (ADR-007 table) supplied through the profile.
+  **Departments in neither the restricted map, the uncertain list nor the profile's reviewed
+  `unrestrictedDepartments` list are flagged UNREVIEWED and imported as `NEEDS_REVIEW`.**
+- Excel **and** CSV, one exact-pinned dependency, validation before any write, hidden + `UNKNOWN`,
+  nothing fabricated.
+- **Categories are the client's own, verbatim (owner decision, later on 2026-10-22).** The platform's category
+  structure is not yet ready to be standardised, so the importer neither maps nor renames: department and
+  sub-department values become category names exactly as written (typos and upper case included). Categories
+  are per-vendor (`@@unique([vendorId, slug])`), so the new vendor's categories cannot collide with Aheed Food
+  Centre's. Standardising categories is a **later phase**, together with a versioned standard import template.
+
+**Why these shapes**
+
+- **Dry-run default, DB-free.** The validator can run the whole parse-classify-plan path with no
+  credentials, so it is reviewable anywhere, and an accidental invocation writes nothing.
+- **Slug as identity.** There is no `sourceRef` column and this slice adds none (`#1201`'s recorded
+  decision), so row-level idempotency must come from `Product`'s existing `@@unique([vendorId,
+  slug])`. The slug is therefore a deterministic function of name, PLU and department only, never
+  of the rest of the file. Known limit: if staff edit an imported product's slug, a later re-import
+  recreates it; the runbook says to re-import before editing slugs or not at all.
+- **Categories created inactive.** The storefront's `visibleCategoryWhere` already hides products
+  whose category is inactive, so a hidden catalogue is hidden twice. Staff activate a category in
+  the existing categories screen when they are ready.
+- **One interactive transaction per department**, on the WebSocket client, so a mid-run failure
+  cannot orphan a category or a product without its inventory/audit rows.
+- **Pure core in `lib/`, I/O in `scripts/`.** The spreadsheet dependency is imported only from
+  `scripts/`, so it can never reach the Worker bundle.
+
+**Deliberately excluded:**
+
+- **Category standardisation, category mapping, client mapping approval and a standard import template with
+  mapping columns.** Deferred by the owner. A draft mapping pack (112 source pairs against Aheed Food Centre's
+  seeded structure) was prepared and **withdrawn**; it was never shared with the client, lives outside the
+  repository, and is the starting point for that later phase. Nothing in this slice reads a mapping.
+
+- Barcode, supplier, cost, case size, reorder levels and stock quantity: not imported, not
+  fabricated (`#1196` ruling; the supplied file has zero barcodes and zero suppliers).
+- VAT: reported, not stored. `Product` has no VAT column and this slice adds no schema change.
+- Product images, net-content derivation, price/name updates on re-import (reported as drift).
+- Any change to `wrangler.toml`, workflows, secrets, DNS, Cloudflare, Resend or the host guard.
+- Outgoing email (`#1217`), the deployed dev environment, per-vendor sender addresses.
+- Deleting or rolling back test data through a script; rollback is documented and needs approval.
+- Importing into staging or production. The importer **cannot**: the host guard has no override.
+
+**Risks and mitigations**
+
+| Risk | Control |
+| --- | --- |
+| A placeholder reaches a deploy | `--check-ready` and `--emit-route` fail; the provisioner cannot write to a deployed DB. Limit: CI cannot see an uncommitted manifest. |
+| Imported rows become sellable | `newImportedProductState` is the only constructor; inactive categories; the DB `CHECK` for restricted rows; `verify-onboarding --expect-hidden`. |
+| Another vendor's data touched | Every write carries the target `vendorId`; the isolation guard compares every other vendor's row counts before and after. |
+| Wrong database | `assertNotDeployedDatabase` before any client; host printed; the dev host cannot be confirmed in the cloud session, so DB-touching validation rows run on the owner's machine and read **UNVERIFIED**, never PASS, without `.env`. |
+| `unitLabel` carries a bare token such as `500G`, not a price-per-unit label | Products are hidden and net content is null so no unit price is computed; staff review before activation. Recorded as a known semantic gap. |
+| `.xls` parser quality | The dependency choice is a Build gate (below). |
+
+**Build gate — the Excel dependency.** SheetJS's npm package is stale and carries advisories; its
+maintained builds are served from a CDN, not npm. Candidates are evaluated at Build against: reads
+legacy `.xls`, `.xlsx` and `.csv`; permissive licence; exact-pinnable from the npm registry; `npm
+audit` shows no high or critical advisory for it. **If none qualifies, Build stops and returns to
+the owner** to choose between accepting `.xlsx`/CSV only (the client re-saves their export) or
+vendoring a parser — it does not pick a lesser dependency silently.
+
+**Open items carried forward:** the later category-standardisation phase (versioned template, reference
+category list verified against the live database, per-client approved category map, approval gate before upload), `#1217` (email), the deployed dev environment slice, `#1201`'s
+remaining client answers (opening stock, barcode/supplier export) which this slice deliberately does
+not need, net-content derivation for imported products, a `sourceRef` column if repeated live
+re-imports become a requirement, and cleanup of the test vendor (needs approval).
+
+
+## Appendix A — Gate 1 proposal — Aheed Super Store test vendor and reusable onboarding automation (`#1201` and a new tracking issue)
 
 Status: **PROPOSAL — awaiting owner approval. Nothing has been built, pushed or deployed.**
 Written 2026-10-22, on `feature/client-onboarding-process` (local only, cut from `docs/1211-document-pass`).
