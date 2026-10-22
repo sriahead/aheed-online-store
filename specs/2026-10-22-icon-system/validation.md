@@ -82,13 +82,16 @@ argument with `MSYS_NO_PATHCONV=1`.
   `/staff/orders`, `/staff/categories`, `/staff/reports`.
 - Staff, SriMart admin (`demo-srimart-admin@example.com`): `/staff`, `/staff/products`.
 
-**Bundle measurement** (R37), run in the repository root after `npm run build` for the client figure and
-after `npm run preview`'s build step (`npx opennextjs-cloudflare build`) for the worker figure:
+**Bundle measurement** (R37), run in the repository root after `npx opennextjs-cloudflare build` (it runs
+the Next build, so one build gives both figures). The Worker figure is what Cloudflare would upload, not
+the entry shim `.open-next/worker.js` (2 KB), which would pass any regression:
 
 ```
 find .next/static -name '*.js' -print0 | xargs -0 -n1 sh -c 'gzip -9 -c "$0" | wc -c' | awk '{s+=$1} END{print s}'
-gzip -9 -c .open-next/worker.js | wc -c
+npx wrangler deploy --dry-run --outdir /tmp/wr-out 2>&1 | grep 'Total Upload'
 ```
+
+The second command prints `Total Upload: <N> KiB / gzip: <M> KiB`; use `M`.
 
 Run the same two commands in `../icon-base` for the BASE figures, and compare with the figures
 `build-notes.md` recorded at the start of Build (they must agree within 2 KB; if not, trust the fresh
@@ -142,7 +145,7 @@ fails on them.
 | R34 | E2E | Capture at BASE: start `npm run preview` in `../icon-base`; for each path of `PATHS_A` run `npx tsx scripts/verify-icon-markup.ts --base http://localhost:8787 --path <p> > base-a-N.json`, and for `PATHS_S` against `http://srimart.localhost:8787` (the script at HEAD is used for both captures; copy it into the worktree's scratch location rather than checking it out there). Stop the server. Repeat at HEAD. For every path, `node` sorts both arrays by their JSON strings and compares for equality; `diff` of the two sorted outputs prints nothing for all 20 paths. Also read the PR diff of `app`, `components` and `features` and confirm no migrated icon changed its `className` text and none gained a `size` prop (a changed `width`/`height` in the comparison would expose it too). Any difference is a FAIL unless it is explained by a documented, reasoned exception in `build-notes.md` that this validator agrees is purely geometry-neutral. |
 | R35 | E2E | Same procedure with `--sign-in demo-customer@example.com:<DEMO_ACCOUNT_PASSWORD from .dev.vars>` for the signed-in Aheed list, `--sign-in demo-store-admin@example.com:...` for the Aheed staff list, and `--sign-in demo-srimart-admin@example.com:...` against `http://srimart.localhost:8787` for the SriMart staff list; all 14 paths produce no difference. (Sign-in on the SriMart host needs `x-forwarded-proto: http`; see the playbook note.) |
 | R36 | Unit | `grep -rn 'LucideIcon' app components features lib` prints nothing (exit 1); `grep -rnE 'icon[:=] ?\{?[A-Z]' components app --include=*.tsx --include=*.ts` prints nothing that passes an imported component as an icon value (each remaining hit must be a string literal semantic name); `npm run typecheck` exits 0. |
-| R37 | Performance | Run the bundle commands of Setup at HEAD and at BASE (and compare with `build-notes.md`). After P2b the client sum minus BASE is at most 15,360 and the worker figure minus BASE is at most 102,400; after P3 at most 25,600 and 102,400; after P4a at most 30,720 and 102,400. Report all four numbers per PR. |
+| R37 | Performance | Run the bundle commands of Setup at HEAD and at BASE (and compare with `build-notes.md`). After P2b the client sum minus BASE is at most 15,360 and the Worker `gzip:` figure minus BASE is at most 100 KiB; after P3 at most 25,600 bytes and 100 KiB; after P4a at most 30,720 bytes and 100 KiB. Report all four numbers per PR. |
 | R38 | Unit | For each row of the "Phase 3 surfaces" table in `plan.md`: `grep -nE "<Icon " <file>` shows the listed icons now rendered through `Icon` with the listed `tone`, `grep -n 'lucide-react' <file>` shows only functional or status icons remain (or nothing), and `node -e` over `components/icons/registry.ts` (or the registry test's dump) confirms each used name has `tier: "decorative"` and `provider: "ph"`; `git diff BASE..HEAD -- components/account components/staff components/layout/PanelNav.tsx "app/(storefront)/quick-shop"` shows only the mechanical P2 changes (no `provider` or `tone` change). Registry check: `git show <P2b head>:components/icons/registry.ts` versus HEAD's: every key present in the first has the same `provider` and `tier` in the second (a changed pre-existing key is a FAIL). |
 | R39 | E2E | With the P3 build under `npm run preview`: `curl -sS http://localhost:8787/ > /tmp/home-a.html` and `curl -sS http://srimart.localhost:8787/ > /tmp/home-s.html`; for each, `node` extracts every `<svg ... data-icon="NAME">` element, and for names that the registry marks decorative asserts the element contains `--icon-secondary` and does not match `#[0-9a-fA-F]{3,8}\b`; at least three such elements exist per page (the trust strip). |
 | R40 | E2E | `grep -o -- '--color-accent:[^;"]*' /tmp/home-a.html \| head -1` and the same on `/tmp/home-s.html` print two different values; `git diff BASE..HEAD --stat -- lib/vendor-theme.ts design-system/tokens/tokens.css` prints nothing. |

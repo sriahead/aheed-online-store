@@ -150,9 +150,10 @@ R36. [P2b] `grep -rn "LucideIcon" app components features lib` prints nothing, a
     pass semantic names).
 R37. [all] Bundle budgets, measured with the commands in `validation.md` and compared with the figures
     recorded in `build-notes.md` at the start of Build: after P2b the sum of individually gzipped files
-    under `.next/static/**/*.js` grows by at most 15 KB (15,360 bytes) and the gzipped size of
-    `.open-next/worker.js` by at most 100 KB (102,400 bytes); after P3 by at most 25 KB and 100 KB; after
-    P4a by at most 30 KB and 100 KB.
+    under `.next/static/**/*.js` grows by at most 15 KB (15,360 bytes) and the `gzip:` figure that
+    `npx wrangler deploy --dry-run --outdir <dir>` prints for the Worker upload (the deployable size; it
+    is not the size of `.open-next/worker.js`, which is a 2 KB entry shim) by at most 100 KiB; after P3 by
+    at most 25 KB and 100 KiB; after P4a by at most 30 KB and 100 KiB.
 
 ## Colour (P3)
 
