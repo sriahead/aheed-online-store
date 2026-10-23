@@ -4,8 +4,8 @@ title: "ADR-008 — Icon system: semantic registry, build-time Iconify data, thr
 audience: [dev, architect, design]
 type: adr
 status: approved
-version: "1.0.0"
-updated: 2026-10-22
+version: "1.1.0"
+updated: 2026-10-23
 visibility: internal
 summary: Icons are addressed by semantic name through a registry and rendered by one component from Iconify data bundled at build time. Lucide serves functional icons, Phosphor duotone decorative ones, Noto Emoji department illustrations as static files. Owner approved on 1223.
 tags: [adr, icons, design-system, theming, multi-tenancy, csp]
@@ -79,7 +79,9 @@ unchanged, so the #251 failure cannot recur. Red is not used on new decorative s
 All four are `devDependencies`, exact-pinned (the committed generated output depends on them), with the
 literals in `tests/dependency-pins.test.ts`. Sets licensed Creative Commons Attribution (Streamline, Solar,
 Twemoji) are excluded unless the owner approves a visible credit. The licence texts ship in
-`public/third-party-icon-licenses.txt`, generated from the upstream `LICENSE` files. Lucide stays a
+`public/third-party-icon-licenses.txt`, generated from the upstream `LICENSE` files (Noto Emoji excepted: its
+`info.json` licence URL returns 404 and the repository's root `LICENSE` is the SIL Open Font License for the fonts, so
+the section carries the canonical Apache 2.0 text and records why; `specs/2026-10-22-icon-system/` R63). Lucide stays a
 `dependency` until Phase 5 so a parity test can compare geometry (`tests/icon-lucide-parity.test.ts`).
 
 ## Consequences

@@ -10,6 +10,16 @@ Each requirement is tagged with the pull request that must satisfy it: **P1** fo
 storefront migration, **P2b** admin migration and import ban, **P3** colour, **P4a** illustrations,
 **all** every PR. A later PR must keep every earlier requirement true.
 
+**Second amendment of 2026-10-23 (the remaining phases are clubbed, owner decision on `#1223`).** The
+slice now ships as two pull requests: **PR A is Phase 2b alone** (invisible) and **PR B is Phases 3 and 4a
+together** (visible), cut from `staging` after PR A has merged. A requirement tagged **P3** or **P4a** is
+checked at the **PR B head**; one tagged **P2b** at the **PR A head**. Two consequences are written into the
+requirements below and not left to the reader: (1) R34, R35 and R56 to R60 prove that a PR changed nothing
+visible, so they are checked **at the PR A head** and are deliberately not required at the PR B head, where
+R64 and R65 bound what PR B may change instead; (2) the P1 test of `DepartmentScroller`'s `svg[data-icon]`
+output (R22's third clause) and its pre-migration class assertions are superseded at the PR B head by requirements 44 and 45 (below). New requirements: 63 (Noto Emoji's licence text), 64 and 65 (what PR B may change), 66 (`design-system.md`).
+`plan.md`, "Phase 2b, 3 and 4a clubbing", has the reasons.
+
 **Amendment of 2026-10-23 (before P2a is built).** R34, R35, R36 and R37 are rewritten and R56 to R62 are
 added, from what P1's validation and merge measured (issue `#1223`, the approved proposal comment, and
 `#1226`). Nothing tagged P1 changes. The reasons are in `plan.md`, "Phase 2 amendment". Definitions used
@@ -126,11 +136,12 @@ R26. [P1] A unit test, `tests/icon-lucide-parity.test.ts`, compares for every re
 R27. [P1] `public/third-party-icon-licenses.txt` has one section per set referenced by the registry or the
     illustration map, each giving the set name, SPDX identifier, author, source URL and the upstream
     `LICENSE` text reproduced verbatim from the URL in that set's `info.json` (all copyright lines
-    included); `npm run icons:build` exits non-zero if a used set's SPDX identifier has no licence text
-    file under `scripts/icon-licences/`.
+    included), **except Noto Emoji, which R63 governs** (its `info.json` URL returns 404);
+    `npm run icons:build` exits non-zero if a used set's SPDX identifier has no licence text file under
+    `scripts/icon-licences/`.
 R28. [P1] On both vendors, a `GET /third-party-icon-licenses.txt` returns HTTP 200 with a `content-type`
     beginning `text/plain`, and the body names `Lucide`, and `Phosphor` from P3 and `Noto Emoji` from P4a, as
-    each set first enters the registry or the illustration map.
+    each set first enters the registry or the illustration map (at the PR B head, all three).
 
 ## Migration (behaviour-preserving)
 
@@ -164,7 +175,8 @@ R34. [P2a] The migration carries each icon's existing `className` over verbatim 
     two outputs exits 0 and prints `identical: N page(s)` with N the list's page count. BASE remains the
     reference, so the comparison is cumulative and covers P1 again (P1's own head was compared once, on
     2026-10-23: `#1226`). The customer list is here, not in P2b, because P2a migrates the `/account` and
-    `/quick-shop` files.
+    `/quick-shop` files. R34 is checked at the P2a head and at the PR A head (P2b); it is **not** required at
+    the PR B head, where markup changes on purpose (R64, R65).
 R35. [P2a, P2b] The same holds for the staff path lists (`PATHS_STAFF_A`, `PATHS_STAFF_S`) at the P2a head
     **and again** at the P2b head, and at the P2b head every list of R34 is run again. P2a is included
     because it migrates components that staff pages also render (an import scan of `app/(admin)` and
@@ -172,20 +184,26 @@ R35. [P2a, P2b] The same holds for the staff path lists (`PATHS_STAFF_A`, `PATHS
     more). The SriMart staff pair has a precondition: a
     sign-in as `demo-srimart-admin@example.com` with `DEMO_ACCOUNT_PASSWORD` from `.dev.vars` returns 200
     (`#1226` found a stale password hash in the dev database, so it returned 401). A pair whose sign-in
-    does not return 200 is UNVERIFIED, which fails P2b and does not fail P2a.
+    does not return 200 is UNVERIFIED, which fails P2b and does not fail P2a. (The pair was verified once, on
+    2026-10-23, at the P2a head: `#1227`.) R35 is checked at the PR A head and is **not** required at the PR B
+    head; R65 is its PR B counterpart for the staff lists.
 R36. [P2b] `grep -rn "LucideIcon" app components features lib --exclude=docs.ts` prints nothing, and no
     component takes an icon as a component-valued prop (`AccountNav`'s `NavLink`, `ViewSwitcher`,
     `CollectionNav`, `PanelNav` and the staff hub pass semantic names). The files in R57 are migrated in P2a;
     P2b only checks the result.
 R37. [all] Bundle budgets, measured with the commands in `validation.md` against a BASE build made the same
-    way, back to back (a stored baseline is not used: P1's was 11.7 KiB wrong on the Worker figure). After P2a
-    and after P2b the sum of individually gzipped files under `.next/static/**/*.js` grows by at most 15 KB
+    way, back to back (a stored baseline is not used: P1's was 11.7 KiB wrong on the Worker figure). At the P2a head
+    and at the PR A head (P2b) the sum of individually gzipped files under `.next/static/**/*.js` grows by at most 15 KB
     (15,360 bytes) and the `gzip:` figure that `npx wrangler deploy --dry-run --outdir <dir>` prints for the
     Worker upload (the deployable size; it is not the size of `.open-next/worker.js`, which is a 2 KB entry
-    shim) by at most 100 KiB (measured at P1: +794 bytes and +4.42 KiB); after P3 by at most 25 KB and
-    100 KiB; after P4a by at most 30 KB and 100 KiB.
+    shim) by at most 100 KiB (measured at P1: +794 bytes and +4.42 KiB; at P2a: -25,350 bytes and -19.8 KiB). At
+    the PR B head (P3 and P4a together) the same two figures against BASE grow by at most 30 KB (30,720 bytes)
+    and 100 KiB.
 
 ## Phase 2 amendment (P2a and P2b)
+
+R56 to R60 are proofs that the migration changed nothing: they are checked at the P2a head and, for their
+P2b clauses, at the PR A head, and are **not** required at the PR B head (R64 and R65 replace them there).
 
 R56. [P2a] The P2a pull request touches no file under `app/(admin)/` or `components/staff/` except the
     generated `app/(admin)/staff/runbook/docs.ts` (which `npm run kms:build-index` rewrites whenever a doc
@@ -251,11 +269,46 @@ R62. [P2b] `CLAUDE.md`'s bullet under `Design tokens & per-vendor branding` that
     merge is removed, and none changes provider or tier (the registry is deliberately not pruned in this
     phase), and every key added by P2a or P2b obeys R15.
 
+## Phase 3 and 4a clubbing (PR B)
+
+R63. [P4a] Noto Emoji's licence text. `scripts/icon-licences/Apache-2.0.txt` is byte-identical to
+    `https://www.apache.org/licenses/LICENSE-2.0.txt` (11,358 bytes when this was written), and
+    `public/third-party-icon-licenses.txt` has a section that begins with the line `Noto Emoji` and gives
+    SPDX `Apache-2.0`, author `Google Inc`, source `https://github.com/googlefonts/noto-emoji`, that text, and
+    one sentence that says all of: the licence URL in the set's `info.json`
+    (`https://github.com/googlefonts/noto-emoji/blob/main/svg/LICENSE`) returned HTTP 404 on 2026-10-23; the
+    project README states "Tools and most image resources are under the Apache license, version 2.0"; and
+    none of the 16 illustrations of R42 is a region flag (the exception the README names). The section is
+    emitted by `npm run icons:build`, so `npm run icons:check` covers it (R8). The repository's root
+    `LICENSE` is the SIL Open Font License for the fonts and is not used.
+R64. [P3, P4a] PR B is cut from the PR A merge and changes only what it names:
+    `git merge-base --is-ancestor <PR A merge> <PR B head>` exits 0, and every path printed by
+    `git diff --name-only <PR A merge>..<PR B head>` is one of: the six files of the "Phase 3 surfaces" table
+    in `plan.md`; `components/layout/DepartmentScroller.tsx`, `components/layout/DepartmentHero.tsx`,
+    `components/layout/DepartmentGlyph.tsx`, `components/product/category-icon.ts`; anything under
+    `components/icons/`, `public/illustrations/departments/`, `scripts/`, `tests/`, `docs/` or `specs/`;
+    `public/third-party-icon-licenses.txt`, `package.json`, `package-lock.json`, `CHANGELOG.md`,
+    `ARTIFACT_INDEX.md`, `app/(admin)/staff/runbook/docs.ts`. Any other path is a failure; a path that
+    legitimately needs changing is a spec change, not a judgement for the builder.
+R65. [P3, P4a] At the PR B head, every staff path list is identical to the PR A head: for `PATHS_STAFF_A`
+    and `PATHS_STAFF_S` on both vendors, `--compare` of the R33 output captured against a server built at
+    the PR A merge and one built at the PR B head exits 0 and prints `identical: 5 page(s)` and
+    `identical: 2 page(s)`. This is checkable because the admin layout renders no Phase 3 or 4a surface:
+    `app/(admin)/layout.tsx` imports `Header` only, `StorefrontChrome` (which holds the Rewards launcher)
+    wraps storefront and landing pages only, and the one admin page that renders `DepartmentHero`,
+    `/staff/promotions`, is in neither staff list. The SriMart pair's sign-in precondition is R35's.
+R66. [P4a] `specs/design-system.md`'s `## Icons` section (from that heading to the next `## ` heading) no
+    longer contains the words `not yet shipped`, `Lucide today` or `from Phase 3`; its tier table says the
+    `decorative` tier is Phosphor duotone; and it names `components/icons/illustrations.ts`,
+    `public/illustrations/departments/`, the 16 slugs' mechanism (static files rendered with `<img>`, not
+    inlined) and `public/third-party-icon-licenses.txt`. `specs/decisions/ADR-008-icon-system.md` is unchanged
+    in status (`approved`) and still states each item of R1.
+
 ## Colour (P3)
 
 R38. [P3] The icons of the table "Phase 3 surfaces" in `plan.md` are rendered through `Icon` with a
     `decorative` registry name whose provider is `ph` and with the tone shown in that table; the files
-    named there import no other icon library; and no registry key that existed at the end of P2b changes
+    named there import no other icon library; and no registry key that existed at the PR A merge changes
     its provider or tier (a decorative variant of an icon that is also used functionally elsewhere gets a
     new semantic name instead).
 R39. [P3] In the served HTML of `/` on both vendors, every `<svg>` whose `data-icon` is a decorative name

@@ -4,7 +4,7 @@ title: "Colourful, vendor-themed, provider-agnostic icon system (plan)"
 audience: [dev]
 type: spec
 status: draft
-version: "1.1.0"
+version: "1.2.0"
 updated: 2026-10-23
 visibility: internal
 summary: One Icon component over a semantic-name registry and build-time bundled Iconify data (Lucide functional, Phosphor duotone decorative, Noto department illustrations), themed per vendor from existing tokens. Phases 1 to 4a of issue 1223.
@@ -58,9 +58,8 @@ a second vendor's palette reaches the icons with no new tokens.
 | --- | --- | --- | --- |
 | 1 | P1 Foundation | none | ADR-008, design-system/tech-stack/CLAUDE.md text, devDependencies, generator, registry, `Icon`, parity test, licence file, `category-icon` and `nav-items` moved to semantic names, the three coupled tests rewritten, `scripts/verify-icon-markup.ts` |
 | 2 | P2a Storefront migration | none | the 60 files outside `app/(admin)` and `components/staff` that still import `lucide-react` (55 by the codemod, 5 by hand: R57); `className` carried over verbatim, no `size` prop; adds `scripts/verify-classname-parity.ts` (R58 to R60) and the playbook notes (R61) |
-| 3 | P2b Admin/staff migration | none | the 39 files under `app/(admin)` and `components/staff`, the import-ban guard test (R32), the `CLAUDE.md` wording (R62) |
-| 4 | P3 Colour | yes | decorative two-hue glyphs on the surfaces listed below |
-| 5 | P4a Illustrations | yes | static department illustrations on the department strip and hero |
+| 3 (**PR A**) | P2b Admin/staff migration | none | the 39 files under `app/(admin)` and `components/staff`, the import-ban guard test (R32), the `CLAUDE.md` wording (R62) |
+| 4 (**PR B**) | P3 Colour and P4a Illustrations, together | yes | decorative two-hue glyphs on the surfaces listed below, and static department illustrations on the department strip and hero; one visual review, one screenshot set, one bundle budget (30 KB, 100 KiB) |
 
 P1 to P2b are required to be behaviour-preserving: any difference in the rendered SVG inventory is a
 defect, not a taste question (R34, R35, R58 to R60). Colour is introduced only after that is proven.
@@ -205,6 +204,56 @@ Approved on `#1223` (proposal comment, owner answers recorded there). Measured a
 - **Any `size`, `tone` or provider change.** P2 is behaviour-preserving; colour is P3.
 - **Splitting the icon data by tier** (a bundle fallback). Only if R37 fails; P1 added 794 bytes.
 - **`lucide-react` removal** stays Phase 5, out of scope (R53).
+
+## Phase 2b, 3 and 4a clubbing (written 2026-10-23, before PR A is built)
+
+Owner decision on `#1223` (comment `6374582601`): club the three remaining phases into one slice, shipped as
+**two PRs**. PR A is Phase 2b alone; PR B is Phases 3 and 4a together, cut from `staging` after PR A merges.
+
+### Why two PRs and not one
+
+- **The "nothing changed" proof dies the moment colour lands.** P2b is behaviour-preserving and is proved by
+  R34 and R35 (rendered markup identical to BASE, both vendors, every list). In the same PR as P3 and P4a the
+  markup differs on purpose, and that comparison could no longer tell an intended change from an accidental one
+  in the 39 admin and staff files. PR A keeps the proof clean and is quick to validate.
+- **Merges are squashed, so one PR is one commit on `staging`.** Had all three shared a PR, a bad illustration
+  could only be reverted together with the migration. Two PRs keep that separable.
+- **P3 and P4a belong together** because both are visible, both need the owner's eyes, and both touch files
+  Phase 2a already migrated, so there is no ordering between them. They share the screenshot evidence, the
+  licence work and the bundle budget.
+
+### What PR B is checked against, since "identical to BASE" cannot apply
+
+The markup of every storefront page changes (the Rewards launcher's gift glyph is on every storefront page of
+a loyalty vendor, and the department strip is on `/categories`, `/categories/[slug]`, `/search` and `/bundles`),
+so no per-page identical check exists for storefront pages. PR B is bounded three other ways: **R64** (the PR
+may touch only the files named for Phases 3 and 4a, enumerated; anything else is a failure and a spec change),
+**R65** (the staff path lists must stay identical to the PR A head, which is checkable because the admin
+layout imports `Header` only and renders none of the surfaces), and the existing surface checks **R38 to R51**
+(decorative names, `--icon-secondary`, the 16 illustrations, vendor-specific art) plus the owner's screenshots.
+R34, R35 and R56 to R60 are **not** required at the PR B head; each says so.
+
+### Noto Emoji's licence text (a finding, and a spec defect corrected)
+
+R27 said every licence block is the upstream `LICENSE` "verbatim from the URL in that set's `info.json`". For
+Noto Emoji that is impossible: `info.json` points at `.../noto-emoji/blob/main/svg/LICENSE`, which returns
+HTTP 404; the repository's root `LICENSE` is the **SIL Open Font License** for the fonts; and the README says
+"Tools and most image resources are under the Apache license, version 2.0" (and exempts the region flags, none of
+which is among the 16 slugs). **R63** therefore requires the canonical Apache 2.0 text (apache.org), a section
+that records the 404 and quotes the README, and that the generator emits it (so `icons:check` covers it).
+ADR-008 Decision 5 is corrected to match. The residual risk is that the 404 means upstream reorganised its
+licensing: the owner may want a lawyer's eye before the illustrations reach production, which this spec does
+not decide.
+
+### Deliberately not in PR A or PR B
+
+- **A markup-diff tool that tolerates named changes** (`verify-icon-markup.ts --compare ... --allow-name`): it
+  would give a per-page proof for PR B, but R33 fixes the script's output keys, so it needs a new flag and its
+  own tests. R64 and R65 are the cheaper bound; build the tool only if PR B's validation shows it is needed.
+- **A footer link to `/third-party-icon-licenses.txt`**: still the owner's call (open since Phase 1).
+- **`#1224`** (AI-generated illustrations), **`#1195`** (Quick Shop re-homing), the `#1230` demo-accounts tool
+  fix and the `#1228` `AddToCartButton` test.
+- **Larger Just Eat-style tiles**: unchanged from "Deliberately excluded" above.
 
 ## Open items carried forward
 
