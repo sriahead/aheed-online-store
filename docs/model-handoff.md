@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.136.0"
+version: "1.137.0"
 updated: 2026-10-22
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -43,15 +43,16 @@ reconciliation. If overall project state did not materially change, leave this f
   PROMOTED.** PR #1225, squash merge `c439d3b`; `deploy-staging` and `deploy-docs-internal` succeeded.
   Spec `specs/2026-10-22-icon-system/`, decision `specs/decisions/ADR-008-icon-system.md`, roadmap row in
   `specs/roadmap.md` 1.177.0. The spec covers **five PRs** (P1 foundation, P2a storefront migration, P2b
-  admin migration and the `lucide-react` import ban, P3 colour, P4a illustrations); **P2a, P2b, P3 and
-  P4a are unbuilt.** The PR used `Refs #1223`, not `Closes`, so the issue stays open through promotion.
+  admin migration and the `lucide-react` import ban, P3 colour, P4a illustrations). **P2a is BUILT on
+  `feature/icon-system-p2a` (pushed, no PR, NOT VALIDATED; `build-notes.md` "Phase 2a build" says what to
+  check and `#1227` is the live-comparison merge gate); P2b, P3 and P4a are unbuilt.** The PR used `Refs #1223`, not `Closes`, so the issue stays open through promotion.
   `#1224` (AI-generated per-vendor illustrations) is a later slice gated on an experiment. Owner answer
   still open: whether a footer link to `/third-party-icon-licenses.txt` is wanted.
-  - **Phase 1 is validated except its live rows, tracked as `#1226`:** R28, R33's live half, **R34 and R35
-    (BASE-against-HEAD markup on both vendors; nothing was compared)**, R50's HTML half and staging
-    `/api/health`. A cloud session has no `.env`, `.dev.vars` or `secrets/` and its egress proxy refuses
-    the staging hosts, so these must run from the owner's machine. **Run R34/R35 before P2a builds on
-    Phase 1.**
+  - **Phase 1's live rows ran on 2026-10-23 (`#1226`) and passed:** licence file `200 text/plain` on both hosts,
+    storefront and customer and Aheed staff pages identical to BASE, staging health ok at `c439d3b`. **One gap
+    remains: the two SriMart staff pages**, because `demo-srimart-admin@example.com`'s dev-database password hash
+    is stale (`demo-accounts.ts add` never resets an existing password). The owner repairs it; P2b cannot pass
+    without it. A cloud session still cannot run any live row (no `.env`/`.dev.vars`, proxy blocks staging).
   - **The first audit's icon count was wrong: 102, not 141** (it also walked the `docs/ui-ref` mockups).
     `#1223`'s body still says 141. Any count of `lucide-react` usage must be scoped to `app`,
     `components`, `features` and `lib`, and parsed with the TypeScript compiler, not a line grep.
