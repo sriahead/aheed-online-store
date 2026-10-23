@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/components/icons/Icon";
 
 export function BackfillImagesButton() {
   const [loading, setLoading] = useState(false);
@@ -88,7 +88,7 @@ export function BackfillImagesButton() {
         disabled={loading}
         className="inline-flex items-center gap-2 rounded-2xl bg-action px-4 py-2.5 text-sm font-bold text-white transition hover:bg-action-hover disabled:opacity-50"
       >
-        <Sparkles className="h-4 w-4" aria-hidden />
+        <Icon name="sparkles" className="h-4 w-4" />
         {loading ? "Generating..." : "Auto-fill Missing Images"}
       </button>
       <label className="flex items-center gap-2 text-xs font-medium text-primary-muted">

@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { Save } from "lucide-react";
 import { saveCategory } from "@/features/admin/catalogue";
 import { initialCatalogueState } from "@/lib/catalogue-form";
 import type {
@@ -12,6 +11,7 @@ import type {
 } from "@/lib/repositories/categories";
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Category create/edit form (P6b1, #159).
@@ -190,7 +190,7 @@ export function CategoryForm({ category, categories, hiddenCounts = null }: Cate
 
       <div className="flex items-center gap-3">
         <Button variant="primary" disabled={saving}>
-          <Save className="h-4 w-4" aria-hidden />
+          <Icon name="save" className="h-4 w-4" />
           {saving ? "Saving…" : isNew ? "Create category" : "Save changes"}
         </Button>
         <Link

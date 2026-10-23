@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { MapPin, Plus, Save, Trash2 } from "lucide-react";
 import {
   addDeliveryArea,
   removeDeliveryArea,
@@ -24,6 +23,7 @@ import {
   uppercaseInputClass as inputClass,
 } from "@/lib/form-classes";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Delivery-area admin forms (P9.2 #612; lists, ranges and per-area charges #613/#890).
@@ -136,7 +136,7 @@ export function AddDeliveryAreaForm({ examples }: { examples: DeliveryAreaExampl
           />
         </div>
         <Button disabled={pending}>
-          <Plus className="h-4 w-4" aria-hidden="true" />
+          <Icon name="plus" className="h-4 w-4" />
           {pending ? "Adding…" : "Add"}
         </Button>
       </div>
@@ -206,7 +206,7 @@ export function DeliveryAreaRowForm({
     <li className="flex flex-col gap-2 border-b border-black/5 py-3 last:border-b-0">
       <div className="flex items-center justify-between gap-4">
         <span className="inline-flex items-center gap-2 font-semibold text-primary">
-          <MapPin className="h-4 w-4 text-primary-subtle" aria-hidden="true" />
+          <Icon name="map-pin" className="h-4 w-4 text-primary-subtle" />
           {area.prefix}
         </span>
         <form action={action}>
@@ -217,7 +217,7 @@ export function DeliveryAreaRowForm({
             aria-label={`Remove delivery area ${area.prefix}`}
             className="inline-flex items-center gap-2 rounded-full border border-black/15 px-3 py-1.5 text-sm font-semibold text-primary transition-colors hover:border-danger hover:text-danger disabled:opacity-60"
           >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            <Icon name="trash" className="h-4 w-4" />
             {pending ? "Removing…" : "Remove"}
           </button>
         </form>
@@ -255,7 +255,7 @@ export function DeliveryAreaRowForm({
           <ChargeFields idPrefix={`area-${area.id}`} initial={area} />
           <div>
             <Button disabled={chargesPending}>
-              <Save className="h-4 w-4" aria-hidden="true" />
+              <Icon name="save" className="h-4 w-4" />
               {chargesPending ? "Saving…" : `Save charges for ${area.prefix}`}
             </Button>
           </div>

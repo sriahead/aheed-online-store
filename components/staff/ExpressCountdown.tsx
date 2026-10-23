@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Clock } from "lucide-react";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Live countdown badge for Express Collection orders (#402).
@@ -28,7 +28,7 @@ export function ExpressCountdown({ targetStr }: { targetStr: string }) {
         isBreached ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"
       }`}
     >
-      <Clock className="w-3.5 h-3.5" aria-hidden />
+      <Icon name="clock" className="w-3.5 h-3.5" />
       {isBreached ? `Overdue (${Math.abs(mins)}m)` : `${mins}m left`}
     </div>
   );

@@ -1,13 +1,13 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Plus, Save, Trash2 } from "lucide-react";
 import { saveBundle } from "@/features/admin/bundles";
 import { initialBundleFormState } from "@/lib/bundle-form";
 import { BundleImageUploader } from "@/components/staff/BundleImageUploader";
 import type { BundleWithItems } from "@/lib/repositories/bundles";
 import { inputClass, labelClass } from "@/lib/form-classes";
 import { FormField } from "@/components/ui/FormField";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Curated bundle edit form (P8.5c, #347) — modelled on `CampaignForm.tsx`'s
@@ -213,7 +213,7 @@ export function BundleForm({
                   className="mb-1 rounded-xl border border-black/15 p-2 text-primary-muted hover:border-danger hover:text-danger"
                   aria-label="Remove this product from the bundle"
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden />
+                  <Icon name="trash" className="h-4 w-4" />
                 </button>
               </li>
             ))}
@@ -224,7 +224,7 @@ export function BundleForm({
             onClick={addRow}
             className="flex items-center gap-1.5 rounded-xl border border-primary/20 px-3 py-1.5 text-xs font-bold text-primary"
           >
-            <Plus className="h-4 w-4" aria-hidden />
+            <Icon name="plus" className="h-4 w-4" />
             Add a product
           </button>
         </section>
@@ -234,7 +234,7 @@ export function BundleForm({
           disabled={saving}
           className="flex items-center gap-2 rounded-xl bg-action px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
         >
-          <Save className="h-4 w-4" aria-hidden />
+          <Icon name="save" className="h-4 w-4" />
           {saving ? "Saving…" : "Save bundle"}
         </button>
       </form>

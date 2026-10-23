@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { ImageUp } from "lucide-react";
 import { requestLogoUpload, attachVendorLogo } from "@/features/admin/storefront";
 import {
   IMAGE_CONTENT_TYPE,
@@ -9,6 +8,7 @@ import {
   MAX_IMAGE_EDGE_PX,
   fitWithinEdge,
 } from "@/lib/product-image";
+import { Icon } from "@/components/icons/Icon";
 
 async function toWebp(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
@@ -136,7 +136,7 @@ export function VendorLogoUploader({ currentLogoUrl }: { currentLogoUrl: string 
             onClick={upload}
             className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-bold text-black hover:bg-black/5 disabled:opacity-50"
           >
-            <ImageUp className="h-4 w-4" />
+            <Icon name="image-up" className="h-4 w-4" />
             {pending ? "Uploading…" : "Upload image"}
           </button>
         </div>

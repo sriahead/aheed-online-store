@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { CalendarClock } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getFulfilmentAdminRepository } from "@/lib/fulfilment-slots-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
@@ -12,6 +11,7 @@ import {
   FulfilmentSlotRowForm,
 } from "@/components/staff/FulfilmentManager";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and this vendor's schedule — must render per-request.
 export const dynamic = "force-dynamic";
@@ -61,7 +61,7 @@ export default async function StaffFulfilmentPage() {
   return (
     <PageContainer width="wide">
       <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-primary">
-        <CalendarClock className="h-5 w-5" aria-hidden="true" />
+        <Icon name="calendar-clock" className="h-5 w-5" />
         Fulfilment scheduling
       </h1>
       <p className="mb-6 text-sm text-primary-muted">

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ShieldAlert } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getBindingRefusalService } from "@/lib/payment-binding-refusals-service";
 import { formatPrice } from "@/components/product/format-price";
@@ -11,6 +10,7 @@ import { retryReconciliation } from "@/features/payments/retry-reconciliation";
 import { getPaymentReconciliationService } from "@/lib/payment-reconciliation-service";
 import type { ReconciliationOutcome } from "@/lib/repositories/payment-reconciliations";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and this vendor's live refusal rows — must render per-request.
 export const dynamic = "force-dynamic";
@@ -70,7 +70,7 @@ export default async function StaffPaymentsPage() {
   return (
     <PageContainer width="wide">
       <h1 className="mb-2 flex items-center gap-2 text-2xl font-semibold text-primary">
-        <ShieldAlert className="h-6 w-6 text-action" aria-hidden />
+        <Icon name="shield-alert" className="h-6 w-6 text-action" />
         Payment issues
       </h1>
       <p className="mb-6 max-w-3xl text-sm text-primary-muted">

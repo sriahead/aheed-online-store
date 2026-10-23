@@ -2,7 +2,6 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ImageUp, Sparkles } from "lucide-react";
 import { requestCampaignImageUpload, attachCampaignImage } from "@/features/admin/campaign-image";
 import {
   IMAGE_CONTENT_TYPE,
@@ -10,6 +9,7 @@ import {
   MAX_IMAGE_EDGE_PX,
   fitWithinEdge,
 } from "@/lib/product-image";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Campaign banner uploader (P8.5e, #356) — a near-exact copy of
@@ -190,7 +190,7 @@ export function CampaignBannerUploader({
             onClick={upload}
             className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-bold text-black hover:bg-black/5 disabled:opacity-50"
           >
-            <ImageUp className="h-4 w-4" />
+            <Icon name="image-up" className="h-4 w-4" />
             {pending ? "Uploading…" : "Upload"}
           </button>
         </div>
@@ -205,7 +205,7 @@ export function CampaignBannerUploader({
             onClick={autoGenerate}
             className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90 disabled:opacity-50"
           >
-            <Sparkles className="h-4 w-4" aria-hidden />
+            <Icon name="sparkles" className="h-4 w-4" />
             {generating ? "Generating…" : "Auto-Generate"}
           </button>
         </div>

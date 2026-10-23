@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { BookA } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { listSynonymsForStaff } from "@/lib/search-synonyms-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
@@ -11,6 +10,7 @@ import {
   SynonymRowForm,
 } from "@/components/staff/SynonymDictionary";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and this vendor's dictionary — must render per-request.
 export const dynamic = "force-dynamic";
@@ -64,7 +64,7 @@ export default async function StaffSearchSynonymsPage() {
         </h2>
         {settled.length === 0 ? (
           <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-            <BookA className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+            <Icon name="book-a" className="mx-auto mb-3 h-8 w-8 text-primary-subtle" />
             <p className="text-sm text-primary-muted">
               No entries yet. Add one above, or let recent searches suggest some.
             </p>

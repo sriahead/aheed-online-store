@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { Plus, Save, Trash2 } from "lucide-react";
 import {
   createTier,
   deleteTier,
@@ -11,6 +10,7 @@ import {
 import type { LoyaltyConfig } from "@/lib/repositories/loyalty";
 import type { LoyaltyTier } from "@/lib/loyalty";
 import { inputClass, labelClass } from "@/lib/form-classes";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Loyalty config form (P5a, #135), following docs/ui-ref/StaffAdminPanel.tsx's
@@ -206,7 +206,7 @@ export function LoyaltyConfigForm({
                       disabled={deleting}
                       className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-danger/30 px-3 py-1.5 text-xs font-bold text-danger transition hover:bg-danger-tint disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                      <Icon name="trash" className="h-3.5 w-3.5" />
                       Remove
                     </button>
                   </div>
@@ -251,7 +251,7 @@ export function LoyaltyConfigForm({
           disabled={pending}
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Save className="h-4 w-4" aria-hidden />
+          <Icon name="save" className="h-4 w-4" />
           {pending ? "Saving…" : "Save loyalty settings"}
         </button>
       </form>
@@ -370,7 +370,7 @@ export function LoyaltyConfigForm({
           disabled={creating}
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-action px-4 py-3 text-sm font-bold text-white transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Plus className="h-4 w-4" aria-hidden />
+          <Icon name="plus" className="h-4 w-4" />
           {creating ? "Adding…" : "Add tier"}
         </button>
       </form>
