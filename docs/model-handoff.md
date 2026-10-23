@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.138.0"
+version: "1.139.0"
 updated: 2026-10-23
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -42,7 +42,7 @@ reconciliation. If overall project state did not materially change, leave this f
 - **2026-10-23, `#1223` icon system: Phases 1 and 2a are MERGED TO `staging`, NOT PROMOTED.** PR #1225
   (`c439d3b`) and PR #1229 (`87b1792`); `deploy-staging` succeeded for both. Spec
   `specs/2026-10-22-icon-system/`, decision `specs/decisions/ADR-008-icon-system.md`, roadmap rows in
-  `specs/roadmap.md` 1.178.0. The spec covers **five PRs**; **next is P2b** (the 39 files still importing
+  `specs/roadmap.md` 1.178.0. The spec covers **five PRs**; **P2b is BUILT (commit `2a1b98f9`, branch `feature/icon-system-p2b`, not yet in a PR; merge gate `#1231`: live R34, R35, R37 on the owner's machine). Original scope: P2b** (the 39 files still importing
   `lucide-react` under `app/(admin)` and `components/staff`, the AST import-ban test
   `tests/icon-imports.test.ts`, and the `CLAUDE.md` icon-bullet wording, R32, R36, R62), on
   `feature/icon-system-p2b`, cut from `staging` with this documentation. P3 (colour) and P4a (department
