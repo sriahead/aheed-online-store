@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.35.0"
-updated: 2026-10-21
+version: "1.36.0"
+updated: 2026-10-23
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, KMS coverage vs gitignore, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -763,6 +763,27 @@ Traps found while building it (2026-10-02):
 - **`srimart.localhost` resolves inside Chrome, not necessarily for `curl` or Node on Windows.**
   For a non-browser request to SriMart, use `127.0.0.1:8787` with `Host: srimart.localhost:8787`
   (the port is required; see the SriMart host-header notes above).
+- **Node on Windows cannot resolve `srimart.localhost`; `curl.exe` can (`#1226`, 2026-10-23).** Node's
+  `getaddrinfo` fails with `ENOTFOUND srimart.localhost`, so `scripts/verify-icon-markup.ts` (or any Node
+  script) pointed at `http://srimart.localhost:8787` fails while the same URL works in Chrome and with
+  `curl.exe`. There are two remedies. Add `127.0.0.1 srimart.localhost` to
+  `C:\Windows\System32\drivers\etc\hosts` (needs an administrator shell), or leave the machine alone
+  and preload a one-file shim through `NODE_OPTIONS` (the request keeps `Host: srimart.localhost:PORT`,
+  which the vendor lookup needs):
+
+  ```js
+  // dns-preload.cjs, kept outside the repo
+  const dns = require("node:dns");
+  const lookup = dns.lookup;
+  dns.lookup = function (hostname, options, callback) {
+    const host = typeof hostname === "string" && hostname.endsWith(".localhost") ? "127.0.0.1" : hostname;
+    return lookup.call(this, host, options, callback);
+  };
+  ```
+
+  Then `NODE_OPTIONS="--require /path/to/dns-preload.cjs" npx tsx scripts/...` (Git Bash). The shim was
+  exercised against a local server through both `fetch` and `http.get`; the Windows failure itself was
+  reported by the `#1226` run and has not been reproduced on another machine.
 - **An orphaned headless Chrome can stall a concurrent `next build` at "Collecting build traces"
   indefinitely.** Stopping a background shell does not kill its `tsx` and `chrome.exe`
   grandchildren. A stuck run left Chrome alive, and `npm run preview`'s build sat on that line for
@@ -917,7 +938,11 @@ PW=$(grep -h '^DEMO_ACCOUNT_PASSWORD=' .dev.vars | head -1 | sed 's/^DEMO_ACCOUN
 absent; for one that already exists it updates role, `emailVerified` and name and nothing else. The
 `[reconciled]` it prints therefore tells you the roster is correct and tells you **nothing** about
 which password is stored — re-running it cannot fix a password mismatch. Remove and re-add the
-account if you need the password reset.
+account if you need the password reset. **Seen at `#1226` (2026-10-23):** `demo-srimart-admin@example.com`
+returned 401 because its dev-database hash dated from 2026-08-17, before `DEMO_ACCOUNT_PASSWORD` took its
+current value, and a re-run of `scripts/demo-accounts.ts add` on 2026-10-21 left it untouched (`add` never resets an
+existing password). A validation that needs that sign-in
+reports the rows UNVERIFIED and does not write to the database; the owner repairs the account.
 
 **A 429 is very often NOT rate limiting.** `authOnRequest` in `lib/auth.ts` refuses a sensitive auth
 path with **429** when the vendor cannot be resolved at all — the fail-closed path from `#469`. So
