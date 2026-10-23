@@ -98,6 +98,11 @@ neither scope nor acceptance intent:
 - **`DepartmentScroller` and `DepartmentHero` are P1 files that Phase 4a will rewrite;** nothing in P2a touches them.
 - **Quick Shop and `AccountNav` collide with `#1195`** (open, three tabs under `/account`); whichever lands second
   rebases, and the allowlist plus R57 are written so the rebase can be re-checked with the same commands.
+- **`npm run sdd:preclear` exits 0 here without checking the slice.** It only inspects spec files *added* on the
+  branch (`git diff --diff-filter=A`), and this slice's folder already exists on `staging` from Phase 1, so a
+  second PR into a multi-PR slice prints "no specs/<date-slice>/ touched" and skips the four-file, heading and
+  CHANGELOG checks. They were run by hand instead and pass (four files present, four headings present,
+  `CHANGELOG.md` +7 lines against `origin/staging`, clean tree). A skip line is not a pass.
 - **Tracked rather than absorbed:** the live P2a comparison is `#1227` (a merge gate for the PR), and the missing
   per-state `AddToCartButton` test is `#1228`.
 - **A cloud session still has no `.env`, `.dev.vars` or `secrets/`,** and its egress proxy refuses the staging
