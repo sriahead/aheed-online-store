@@ -360,3 +360,40 @@ Run on commit `f9351d19`, from the top. **Still not independent** (same Sonnet 5
   `npm run preview`):** R28 (licence file served on both hosts), the live half of R33, R34 and R35 (BASE
   against HEAD markup on both vendors, signed in and staff), the HTML half of R50. **GitHub CI is not
   confirmed:** no run exists for this branch because no pull request is open.
+
+## Validation run 3 (PR 2, Phase 2a)
+
+Run on commit `f1d5e259`. **Not independent:** the same Sonnet 5.5 context that specced and built Phase 2a ran
+it, with no `/clear` in between. Rows were checked against the files and command output, not against memory, but
+treat the result as a self-check. **Result: PASS for every P1, "all" and P2a row that can run in a cloud
+session; R34 and R35 and the other live rows are unverified.**
+
+- **Pre-flight, each alone, exit 0:** `lint`, `format:check`, `icons:check`, `kms:validate`,
+  `kms:check-generated`, `npx tsc --noEmit`, `npm run build`, `kms:assemble:internal` and the docs-site
+  `next build --webpack`. `npx vitest run --maxWorkers=4`: 307 files passed and 1 failed; 4558 tests passed, 1
+  failed, 3 skipped. The failure is the known flake `#983` (`tests/add-to-cart-feedback.test.tsx:93`, a
+  `disabled` assertion), which passes 3 of 3 when run alone (R54).
+- **Rows re-run and passing:** R1 to R31 (R10 by hand both ways, R13 as an independent probe over all 99
+  Lucide entries, R16 and R21 type errors confirmed on a probe and removed, R27 verbatim against upstream, R31
+  re-derived from a BASE worktree: 102 names, no diff), R52, R53, R54, R55 (`kms:check-generated`).
+  **R56:** the P2a diff since `c439d3b` touches nothing under `app/(admin)` or `components/staff` apart from the
+  generated `docs.ts`, no file outside those paths imports `lucide-react`, and the remaining 39 are exactly the 39 at
+  `c439d3b`. **R57:** none of the five files imports `lucide-react` or holds a component value, and each file's
+  `className` strings are an identical multiset against `c439d3b`; `CollectionNav` rendered for real emits
+  `layers, sparkles, star, package-open`. **R58 to R60:** 11 process tests pass; the real script exits 0 with
+  `checked 100 file(s), 39 not migrated, 9 allowed`; with the five-file allowlist it exits 1 on the four P1 files
+  (which independently confirms the nine-file amendment); on a scratch copy it fails on a changed `className`
+  and on an added `size`, naming file and line. **R61:** the playbook sentences exist; version 1.36.0.
+- **R37, fresh BASE and HEAD builds back to back:** client **546,054 to 520,704 bytes (-25,350)** against a
+  +15,360 budget; Worker `gzip:` **5,013.43 to 4,993.59 KiB (-19.84)** against +100. The shrinkage is still
+  unexplained.
+- **A validator's own mistake worth keeping:** the first attempt at R59's guard ("change one `className` in a
+  scratch copy") edited a file that has no such string, matched nothing, and the script correctly exited 0 on an
+  unchanged tree. That proved nothing; it was redone on `app/(storefront)/cart/page.tsx`. Check that the mutation
+  landed before reading the exit code.
+- **Not applicable to this PR:** R32, R36's ban half, R60's P2b clause, R62, R38 to R51.
+- **Unverified, with the reason (no `.env`, `.dev.vars` or `secrets/`, so no `npm run preview`; the egress
+  proxy refuses the staging hosts):** **R34 and R35** (BASE against HEAD markup, both vendors, storefront,
+  customer and staff lists) are `#1227`, **a merge gate**; the SriMart staff pair also needs the stale demo
+  account repaired (`#1226`). R28, the live half of R33 and the HTML half of R50 were proved for Phase 1 by
+  `#1226` and not re-run. **CI:** no run existed for `f1d5e259` at validation time (no PR was open).
