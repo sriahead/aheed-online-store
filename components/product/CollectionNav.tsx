@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Layers, PackageOpen, Sparkles, Star } from "lucide-react";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * The storefront's collection entry points (#681), rendered in the filter-panel column on
@@ -29,10 +29,10 @@ import { Layers, PackageOpen, Sparkles, Star } from "lucide-react";
  */
 
 const COLLECTIONS = [
-  { href: "/search", label: "All products", icon: Layers },
-  { href: "/search", label: "New Arrivals", icon: Sparkles },
-  { href: "/search?featured=1", label: "Featured Products", icon: Star },
-  { href: "/bundles", label: "Value Bundles", icon: PackageOpen },
+  { href: "/search", label: "All products", icon: "layers" },
+  { href: "/search", label: "New Arrivals", icon: "sparkles" },
+  { href: "/search?featured=1", label: "Featured Products", icon: "star" },
+  { href: "/bundles", label: "Value Bundles", icon: "package-open" },
 ] as const;
 
 export function CollectionNav({ activeHref }: { activeHref?: string }) {
@@ -42,7 +42,7 @@ export function CollectionNav({ activeHref }: { activeHref?: string }) {
         Browse
       </h2>
       <ul className="flex flex-wrap gap-2 md:flex-col md:gap-1">
-        {COLLECTIONS.map(({ href, label, icon: Icon }) => {
+        {COLLECTIONS.map(({ href, label, icon }) => {
           const active = href === activeHref;
           return (
             <li key={label}>
@@ -55,7 +55,7 @@ export function CollectionNav({ activeHref }: { activeHref?: string }) {
                     : "inline-flex min-h-tap items-center gap-2 rounded-2xl px-3 py-2 text-sm text-primary hover:bg-surface-muted lg:min-h-0"
                 }
               >
-                <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                <Icon name={icon} className="h-4 w-4 shrink-0" />
                 {label}
               </Link>
             </li>

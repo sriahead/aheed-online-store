@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { BookmarkPlus, ChevronLeft, RotateCcw } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { getOrderRepository } from "@/lib/orders-service";
 import { formatOrderDate } from "@/lib/order-status";
@@ -15,6 +14,7 @@ import { reorderItems } from "@/features/orders/reorder-items";
 import { saveOrderAsList } from "@/features/lists/save-order-as-list";
 import { MAX_SAVED_LISTS } from "@/lib/saved-list";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and one owned order — must render per-request.
 export const dynamic = "force-dynamic";
@@ -45,7 +45,7 @@ export default async function AccountOrderPage({
           href="/account/orders"
           className="inline-flex items-center gap-1 text-sm text-primary-muted hover:text-primary"
         >
-          <ChevronLeft className="h-4 w-4" aria-hidden />
+          <Icon name="chevron-left" className="h-4 w-4" />
           All orders
         </Link>
         {/*
@@ -60,7 +60,7 @@ export default async function AccountOrderPage({
               type="submit"
               className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-primary/90 transition-colors"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              <Icon name="rotate-ccw" className="h-3.5 w-3.5" />
               Reorder items
             </button>
           </form>
@@ -71,7 +71,7 @@ export default async function AccountOrderPage({
               type="submit"
               className="inline-flex items-center gap-1.5 rounded-xl border border-primary/20 px-3.5 py-1.5 text-xs font-bold text-primary transition-colors hover:border-primary/40"
             >
-              <BookmarkPlus className="h-3.5 w-3.5" />
+              <Icon name="bookmark-plus" className="h-3.5 w-3.5" />
               Save as list
             </button>
           </form>

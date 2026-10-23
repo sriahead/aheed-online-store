@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Gift, X } from "lucide-react";
 import { RewardsPanel, type RewardsData } from "@/components/rewards/RewardsPanel";
 import {
   CONSENT_CHANGE_EVENT,
@@ -12,6 +11,7 @@ import {
   REFERRAL_COOKIE,
   type ConsentValue,
 } from "@/lib/storage-keys";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * `vendorName` comes from the storefront layout (`StorefrontChrome`) as a prop — CLAUDE.md rules
@@ -109,10 +109,10 @@ export function RewardsLauncher({
           }`}
         >
           {open ? (
-            <X className="h-5 w-5" aria-hidden="true" />
+            <Icon name="x" className="h-5 w-5" />
           ) : (
             <>
-              <Gift className="h-4 w-4 text-amber-300" aria-hidden="true" />
+              <Icon name="gift" className="h-4 w-4 text-amber-300" />
               <span>Rewards</span>
             </>
           )}

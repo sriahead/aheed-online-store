@@ -1,4 +1,3 @@
-import { Minus, Plus, ShoppingBag, Sparkles, Store, Trash2, Truck } from "lucide-react";
 import Link from "next/link";
 import { formatPrice } from "@/components/product/format-price";
 import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
@@ -10,6 +9,7 @@ import { removeFromCart } from "@/features/cart/remove-item";
 import { updateQuantity } from "@/features/cart/update-quantity";
 import { CheckoutLink } from "./CheckoutLink";
 import { CartLineNote } from "./CartLineNote";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Server-rendered cart body (P3a, #93) — shared by the drawer and /cart so both
@@ -60,9 +60,9 @@ export function CartContents({
             <div className="flex items-center justify-between gap-3">
               <span className="flex items-center gap-1 font-medium">
                 {method === "COLLECTION" ? (
-                  <Store className="h-4 w-4 text-primary" aria-hidden />
+                  <Icon name="store" className="h-4 w-4 text-primary" />
                 ) : (
-                  <Truck className="h-4 w-4 text-primary" aria-hidden />
+                  <Icon name="truck" className="h-4 w-4 text-primary" />
                 )}
                 Add {formatPrice(progress.remainingPence)} to reach the{" "}
                 {formatPrice(minimumOrderPence)} minimum order
@@ -76,7 +76,7 @@ export function CartContents({
           {progress.kind === "delivery-remaining" && (
             <div className="flex items-center justify-between gap-3">
               <span className="flex items-center gap-1 font-medium">
-                <Truck className="h-4 w-4 text-primary" aria-hidden />
+                <Icon name="truck" className="h-4 w-4 text-primary" />
                 Add {formatPrice(progress.remainingPence)} for FREE Local Delivery
               </span>
               <div className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-black/10">
@@ -87,7 +87,7 @@ export function CartContents({
 
           {progress.kind === "delivery-unlocked" && (
             <div className="flex items-center gap-1 font-bold text-primary">
-              <Sparkles className="h-4 w-4 text-amber-500" aria-hidden />
+              <Icon name="sparkles" className="h-4 w-4 text-amber-500" />
               You unlocked FREE Local Delivery
               {localityName ? ` to ${localityName}` : ""}!
             </div>
@@ -95,7 +95,7 @@ export function CartContents({
 
           {progress.kind === "collection-ready" && (
             <div className="flex items-center gap-1 font-bold text-primary">
-              <Store className="h-4 w-4 text-primary" aria-hidden />
+              <Icon name="store" className="h-4 w-4 text-primary" />
               Ready for Click &amp; Collect
             </div>
           )}
@@ -105,7 +105,7 @@ export function CartContents({
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {summary.lines.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-            <ShoppingBag className="mb-3 h-16 w-16 text-primary-subtle" aria-hidden />
+            <Icon name="shopping-bag" className="mb-3 h-16 w-16 text-primary-subtle" />
             <h3 className="text-sm font-bold text-primary">Your cart is empty</h3>
             <p className="mt-1 max-w-xs text-xs text-primary-muted">
               Browse the aisles and add something you fancy.
@@ -168,7 +168,7 @@ export function CartContents({
                         aria-label={`Decrease quantity of ${line.name}`}
                         className="flex size-tap items-center justify-center p-1 text-primary-muted hover:text-primary lg:size-auto"
                       >
-                        <Minus className="h-3 w-3" aria-hidden />
+                        <Icon name="minus" className="h-3 w-3" />
                       </button>
                     </form>
                     <span className="px-2 text-xs font-bold text-primary">{line.quantity}</span>
@@ -184,7 +184,7 @@ export function CartContents({
                         aria-label={`Increase quantity of ${line.name}`}
                         className="flex size-tap items-center justify-center p-1 text-primary-muted hover:text-primary disabled:opacity-30 lg:size-auto"
                       >
-                        <Plus className="h-3 w-3" aria-hidden />
+                        <Icon name="plus" className="h-3 w-3" />
                       </button>
                     </form>
                   </div>
@@ -200,7 +200,7 @@ export function CartContents({
                       aria-label={`Remove ${line.name}`}
                       className="flex size-tap items-center justify-center p-1 text-primary-subtle transition-colors hover:text-danger lg:size-auto"
                     >
-                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                      <Icon name="trash" className="h-3.5 w-3.5" />
                     </button>
                   </form>
                 </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * The shop page's one horizontal-scroll affordance (#511).
@@ -92,7 +92,7 @@ export function HorizontalScroller({
         className={`left-0 -translate-x-4 lg:-translate-x-1/2 ${arrowClassName}`}
       >
         <span className={arrowCircleClassName}>
-          <ChevronLeft className="h-4 w-4" aria-hidden />
+          <Icon name="chevron-left" className="h-4 w-4" />
         </span>
       </button>
 
@@ -114,7 +114,7 @@ export function HorizontalScroller({
         className={`right-0 translate-x-4 lg:translate-x-1/2 ${arrowClassName}`}
       >
         <span className={arrowCircleClassName}>
-          <ChevronRight className="h-4 w-4" aria-hidden />
+          <Icon name="chevron-right" className="h-4 w-4" />
         </span>
       </button>
     </div>

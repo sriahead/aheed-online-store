@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { composePublicUrl } from "@/lib/storage";
 import type { ProductImageSummary } from "@/lib/repositories/products";
+import { Icon } from "@/components/icons/Icon";
 
 export function ProductImageGallery({
   images,
@@ -148,7 +148,7 @@ export function ProductImageGallery({
             className="left-1 lg:left-2.5 group/arrow absolute top-1/2 -translate-y-1/2 z-10 flex size-tap items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action lg:size-8"
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs transition group-hover/arrow:bg-white group-hover/arrow:scale-105 group-active/arrow:scale-95 motion-reduce:group-hover/arrow:scale-100 motion-reduce:group-active/arrow:scale-100">
-              <ChevronLeft className="h-5 w-5" aria-hidden />
+              <Icon name="chevron-left" className="h-5 w-5" />
             </span>
           </button>
           <button
@@ -160,7 +160,7 @@ export function ProductImageGallery({
             className="right-1 lg:right-2.5 group/arrow absolute top-1/2 -translate-y-1/2 z-10 flex size-tap items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action lg:size-8"
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs transition group-hover/arrow:bg-white group-hover/arrow:scale-105 group-active/arrow:scale-95 motion-reduce:group-hover/arrow:scale-100 motion-reduce:group-active/arrow:scale-100">
-              <ChevronRight className="h-5 w-5" aria-hidden />
+              <Icon name="chevron-right" className="h-5 w-5" />
             </span>
           </button>
 

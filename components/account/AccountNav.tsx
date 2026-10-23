@@ -3,26 +3,10 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  User,
-  ClipboardList,
-  Bookmark,
-  Sparkles,
-  MessageSquareQuote,
-  ShieldCheck,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import type { IconName } from "@/components/icons/registry";
+import { Icon } from "@/components/icons/Icon";
 
-function NavLink({
-  href,
-  icon: Icon,
-  label,
-}: {
-  href: string;
-  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
-  label: string;
-}) {
+function NavLink({ href, icon, label }: { href: string; icon: IconName; label: string }) {
   const pathname = usePathname();
   const isActive =
     href === "/account" || href === "/feedback"
@@ -38,7 +22,7 @@ function NavLink({
           : "border-transparent text-black/60 hover:border-black/20 hover:text-black/80"
       }`}
     >
-      <Icon className="h-4 w-4" aria-hidden />
+      <Icon name={icon} className="h-4 w-4" />
       {label}
     </Link>
   );
@@ -74,21 +58,21 @@ export function AccountNav({ loyaltyEnabled }: { loyaltyEnabled: boolean }) {
           onClick={() => nudge(-1)}
           className="absolute left-0 sm:-left-3 z-10 hidden sm:flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-white text-black/60 shadow hover:bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"
         >
-          <ChevronLeft className="h-4 w-4" aria-hidden />
+          <Icon name="chevron-left" className="h-4 w-4" />
         </button>
 
         <div
           ref={trackRef}
           className="no-scrollbar flex w-full gap-6 overflow-x-auto scroll-smooth"
         >
-          <NavLink href="/account" icon={User} label="Overview" />
-          <NavLink href="/account/orders" icon={ClipboardList} label="Orders" />
-          <NavLink href="/account/lists" icon={Bookmark} label="Lists" />
+          <NavLink href="/account" icon="user" label="Overview" />
+          <NavLink href="/account/orders" icon="clipboard-list" label="Orders" />
+          <NavLink href="/account/lists" icon="bookmark" label="Lists" />
           {loyaltyEnabled && (
-            <NavLink href="/account/loyalty" icon={Sparkles} label="Loyalty & Rewards" />
+            <NavLink href="/account/loyalty" icon="sparkles" label="Loyalty & Rewards" />
           )}
-          <NavLink href="/feedback" icon={MessageSquareQuote} label="Feedback" />
-          <NavLink href="/account/data" icon={ShieldCheck} label="Data rights" />
+          <NavLink href="/feedback" icon="message-square-quote" label="Feedback" />
+          <NavLink href="/account/data" icon="shield-check" label="Data rights" />
         </div>
 
         <button
@@ -97,7 +81,7 @@ export function AccountNav({ loyaltyEnabled }: { loyaltyEnabled: boolean }) {
           onClick={() => nudge(1)}
           className="absolute right-0 sm:-right-3 z-10 hidden sm:flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-white text-black/60 shadow hover:bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"
         >
-          <ChevronRight className="h-4 w-4" aria-hidden />
+          <Icon name="chevron-right" className="h-4 w-4" />
         </button>
       </div>
     </nav>

@@ -1,8 +1,8 @@
-import { Package } from "lucide-react";
 import { addBundleToCart } from "@/features/cart/add-bundle-to-cart";
 import { formatPrice } from "@/components/product/format-price";
 import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { availableBundleItems, bundleTotalPence, type BundleItemInput } from "@/lib/bundle-pricing";
+import { Icon } from "@/components/icons/Icon";
 
 interface BundleCardProps {
   id: string;
@@ -51,7 +51,7 @@ interface BundleCardProps {
 function NoBundleImage() {
   return (
     <div className="flex h-full w-full items-center justify-center bg-surface-muted">
-      <Package className="h-10 w-10 text-primary-subtle" aria-hidden />
+      <Icon name="package" className="h-10 w-10 text-primary-subtle" />
     </div>
   );
 }

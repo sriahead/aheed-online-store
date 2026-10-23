@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { Package } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { getOrderRepository } from "@/lib/orders-service";
 import { formatOrderDate } from "@/lib/order-status";
 import { formatPrice } from "@/components/product/format-price";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and the viewer's own orders — must render per-request.
 export const dynamic = "force-dynamic";
@@ -48,7 +48,7 @@ export default async function OrdersPage({
 
       {items.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <Package className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+          <Icon name="package" className="mx-auto mb-3 h-8 w-8 text-primary-subtle" />
           <p className="mb-4 text-sm text-primary-muted">
             You haven&apos;t placed any orders with us yet.
           </p>

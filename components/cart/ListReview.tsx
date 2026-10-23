@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { CircleAlert, CircleHelp, ListChecks, PackageX } from "lucide-react";
 import { formatPrice } from "@/components/product/format-price";
 import { addListToCart } from "@/features/cart/add-list-to-cart";
 import type { ResolvedLine } from "@/lib/shopping-list";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * The mandatory review step, shared by both surfaces that produce resolved lines (P3d #114, and
@@ -50,7 +50,7 @@ export function ListReview({ lines }: { lines: ResolvedLine[] }) {
   return (
     <form action={addListToCart} className="space-y-3">
       <div className="flex items-center gap-2 border-t border-black/10 pt-5">
-        <ListChecks className="h-5 w-5 text-primary" aria-hidden />
+        <Icon name="list-checks" className="h-5 w-5 text-primary" />
         <h2 className="text-sm font-bold text-primary">
           Check your matches before adding anything
         </h2>
@@ -86,7 +86,7 @@ export function ListReview({ lines }: { lines: ResolvedLine[] }) {
                 ) : (
                   <>
                     <p className="flex items-center gap-1.5 text-xs font-semibold text-danger">
-                      <PackageX className="h-4 w-4" aria-hidden />
+                      <Icon name="package-x" className="h-4 w-4" />
                       {line.resolution.product.name} — unavailable, not added
                     </p>
                     {/* Named by the matched product, the name this row shows, not the typed text. */}
@@ -109,7 +109,7 @@ export function ListReview({ lines }: { lines: ResolvedLine[] }) {
                     picking a size on the shopper's behalf is the one thing this step exists to
                     prevent.
                   */}
-                  <CircleHelp className="h-4 w-4" aria-hidden />
+                  <Icon name="circle-question-mark" className="h-4 w-4" />
                   {line.measure
                     ? `We don't stock a ${line.measure} pack — choose a size`
                     : "Which one did you mean?"}
@@ -151,7 +151,7 @@ export function ListReview({ lines }: { lines: ResolvedLine[] }) {
 
             {line.resolution.kind === "unmatched" && (
               <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-primary-muted">
-                <CircleAlert className="h-4 w-4" aria-hidden />
+                <Icon name="circle-alert" className="h-4 w-4" />
                 No match in this shop — check the spelling or search for it
               </p>
             )}

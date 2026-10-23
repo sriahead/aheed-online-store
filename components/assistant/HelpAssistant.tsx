@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, MessageCircle, X } from "lucide-react";
 import {
   loadAssistantContent,
   recordAssistantOutcome,
@@ -10,6 +9,7 @@ import {
 } from "@/features/assistant/assistant";
 import type { AssistantEntry, AssistantPanelData } from "@/lib/assistant-content";
 import { buildHandoffText, buildHandoffUrl, HANDOFF_NOTE } from "@/lib/assistant-handoff";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * The guided help assistant panel (#1015, #1014) — opened from `FloatingContact`.
@@ -141,7 +141,7 @@ export function HelpAssistant({
             aria-label="Close help assistant"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
           >
-            <X className="h-5 w-5" aria-hidden="true" />
+            <Icon name="x" className="h-5 w-5" />
           </button>
         </div>
 
@@ -190,7 +190,7 @@ export function HelpAssistant({
                 onClick={() => setEntry(null)}
                 className="inline-flex items-center gap-1 font-semibold text-action hover:underline"
               >
-                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                <Icon name="arrow-left" className="h-4 w-4" />
                 Back to topics
               </button>
               <h3 className="font-bold break-words">{entry.label}</h3>
@@ -245,7 +245,7 @@ export function HelpAssistant({
                     onClick={handOff}
                     className="flex items-center justify-center gap-2 rounded-xl bg-action px-4 py-3 font-semibold text-white hover:bg-action-hover"
                   >
-                    <MessageCircle className="h-5 w-5" aria-hidden="true" />
+                    <Icon name="message-circle" className="h-5 w-5" />
                     Message the store on WhatsApp
                   </a>
                 )}

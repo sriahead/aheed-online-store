@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Eye } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { CartQuantityStepper } from "@/components/cart/CartQuantityStepper";
 import { FavouriteButton } from "./FavouriteButton";
@@ -17,6 +16,7 @@ import { tierThresholdQuantity } from "@/lib/tier-pricing";
 import { formatPrice } from "./format-price";
 import { deriveUnitPriceLabel } from "./unit-price";
 import type { ProductSummary } from "@/lib/repositories/products";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * P8.5a (#345) — the skewed card.
@@ -186,7 +186,7 @@ export function ProductCard({
               }}
               className="flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-xs font-bold text-primary shadow-md backdrop-blur-xs transition-transform duration-200 hover:scale-105 motion-reduce:hover:scale-100 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
             >
-              <Eye className="h-3.5 w-3.5" aria-hidden />
+              <Icon name="eye" className="h-3.5 w-3.5" />
               <span>Quick View</span>
             </button>
           </div>
@@ -205,7 +205,7 @@ export function ProductCard({
             className="group/qv sm:hidden absolute top-0 right-0 z-20 flex size-tap items-center justify-center rounded-full"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs transition group-active/qv:scale-95 motion-reduce:group-active/qv:scale-100">
-              <Eye className="h-4 w-4" aria-hidden />
+              <Icon name="eye" className="h-4 w-4" />
             </span>
           </button>
 
@@ -299,7 +299,7 @@ export function ProductCard({
 
             {isLowStock && (
               <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-danger">
-                <AlertTriangle className="h-3 w-3" aria-hidden />
+                <Icon name="triangle-alert" className="h-3 w-3" />
                 Only {product.stockQuantity} left
               </p>
             )}

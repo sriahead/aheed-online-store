@@ -1,4 +1,3 @@
-import { Sparkles, Truck, ShieldCheck, CreditCard, BellRing } from "lucide-react";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { getProductRepository } from "@/lib/products-service";
 import { getEnv } from "@/lib/config";
@@ -15,6 +14,7 @@ import {
 import { getCustomerFeedbackRepository } from "@/lib/customer-feedback-service";
 import { getVendorReviewLinkRepository } from "@/lib/vendor-review-links-service";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 /** How many approved cards the stack holds. Beyond this the fan is unreadable anyway. */
 const FEEDBACK_CARD_LIMIT = 12;
@@ -123,7 +123,7 @@ export default async function HomePage() {
         >
           <div className="max-w-2xl space-y-4">
             <div className="inline-flex items-center gap-1.5 bg-black/20 border border-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <Icon name="sparkles" className="w-3.5 h-3.5 text-amber-300" />
               {profile?.offerCollection
                 ? `Local Delivery across ${localityName} & Click & Collect`
                 : `Local Delivery across ${localityName}`}
@@ -154,13 +154,13 @@ export default async function HomePage() {
             <div className="pt-2 flex flex-wrap gap-3 text-xs font-medium text-white/90">
               {freeDeliveryThresholdPence !== null && (
                 <span className="flex items-center gap-1 bg-black/20 px-2.5 py-1 rounded-lg">
-                  <Truck className="w-3.5 h-3.5 text-amber-300" /> Free delivery over{" "}
+                  <Icon name="truck" className="w-3.5 h-3.5 text-amber-300" /> Free delivery over{" "}
                   {formatPrice(freeDeliveryThresholdPence)}
                 </span>
               )}
               {minimumOrderPence > 0 && (
                 <span className="flex items-center gap-1 bg-black/20 px-2.5 py-1 rounded-lg">
-                  <ShieldCheck className="w-3.5 h-3.5 text-action-tint" />{" "}
+                  <Icon name="shield-check" className="w-3.5 h-3.5 text-action-tint" />{" "}
                   {/* #1083 — "delivery": collection has its own minimum, often none. */}
                   {formatPrice(minimumOrderPence)} minimum delivery order
                 </span>
@@ -203,7 +203,7 @@ export default async function HomePage() {
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-10 h-10 rounded-xl bg-action-tint text-primary flex items-center justify-center font-bold shrink-0 group-hover:scale-110 motion-reduce:group-hover:scale-100 transition-transform">
-            <Truck className="w-5 h-5 text-primary" />
+            <Icon name="truck" className="w-5 h-5 text-primary" />
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
@@ -219,7 +219,7 @@ export default async function HomePage() {
 
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-10 h-10 rounded-xl bg-accent-tint text-accent flex items-center justify-center font-bold shrink-0 group-hover:scale-110 motion-reduce:group-hover:scale-100 transition-transform">
-            <CreditCard className="w-5 h-5 text-accent" />
+            <Icon name="credit-card" className="w-5 h-5 text-accent" />
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
@@ -231,7 +231,7 @@ export default async function HomePage() {
 
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-10 h-10 rounded-xl bg-danger-tint text-danger flex items-center justify-center font-bold shrink-0 group-hover:scale-110 motion-reduce:group-hover:scale-100 transition-transform">
-            <BellRing className="w-5 h-5 text-danger" />
+            <Icon name="bell-ring" className="w-5 h-5 text-danger" />
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">

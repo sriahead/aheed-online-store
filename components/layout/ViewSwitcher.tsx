@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ShoppingBag, Store, Shield } from "lucide-react";
+import type { IconName } from "@/components/icons/registry";
+import { Icon } from "@/components/icons/Icon";
 
 export interface ViewSwitcherProps {
   canSeeAdmin: boolean;
@@ -53,16 +54,15 @@ export function ViewSwitcher({ canSeeAdmin, currentTier, isPortal }: ViewSwitche
     });
   };
 
-  const views = [
-    { id: "shopper", label: "Shopper View", icon: ShoppingBag },
-    { id: "staff", label: "Staff View", icon: Store },
+  const views: { id: string; label: string; icon: IconName }[] = [
+    { id: "shopper", label: "Shopper View", icon: "shopping-bag" },
+    { id: "staff", label: "Staff View", icon: "store" },
   ];
   if (canSeeAdmin) {
-    views.push({ id: "admin", label: "Admin View", icon: Shield });
+    views.push({ id: "admin", label: "Admin View", icon: "shield" });
   }
 
   const activeOption = views.find((v) => v.id === activeView) || views[0];
-  const ActiveIcon = activeOption.icon;
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -71,15 +71,17 @@ export function ViewSwitcher({ canSeeAdmin, currentTier, isPortal }: ViewSwitche
         disabled={isPending}
         className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
       >
-        <ActiveIcon className="h-3.5 w-3.5" />
+        <Icon name={activeOption.icon} className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">{activeOption.label}</span>
-        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <Icon
+          name="chevron-down"
+          className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-xl border border-black/10 bg-white p-1 shadow-lg z-50">
           {views.map((view) => {
-            const Icon = view.icon;
             const isSelected = activeView === view.id;
             return (
               <button
@@ -91,7 +93,7 @@ export function ViewSwitcher({ canSeeAdmin, currentTier, isPortal }: ViewSwitche
                     : "font-medium text-black/70 hover:bg-black/5"
                 }`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon name={view.icon} className="h-4 w-4" />
                 {view.label}
               </button>
             );

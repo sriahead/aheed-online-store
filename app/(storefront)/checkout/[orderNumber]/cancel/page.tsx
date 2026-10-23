@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { AlertCircle } from "lucide-react";
 import { getOrderRepository } from "@/lib/orders-service";
 import { getAuth } from "@/lib/auth";
 import { formatPrice } from "@/components/product/format-price";
 import { cancelOrder } from "@/features/checkout/cancel-order";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +57,7 @@ export default async function CancelOrderPage({
   return (
     <PageContainer width="narrow">
       <div className="mb-6 flex items-center gap-3">
-        <AlertCircle className="h-8 w-8 shrink-0 text-accent" aria-hidden />
+        <Icon name="circle-alert" className="h-8 w-8 shrink-0 text-accent" />
         <div>
           <h1 className="text-xl font-bold text-primary">Cancel this order?</h1>
           <p className="text-sm text-primary-muted">

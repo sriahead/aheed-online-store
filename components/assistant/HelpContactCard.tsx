@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { MessageCircle } from "lucide-react";
 import { HelpAssistant } from "@/components/assistant/HelpAssistant";
 import { buildHandoffUrl } from "@/lib/assistant-handoff";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * The Help Centre's "still need help?" card (#1052).
@@ -41,7 +41,7 @@ export function HelpContactCard({
   return (
     <section className="bg-white rounded-2xl p-6 border border-black/10">
       <div className="flex items-center gap-3 mb-2">
-        <MessageCircle className="w-5 h-5 text-action-tint" aria-hidden="true" />
+        <Icon name="message-circle" className="w-5 h-5 text-action-tint" />
         <h2 className="font-bold text-lg">Still need help?</h2>
       </div>
       {assistantAvailable ? (
@@ -73,7 +73,7 @@ export function HelpContactCard({
             rel="noopener noreferrer"
             className={buttonClass}
           >
-            <MessageCircle className="h-5 w-5" aria-hidden="true" />
+            <Icon name="message-circle" className="h-5 w-5" />
             Message {vendorName} on WhatsApp
           </a>
         </>

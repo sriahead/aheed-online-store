@@ -1,10 +1,10 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { Check, X, ExternalLink } from "lucide-react";
 import { requireRole } from "@/lib/auth-rbac";
 import { getDevDiagnostics } from "@/lib/dev-diagnostics";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session (requireRole) — must render per-request, never prerender.
 export const dynamic = "force-dynamic";
@@ -112,11 +112,11 @@ export default async function DevPage() {
                 <span className="text-primary-muted">{INTEGRATION_LABELS[key] ?? key}</span>
                 {on ? (
                   <span className="inline-flex items-center gap-1 font-semibold text-primary">
-                    <Check className="h-4 w-4 text-action" aria-hidden /> Configured
+                    <Icon name="check" className="h-4 w-4 text-action" /> Configured
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 font-semibold text-danger">
-                    <X className="h-4 w-4" aria-hidden /> Not set
+                    <Icon name="x" className="h-4 w-4" /> Not set
                   </span>
                 )}
               </li>
@@ -137,7 +137,7 @@ export default async function DevPage() {
               className="inline-flex items-center gap-1.5 font-semibold text-action"
             >
               Open the KMS internal docs
-              <ExternalLink className="h-4 w-4" aria-hidden />
+              <Icon name="external-link" className="h-4 w-4" />
             </a>
           ) : (
             <p className="text-sm text-primary-muted">

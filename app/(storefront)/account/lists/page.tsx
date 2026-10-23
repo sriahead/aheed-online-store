@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ChevronLeft, ChevronRight, ListChecks, Trash2 } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { getShoppingListService } from "@/lib/shopping-lists-service";
 import { deleteList } from "@/features/lists/delete-list";
 import { renameList } from "@/features/lists/rename-list";
 import { MAX_LIST_NAME_LENGTH, MAX_SAVED_LISTS } from "@/lib/saved-list";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Saved shopping lists (P10, #116).
@@ -34,7 +34,7 @@ export default async function AccountListsPage() {
         href="/account"
         className="mb-4 inline-flex items-center gap-1 text-sm text-primary-muted hover:text-primary"
       >
-        <ChevronLeft className="h-4 w-4" aria-hidden />
+        <Icon name="chevron-left" className="h-4 w-4" />
         Your account
       </Link>
 
@@ -65,7 +65,7 @@ export default async function AccountListsPage() {
                 className="flex items-center justify-between gap-3"
               >
                 <span className="flex min-w-0 items-center gap-2">
-                  <ListChecks className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+                  <Icon name="list-checks" className="h-5 w-5 shrink-0 text-primary" />
                   <span className="min-w-0">
                     <span className="block truncate font-semibold text-primary">{list.name}</span>
                     <span className="block text-xs text-primary-muted">
@@ -73,7 +73,7 @@ export default async function AccountListsPage() {
                     </span>
                   </span>
                 </span>
-                <ChevronRight className="h-5 w-5 shrink-0 text-primary-subtle" aria-hidden />
+                <Icon name="chevron-right" className="h-5 w-5 shrink-0 text-primary-subtle" />
               </Link>
 
               {/*
@@ -106,7 +106,7 @@ export default async function AccountListsPage() {
                     aria-label={`Delete "${list.name}"`}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-bold text-danger"
                   >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    <Icon name="trash" className="h-3.5 w-3.5" />
                     Delete
                   </button>
                 </form>

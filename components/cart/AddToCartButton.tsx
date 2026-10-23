@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { Plus, Check, Loader2, Minus } from "lucide-react";
 import { addToCart } from "@/features/cart/add-to-cart";
 import type { AddOutcome } from "@/lib/cart-rules";
+import type { IconName } from "@/components/icons/registry";
 import { useCartFeedback } from "./CartFeedback";
 import { addFeedbackButtonText, addFeedbackMessage } from "./add-feedback-copy";
 import { CUSTOM_NOTE_MAX_LENGTH } from "@/lib/custom-note";
+import { Icon } from "@/components/icons/Icon";
 
 /** How long the button shows "Added" (unchanged) and any other outcome (#956). */
 const ADDED_MS = 1500;
@@ -101,7 +102,7 @@ export function AddToCartButton({
 
   const added = flash?.kind === "added";
   const outcomeText = flash?.kind === "other" ? flash.text : null;
-  const Icon = pending ? Loader2 : added ? Check : Plus;
+  const iconName: IconName = pending ? "loader-circle" : added ? "check" : "plus";
 
   if (variant === "card") {
     if (disabled) {
@@ -144,7 +145,7 @@ export function AddToCartButton({
           aria-label={label}
           className="flex size-tap lg:size-8 items-center justify-center rounded-xl bg-primary text-white transition hover:bg-primary/90 active:scale-95 motion-reduce:active:scale-100 shadow-sm"
         >
-          <Icon className={`w-4 h-4 ${pending ? "animate-spin" : ""}`} aria-hidden="true" />
+          <Icon name={iconName} className={`w-4 h-4 ${pending ? "animate-spin" : ""}`} />
         </button>
       </div>
     );
@@ -176,7 +177,7 @@ export function AddToCartButton({
             aria-label={`Decrease quantity of ${productName}`}
             className="min-h-tap min-w-tap lg:min-h-0 lg:min-w-0 px-3 h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
           >
-            <Minus className="w-4 h-4" aria-hidden="true" />
+            <Icon name="minus" className="w-4 h-4" />
           </button>
           <span className="text-sm font-bold text-primary w-8 text-center">{qty}</span>
           <button
@@ -185,7 +186,7 @@ export function AddToCartButton({
             aria-label={`Increase quantity of ${productName}`}
             className="min-h-tap min-w-tap lg:min-h-0 lg:min-w-0 px-3 h-full flex items-center justify-center text-black/70 hover:bg-black/5 hover:text-black transition-colors"
           >
-            <Plus className="w-4 h-4" aria-hidden="true" />
+            <Icon name="plus" className="w-4 h-4" />
           </button>
         </div>
         <button
@@ -194,7 +195,7 @@ export function AddToCartButton({
           disabled={pending}
           className="flex-1 flex items-center justify-center gap-2 self-stretch lg:self-auto lg:h-11 rounded-2xl bg-primary px-4 text-white text-sm font-bold transition hover:bg-primary/90 active:scale-95 motion-reduce:active:scale-100 shadow-sm"
         >
-          <Icon className={`w-4 h-4 ${pending ? "animate-spin" : ""}`} />
+          <Icon name={iconName} className={`w-4 h-4 ${pending ? "animate-spin" : ""}`} />
           <span>{added ? "Added to cart" : (outcomeText ?? label)}</span>
         </button>
       </div>
@@ -210,7 +211,7 @@ export function AddToCartButton({
         aria-label={disabled ? `${productName} is out of stock` : label}
         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <Icon className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} aria-hidden />
+        <Icon name={iconName} className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} />
         <span>{disabled ? "Out of stock" : added ? "Added" : (outcomeText ?? label)}</span>
       </button>
     );
@@ -243,7 +244,7 @@ export function AddToCartButton({
       aria-label={disabled ? "Out of stock" : label}
       className="flex items-center justify-center rounded-full bg-primary p-2 text-white transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-40"
     >
-      <Icon className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} aria-hidden />
+      <Icon name={iconName} className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} />
     </button>
   );
 }

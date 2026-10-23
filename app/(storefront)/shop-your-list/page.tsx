@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, ListChecks } from "lucide-react";
 import { getUserId } from "@/lib/cart-identity";
 import { getShoppingListService } from "@/lib/shopping-lists-service";
 import { ShopYourList } from "@/components/cart/ShopYourList";
 import { getProductRepository } from "@/lib/products-service";
 import { MAX_EXAMPLE_NAMES } from "@/lib/shopping-list-examples";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * "Shop your list" (P3d, #114) — the second way to fill a cart, alongside
@@ -59,7 +59,7 @@ export default async function ShopYourListPage() {
                   className="flex items-center justify-between gap-3"
                 >
                   <span className="flex min-w-0 items-center gap-2">
-                    <ListChecks className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                    <Icon name="list-checks" className="h-4 w-4 shrink-0 text-primary" />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold text-primary">
                         {list.name}
@@ -69,7 +69,7 @@ export default async function ShopYourListPage() {
                       </span>
                     </span>
                   </span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-primary-subtle" aria-hidden />
+                  <Icon name="chevron-right" className="h-4 w-4 shrink-0 text-primary-subtle" />
                 </Link>
               </li>
             ))}

@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
-import { Trash2 } from "lucide-react";
 import { eraseGuestOrder } from "@/features/orders/guest-data-rights";
 import { GUEST_ERASE_CONFIRMATION, initialDataRightsState } from "@/lib/data-rights-form";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Guest Art. 17 erasure (P7 closeout, #251 / #222).
@@ -84,7 +84,7 @@ export function GuestEraseForm({ orderNumber, email }: GuestEraseFormProps) {
             disabled={working}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-danger px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:opacity-90 disabled:opacity-60"
           >
-            <Trash2 className="h-4 w-4" aria-hidden />
+            <Icon name="trash" className="h-4 w-4" />
             <span>{working ? "Erasing…" : "Erase my details"}</span>
           </button>
         </form>

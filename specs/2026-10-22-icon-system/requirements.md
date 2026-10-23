@@ -8,7 +8,12 @@ files, all coloured from the tokens `brandStyle()` already emits. `plan.md` carr
 
 Each requirement is tagged with the pull request that must satisfy it: **P1** foundation, **P2a**
 storefront migration, **P2b** admin migration and import ban, **P3** colour, **P4a** illustrations,
-**all** every PR. A later PR must keep every earlier requirement true. Definitions used below:
+**all** every PR. A later PR must keep every earlier requirement true.
+
+**Amendment of 2026-10-23 (before P2a is built).** R34, R35, R36 and R37 are rewritten and R56 to R62 are
+added, from what P1's validation and merge measured (issue `#1223`, the approved proposal comment, and
+`#1226`). Nothing tagged P1 changes. The reasons are in `plan.md`, "Phase 2 amendment". Definitions used
+below:
 
 - **BASE** is the parent of the commit that first added this file:
   `git log --diff-filter=A --format=%H -1 -- specs/2026-10-22-icon-system/requirements.md` then `^`.
@@ -153,20 +158,98 @@ R33. [P1] `scripts/verify-icon-markup.ts` accepts `--base <url>`, repeatable `--
     <after>` reads two such outputs and exits 0 exactly when each page's two arrays pair up one to one on
     `(width, height, className, ariaHidden)` with geometry equal within the tolerance of R26.
 R34. [P2a] The migration carries each icon's existing `className` over verbatim and sets no `size` prop, and
-    for each of the storefront paths in `validation.md` on both vendors the output of R33 run against a
+    at the P2a head, for each of the storefront and signed-in customer path lists in `validation.md`
+    (`PATHS_A`, `PATHS_S`, `PATHS_CUST`) on the vendor each list names, the output of R33 run against a
     server built at BASE and against a server built at the PR head are identical, meaning `--compare` of the
-    two outputs exits 0.
-R35. [P2b] The same holds for the signed-in and staff paths in `validation.md`, again on both vendors,
-    with `--compare` exiting 0 for the whole slice's P1 to P2b head.
-R36. [P2b] `grep -rn "LucideIcon" app components features lib` prints nothing, and no component takes an
-    icon as a component-valued prop (`AccountNav`'s `NavLink`, `ViewSwitcher`, `PanelNav` and the staff hub
-    pass semantic names).
-R37. [all] Bundle budgets, measured with the commands in `validation.md` and compared with the figures
-    recorded in `build-notes.md` at the start of Build: after P2b the sum of individually gzipped files
-    under `.next/static/**/*.js` grows by at most 15 KB (15,360 bytes) and the `gzip:` figure that
-    `npx wrangler deploy --dry-run --outdir <dir>` prints for the Worker upload (the deployable size; it
-    is not the size of `.open-next/worker.js`, which is a 2 KB entry shim) by at most 100 KiB; after P3 by
-    at most 25 KB and 100 KiB; after P4a by at most 30 KB and 100 KiB.
+    two outputs exits 0 and prints `identical: N page(s)` with N the list's page count. BASE remains the
+    reference, so the comparison is cumulative and covers P1 again (P1's own head was compared once, on
+    2026-10-23: `#1226`). The customer list is here, not in P2b, because P2a migrates the `/account` and
+    `/quick-shop` files.
+R35. [P2a, P2b] The same holds for the staff path lists (`PATHS_STAFF_A`, `PATHS_STAFF_S`) at the P2a head
+    **and again** at the P2b head, and at the P2b head every list of R34 is run again. P2a is included
+    because it migrates components that staff pages also render (an import scan of `app/(admin)` and
+    `components/staff` finds `components/errors/ErrorPanel`, a P2a file, and a transitive import can add
+    more). The SriMart staff pair has a precondition: a
+    sign-in as `demo-srimart-admin@example.com` with `DEMO_ACCOUNT_PASSWORD` from `.dev.vars` returns 200
+    (`#1226` found a stale password hash in the dev database, so it returned 401). A pair whose sign-in
+    does not return 200 is UNVERIFIED, which fails P2b and does not fail P2a.
+R36. [P2b] `grep -rn "LucideIcon" app components features lib --exclude=docs.ts` prints nothing, and no
+    component takes an icon as a component-valued prop (`AccountNav`'s `NavLink`, `ViewSwitcher`,
+    `CollectionNav`, `PanelNav` and the staff hub pass semantic names). The files in R57 are migrated in P2a;
+    P2b only checks the result.
+R37. [all] Bundle budgets, measured with the commands in `validation.md` against a BASE build made the same
+    way, back to back (a stored baseline is not used: P1's was 11.7 KiB wrong on the Worker figure). After P2a
+    and after P2b the sum of individually gzipped files under `.next/static/**/*.js` grows by at most 15 KB
+    (15,360 bytes) and the `gzip:` figure that `npx wrangler deploy --dry-run --outdir <dir>` prints for the
+    Worker upload (the deployable size; it is not the size of `.open-next/worker.js`, which is a 2 KB entry
+    shim) by at most 100 KiB (measured at P1: +794 bytes and +4.42 KiB); after P3 by at most 25 KB and
+    100 KiB; after P4a by at most 30 KB and 100 KiB.
+
+## Phase 2 amendment (P2a and P2b)
+
+R56. [P2a] The P2a pull request touches no file under `app/(admin)/` or `components/staff/` except the
+    generated `app/(admin)/staff/runbook/docs.ts` (which `npm run kms:build-index` rewrites whenever a doc
+    changes, so it cannot be excluded from a slice that edits docs):
+    `git diff --name-only <P1 merge c439d3b>..<P2a head> -- "app/(admin)" components/staff ":!app/(admin)/staff/runbook/docs.ts"`
+    prints nothing.
+    Every file that still imports `lucide-react` at the P2a head is under one of those two paths, and
+    there are exactly the 39 that imported it at the P1 merge. After P2a, no file elsewhere under `app`,
+    `components`, `features` or `lib` (other than `components/icons/`) imports `lucide-react`. P2b is
+    "every remaining file", so P2b's diff is exactly those 39 plus the import ban and docs.
+R57. [P2a] Five files cannot be migrated mechanically (each already has a local binding named `Icon`) and
+    are migrated by hand, each to semantic names with every icon's `className` text unchanged and no
+    `size` prop: `app/(storefront)/quick-shop/page.tsx`, `components/account/AccountNav.tsx`,
+    `components/layout/ViewSwitcher.tsx`, `components/product/CollectionNav.tsx` and
+    `components/cart/AddToCartButton.tsx`. After P2a none of them imports `lucide-react`, holds a component
+    as a value (a prop, an object field, a ternary or a lookup table), or types anything as `LucideIcon`
+    or `React.ComponentType<{ className`: the props that carried an icon (`NavLink`'s `icon`, the
+    `views` array's `icon`, `COLLECTIONS`' `icon`) are typed `IconName`, and `AddToCartButton` chooses
+    among the registry names `loader-circle`, `check` and `plus` (what `tests/fixtures/lucide-icons-in-use.json`
+    assigns to `Loader2`, `Check` and `Plus`) and renders `<Icon name={...}>` at each site. Where an element's markup is unchanged
+    by construction (the rendered `<svg>` attributes), R34 proves it.
+R58. [P2a] `scripts/verify-classname-parity.ts` exists and takes `--base-root <dir>`, `--head-root <dir>`,
+    repeatable `--allow <path>` and optional `--require-migrated`. For every `.ts` or `.tsx` file present
+    under `app`, `components`, `features` or `lib` in both trees (except `components/icons/` and
+    `--allow`ed paths) it parses both with the TypeScript compiler and takes, in document order, at BASE
+    every JSX element whose tag is an identifier imported from `lucide-react` (resolved by its local name, so `import { Search as SearchIcon }` counts), and at HEAD every JSX
+    element whose tag is `Icon` imported from `@/components/icons/Icon` or `@/components/icons`. The two
+    lists must have equal length, and element by element the source text of the `className` initialiser
+    must be equal (a missing `className` equals a missing `className`), and the HEAD element's props must be
+    exactly the BASE element's props with `aria-hidden` removed and `name` added, each with source text equal
+    to its BASE counterpart (`name` excepted); a HEAD element carrying `size`, `tone`, `label` or a spread
+    attribute fails. A common file that still imports `lucide-react` at HEAD is "not migrated":
+    it is not paired, it is reported on stderr, and it is accepted unless `--require-migrated` is given,
+    which makes it a failure. It exits 0 exactly when nothing failed and
+    prints one `file:line: <reason>` line on stderr per failure, plus a final line
+    `checked N file(s), M not migrated, K allowed`.
+R59. [P2a] `tests/verify-classname-parity.test.ts` spawns the real script (as a child process, the R10 rule)
+    against fixture trees written to a temp directory, and asserts the exit code and stderr for: an
+    identical pair (exit 0); a pair where one `className` text differs (non-zero, naming the file and line);
+    a pair where HEAD adds `size="sm"` (non-zero); a pair where an element was dropped (non-zero); a pair
+    whose HEAD file still imports `lucide-react` (exit 0 without `--require-migrated`, non-zero with it);
+    and an `--allow`ed file that would otherwise fail (exit 0, counted as allowed). The allowlist the P2a
+    pull request passes is the exported `CLASSNAME_PARITY_ALLOWLIST` in
+    `tests/fixtures/classname-parity-allowlist.ts`, each entry with a reason, and a unit test asserts its
+    set of paths equals exactly nine files: the five of R57 and the four files P1 migrated whose icon was
+    already a component value at BASE (`app/(admin)/staff/page.tsx`, `components/layout/DepartmentHero.tsx`,
+    `components/layout/DepartmentScroller.tsx`, `components/staff/PanelNav.tsx`; found when Build ran the
+    real script, which cannot pair a BASE element whose tag was a local binding). Those four were proved
+    live against BASE by `#1226`.
+R60. [P2a] Run against a BASE checkout and the P2a head with that allowlist, the script exits 0 and prints
+    `K allowed` with K equal to 9, and its "not migrated" count equals the 39 files of R56. [P2b] Run
+    against BASE and the P2b head with `--require-migrated` and the same allowlist it exits 0 and its "not
+    migrated" count is 0.
+R61. [P2a] `docs/developer-portal/local-dev-playbook.md` states, each in its own sentence: that Node on
+    Windows cannot resolve `srimart.localhost` (`getaddrinfo` fails with `ENOTFOUND`, while `curl.exe`
+    resolves it), with the two remedies (a hosts-file entry for `srimart.localhost`, or a DNS preload
+    passed through `NODE_OPTIONS`); and that `scripts/demo-accounts.ts add` does not reset the password of an
+    account that already exists, so a demo account created before `DEMO_ACCOUNT_PASSWORD` changed returns
+    401 on sign-in (`#1226`) and must be repaired by the owner. Its `updated` date and `version` are bumped.
+R62. [P2b] `CLAUDE.md`'s bullet under `Design tokens & per-vendor branding` that begins "Icons are used only
+    through `components/icons`" no longer contains the words "being migrated" or "do not add new ones",
+    and says the import ban is enforced by `tests/icon-imports.test.ts`. No registry key present at the P1
+    merge is removed, and none changes provider or tier (the registry is deliberately not pruned in this
+    phase), and every key added by P2a or P2b obeys R15.
 
 ## Colour (P3)
 

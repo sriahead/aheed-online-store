@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import { getOrderRepository } from "@/lib/orders-service";
 import { getAuth } from "@/lib/auth";
 import { OrderItemsCard } from "@/components/orders/OrderItemsCard";
 import { OrderAddressCard } from "@/components/orders/OrderAddressCard";
 import { OrderPointsNote } from "@/components/orders/OrderPointsNote";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 export const dynamic = "force-dynamic";
 
@@ -51,13 +51,13 @@ export default async function OrderConfirmationPage({
           races the webhook, and a closed tab means it never happens at all. */}
       <div className="mb-6 flex items-center gap-3">
         {order.status === "CONFIRMED" && (
-          <CheckCircle2 className="h-8 w-8 shrink-0 text-action" aria-hidden />
+          <Icon name="circle-check" className="h-8 w-8 shrink-0 text-action" />
         )}
         {order.status === "PENDING_PAYMENT" && (
-          <Clock className="h-8 w-8 shrink-0 text-accent" aria-hidden />
+          <Icon name="clock" className="h-8 w-8 shrink-0 text-accent" />
         )}
         {order.status === "CANCELLED" && (
-          <XCircle className="h-8 w-8 shrink-0 text-danger" aria-hidden />
+          <Icon name="circle-x" className="h-8 w-8 shrink-0 text-danger" />
         )}
         <div>
           <h1 className="text-xl font-bold text-primary">

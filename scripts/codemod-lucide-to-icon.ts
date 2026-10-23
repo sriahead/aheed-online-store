@@ -216,9 +216,16 @@ export function migrate(fileName: string, original: string): CodemodResult {
     (element) => !migrated.has(element.name.text) && !dead.has(element.name.text),
   );
   const importText = original.slice(lucideImport.getStart(), lucideImport.getEnd());
+  // A fully removed import takes its own line break with it, so no blank line is left behind.
+  const importEnd = lucideImport.getEnd();
+  const lineBreak = original.startsWith("\r\n", importEnd)
+    ? 2
+    : original[importEnd] === "\n"
+      ? 1
+      : 0;
   edits.push({
     start: lucideImport.getStart(),
-    end: lucideImport.getEnd(),
+    end: remaining.length === 0 ? importEnd + lineBreak : importEnd,
     text:
       remaining.length === 0
         ? ""

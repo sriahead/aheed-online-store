@@ -9,8 +9,8 @@ import type { GuestLookupOrder } from "@/lib/repositories/orders";
 import { checkOrderLookupRateLimitForVendor } from "@/lib/order-lookup-rate-limit-service";
 import { formatPrice } from "@/components/product/format-price";
 import { GuestEraseForm } from "@/components/orders/GuestEraseForm";
-import { Package, Truck, CheckCircle2, Search, MapPin, AlertCircle, Download } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 export const dynamic = "force-dynamic";
 
@@ -152,7 +152,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
             type="submit"
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-primary/90 transition-colors"
           >
-            <Search className="w-4 h-4" />
+            <Icon name="search" className="w-4 h-4" />
             <span>Track Order</span>
           </button>
         </form>
@@ -160,7 +160,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
         {/* Rate-Limited State */}
         {rateLimited && (
           <div className="p-6 bg-red-50 text-red-900 flex items-start gap-3 border-b border-red-100">
-            <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <Icon name="circle-alert" className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
             <div className="text-xs">
               <p className="font-bold">Too many attempts</p>
               <p className="mt-0.5 text-red-700">
@@ -173,7 +173,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
         {/* Error State */}
         {errorMsg && (
           <div className="p-6 bg-red-50 text-red-900 flex items-start gap-3 border-b border-red-100">
-            <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <Icon name="circle-alert" className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
             <div className="text-xs">
               <p className="font-bold">Lookup Failed</p>
               <p className="mt-0.5 text-red-700">{errorMsg}</p>
@@ -213,7 +213,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                           : "bg-slate-200 text-slate-500"
                       }`}
                     >
-                      {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : idx + 1}
+                      {isCompleted ? <Icon name="circle-check" className="w-3.5 h-3.5" /> : idx + 1}
                     </div>
 
                     <div className="pl-2">
@@ -278,7 +278,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
                 download
                 className="inline-flex items-center gap-2 text-sm font-medium text-action hover:text-action-hover underline"
               >
-                <Download className="h-4 w-4" aria-hidden="true" />
+                <Icon name="download" className="h-4 w-4" />
                 Download this order&rsquo;s data (JSON)
               </a>
               <p className="mt-1 text-xs text-slate-600">
