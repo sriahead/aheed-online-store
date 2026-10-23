@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.137.0"
-updated: 2026-10-22
+version: "1.138.0"
+updated: 2026-10-23
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,33 +39,42 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-22, `#1223` icon system: PR 1 of 5 (Phase 1, the foundation) is MERGED TO `staging`, NOT
-  PROMOTED.** PR #1225, squash merge `c439d3b`; `deploy-staging` and `deploy-docs-internal` succeeded.
-  Spec `specs/2026-10-22-icon-system/`, decision `specs/decisions/ADR-008-icon-system.md`, roadmap row in
-  `specs/roadmap.md` 1.177.0. The spec covers **five PRs** (P1 foundation, P2a storefront migration, P2b
-  admin migration and the `lucide-react` import ban, P3 colour, P4a illustrations). **P2a is BUILT on
-  `feature/icon-system-p2a` (pushed, no PR, NOT VALIDATED; `build-notes.md` "Phase 2a build" says what to
-  check and `#1227` is the live-comparison merge gate); P2b, P3 and P4a are unbuilt.** The PR used `Refs #1223`, not `Closes`, so the issue stays open through promotion.
+- **2026-10-23, `#1223` icon system: Phases 1 and 2a are MERGED TO `staging`, NOT PROMOTED.** PR #1225
+  (`c439d3b`) and PR #1229 (`87b1792`); `deploy-staging` succeeded for both. Spec
+  `specs/2026-10-22-icon-system/`, decision `specs/decisions/ADR-008-icon-system.md`, roadmap rows in
+  `specs/roadmap.md` 1.178.0. The spec covers **five PRs**; **next is P2b** (the 39 files still importing
+  `lucide-react` under `app/(admin)` and `components/staff`, the AST import-ban test
+  `tests/icon-imports.test.ts`, and the `CLAUDE.md` icon-bullet wording, R32, R36, R62), on
+  `feature/icon-system-p2b`, cut from `staging` with this documentation. P3 (colour) and P4a (department
+  illustrations) are unbuilt. Both PRs used `Refs #1223`, not `Closes`: only P4a's PR should close it.
   `#1224` (AI-generated per-vendor illustrations) is a later slice gated on an experiment. Owner answer
   still open: whether a footer link to `/third-party-icon-licenses.txt` is wanted.
-  - **Phase 1's live rows ran on 2026-10-23 (`#1226`) and passed:** licence file `200 text/plain` on both hosts,
-    storefront and customer and Aheed staff pages identical to BASE, staging health ok at `c439d3b`. **One gap
-    remains: the two SriMart staff pages**, because `demo-srimart-admin@example.com`'s dev-database password hash
-    is stale (`demo-accounts.ts add` never resets an existing password). The owner repairs it; P2b cannot pass
-    without it. A cloud session still cannot run any live row (no `.env`/`.dev.vars`, proxy blocks staging).
-  - **The first audit's icon count was wrong: 102, not 141** (it also walked the `docs/ui-ref` mockups).
-    `#1223`'s body still says 141. Any count of `lucide-react` usage must be scoped to `app`,
-    `components`, `features` and `lib`, and parsed with the TypeScript compiler, not a line grep.
-  - **`@iconify-json/lucide` is pinned to 1.2.122 on purpose.** It is the release matching the installed
-    `lucide-react` 1.30.0; the newest redrew six icons. Bumping `lucide-react` means re-running
-    `tests/icon-lucide-parity.test.ts` and probably moving that pin. Icons are used only through
-    `components/icons` (`CLAUDE.md`); the ~99 files that still import `lucide-react` are P2's work.
-  - **Do not `npm install` a package in the cloud container and commit the lockfile as it comes out.** Its
-    npm (10.9.4) strips the `libc` markers from 68 platform packages. The lockfile here was restored and the
-    new packages grafted in by hand; the method is in `build-notes.md`.
-  - **A cloud session cannot use `gh`'s GraphQL** (`gh pr create`, `gh pr merge`, `gh pr checks`, Project #2
-    edits all 403). PR create, merge and CI polling worked through `gh api` REST; **moving a board item
-    needs the owner or a local session.**
+  - **P2a's live comparison passed (`#1227`, closed): 34 of 34 pages identical to BASE `6a09b001` on both
+    vendors.** Phase 1's live rows passed too (`#1226`, closed). **Not read by any session:** staging
+    `/api/health` at `87b1792` (a cloud session's proxy refuses the staging hosts); ask the owner to read it.
+    A cloud session cannot run any live row (no `.env`/`.dev.vars`); the owner runs them with a local Claude
+    Code session using the procedure in `specs/2026-10-22-icon-system/validation.md` "Setup".
+  - **`scripts/verify-classname-parity.ts` skips nine files** (`tests/fixtures/classname-parity-allowlist.ts`):
+    the five hand-migrated in P2a and four from P1, all because an icon was a component *value* at BASE. P2b
+    runs it with `--require-migrated` and expects `0 not migrated`.
+  - **BASE for P2b is `6a09b001`** (the commit before PR #1225's squash). `../icon-base` was left in place on
+    the owner's machine and in the last cloud session; recreate it with `git worktree add ../icon-base 6a09b001`.
+  - **`@iconify-json/lucide` is pinned to 1.2.122 on purpose** (the release matching the installed
+    `lucide-react` 1.30.0; the newest redrew six icons). Bumping `lucide-react` means re-running
+    `tests/icon-lucide-parity.test.ts` and probably moving that pin.
+  - **The first audit's icon count was wrong: 102, not 141** (it also walked the `docs/ui-ref` mockups);
+    `#1223`'s body still says 141. Scope any count of `lucide-react` usage to `app`, `components`, `features`
+    and `lib` and parse with the TypeScript compiler, not a line grep.
+  - **Demo accounts (`#1230`).** The dev demo passwords were rotated by hand on 2026-10-23 to a new value
+    (kept in `.dev.vars`, the source of truth; `.env` must match). `scripts/demo-accounts.ts add` still never
+    resets an existing password, reads `.env` while preview uses `.dev.vars`, and `remove` deletes every demo
+    account (so do not use it to reset one). **Staging and production demo accounts were not touched and may
+    still use a password that older spec notes record in plain text.** Details: `local-dev-playbook.md`,
+    `env-setup.md`.
+  - **Do not `npm install` a package in the cloud container and commit the lockfile as it comes out** (its
+    npm 10.9.4 strips the `libc` markers from 68 platform packages). **A cloud session also cannot use `gh`'s
+    GraphQL** (PR create, merge, checks, Project #2): see `specs/sdd-workflow.md` "Ship". Moving a board
+    item needs the owner or a local session; the board is **not** updated for `#1223`, `#1226`-`#1230`.
 - **2026-10-21, `#1186`/`#1187` Document (supersedes this entry's own "BUILT, NOT VALIDATED AND NOT
   MERGED" predecessor). The Quick Shop hub and the Regulars placeholder are IN PRODUCTION.** The
   programme's remaining two slices shipped as **one**,

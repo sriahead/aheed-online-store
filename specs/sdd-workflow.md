@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.50.0"
-updated: 2026-10-22
+version: "2.51.0"
+updated: 2026-10-23
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -532,6 +532,11 @@ Everything that must survive the Clear. This is a **write-to-disk** stage, not a
   changed, leave the handoff untouched. This is a mandatory judgment check, not an
   `sdd:preclear` heuristic.
 - Commit it all. If it isn't committed, the Clear destroys it.
+- **`sdd:preclear` checks only slice files *added* on the branch.** A second PR into a slice folder that
+  already exists on `staging` (a multi-PR slice, `#1223` Phase 2a) only *modifies* its files, so
+  `sdd:preclear` prints `no specs/<date-slice>/ touched` and exits 0 **without running the four-file,
+  heading and CHANGELOG checks**. A skip line is not a pass: run those four checks by hand and say so in the
+  build notes.
 - **Then run `npm run sdd:preclear` and get exit 0.** It is the gate on this stage, not a
   formality: it derives the slice from the branch, requires all four spec files, requires the
   build-notes template's sections, requires a `CHANGELOG.md` diff against the base, and requires a
@@ -608,6 +613,11 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
 - **If the spec itself looks wrong**, say so rather than validating around it. A fresh context that
   conforms to a bad requirement produces a passing slice that's still broken; escalate it as a
   finding and, if it's a real design defect, go back to Spec rather than patching under Fix.
+- **A "this check can fail" guard proves nothing until you have shown the mutation landed.** At `#1223`'s
+  Phase 2a the guard for the className-parity script was "change one `className` in a scratch copy and expect
+  a non-zero exit"; the first attempt edited a file that did not contain the string, the `sed` matched nothing,
+  and the script correctly exited 0 on an unchanged tree, which looked like a pass of the wrong kind. Print the
+  match count or `diff` the copy before reading the exit code.
 - **Check `git worktree list` before concluding a slice's work doesn't exist.** If `build-notes.md`
   names a sub-agent worktree (see Document (build notes)), or if the main checkout looks clean but
   the spec claims a Build happened, the artifact may live at `.claude/worktrees/<agent-id>/` on its
@@ -922,6 +932,14 @@ named gates, but the part of this repo's actual history most prone to drift.
 - Open the PR referencing its issue (`Closes #NN`). Wait for the **actual** CI result before calling
   it ready — poll correctly (multi-line `gh pr checks` output breaks a naive string-equality check;
   match on absence of `pending` instead) rather than assuming a run will pass.
+- **A cloud session cannot use `gh`'s GraphQL, so `gh pr create`, `gh pr merge`, `gh pr checks`, `gh project`
+  and `gh pr view --json` all return a 403 (`#1223`).** REST works: create with `gh api repos/<o>/<r>/pulls -f
+  title=… -f head=… -f base=staging -F body=@<file>`, label with `gh api repos/<o>/<r>/issues/<n>/labels -f
+  'labels[]=…'`, poll with `gh api repos/<o>/<r>/commits/<sha>/check-runs`, and merge with `gh api -X PUT
+  repos/<o>/<r>/pulls/<n>/merge -f merge_method=squash` (`merge` for a `staging` to `main` promotion). **Project
+  #2 has no REST route here, so a board move is left to the owner or a local session and must be reported as
+  not done**, not skipped. The cloud session's egress proxy also refuses the staging and production hosts, so
+  the `/api/health` read of the post-merge step needs the owner to paste it.
 - **`gh pr checks` is a view, not the truth — cross-check a long "pending" against
   `gh run view <run-id> --json status,conclusion`.** During P5a's promotion (#140) a `gates` run
   showed every step green in the Actions UI, including `Complete job`, while the job's own status

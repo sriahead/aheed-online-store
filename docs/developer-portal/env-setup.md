@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.21.0"
-updated: 2026-10-21
+version: "1.22.0"
+updated: 2026-10-23
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -639,7 +639,8 @@ DIRECT_URL=<env-direct-url> npm run demo:accounts -- remove
 - **All five accounts share the ONE `DEMO_ACCOUNT_PASSWORD` value for that run — there is no
   per-account password.** `add` only sets a password when it *creates* a user, so once an account
   exists, whatever it was created with is the only record of it. A `remove` then `add` cycle (the
-  documented way to reset the roster) sets **every** account's password to whichever
+  documented way to reset the roster; **it deletes every demo account and cascades, so on a database
+  where `demo-customer` has orders or lists it destroys them, `#1230`**) sets **every** account's password to whichever
   `DEMO_ACCOUNT_PASSWORD` that one run used, including any account whose password an owner had
   meant to set independently — there is nowhere in the tool to override just one. Hit live at
   `#912`'s `/ship` R28 proof (2026-09-27): staging's `demo-srimart-admin@example.com` had been
