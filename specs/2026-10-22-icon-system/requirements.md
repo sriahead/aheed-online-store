@@ -187,8 +187,11 @@ R37. [all] Bundle budgets, measured with the commands in `validation.md` against
 
 ## Phase 2 amendment (P2a and P2b)
 
-R56. [P2a] The P2a pull request touches no file under `app/(admin)/` or `components/staff/`:
-    `git diff --name-only <P1 merge c439d3b>..<P2a head> -- "app/(admin)" components/staff` prints nothing.
+R56. [P2a] The P2a pull request touches no file under `app/(admin)/` or `components/staff/` except the
+    generated `app/(admin)/staff/runbook/docs.ts` (which `npm run kms:build-index` rewrites whenever a doc
+    changes, so it cannot be excluded from a slice that edits docs):
+    `git diff --name-only <P1 merge c439d3b>..<P2a head> -- "app/(admin)" components/staff ":!app/(admin)/staff/runbook/docs.ts"`
+    prints nothing.
     Every file that still imports `lucide-react` at the P2a head is under one of those two paths, and
     there are exactly the 39 that imported it at the P1 merge. After P2a, no file elsewhere under `app`,
     `components`, `features` or `lib` (other than `components/icons/`) imports `lucide-react`. P2b is
@@ -227,9 +230,13 @@ R59. [P2a] `tests/verify-classname-parity.test.ts` spawns the real script (as a 
     and an `--allow`ed file that would otherwise fail (exit 0, counted as allowed). The allowlist the P2a
     pull request passes is the exported `CLASSNAME_PARITY_ALLOWLIST` in
     `tests/fixtures/classname-parity-allowlist.ts`, each entry with a reason, and a unit test asserts its
-    set of paths equals exactly the five files of R57.
+    set of paths equals exactly nine files: the five of R57 and the four files P1 migrated whose icon was
+    already a component value at BASE (`app/(admin)/staff/page.tsx`, `components/layout/DepartmentHero.tsx`,
+    `components/layout/DepartmentScroller.tsx`, `components/staff/PanelNav.tsx`; found when Build ran the
+    real script, which cannot pair a BASE element whose tag was a local binding). Those four were proved
+    live against BASE by `#1226`.
 R60. [P2a] Run against a BASE checkout and the P2a head with that allowlist, the script exits 0 and prints
-    `K allowed` with K equal to 5, and its "not migrated" count equals the 39 files of R56. [P2b] Run
+    `K allowed` with K equal to 9, and its "not migrated" count equals the 39 files of R56. [P2b] Run
     against BASE and the P2b head with `--require-migrated` and the same allowlist it exits 0 and its "not
     migrated" count is 0.
 R61. [P2a] `docs/developer-portal/local-dev-playbook.md` states, each in its own sentence: that Node on
