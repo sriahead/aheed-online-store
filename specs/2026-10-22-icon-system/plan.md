@@ -4,8 +4,8 @@ title: "Colourful, vendor-themed, provider-agnostic icon system (plan)"
 audience: [dev]
 type: spec
 status: draft
-version: "1.0.0"
-updated: 2026-10-22
+version: "1.1.0"
+updated: 2026-10-23
 visibility: internal
 summary: One Icon component over a semantic-name registry and build-time bundled Iconify data (Lucide functional, Phosphor duotone decorative, Noto department illustrations), themed per vendor from existing tokens. Phases 1 to 4a of issue 1223.
 tags: [icons, design-system, theming, iconify, accessibility, multi-tenancy]
@@ -57,13 +57,13 @@ a second vendor's palette reaches the icons with no new tokens.
 | PR | Phase | Visual change | Contents |
 | --- | --- | --- | --- |
 | 1 | P1 Foundation | none | ADR-008, design-system/tech-stack/CLAUDE.md text, devDependencies, generator, registry, `Icon`, parity test, licence file, `category-icon` and `nav-items` moved to semantic names, the three coupled tests rewritten, `scripts/verify-icon-markup.ts` |
-| 2 | P2a Storefront migration | none | every `lucide-react` import under storefront code replaced by `Icon`; each icon's `className` carried over verbatim and no `size` prop set (the size scale is for new usage), so the rendered SVG attributes do not change |
-| 3 | P2b Admin/staff migration | none | the rest, plus the import-ban guard test |
+| 2 | P2a Storefront migration | none | the 60 files outside `app/(admin)` and `components/staff` that still import `lucide-react` (55 by the codemod, 5 by hand: R57); `className` carried over verbatim, no `size` prop; adds `scripts/verify-classname-parity.ts` (R58 to R60) and the playbook notes (R61) |
+| 3 | P2b Admin/staff migration | none | the 39 files under `app/(admin)` and `components/staff`, the import-ban guard test (R32), the `CLAUDE.md` wording (R62) |
 | 4 | P3 Colour | yes | decorative two-hue glyphs on the surfaces listed below |
 | 5 | P4a Illustrations | yes | static department illustrations on the department strip and hero |
 
 P1 to P2b are required to be behaviour-preserving: any difference in the rendered SVG inventory is a
-defect, not a taste question (R34, R35). Colour is introduced only after that is proven.
+defect, not a taste question (R34, R35, R58 to R60). Colour is introduced only after that is proven.
 
 ### Architecture (decisions; the rationale is in ADR-008)
 
@@ -167,12 +167,52 @@ code, exactly as `category-icon.ts` does today; making it data-driven is `#1224`
 | Grocery pictures on a non-grocery vendor | R49, R51 |
 | New runtime network dependency or CSP widening | R50 |
 
+## Phase 2 amendment (written 2026-10-23, before P2a is built)
+
+Approved on `#1223` (proposal comment, owner answers recorded there). Measured at that point on the P1 merge
+(`c439d3b`), not carried from the first audit:
+
+- **99 files still import `lucide-react`: 60 outside `app/(admin)` and `components/staff` (P2a) and 39 inside
+  them (P2b).** The proposal's "about 77" was a miscount. A dry run of `scripts/codemod-lucide-to-icon.ts`
+  converts 94 and refuses 5, each because the file already has a local binding called `Icon`:
+  `app/(storefront)/quick-shop/page.tsx`, `AccountNav`, `ViewSwitcher`, `CollectionNav`, `AddToCartButton`.
+  Four pass an icon as a component value (the R36 shape); `AddToCartButton` picks `Loader2`, `Check` or `Plus`
+  at render time. All five are hand-migrated in P2a (R57), and none of them is staff code.
+- **P1 is proved against BASE on 2026-10-23 (`#1226`):** 10 and 10 storefront pages, 7 customer pages and 5
+  Aheed staff pages identical; the licence file served `200 text/plain` on both hosts; staging health ok. The
+  two SriMart staff pages were not compared (a stale demo password in the dev database). That is why BASE stays
+  the reference for P2a and P2b: the comparison is cumulative, and a difference can only be new in P2.
+
+### What this amendment changes, and why
+
+| Change | Why |
+| --- | --- |
+| R34 now includes the signed-in customer list; R35 runs the staff lists at **both** P2a and P2b | P2a migrates `/account` and `/quick-shop`, which the old R35 only compared in P2b, and staff pages render shared components that P2a migrates (`components/errors/ErrorPanel` is one, found by an import scan; `Header` was P1 and is already proved), so a P2a change can reach them |
+| R35's SriMart staff pair has a sign-in precondition and is UNVERIFIED, not failed, in P2a | The owner repairs a dev-database account; a validator must not be asked to write to a database |
+| R56 pins the 60/39 split and forbids a P2a edit under the 39 | Keeps the two PRs separable and reviewable, and makes P2b's diff predictable |
+| R57 to R60 add a cloud-runnable className parity check | R34 and R35 need the owner's machine; the main risk of a mechanical migration (a changed class, a lost size, a stray prop) is decidable from source, so it is checked in every cloud validation. It does **not** replace R34 and R35, which prove the rendered markup |
+| R61 records two traps in the playbook | Both cost real time in `#1226`: Node on Windows cannot resolve `*.localhost`, and `demo-accounts.ts add` does not reset an existing account's password |
+| R62 updates `CLAUDE.md` when the ban lands | The bullet says files "are being migrated"; once `tests/icon-imports.test.ts` enforces the ban that sentence is false, and a future session would read it as permission to leave a file behind |
+| R37 adds a P2a checkpoint | The budget was only checked after P2b; P2a moves 60 files and the client bundle shape is the named risk |
+
+### Deliberately not in P2a or P2b
+
+- **Registry pruning.** The 99 keys stay (a few have no JSX use yet). Pruning would shrink the generated data by
+  a few hundred bytes and break R31 for no benefit; R62 forbids removing or changing a key.
+- **`AccountNav` and `quick-shop` redesign.** `#1195` (Quick Shop as three tabs under `/account`, open) edits the
+  same two files. This slice only changes their icon plumbing; whichever lands second rebases, and the five-file
+  allowlist and R57 are written so the rebase can be checked by the same commands.
+- **Any `size`, `tone` or provider change.** P2 is behaviour-preserving; colour is P3.
+- **Splitting the icon data by tier** (a bundle fallback). Only if R37 fails; P1 added 794 bytes.
+- **`lucide-react` removal** stays Phase 5, out of scope (R53).
+
 ## Open items carried forward
 
 - **Credits page (owner).** Whether a footer link to `/third-party-icon-licenses.txt` is wanted is
   undecided; this slice ships the file only. Tracked on `#1223`.
 - **Model.** `CLAUDE.md` assigns Spec and Build to Opus 5; this spec was written on Sonnet 5.5 at the
   owner's `/spec` instruction. Build should run on Opus 5 once the owner switches.
+- **`#1226`** (the two SriMart staff pages and the stale demo-account password), a precondition of R35 and a P2b gate.
 - **`#1224`** (AI illustrations) and **`#1195`** (Quick Shop re-homing, which also changes `AccountNav`).
 - **Unverified at spec time:** client and Worker bundle baselines (recorded at Build start, R37); whether
   Lucide's Iconify data and the installed `lucide-react` differ in any icon's geometry (R26 finds out and
