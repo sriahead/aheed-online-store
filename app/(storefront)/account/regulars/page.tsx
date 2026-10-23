@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { REGULARS_PLACEHOLDER_MESSAGE } from "@/lib/regulars";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Regulars (#1186) — the placeholder half. See `lib/regulars.ts` for the five decisions the
@@ -38,7 +38,7 @@ export default async function AccountRegularsPage() {
         href="/account"
         className="mb-4 inline-flex items-center gap-1 text-sm text-primary-muted hover:text-primary"
       >
-        <ChevronLeft className="h-4 w-4" aria-hidden />
+        <Icon name="chevron-left" className="h-4 w-4" />
         Your account
       </Link>
 

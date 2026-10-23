@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * What an order says about loyalty points earned (P7.5b, #138).
@@ -43,7 +43,7 @@ export function OrderPointsNote({
   if (pointsEarned !== null && pointsEarned > 0) {
     return (
       <p className="mb-5 flex items-center gap-2 rounded-2xl bg-action-tint px-4 py-3 text-sm text-primary">
-        <Sparkles className="h-4 w-4 shrink-0 text-action" aria-hidden />
+        <Icon name="sparkles" className="h-4 w-4 shrink-0 text-action" />
         <span>
           You earned <span className="font-bold">{pointsEarned}</span> points on this order.
         </span>
@@ -54,7 +54,7 @@ export function OrderPointsNote({
   if (status === "PENDING_PAYMENT") {
     return (
       <p className="mb-5 flex items-center gap-2 rounded-2xl bg-surface-muted px-4 py-3 text-sm text-primary-muted">
-        <Sparkles className="h-4 w-4 shrink-0 text-primary-subtle" aria-hidden />
+        <Icon name="sparkles" className="h-4 w-4 shrink-0 text-primary-subtle" />
         {/* Deliberately carries no number — see the component note. */}
         <span>Your loyalty points are added once payment clears.</span>
       </p>

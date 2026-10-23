@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Share2, Users } from "lucide-react";
 import {
   buildShareLinks,
   MIN_REFERRAL_ORDER_PENCE,
   REFERRAL_DISCOUNT_PENCE,
 } from "@/lib/referrals";
 import { formatPrice } from "@/components/product/format-price";
+import { Icon } from "@/components/icons/Icon";
 
 function FacebookIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
@@ -111,7 +111,7 @@ export function ReferralCard({
               isDark ? "bg-amber-400/20 text-amber-400" : "bg-action-tint text-action"
             }`}
           >
-            <Users className="h-4 w-4" aria-hidden="true" />
+            <Icon name="users" className="h-4 w-4" />
           </div>
           <div>
             <h3 className="text-sm font-semibold">Refer your friends</h3>
@@ -130,7 +130,7 @@ export function ReferralCard({
               isDark ? "bg-white/10 hover:bg-white/20" : "bg-black/5 hover:bg-black/10"
             } transition`}
           >
-            <Share2 className="h-4 w-4" aria-hidden="true" />
+            <Icon name="share" className="h-4 w-4" />
           </button>
         )}
       </div>
@@ -190,12 +190,12 @@ export function ReferralCard({
             >
               {copied ? (
                 <>
-                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                  <Icon name="check" className="h-3.5 w-3.5" />
                   <span>Copied</span>
                 </>
               ) : (
                 <>
-                  <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                  <Icon name="copy" className="h-3.5 w-3.5" />
                   <span>Copy</span>
                 </>
               )}

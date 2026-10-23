@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Heart } from "lucide-react";
 import { toggleFavourite } from "@/features/favourites/toggle-favourite";
 import { favouriteControlLabel, type FavouriteState } from "@/lib/favourites";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * The product card's favourite control (#232).
@@ -74,7 +74,7 @@ export function FavouriteButton({
         className={POSITION}
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs">
-          <Heart className="h-4 w-4" aria-hidden />
+          <Icon name="heart" className="h-4 w-4" />
         </span>
       </Link>
     );
@@ -124,7 +124,7 @@ export function FavouriteButton({
           on ? "text-action" : "text-primary"
         } ${failed ? "ring-2 ring-danger" : ""}`}
       >
-        <Heart className={`h-4 w-4 ${on ? "fill-current" : ""}`} aria-hidden />
+        <Icon name="heart" className={`h-4 w-4 ${on ? "fill-current" : ""}`} />
       </span>
     </button>
   );

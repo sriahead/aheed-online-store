@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookmarkPlus, ListChecks } from "lucide-react";
 import { getCartRepository } from "@/lib/cart-service";
 import { getCartIdentity, getUserId } from "@/lib/cart-identity";
 import { saveCartAsList } from "@/features/lists/save-cart-as-list";
@@ -15,6 +14,7 @@ import { RestoreNotice } from "@/components/cart/RestoreNotice";
 import { getFulfilmentMethod } from "@/lib/fulfilment-service";
 import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Canonical cart URL (P3a, #93). The drawer is the primary surface, but this
@@ -68,7 +68,7 @@ export default async function CartPage({
           href="/shop-your-list"
           className="flex items-center gap-1.5 rounded-xl border border-primary/20 px-3 py-1.5 text-xs font-bold text-primary"
         >
-          <ListChecks className="h-4 w-4" aria-hidden />
+          <Icon name="list-checks" className="h-4 w-4" />
           Smart Lists
         </Link>
       </div>
@@ -132,7 +132,7 @@ export default async function CartPage({
               type="submit"
               className="inline-flex shrink-0 items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white"
             >
-              <BookmarkPlus className="h-4 w-4" aria-hidden />
+              <Icon name="bookmark-plus" className="h-4 w-4" />
               Save list
             </button>
           </div>

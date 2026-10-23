@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { Download } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { getDataRightsRepository } from "@/lib/data-rights-service";
 import {
@@ -17,6 +16,7 @@ import { MarketingConsentForm } from "@/components/account/MarketingConsentForm"
 import { getMarketingConsentRepository } from "@/lib/marketing-consent-service";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and the viewer's own account state — must render per request.
 export const dynamic = "force-dynamic";
@@ -69,7 +69,7 @@ export default async function AccountDataPage() {
           prefetch={false}
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100"
         >
-          <Download className="h-4 w-4" aria-hidden />
+          <Icon name="download" className="h-4 w-4" />
           Download
         </Link>
       </section>

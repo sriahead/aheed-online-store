@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import { MapPin, ShieldCheck, Sparkles, Tag, User, Clock } from "lucide-react";
 import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-order";
 import { inputClass, labelClass } from "@/lib/form-classes";
 import { lookupAddressForCheckout } from "@/features/checkout/address-lookup";
@@ -17,6 +16,7 @@ import {
 } from "@/lib/checkout-sections";
 import { SlotPicker } from "./SlotPicker";
 import { readCheckoutDetails, writeCheckoutDetails } from "@/lib/checkout-details-storage";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Checkout form (P3b, #96), following docs/ui-ref/CheckoutModal.tsx's structure —
@@ -353,7 +353,7 @@ export function CheckoutForm({
       {offerCollection && (
         <section className="space-y-3">
           <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
-            <MapPin className="h-4 w-4" aria-hidden />
+            <Icon name="map-pin" className="h-4 w-4" />
             {heading("fulfilment")}
           </h2>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -393,7 +393,7 @@ export function CheckoutForm({
 
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
-          <User className="h-4 w-4" aria-hidden />
+          <Icon name="user" className="h-4 w-4" />
           {heading("contact")}
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -457,7 +457,7 @@ export function CheckoutForm({
       {method === "DELIVERY" && (
         <section className="space-y-3 border-t border-black/5 pt-5">
           <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
-            <MapPin className="h-4 w-4" aria-hidden />
+            <Icon name="map-pin" className="h-4 w-4" />
             {heading("address")}
           </h2>
           {savedAddresses.length > 0 && (
@@ -613,7 +613,7 @@ export function CheckoutForm({
       {((method === "DELIVERY" && offerDeliverySlots) || method === "COLLECTION") && (
         <section className="space-y-3 border-t border-black/5 pt-5">
           <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
-            <Clock className="h-4 w-4" aria-hidden />
+            <Icon name="clock" className="h-4 w-4" />
             {heading("time")}
           </h2>
           <SlotPicker
@@ -631,7 +631,7 @@ export function CheckoutForm({
       {redeemable && (
         <section className="space-y-3 border-t border-black/5 pt-5">
           <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
-            <Sparkles className="h-4 w-4" aria-hidden />
+            <Icon name="sparkles" className="h-4 w-4" />
             {heading("loyalty")}
           </h2>
           <p className="text-xs text-primary-muted">
@@ -677,7 +677,7 @@ export function CheckoutForm({
       */}
       <section className="space-y-3 border-t border-black/5 pt-5">
         <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
-          <Tag className="h-4 w-4" aria-hidden />
+          <Icon name="tag" className="h-4 w-4" />
           {heading("discount")}
         </h2>
         <div className="max-w-sm">
@@ -763,7 +763,7 @@ export function CheckoutForm({
         disabled={pending}
         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <ShieldCheck className="h-4 w-4" aria-hidden />
+        <Icon name="shield-check" className="h-4 w-4" />
         {pending ? "Continuing to payment…" : "Continue to payment"}
       </button>
     </form>

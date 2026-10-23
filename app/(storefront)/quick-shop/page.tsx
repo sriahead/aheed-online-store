@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Boxes, Heart, ListChecks, Repeat } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
+import type { IconName } from "@/components/icons/registry";
 
 /**
  * The Quick Shop hub (#1187) — what the header's Quick Shop button opens, instead of going straight
@@ -33,33 +34,39 @@ const TILE_CLASS =
  * `tests/vendor-neutral-copy.test.ts` is a denylist and cannot catch a new vendor-specific phrase,
  * so this stays a review obligation rather than a test one.
  */
-const TILES = [
+const TILES: {
+  href: string;
+  label: string;
+  description: string;
+  icon: IconName;
+  iconClass: string;
+}[] = [
   {
     href: "/account/favourites",
     label: "Your favourites",
     description: "Everything you have tapped the heart on, ready to add to your basket again.",
-    Icon: Heart,
+    icon: "heart",
     iconClass: "text-action",
   },
   {
     href: "/account/regulars",
     label: "Your regulars",
     description: "The items you order most often, in one place.",
-    Icon: Repeat,
+    icon: "repeat",
     iconClass: "text-accent",
   },
   {
     href: "/shop-your-list",
     label: "Smart Lists",
     description: "Paste or type a list and match it to what is in stock.",
-    Icon: ListChecks,
+    icon: "list-checks",
     iconClass: "text-action",
   },
   {
     href: "/bundles",
     label: "Value Bundles",
     description: "Multi-item bundles at a set price.",
-    Icon: Boxes,
+    icon: "boxes",
     iconClass: "text-accent",
   },
 ] as const;
@@ -74,9 +81,9 @@ export default function QuickShopPage() {
 
       {/* Same responsive card grid as `/account`: 2-column on desktop, single-column on mobile. */}
       <div className="grid gap-4 sm:grid-cols-2">
-        {TILES.map(({ href, label, description, Icon, iconClass }) => (
+        {TILES.map(({ href, label, description, icon, iconClass }) => (
           <Link key={href} href={href} className={TILE_CLASS}>
-            <Icon className={`mb-3 h-6 w-6 ${iconClass}`} aria-hidden="true" />
+            <Icon name={icon} className={`mb-3 h-6 w-6 ${iconClass}`} />
             <p className="font-semibold text-primary">{label}</p>
             <p className="mt-1 text-sm text-primary-muted">{description}</p>
           </Link>

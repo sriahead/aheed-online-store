@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useEffect, useState, useTransition } from "react";
-import { Truck, MapPin, Store, Check, Pencil, ChevronDown } from "lucide-react";
 import { setDeliveryPostcode, setFulfilmentMethod } from "@/features/storefront/delivery";
 import { POSTCODE_INTENT_FIELD, type PostcodeIntent } from "@/lib/delivery-cookie";
 import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Header delivery / Click & Collect control.
@@ -123,14 +123,14 @@ export function LocationControl({
             className="flex h-full min-h-tap w-full cursor-pointer list-none items-center gap-1.5 whitespace-nowrap rounded-xl border border-black/10 bg-surface-muted px-3 py-2 text-xs font-bold text-black/80 transition hover:bg-black/5 sm:w-auto lg:min-h-0 [&::-webkit-details-marker]:hidden"
           >
             {method === "COLLECTION" ? (
-              <Store className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+              <Icon name="store" className="h-4 w-4 shrink-0 text-primary" />
             ) : (
-              <Truck className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+              <Icon name="truck" className="h-4 w-4 shrink-0 text-primary" />
             )}
             <span className="min-w-0 truncate">{summaryLabel}</span>
-            <ChevronDown
+            <Icon
+              name="chevron-down"
               className="ml-auto h-3.5 w-3.5 shrink-0 text-black/60 transition-transform group-open:rotate-180 sm:ml-0"
-              aria-hidden
             />
           </summary>
 
@@ -153,10 +153,10 @@ export function LocationControl({
                 aria-current={method === "COLLECTION" ? "true" : undefined}
                 className={itemClass}
               >
-                <Store className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                <Icon name="store" className="h-4 w-4 shrink-0 text-primary" />
                 <span className="flex-1">Click &amp; Collect</span>
                 {method === "COLLECTION" && (
-                  <Check className="h-4 w-4 shrink-0 text-action" aria-hidden />
+                  <Icon name="check" className="h-4 w-4 shrink-0 text-action" />
                 )}
               </button>
             </form>
@@ -171,10 +171,10 @@ export function LocationControl({
                   aria-current={method === "DELIVERY" ? "true" : undefined}
                   className={itemClass}
                 >
-                  <Truck className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                  <Icon name="truck" className="h-4 w-4 shrink-0 text-primary" />
                   <span className="flex-1">{deliveryLabel}</span>
                   {method === "DELIVERY" && (
-                    <Check className="h-4 w-4 shrink-0 text-action" aria-hidden />
+                    <Icon name="check" className="h-4 w-4 shrink-0 text-action" />
                   )}
                 </button>
               </form>
@@ -190,10 +190,10 @@ export function LocationControl({
                 aria-current={method === "DELIVERY" ? "true" : undefined}
                 className={itemClass}
               >
-                <Truck className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                <Icon name="truck" className="h-4 w-4 shrink-0 text-primary" />
                 <span className="flex-1">Delivery</span>
                 {method === "DELIVERY" && (
-                  <Check className="h-4 w-4 shrink-0 text-action" aria-hidden />
+                  <Icon name="check" className="h-4 w-4 shrink-0 text-action" />
                 )}
               </button>
             )}
@@ -214,7 +214,7 @@ export function LocationControl({
                 data-tap-surface="location"
                 className={itemClass}
               >
-                <Pencil className="h-4 w-4 shrink-0 text-black/60" aria-hidden />
+                <Icon name="pencil" className="h-4 w-4 shrink-0 text-black/60" />
                 <span className="flex-1">Change postcode</span>
               </button>
             )}
@@ -233,9 +233,9 @@ export function LocationControl({
           aria-label={hasDeliverablePostcode ? deliveryLabel : "Check delivery availability"}
         >
           {hasDeliverablePostcode ? (
-            <Check className="w-4 h-4 text-action" />
+            <Icon name="check" className="w-4 h-4 text-action" />
           ) : (
-            <Truck className="w-4 h-4 text-primary" />
+            <Icon name="truck" className="w-4 h-4 text-primary" />
           )}
           <span aria-hidden className="hidden sm:inline">
             {hasDeliverablePostcode ? `Delivery · ${postcode}` : "Check delivery availability"}
@@ -286,9 +286,9 @@ export function LocationControl({
 
             <div className="flex items-center gap-2">
               <div className="relative flex-1 flex items-center">
-                <MapPin
+                <Icon
+                  name="map-pin"
                   className="pointer-events-none absolute left-3 h-4 w-4 text-black/60"
-                  aria-hidden
                 />
                 <input
                   type="text"
@@ -318,7 +318,7 @@ export function LocationControl({
                 </p>
                 {offerCollection && (
                   <p className="flex items-center gap-1.5 text-sm font-bold text-primary mt-3">
-                    <Check className="w-4 h-4 text-action" />
+                    <Icon name="check" className="w-4 h-4 text-action" />
                     Click &amp; Collect is still available
                   </p>
                 )}

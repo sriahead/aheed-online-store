@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { Trash2 } from "lucide-react";
 import { eraseMyData } from "@/features/account/data-rights";
 import { initialDataRightsState, type EraseConfirmationMode } from "@/lib/data-rights-form";
 import { inputClass } from "@/lib/form-classes";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Art. 17 erasure (P7b, #216).
@@ -101,7 +101,7 @@ export function EraseDataForm({ mode, accountEmail, blockedReason }: EraseDataFo
         disabled={working}
         className="flex items-center justify-center gap-2 rounded-2xl bg-danger px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <Trash2 className="h-4 w-4" aria-hidden />
+        <Icon name="trash" className="h-4 w-4" />
         {working ? "Erasing…" : "Erase my data"}
       </button>
     </form>

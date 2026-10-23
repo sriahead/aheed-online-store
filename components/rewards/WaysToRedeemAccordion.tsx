@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Gift, ShoppingBag, Percent } from "lucide-react";
 import { formatPrice } from "@/components/product/format-price";
+import { Icon } from "@/components/icons/Icon";
 
 export function WaysToRedeemAccordion({
   pencePerPointRedeemed = 1,
@@ -35,15 +35,15 @@ export function WaysToRedeemAccordion({
               isDark ? "bg-amber-400/20 text-amber-400" : "bg-action-tint text-action"
             }`}
           >
-            <Gift className="h-4 w-4" aria-hidden="true" />
+            <Icon name="gift" className="h-4 w-4" />
           </div>
           <span className="text-sm font-semibold">Ways to redeem</span>
         </div>
-        <ChevronDown
+        <Icon
+          name="chevron-down"
           className={`h-4 w-4 transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
           } ${isDark ? "text-stone-400" : "text-primary-muted"}`}
-          aria-hidden="true"
         />
       </button>
 
@@ -54,7 +54,8 @@ export function WaysToRedeemAccordion({
           }`}
         >
           <div className="flex items-start gap-2.5">
-            <Gift
+            <Icon
+              name="gift"
               className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? "text-amber-400" : "text-action"}`}
             />
             <div>
@@ -68,7 +69,8 @@ export function WaysToRedeemAccordion({
           </div>
 
           <div className="flex items-start gap-2.5">
-            <Percent
+            <Icon
+              name="percent"
               className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? "text-amber-400" : "text-accent"}`}
             />
             <div>
@@ -83,7 +85,8 @@ export function WaysToRedeemAccordion({
           </div>
 
           <div className="flex items-start gap-2.5">
-            <ShoppingBag
+            <Icon
+              name="shopping-bag"
               className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? "text-amber-400" : "text-action"}`}
             />
             <div>

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Share2, X } from "lucide-react";
 import { contactChannels } from "@/lib/contact-channels";
 import { ContactChannelIcon } from "@/components/layout/contact-channel-icons";
 import {
   AssistantLauncherProvider,
   useAssistantLauncher,
 } from "@/components/assistant/AssistantLauncher";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Floating per-vendor contact cluster (P9.2, #407 / #405).
@@ -146,11 +146,7 @@ function FloatingContactPanel(props: FloatingContactProps) {
           title={open ? "Hide contact links" : `Contact and follow ${vendorName}`}
           className="flex h-12 w-12 items-center justify-center rounded-full bg-action text-white shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-transform hover:scale-105 motion-reduce:hover:scale-100 hover:bg-action-hover"
         >
-          {open ? (
-            <X className="h-5 w-5" aria-hidden="true" />
-          ) : (
-            <Share2 className="h-5 w-5" aria-hidden="true" />
-          )}
+          {open ? <Icon name="x" className="h-5 w-5" /> : <Icon name="share" className="h-5 w-5" />}
         </button>
       </div>
     </div>

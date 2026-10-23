@@ -2,8 +2,8 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
 import { SearchSuggest } from "./SearchSuggest";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * One option as the selector needs it: its slug is what `/search?category=` takes. #1169 — a
@@ -110,7 +110,7 @@ export function DepartmentSearchBar({
         data-tap-surface="search"
         className="flex min-h-tap min-w-tap lg:min-h-0 lg:min-w-0 shrink-0 items-center justify-center rounded-r-xl bg-accent px-3 text-white hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
       >
-        <Search className="h-4 w-4" aria-hidden />
+        <Icon name="search" className="h-4 w-4" />
       </button>
     </form>
   );

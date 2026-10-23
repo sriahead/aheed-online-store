@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { getProductRepository } from "@/lib/products-service";
 import { getShoppingListService } from "@/lib/shopping-lists-service";
@@ -10,6 +9,7 @@ import { itemsToLines } from "@/lib/saved-list";
 import { distinctTerms, resolveLines } from "@/lib/shopping-list";
 import { ListReview } from "@/components/cart/ListReview";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Open a saved list against today's catalogue (P10, #116).
@@ -60,7 +60,7 @@ export default async function SavedListPage({ params }: { params: Promise<{ list
         href="/account/lists"
         className="mb-4 inline-flex items-center gap-1 text-sm text-primary-muted hover:text-primary"
       >
-        <ChevronLeft className="h-4 w-4" aria-hidden />
+        <Icon name="chevron-left" className="h-4 w-4" />
         Your lists
       </Link>
 

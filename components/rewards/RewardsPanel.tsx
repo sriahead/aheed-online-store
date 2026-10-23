@@ -2,11 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { X, Sparkles } from "lucide-react";
 import { WaysToEarnAccordion } from "@/components/rewards/WaysToEarnAccordion";
 import { WaysToRedeemAccordion } from "@/components/rewards/WaysToRedeemAccordion";
 import { ReferralCard } from "@/components/rewards/ReferralCard";
 import { REFERRAL_DISCOUNT_PENCE } from "@/lib/referrals";
+import { Icon } from "@/components/icons/Icon";
 
 export interface RewardsData {
   authenticated: boolean;
@@ -87,7 +87,7 @@ export function RewardsPanel({
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 text-amber-300">
-              <Sparkles className="h-4 w-4" aria-hidden="true" />
+              <Icon name="sparkles" className="h-4 w-4" />
             </span>
             <span className="text-xs font-black tracking-wider uppercase text-white">
               {vendorName} Club
@@ -100,7 +100,7 @@ export function RewardsPanel({
             aria-label="Close rewards panel"
             className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-white transition"
           >
-            <X className="h-4 w-4" aria-hidden="true" />
+            <Icon name="x" className="h-4 w-4" />
           </button>
         </div>
 

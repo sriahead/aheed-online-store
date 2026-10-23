@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { Save } from "lucide-react";
 import { updateMyName } from "@/features/account/data-rights";
 import { initialDataRightsState } from "@/lib/data-rights-form";
 import { inputClass } from "@/lib/form-classes";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Art. 16 rectification (P7b, #216) — correct your own display name.
@@ -57,7 +57,7 @@ export function NameForm({ currentName }: { currentName: string }) {
         disabled={saving}
         className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <Save className="h-4 w-4" aria-hidden />
+        <Icon name="save" className="h-4 w-4" />
         {saving ? "Saving…" : "Save name"}
       </button>
     </form>

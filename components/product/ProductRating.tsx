@@ -1,4 +1,4 @@
-import { Star } from "lucide-react";
+import { Icon } from "@/components/icons/Icon";
 
 export function ProductRating({
   averageRating,
@@ -11,7 +11,7 @@ export function ProductRating({
 
   return (
     <div className="flex items-center gap-1">
-      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden />
+      <Icon name="star" className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
       <span className="font-medium text-black/70">{averageRating.toFixed(1)}</span>
       <span>({reviewCount})</span>
     </div>

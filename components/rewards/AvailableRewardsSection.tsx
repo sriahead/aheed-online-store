@@ -1,7 +1,7 @@
 "use client";
 
-import { Gift, Lock, CheckCircle2 } from "lucide-react";
 import { formatPrice } from "@/components/product/format-price";
+import { Icon } from "@/components/icons/Icon";
 
 interface RewardThreshold {
   id: string;
@@ -58,7 +58,7 @@ export function AvailableRewardsSection({
             isDark ? "bg-amber-400/20 text-amber-400" : "bg-action-tint text-action"
           }`}
         >
-          <Gift className="h-4 w-4" aria-hidden="true" />
+          <Icon name="gift" className="h-4 w-4" />
         </div>
         <div>
           <h3 className="text-sm font-semibold">Points milestones</h3>
@@ -109,12 +109,12 @@ export function AvailableRewardsSection({
                   </span>
                   {isUnlocked ? (
                     <span className="flex items-center gap-1 text-[11px] font-semibold text-action">
-                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      <Icon name="circle-check" className="h-3.5 w-3.5" />
                       <span>Ready</span>
                     </span>
                   ) : (
                     <span className="flex items-center gap-1 text-[11px] text-stone-400">
-                      <Lock className="h-3 w-3" aria-hidden="true" />
+                      <Icon name="lock" className="h-3 w-3" />
                     </span>
                   )}
                 </div>

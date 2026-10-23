@@ -1,5 +1,5 @@
-import { HelpCircle, MessageCircle } from "lucide-react";
 import type { ContactChannelKind } from "@/lib/contact-channels";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * The one icon per contact channel (#1060), shared by `FloatingContact` and the storefront footer's
@@ -50,8 +50,8 @@ export function ContactChannelIcon({ kind }: { kind: ContactChannelKind }) {
     case "instagram":
       return <InstagramGlyph />;
     case "whatsapp":
-      return <MessageCircle className="h-5 w-5" aria-hidden="true" />;
+      return <Icon name="message-circle" className="h-5 w-5" />;
     case "assistant":
-      return <HelpCircle className="h-5 w-5" aria-hidden="true" />;
+      return <Icon name="circle-question-mark" className="h-5 w-5" />;
   }
 }

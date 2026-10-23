@@ -2,13 +2,13 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { BookmarkPlus, CircleCheck, LogIn } from "lucide-react";
 import { ListReview } from "@/components/cart/ListReview";
 import { matchList } from "@/features/cart/match-list";
 import { saveListFromMatch } from "@/features/lists/save-list-from-match";
 import { EMPTY_MATCH_STATE, MAX_LIST_LINES } from "@/lib/shopping-list";
 import { buildListExamples } from "@/lib/shopping-list-examples";
 import { EMPTY_SAVE_STATE, MAX_LIST_NAME_LENGTH, MAX_SAVED_LISTS } from "@/lib/saved-list";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * "Shop your list" (P3d, #114), shown to shoppers as "Quick Shop" since #1145. Sibling forms, not nested ones: the first matches the pasted
@@ -136,14 +136,14 @@ export function ShopYourList({
               disabled={saving}
               className="inline-flex shrink-0 items-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
             >
-              <BookmarkPlus className="h-4 w-4" aria-hidden />
+              <Icon name="bookmark-plus" className="h-4 w-4" />
               {saving ? "Saving…" : "Save list"}
             </button>
           </div>
 
           {saveState.outcome === "saved" && (
             <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-              <CircleCheck className="h-4 w-4" aria-hidden />
+              <Icon name="circle-check" className="h-4 w-4" />
               Saved as “{saveState.name}” — find it under Your lists.
             </p>
           )}
@@ -169,7 +169,7 @@ export function ShopYourList({
             href="/login"
             className="inline-flex min-h-tap items-center gap-1.5 rounded-2xl border border-black/10 bg-surface-muted px-4 text-sm font-bold text-primary hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
           >
-            <LogIn className="h-4 w-4" aria-hidden />
+            <Icon name="log-in" className="h-4 w-4" />
             Sign in
           </Link>
         </div>
