@@ -8,6 +8,14 @@ every branch merges.
 
 ### Added
 
+- **Icon credits page, generated icon attribution, and cart tooltip cleanup** (issue `#1257`; `specs/2026-10-24-p1257-icon-credits-cart-tooltip/`).
+  - **Cart Hover Tooltip Purity:** Suppressed inner SVG `<title>` in `components/cart/CartDrawerShell.tsx` via `decorative={true}` on the trigger and drawer header icons, ensuring only `"My Cart"` displays on browser hover.
+  - **Clean Catalog Names:** Renamed `cart-add` in `lib/icons-3d/catalog.ts` to `"My Cart"` and stripped redundant `"3D "` prefixes from all icon catalog names.
+  - **Custom Label Rendering:** Updated `lib/icons-3d/render.ts` so custom `options.label` is respected in non-decorative SVG `<title>` elements.
+  - **Dedicated Icon Credits Page:** Authored `app/(storefront)/icon-credits/page.tsx` with clean, accessible attributions for all four third-party icon libraries (Lucide, Google Noto Emoji, Phosphor Icons, Simple Icons) with upstream links and SPDX notices.
+  - **Configurable Generated Icons Attribution:** Added Generated Icons section on `/icon-credits` attributing custom 3D artwork with **“Powered by [Platform Name]”**, reading from `getPlatformBrandingEnv().PLATFORM_NAME` (configurable via `PLATFORM_NAME` in config/env).
+  - **Storefront Footer Link:** Updated "Icon credits" in `components/layout/StorefrontFooter.tsx` to navigate directly to `/icon-credits`.
+
 - **UI and checkout improvements: My Cart tooltip, Contact Hub label, official payment logos, address layout, Click & Collect order details, animated Quick Shop** (issue `#1254`; `specs/2026-10-24-p1254-ui-checkout-improvements/`).
   - **Cart Tooltip:** Standardized trolley trigger button tooltip to `"My Cart"` in `components/cart/CartDrawerShell.tsx`.
   - **Contact & Follow Hub Clean Name:** Removed `"3D"` prefix from `contact-follow` in `lib/icons-3d/catalog.ts` and set floating trigger tooltip to `"Contact & Follow Hub"` in `components/layout/FloatingContact.tsx`.

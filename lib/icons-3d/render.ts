@@ -83,7 +83,7 @@ export function renderIconSvg(
     : `role="img" aria-label="${escapeXml(label)}"`;
   const metaTags = isDecorative
     ? ""
-    : `<title>${escapeXml(item.name)}</title>\n  <desc>${escapeXml(item.purpose)}</desc>`;
+    : `<title>${escapeXml(label)}</title>\n  <desc>${escapeXml(item.purpose)}</desc>`;
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" ${dataIconAttr} viewBox="0 0 96 96" width="${size}" height="${size}" ${a11yAttrs} style="overflow:visible">
   ${metaTags}

@@ -100,6 +100,7 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
     padY: "default",
   },
   "app/(storefront)/cart/page.tsx": { width: "standard", padY: "tight" },
+  "app/(storefront)/icon-credits/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/products/[slug]/page.tsx": { width: "standard", padY: "default" },
   // --- storefront: narrow
   "app/(storefront)/checkout/page.tsx": { width: "narrow", padY: "tight" },

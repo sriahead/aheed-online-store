@@ -270,13 +270,11 @@ describe("StorefrontFooter Legal row (#1107 R12)", () => {
   });
 });
 
-describe("StorefrontFooter icon credits (#1223 R67)", () => {
-  it("links to the icon licence file for a vendor with no optional data and no platform name", () => {
+describe("StorefrontFooter icon credits (#1223 R67, #1257)", () => {
+  it("links to the icon credits page for a vendor with no optional data and no platform name", () => {
     const footer = renderFooter(BARE);
     const link = within(footer).getByRole("link", { name: "Icon credits" });
-    expect(link.getAttribute("href")).toBe("/third-party-icon-licenses.txt");
-    expect(link.getAttribute("target")).toBe("_blank");
-    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(link.getAttribute("href")).toBe("/icon-credits");
   });
 
   it("keeps the 44px tap height below md and sits outside the Legal nav", () => {
