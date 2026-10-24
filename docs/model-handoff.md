@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.141.0"
+version: "1.142.0"
 updated: 2026-10-24
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,23 +39,31 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-24, `#1223` icon system: Phases 1, 2a and 2b are MERGED TO `staging`, NOT PROMOTED; PR B (Phases 3 and 4a) is
-  BUILT, NOT VALIDATED AND NOT IN A PR.** PR #1225 (`c439d3b`), PR #1229 (`87b1792`) and PR #1232 (`1a85d26`, PR A);
-  `deploy-staging` succeeded for all three. Spec `specs/2026-10-22-icon-system/`, decision
-  `specs/decisions/ADR-008-icon-system.md`, roadmap rows in `specs/roadmap.md` 1.179.0. **PR B** is on
-  `feature/icon-system-pb` (build commit `9a220042`, then the build-notes commit), cut from `staging` at `1a85d26`; it is the PR
-  that should say `Closes #1223` (the earlier ones used `Refs`). It changes markup on purpose, so R34, R35 and R56 to R60 do not
-  apply to it; it is bounded by R64 (an enumerated file list) and R65 (staff lists identical to a build at `1a85d26`). **The
-  owner decided on 2026-10-24 that the footer "Icon credits" link is wanted** (R67), and R64 also gained
-  `components/ui/ImageWithFallback.tsx`. Live gate: **`#1234`** (R51, R65, page halves of R39/R40/R50/R67, R28, R37, owner
-  screenshots); a cloud session cannot run it. `#1224` (AI-generated per-vendor illustrations) is a later slice gated on an
-  experiment. Owner answer still open: a lawyer's eye on Noto Emoji's licence (R63: its `info.json` licence URL returns 404, the
-  canonical Apache 2.0 text is used).
-  - **PR A's live gate `#1231` passed on the owner's machine at `4dff9dae`:** R34 (10, 10, 7 pages) and R35 (5, 2)
-    identical to BASE `6a09b001`; R37 client -42,750 B, Worker -48.77 KiB. PR A's validation was not independent
-    (the building Sonnet 5.5 context ran it). **Not read by any session:** staging `/api/health` at `1a85d26`
-    (a cloud session's proxy refuses the staging hosts); ask the owner to read it. `#1231` is left for the owner
-    to close.
+- **2026-10-24, `#1223` icon system: ALL FIVE PHASES' BUILD SCOPE IS MERGED TO `staging`, NOT PROMOTED.** PR #1225 (`c439d3b`),
+  #1229 (`87b1792`), #1232 (`1a85d26`, PR A) and **#1238 (`b422864`, PR B: colour, 16 department illustrations, the footer "Icon
+  credits" link)**; `deploy-staging` succeeded for each. Spec `specs/2026-10-22-icon-system/`, decision
+  `specs/decisions/ADR-008-icon-system.md`, roadmap rows in `specs/roadmap.md` 1.180.0. **Promotion to `main` is the owner's
+  call and is its own `staging` into `main` PR** (merge commit, `--merge`): its body must carry `closes #1223` on its own line, since
+  no earlier PR used a closing keyword (`staging` is not the default branch) and `#1223` stays open until then. It will also carry
+  `#1233` (the WhatsApp offers page, merged to `staging` meanwhile). Phase 5 (removing `lucide-react`) is out of scope; the parity test
+  needs the package. `#1224` (AI-generated per-vendor illustrations) is a later slice gated on an experiment.
+  - **Owner items still open:** (1) **read staging `/api/health` at `b422864`** (no cloud session can: its proxy refuses the staging
+    hosts) and look at `/` and `/categories` on staging for both vendors, because PR B's live gate `#1234` passed at `25fb59f3`,
+    *before* `#1233`'s footer and `/categories` changes were merged in, so the combined markup was not seen live; (2) a lawyer's eye
+    on Noto Emoji's licence (R63: the set's own licence URL returns 404, the canonical Apache 2.0 text is used); (3) close `#1231` and
+    `#1234`, and move `#1223` to In Review on the board (a cloud session has no GraphQL).
+  - **PR B's live gate `#1234` passed on the owner's machine at `25fb59f3`:** R65, R50, R51, R40, R67/R28 and R37 (client -41,074 B,
+    Worker -41.47 KiB). PR B's validation was not independent (the building Sonnet 5.5 context ran it). Findings: R39 said "every
+    decorative name" but only the nine Phosphor names carry `--icon-secondary` (spec corrected), and a Windows-only test bug
+    (`path.split("/")`, fixed). **A local session's long prose report described files and values that do not exist in this repo**
+    (`StorefrontTrustStrip.tsx`, other slugs, a 40 px tile); only its measured output was used. When a local session reports on code,
+    check the claim against the repository before it goes in a PR or a doc.
+  - **After merging `staging` into a branch, run `npm run db:generate` before `tsc`:** `#1233` added schema columns, and a stale
+    generated client produced about 60 type errors in `lib/repositories/vendor.ts` that looked like a broken merge.
+  - **`sdd:audit` reports one gap that is not this slice's:** `specs/2026-10-24-whatsapp-offers-page/` (`#1233`) has no roadmap
+    row. Its Document pass has not landed; whoever owns it writes the row.
+  - **PR A's live gate `#1231` passed at `4dff9dae`:** R34 (10, 10, 7 pages) and R35 (5, 2) identical to BASE `6a09b001`; R37 client
+    -42,750 B, Worker -48.77 KiB.
   - **P2a's live comparison passed (`#1227`, closed): 34 of 34 pages identical to BASE `6a09b001` on both
     vendors.** Phase 1's live rows passed too (`#1226`, closed). **Not read by any session:** staging
     `/api/health` at `87b1792` (a cloud session's proxy refuses the staging hosts); ask the owner to read it.
