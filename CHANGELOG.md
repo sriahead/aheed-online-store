@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **Supermarket trolley icon for checkout and group icon for contact cluster** (issue `#1242`; `specs/2026-10-24-p1242-trolley-group-icons/`).
+  - Added `"shopping-cart"` to `ICON_REGISTRY` mapped to Google Noto Emoji `shopping-cart` (supermarket trolley 🛒).
+  - Updated floating checkout/cart button and drawer header in `components/cart/CartDrawerShell.tsx` and empty basket in `components/cart/CartContents.tsx` to render `<Icon name="shopping-cart" />`.
+  - Updated floating contact cluster launcher button in `components/layout/FloatingContact.tsx` to render `<Icon name="users" />` (community group 👥) instead of technical `share` node icon.
+
 - **Colourful Noto Emoji icons across storefront and admin surfaces** (issue `#1239`; `specs/2026-10-24-p1239-noto-emoji-icons/`, `specs/decisions/ADR-008-icon-system.md`).
   - **79 decorative and status icons switched to Noto Emoji:** all feature, button, navigation, sidebar (`CollectionNav`), header (`Delivery` / `Click & Collect`, `Quick Shop`, `Shop`, `ViewSwitcher`), rewards (`RewardsLauncher`, `RewardsPanel`), trust strip, account (`AccountNav`), footer, status (`badge-check`, `circle-alert`, `circle-check`, `circle-x`, `shield-alert`, `triangle-alert`), and admin icons now render colourful Google Noto Emoji inline SVGs via `<Icon>`.
   - **Compact functional UI chrome preserved on Lucide:** 30 functional navigation and control primitives (`chevron-*`, `arrow-*`, `x`, `plus`, `minus`, `check`, `loader-circle`, `search`, etc.) plus interactive 1-to-5 rating stars (`star`) remain on `provider: "lucide"` (`currentColor`).

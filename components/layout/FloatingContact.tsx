@@ -147,7 +147,7 @@ function FloatingContactPanel(props: FloatingContactProps) {
           title={open ? "Hide contact links" : `Contact and follow ${vendorName}`}
           className="flex h-12 w-12 items-center justify-center rounded-full bg-action text-white shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-transform hover:scale-105 motion-reduce:hover:scale-100 hover:bg-action-hover"
         >
-          {open ? <Icon name="x" className="h-5 w-5" /> : <Icon name="share" className="h-5 w-5" />}
+          {open ? <Icon name="x" className="h-5 w-5" /> : <Icon name="users" className="h-5 w-5" />}
         </button>
       </div>
     </div>
