@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-24T16:47:43.663Z` · commit `0735dc2` · `264` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-24T18:06:42.857Z` · commit `5c38c8b` · `265` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -256,6 +256,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Production-ready 3D Icon Studio API and modern 3D icon suite integration (plan)](specs/2026-10-24-p1245-3d-icon-system/plan.md) | spec | 1.0.0 | 2026-10-24 | draft | internal | Upgrade 3D Icon Studio into a production-ready API and generate modern 3D-styled icons across the website. Issue 1245. |
 | [Expand 3D icon suite across Shop, Quick Shop, Contact and Follow, and Department navigation (plan)](specs/2026-10-24-p1248-3d-icons-expansion/plan.md) | spec | 1.0.0 | 2026-10-24 | draft | internal | Expand 3D icon system (#1245) to cover header Shop, Quick Shop, floating Contact and Follow, and department categories. Issue 1248. |
 | [Fix Quick Shop mobile visibility, icon sizes, user profile icon and navigation drill-down (plan)](specs/2026-10-24-p1251-navigation-icon-fixes/plan.md) | spec | 1.0.0 | 2026-10-24 | draft | internal | Fix Quick Shop mobile/tablet visibility and positioning, enlarge 3D icons and improve tooltips, replace user initial with 3D profile icon, and eliminate navigation drill-down failures. Issue 1251. |
+| [UI and Checkout Improvements: Cart Tooltip, Contact Hub, Payment Logos, Address Layout, Click & Collect Details, Animated Quick Shop](specs/2026-10-24-p1254-ui-checkout-improvements/plan.md) | spec | 1.0.0 | 2026-10-24 | approved | internal | UI and checkout refinements addressing trolley tooltip ('My Cart'), Contact & Follow Hub label cleanup, official vector payment logos, UK address layout order, Click & Collect customer order details card, and animated Quick Shop navigation icon. |
 | [Offers & WhatsApp Promotions page (plan)](specs/2026-10-24-whatsapp-offers-page/plan.md) | spec | 1.0.0 | 2026-10-24 | approved | internal | Dedicated /whatsapp-offers storefront page (#1233) combining per-vendor WhatsApp community join banner + QR code on VendorConfig with genuine catalogue offers grouped by department, active bundles, live campaigns, and storefront navigation. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.43.0 | 2026-10-22 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |

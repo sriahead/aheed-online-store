@@ -120,7 +120,11 @@ export default async function AccountOrderPage({
         totalPence={order.totalPence}
       />
 
-      <OrderAddressCard address={order.address} />
+      <OrderAddressCard
+        address={order.address}
+        fulfilmentMethod={order.fulfilmentMethod}
+        orderNumber={order.orderNumber}
+      />
     </PageContainer>
   );
 }

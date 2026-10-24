@@ -8,6 +8,14 @@ every branch merges.
 
 ### Added
 
+- **UI and checkout improvements: My Cart tooltip, Contact Hub label, official payment logos, address layout, Click & Collect order details, animated Quick Shop** (issue `#1254`; `specs/2026-10-24-p1254-ui-checkout-improvements/`).
+  - **Cart Tooltip:** Standardized trolley trigger button tooltip to `"My Cart"` in `components/cart/CartDrawerShell.tsx`.
+  - **Contact & Follow Hub Clean Name:** Removed `"3D"` prefix from `contact-follow` in `lib/icons-3d/catalog.ts` and set floating trigger tooltip to `"Contact & Follow Hub"` in `components/layout/FloatingContact.tsx`.
+  - **Official Payment Vector Logos:** Upgraded Visa, Mastercard, Google Pay, Apple Pay, and American Express in `public/payment-methods/` to official brand marks with interlocking red/orange/yellow circles for Mastercard, 4-color Google G and dark gray Pay for Google Pay, Visa blue for Visa, Apple silhouette + Pay for Apple Pay, and white on blue for Amex, all consistently centered on 48×30 rounded tiles.
+  - **UK Address Layout:** Reordered address inputs in `components/checkout/CheckoutForm.tsx` so `Flat, building (optional)` appears above `Street address`.
+  - **Click & Collect Order Details:** Enhanced `components/orders/OrderAddressCard.tsx` to branch on `fulfilmentMethod`. When `COLLECTION`, renders a clear "Click & Collect" section with "Customer Collection" badge, customer name, order reference, and contact phone, without displaying the store's address as a customer delivery destination.
+  - **Quick Shop Icon Animation:** Activated CSS keyframe animation (`animated={true}`) on the header's Quick Shop 3D icon in `components/layout/ShoppingListLink.tsx`.
+
 - **Quick Shop mobile visibility, icon sizing, 3D user profile icon and navigation drill-down fixes** (issue `#1251`; `specs/2026-10-24-p1251-navigation-icon-fixes/`).
   - **Quick Shop Main Navigation Placement:** Moved `ShoppingListLink` into `Main Navigation` directly alongside `Shop`, ensuring persistent, prominent visibility on mobile, tablet, and desktop viewports, while giving the mobile search bar full unobstructed row width.
   - **Enlarged 3D Icons & Enhanced Tooltips:** Increased `FloatingContact` icon from 28px to 38px to properly fill the 48px floating button; increased header `Shop` and `Quick Shop` 3D icons from 20px to 24px; increased `CartDrawerShell` cart icon to 28px; increased `RewardsLauncher` coin icon to 24px. Enhanced `title` tooltips across all interactive navigation and floating triggers with descriptive copy.

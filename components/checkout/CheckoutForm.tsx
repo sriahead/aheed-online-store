@@ -499,6 +499,12 @@ export function CheckoutForm({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
+              <label className={labelClass} htmlFor="line2">
+                Flat, building (optional)
+              </label>
+              <input id="line2" name="line2" autoComplete="address-line2" className={inputClass} />
+            </div>
+            <div className="sm:col-span-2">
               <label className={labelClass} htmlFor="line1">
                 Street address
               </label>
@@ -528,12 +534,6 @@ export function CheckoutForm({
                   </p>
                 </>
               )}
-            </div>
-            <div className="sm:col-span-2">
-              <label className={labelClass} htmlFor="line2">
-                Flat, building (optional)
-              </label>
-              <input id="line2" name="line2" autoComplete="address-line2" className={inputClass} />
             </div>
             <div>
               <label className={labelClass} htmlFor="city">
