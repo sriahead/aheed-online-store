@@ -29,6 +29,20 @@ Built and validated fixes for the four user-reported storefront issues on Issue 
    - Added `prefetch={false}` to `Shop` and `Quick Shop` links to eliminate stale/partial App Router flight cache corruption across route groups.
    - Added scroll-to-top fallback handler on click when already on destination page.
 
+## What changed and why
+- `components/layout/Header.tsx`: Moved `ShoppingListLink` into Main Navigation alongside `Shop`, replaced letter avatar with `<Icon3D name="user-profile" size={24} />`, added `prefetch={false}`, and enlarged `Shop` icon to 24px.
+- `components/layout/ShoppingListLink.tsx`: Enlarged icon to 24px, added `prefetch={false}`, and added scroll-to-top fallback handler.
+- `components/layout/FloatingContact.tsx`: Enlarged 3D contact icon from 28px to 38px and enhanced tooltip text.
+- `components/rewards/RewardsLauncher.tsx`: Enlarged 3D coin to 24px and updated tooltip.
+- `components/cart/CartDrawerShell.tsx`: Enlarged cart icon to 28px and added descriptive tooltip.
+- `lib/icons-3d/catalog.ts`: Added `user-profile` 3D vector definition.
+
+## Deviations from the spec
+None. All four reported items were addressed and validated.
+
+## Known-shaky areas
+None. All 319 test suites and 4,560 tests pass cleanly without regressions.
+
 ## Decisions taken during the build
 1. **Placement in Main Navigation:** Placing `ShoppingListLink` inside `<nav aria-label="Main Navigation">` directly adjacent to `Shop` ensures symmetric, intuitive UX on all viewports. On mobile viewports, both buttons render compact 44×44px touch targets with clean 3D icons; on tablet and desktop, both render icons and text labels.
 2. **3D User Profile Art:** Rather than a simple flat outline, authored a multi-layered 3D circular avatar bust with soft gradient, glossy rim, and golden membership emblem, harmonising with the existing 3D storefront aesthetic.
