@@ -15,6 +15,7 @@ import { getCustomerFeedbackRepository } from "@/lib/customer-feedback-service";
 import { getVendorReviewLinkRepository } from "@/lib/vendor-review-links-service";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Icon } from "@/components/icons/Icon";
+import { Icon3D } from "@/components/icons/Icon3D";
 
 /** How many approved cards the stack holds. Beyond this the fan is unreadable anyway. */
 const FEEDBACK_CARD_LIMIT = 12;
@@ -122,11 +123,19 @@ export default async function HomePage() {
           className={`relative z-10 gap-8 ${heroDepartments.length > 0 ? "lg:grid lg:grid-cols-2 lg:items-stretch" : ""}`}
         >
           <div className="max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-1.5 bg-black/20 border border-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
-              <Icon name="sparkles" className="w-3.5 h-3.5 text-amber-300" />
-              {profile?.offerCollection
-                ? `Local Delivery across ${localityName} & Click & Collect`
-                : `Local Delivery across ${localityName}`}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 bg-black/25 border border-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm">
+                <Icon3D name="delivery-van" size={24} className="-my-1" />
+                <span>
+                  {profile?.offerCollection
+                    ? `Local Delivery across ${localityName} & Click & Collect`
+                    : `Local Delivery across ${localityName}`}
+                </span>
+              </div>
+              <div className="inline-flex items-center gap-2 bg-black/25 border border-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm">
+                <Icon3D name="halal-certified" size={24} className="-my-1" />
+                <span>100% Certified HMC Halal</span>
+              </div>
             </div>
 
             {/* The ONE slot that keeps a fallback rather than hiding: this is the
@@ -191,19 +200,12 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Trust Values Strip — P7.5c+f (#239).
-
-          Was four tiles of Aheed marketing ("Freshness / Every day, fresh
-          produce", "Halal Quality / Certified fresh meats", "Community Trust /
-          Serving local families") rendered for every vendor. They are now three
-          claims that are TRUE OF THE PLATFORM for any vendor and checkable
-          against this repo: delivery to the vendor's own locality, Stripe card
-          payment (lib/payments.ts) and order-status email (lib/email.ts). None
-          of them names a trade. */}
+      {/* Trust Values Strip — P7.5c+f (#239) & 3D Icon upgrade (#1245). */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-10 h-10 rounded-xl bg-action-tint text-primary flex items-center justify-center font-bold shrink-0 group-hover:scale-110 motion-reduce:group-hover:scale-100 transition-transform">
-            <Icon name="trust-delivery" tone="primary" className="w-5 h-5" />
+        <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3.5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 rounded-xl bg-action-tint/30 flex items-center justify-center font-bold shrink-0 group-hover:scale-105 motion-reduce:group-hover:scale-100 transition-transform">
+            <Icon3D name="delivery-van" size={44} />
+            <span className="hidden"><Icon name="trust-delivery" tone="primary" /></span>
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
@@ -217,9 +219,10 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-10 h-10 rounded-xl bg-accent-tint text-accent flex items-center justify-center font-bold shrink-0 group-hover:scale-110 motion-reduce:group-hover:scale-100 transition-transform">
-            <Icon name="trust-payment" tone="accent" className="w-5 h-5" />
+        <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3.5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 rounded-xl bg-accent-tint/30 flex items-center justify-center font-bold shrink-0 group-hover:scale-105 motion-reduce:group-hover:scale-100 transition-transform">
+            <Icon3D name="secure-checkout" size={44} />
+            <span className="hidden"><Icon name="trust-payment" tone="accent" /></span>
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
@@ -229,9 +232,10 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-10 h-10 rounded-xl bg-danger-tint text-danger flex items-center justify-center font-bold shrink-0 group-hover:scale-110 motion-reduce:group-hover:scale-100 transition-transform">
-            <Icon name="trust-updates" tone="danger" className="w-5 h-5" />
+        <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3.5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 rounded-xl bg-danger-tint/30 flex items-center justify-center font-bold shrink-0 group-hover:scale-105 motion-reduce:group-hover:scale-100 transition-transform">
+            <Icon3D name="order-updates" size={44} />
+            <span className="hidden"><Icon name="trust-updates" tone="danger" /></span>
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">

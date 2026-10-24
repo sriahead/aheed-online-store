@@ -5,6 +5,7 @@ import { setDeliveryPostcode, setFulfilmentMethod } from "@/features/storefront/
 import { POSTCODE_INTENT_FIELD, type PostcodeIntent } from "@/lib/delivery-cookie";
 import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
 import { Icon } from "@/components/icons/Icon";
+import { Icon3D } from "@/components/icons/Icon3D";
 
 /**
  * Header delivery / Click & Collect control.
@@ -262,10 +263,17 @@ export function LocationControl({
         className="backdrop:bg-black/50 p-0 rounded-2xl shadow-2xl border border-black/10 m-auto w-[calc(100vw-2rem)] sm:w-[28rem] overflow-hidden"
       >
         <div data-tap-surface="location-dialog" className="bg-white p-6 flex flex-col">
-          <h2 className="text-lg font-extrabold text-primary mb-2">Check delivery availability</h2>
-          <p className="text-sm text-black/70 mb-5">
-            Enter your postcode to check whether we deliver to your area.
-          </p>
+          <div className="flex items-center gap-3.5 mb-3">
+            <Icon3D name="postcode-search" size={42} />
+            <div>
+              <h2 className="text-lg font-extrabold text-primary leading-tight">
+                Check delivery availability
+              </h2>
+              <p className="text-xs text-black/70">
+                Enter your postcode to check if we deliver to your address.
+              </p>
+            </div>
+          </div>
 
           <form
             action={(formData) => {
