@@ -205,7 +205,9 @@ export default async function HomePage() {
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3.5 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-12 h-12 rounded-xl bg-action-tint/30 flex items-center justify-center font-bold shrink-0 group-hover:scale-105 motion-reduce:group-hover:scale-100 transition-transform">
             <Icon3D name="delivery-van" size={44} />
-            <span className="hidden"><Icon name="trust-delivery" tone="primary" /></span>
+            <span className="hidden">
+              <Icon name="trust-delivery" tone="primary" />
+            </span>
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
@@ -222,7 +224,9 @@ export default async function HomePage() {
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3.5 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-12 h-12 rounded-xl bg-accent-tint/30 flex items-center justify-center font-bold shrink-0 group-hover:scale-105 motion-reduce:group-hover:scale-100 transition-transform">
             <Icon3D name="secure-checkout" size={44} />
-            <span className="hidden"><Icon name="trust-payment" tone="accent" /></span>
+            <span className="hidden">
+              <Icon name="trust-payment" tone="accent" />
+            </span>
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
@@ -235,7 +239,9 @@ export default async function HomePage() {
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3.5 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-12 h-12 rounded-xl bg-danger-tint/30 flex items-center justify-center font-bold shrink-0 group-hover:scale-105 motion-reduce:group-hover:scale-100 transition-transform">
             <Icon3D name="order-updates" size={44} />
-            <span className="hidden"><Icon name="trust-updates" tone="danger" /></span>
+            <span className="hidden">
+              <Icon name="trust-updates" tone="danger" />
+            </span>
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
