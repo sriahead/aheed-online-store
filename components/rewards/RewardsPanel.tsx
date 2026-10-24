@@ -87,7 +87,7 @@ export function RewardsPanel({
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 text-amber-300">
-              <Icon name="sparkles" className="h-4 w-4" />
+              <Icon name="rewards-sparkles" className="h-4 w-4" />
             </span>
             <span className="text-xs font-black tracking-wider uppercase text-white">
               {vendorName} Club

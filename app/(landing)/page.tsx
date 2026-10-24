@@ -203,7 +203,7 @@ export default async function HomePage() {
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-10 h-10 rounded-xl bg-action-tint text-primary flex items-center justify-center font-bold shrink-0 group-hover:scale-110 motion-reduce:group-hover:scale-100 transition-transform">
-            <Icon name="truck" className="w-5 h-5 text-primary" />
+            <Icon name="trust-delivery" tone="primary" className="w-5 h-5" />
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
@@ -219,7 +219,7 @@ export default async function HomePage() {
 
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-10 h-10 rounded-xl bg-accent-tint text-accent flex items-center justify-center font-bold shrink-0 group-hover:scale-110 motion-reduce:group-hover:scale-100 transition-transform">
-            <Icon name="credit-card" className="w-5 h-5 text-accent" />
+            <Icon name="trust-payment" tone="accent" className="w-5 h-5" />
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">
@@ -231,7 +231,7 @@ export default async function HomePage() {
 
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-10 h-10 rounded-xl bg-danger-tint text-danger flex items-center justify-center font-bold shrink-0 group-hover:scale-110 motion-reduce:group-hover:scale-100 transition-transform">
-            <Icon name="bell-ring" className="w-5 h-5 text-danger" />
+            <Icon name="trust-updates" tone="danger" className="w-5 h-5" />
           </div>
           <div>
             <h4 className="font-bold text-xs text-black/90 uppercase tracking-wide">

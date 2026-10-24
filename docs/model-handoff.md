@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.139.0"
-updated: 2026-10-23
+version: "1.141.0"
+updated: 2026-10-24
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,16 +39,23 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-23, `#1223` icon system: Phases 1 and 2a are MERGED TO `staging`, NOT PROMOTED.** PR #1225
-  (`c439d3b`) and PR #1229 (`87b1792`); `deploy-staging` succeeded for both. Spec
-  `specs/2026-10-22-icon-system/`, decision `specs/decisions/ADR-008-icon-system.md`, roadmap rows in
-  `specs/roadmap.md` 1.178.0. The spec covers **five PRs**; **P2b is BUILT (commit `2a1b98f9`, branch `feature/icon-system-p2b`, not yet in a PR; merge gate `#1231`: live R34, R35, R37 on the owner's machine). Original scope: P2b** (the 39 files still importing
-  `lucide-react` under `app/(admin)` and `components/staff`, the AST import-ban test
-  `tests/icon-imports.test.ts`, and the `CLAUDE.md` icon-bullet wording, R32, R36, R62), on
-  `feature/icon-system-p2b`, cut from `staging` with this documentation. P3 (colour) and P4a (department
-  illustrations) are unbuilt. Both PRs used `Refs #1223`, not `Closes`: only P4a's PR should close it.
-  `#1224` (AI-generated per-vendor illustrations) is a later slice gated on an experiment. Owner answer
-  still open: whether a footer link to `/third-party-icon-licenses.txt` is wanted.
+- **2026-10-24, `#1223` icon system: Phases 1, 2a and 2b are MERGED TO `staging`, NOT PROMOTED; PR B (Phases 3 and 4a) is
+  BUILT, NOT VALIDATED AND NOT IN A PR.** PR #1225 (`c439d3b`), PR #1229 (`87b1792`) and PR #1232 (`1a85d26`, PR A);
+  `deploy-staging` succeeded for all three. Spec `specs/2026-10-22-icon-system/`, decision
+  `specs/decisions/ADR-008-icon-system.md`, roadmap rows in `specs/roadmap.md` 1.179.0. **PR B** is on
+  `feature/icon-system-pb` (build commit `9a220042`, then the build-notes commit), cut from `staging` at `1a85d26`; it is the PR
+  that should say `Closes #1223` (the earlier ones used `Refs`). It changes markup on purpose, so R34, R35 and R56 to R60 do not
+  apply to it; it is bounded by R64 (an enumerated file list) and R65 (staff lists identical to a build at `1a85d26`). **The
+  owner decided on 2026-10-24 that the footer "Icon credits" link is wanted** (R67), and R64 also gained
+  `components/ui/ImageWithFallback.tsx`. Live gate: **`#1234`** (R51, R65, page halves of R39/R40/R50/R67, R28, R37, owner
+  screenshots); a cloud session cannot run it. `#1224` (AI-generated per-vendor illustrations) is a later slice gated on an
+  experiment. Owner answer still open: a lawyer's eye on Noto Emoji's licence (R63: its `info.json` licence URL returns 404, the
+  canonical Apache 2.0 text is used).
+  - **PR A's live gate `#1231` passed on the owner's machine at `4dff9dae`:** R34 (10, 10, 7 pages) and R35 (5, 2)
+    identical to BASE `6a09b001`; R37 client -42,750 B, Worker -48.77 KiB. PR A's validation was not independent
+    (the building Sonnet 5.5 context ran it). **Not read by any session:** staging `/api/health` at `1a85d26`
+    (a cloud session's proxy refuses the staging hosts); ask the owner to read it. `#1231` is left for the owner
+    to close.
   - **P2a's live comparison passed (`#1227`, closed): 34 of 34 pages identical to BASE `6a09b001` on both
     vendors.** Phase 1's live rows passed too (`#1226`, closed). **Not read by any session:** staging
     `/api/health` at `87b1792` (a cloud session's proxy refuses the staging hosts); ask the owner to read it.
@@ -57,8 +64,9 @@ reconciliation. If overall project state did not materially change, leave this f
   - **`scripts/verify-classname-parity.ts` skips nine files** (`tests/fixtures/classname-parity-allowlist.ts`):
     the five hand-migrated in P2a and four from P1, all because an icon was a component *value* at BASE. P2b
     runs it with `--require-migrated` and expects `0 not migrated`.
-  - **BASE for P2b is `6a09b001`** (the commit before PR #1225's squash). `../icon-base` was left in place on
-    the owner's machine and in the last cloud session; recreate it with `git worktree add ../icon-base 6a09b001`.
+  - **BASE is still `6a09b001`** (the commit before PR #1225's squash) for any comparison against the pre-slice
+    state. `../icon-base` was left in place on the owner's machine and in the last cloud session; recreate it with
+    `git worktree add ../icon-base 6a09b001`. PR B's R65 needs a second worktree at `1a85d26`.
   - **`@iconify-json/lucide` is pinned to 1.2.122 on purpose** (the release matching the installed
     `lucide-react` 1.30.0; the newest redrew six icons). Bumping `lucide-react` means re-running
     `tests/icon-lucide-parity.test.ts` and probably moving that pin.

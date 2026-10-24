@@ -68,10 +68,22 @@ describe("DepartmentHero", () => {
   it("falls back to the category icon when no image key is present (R3)", () => {
     const { container } = render(<DepartmentHero departments={DEPARTMENTS} cdnBaseUrl={null} />);
 
-    // No <img> at all — every panel is icon-led.
-    expect(container.querySelectorAll("img")).toHaveLength(0);
-    // The icon slot is populated rather than empty: `Icon` renders an <svg> carrying `data-icon`.
-    expect(container.querySelectorAll("svg[data-icon]").length).toBeGreaterThan(0);
+    // #1223 Phase 4a: a department with an illustration shows it, as a static platform file (never a
+    // stored image key composed against the CDN). Both fixture slugs are illustrated.
+    const sources = [...container.querySelectorAll("img")].map((img) => img.getAttribute("src"));
+    expect(sources).toEqual([
+      "/illustrations/departments/halal-meat.svg",
+      "/illustrations/departments/fruit-veg.svg",
+    ]);
+    // The glyph slot for a department with NO illustration is still an `Icon` svg.
+    const { container: unmapped } = render(
+      <DepartmentHero
+        departments={[{ id: "c", slug: "chargers", name: "Chargers", spotlight: null }]}
+        cdnBaseUrl={null}
+      />,
+    );
+    expect(unmapped.querySelectorAll("img")).toHaveLength(0);
+    expect(unmapped.querySelectorAll("svg[data-icon='tag']").length).toBeGreaterThan(0);
   });
 
   it("renders an image instead of the icon when a key is supplied (R3)", () => {
@@ -97,8 +109,11 @@ describe("DepartmentHero", () => {
 
     const { container } = render(<DepartmentHero departments={withArtwork} cdnBaseUrl={null} />);
 
-    // A key with nothing to compose against must not become a broken <img>.
-    expect(container.querySelectorAll("img")).toHaveLength(0);
+    // A key with nothing to compose against must not become a stored-image <img>: the only <img> is the
+    // department's static illustration (#1223).
+    expect([...container.querySelectorAll("img")].map((img) => img.getAttribute("src"))).toEqual([
+      "/illustrations/departments/halal-meat.svg",
+    ]);
   });
 
   it("renders the spotlight product's real price, and no callout without one (R4)", () => {

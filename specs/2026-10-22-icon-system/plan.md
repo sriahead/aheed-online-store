@@ -149,7 +149,7 @@ code, exactly as `category-icon.ts` does today; making it data-driven is `#1224`
 - **AI-generated per-vendor illustrations** are `#1224`, gated on an experiment and a schema change.
 - **Removing `lucide-react` (Phase 5)** is optional and not done here: the parity test needs it
   (R26). **Derived `--color-icon-1..4` tokens** are not added. **A public credits page** is not added;
-  the licence text ships as a static file (R27, R28) and a footer link is the owner's call.
+  the licence text ships as a static file (R27, R28), and PR B adds a footer link to it (R67, the owner's decision of 2026-10-24).
 - Long-cache hashed filenames for illustration files, and WebP/PNG variants: not needed at 71 KB.
 
 ## Risks the requirements are written against
@@ -250,15 +250,14 @@ not decide.
 - **A markup-diff tool that tolerates named changes** (`verify-icon-markup.ts --compare ... --allow-name`): it
   would give a per-page proof for PR B, but R33 fixes the script's output keys, so it needs a new flag and its
   own tests. R64 and R65 are the cheaper bound; build the tool only if PR B's validation shows it is needed.
-- **A footer link to `/third-party-icon-licenses.txt`**: still the owner's call (open since Phase 1).
 - **`#1224`** (AI-generated illustrations), **`#1195`** (Quick Shop re-homing), the `#1230` demo-accounts tool
   fix and the `#1228` `AddToCartButton` test.
 - **Larger Just Eat-style tiles**: unchanged from "Deliberately excluded" above.
 
 ## Open items carried forward
 
-- **Credits page (owner).** Whether a footer link to `/third-party-icon-licenses.txt` is wanted is
-  undecided; this slice ships the file only. Tracked on `#1223`.
+- **Credits (owner, decided 2026-10-24).** PR B adds a footer link to `/third-party-icon-licenses.txt` (R67);
+  there is still no credits page. Tracked on `#1223`.
 - **Model.** `CLAUDE.md` assigns Spec and Build to Opus 5; this spec was written on Sonnet 5.5 at the
   owner's `/spec` instruction. Build should run on Opus 5 once the owner switches.
 - **`#1226`** (the two SriMart staff pages and the stale demo-account password), a precondition of R35 and a P2b gate.

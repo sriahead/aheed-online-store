@@ -41,7 +41,7 @@ export function WaysToEarnAccordion({
               isDark ? "bg-amber-400/20 text-amber-400" : "bg-action-tint text-action"
             }`}
           >
-            <Icon name="coins" className="h-4 w-4" />
+            <Icon name="rewards-coins" tone={isDark ? undefined : "action"} className="h-4 w-4" />
           </div>
           <span className="text-sm font-semibold">Ways to earn</span>
         </div>
@@ -61,8 +61,9 @@ export function WaysToEarnAccordion({
         >
           <div className="flex items-start gap-2.5">
             <Icon
-              name="coins"
-              className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? "text-amber-400" : "text-action"}`}
+              name="rewards-coins"
+              tone={isDark ? undefined : "action"}
+              className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? "text-amber-400" : ""}`}
             />
             <div>
               <p className={`font-semibold ${isDark ? "text-white" : "text-primary"}`}>
@@ -80,8 +81,9 @@ export function WaysToEarnAccordion({
           {maxMultiplier > 1 && (
             <div className="flex items-start gap-2.5">
               <Icon
-                name="sparkles"
-                className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? "text-amber-400" : "text-accent"}`}
+                name="rewards-sparkles"
+                tone={isDark ? undefined : "accent"}
+                className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? "text-amber-400" : ""}`}
               />
               <div>
                 <p className={`font-semibold ${isDark ? "text-white" : "text-primary"}`}>
@@ -96,8 +98,9 @@ export function WaysToEarnAccordion({
 
           <div className="flex items-start gap-2.5">
             <Icon
-              name="user-plus"
-              className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? "text-amber-400" : "text-action"}`}
+              name="rewards-invite"
+              tone={isDark ? undefined : "action"}
+              className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? "text-amber-400" : ""}`}
             />
             <div>
               <p className={`font-semibold ${isDark ? "text-white" : "text-primary"}`}>

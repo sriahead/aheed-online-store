@@ -269,3 +269,20 @@ describe("StorefrontFooter Legal row (#1107 R12)", () => {
     expect(withoutSlots.textContent).not.toContain("slots");
   });
 });
+
+describe("StorefrontFooter icon credits (#1223 R67)", () => {
+  it("links to the icon licence file for a vendor with no optional data and no platform name", () => {
+    const footer = renderFooter(BARE);
+    const link = within(footer).getByRole("link", { name: "Icon credits" });
+    expect(link.getAttribute("href")).toBe("/third-party-icon-licenses.txt");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+  });
+
+  it("keeps the 44px tap height below md and sits outside the Legal nav", () => {
+    const footer = renderFooter(BARE);
+    const link = within(footer).getByRole("link", { name: "Icon credits" });
+    expect(link.className).toContain("min-h-tap");
+    expect(link.closest("nav[aria-label='Legal']")).toBeNull();
+  });
+});

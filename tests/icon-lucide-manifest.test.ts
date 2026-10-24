@@ -23,9 +23,13 @@ describe("lucide icons in use at BASE", () => {
     expect(ICON_REGISTRY[key as keyof typeof ICON_REGISTRY].provider).toBe("lucide");
   });
 
-  it("the registry holds no icon the manifest does not account for", () => {
+  it("the registry holds no icon the manifest does not account for, bar the Phase 3 Phosphor names", () => {
+    // #1223 Phase 3 adds NEW two-hue names beside the BASE set (R38); every other key must still be one the
+    // app imported from lucide-react at BASE. The exact Phase 3 set is pinned in icon-phase3-surfaces.test.tsx.
     const accountedFor = new Set(manifest.icons.map((i) => i.key));
-    for (const key of Object.keys(ICON_REGISTRY))
+    for (const [key, entry] of Object.entries(ICON_REGISTRY)) {
+      if (entry.provider === "ph") continue;
       expect(accountedFor.has(key), `${key} is unused`).toBe(true);
+    }
   });
 });
