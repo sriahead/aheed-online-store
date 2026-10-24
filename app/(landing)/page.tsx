@@ -194,7 +194,11 @@ export default async function HomePage() {
               "superseded" rather than "unused" is the accurate reason. */}
           {heroDepartments.length > 0 && (
             <div className="mt-8 lg:mt-0 lg:h-full">
-              <DepartmentHero departments={heroDepartments} cdnBaseUrl={CDN_BASE_URL ?? null} />
+              <DepartmentHero
+                departments={heroDepartments}
+                cdnBaseUrl={CDN_BASE_URL ?? null}
+                use3D
+              />
             </div>
           )}
         </div>

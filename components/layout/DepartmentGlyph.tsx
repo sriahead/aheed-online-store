@@ -1,5 +1,6 @@
-import { departmentIllustration } from "@/components/icons/illustrations";
+import { departmentIllustration, department3DIcon } from "@/components/icons/illustrations";
 import { Icon } from "@/components/icons/Icon";
+import { Icon3D } from "@/components/icons/Icon3D";
 import { categoryIconName } from "@/components/product/category-icon";
 import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 
@@ -17,11 +18,18 @@ import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 export function DepartmentGlyph({
   slug,
   loading,
+  use3D = false,
 }: {
   slug: string;
   /** The first panel is above the fold and loads eagerly; the rest wait. */
   loading?: "eager" | "lazy";
+  use3D?: boolean;
 }) {
+  const icon3D = use3D ? department3DIcon(slug) : null;
+  if (icon3D) {
+    return <Icon3D name={icon3D} size={96} className="h-24 w-24 md:h-32 md:w-32" />;
+  }
+
   const fallback = (
     <Icon
       name={categoryIconName(slug)}

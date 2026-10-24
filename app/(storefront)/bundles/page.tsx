@@ -58,7 +58,7 @@ export default async function BundlesPage() {
         site. The department strip is a way BACK OUT to a filtered product listing, not a filter
         over what is on this page.
       */}
-      <DepartmentScroller categories={departments} activeSlug={null} />
+      <DepartmentScroller categories={departments} activeSlug={null} use3D />
 
       {/*
         #701 — `/bundles` used to be a single-column page (CollectionNav full-width, a 3-column

@@ -79,9 +79,11 @@ const PANEL_TONES = ["bg-primary", "bg-action", "bg-accent"] as const;
 export function DepartmentHero({
   departments,
   cdnBaseUrl,
+  use3D = false,
 }: {
   departments: readonly HeroDepartment[];
   cdnBaseUrl: string | null;
+  use3D?: boolean;
 }) {
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -303,6 +305,7 @@ export function DepartmentHero({
                           <DepartmentGlyph
                             slug={department.slug}
                             loading={index === 0 ? "eager" : "lazy"}
+                            use3D={use3D}
                           />
                         }
                       />
@@ -310,6 +313,7 @@ export function DepartmentHero({
                       <DepartmentGlyph
                         slug={department.slug}
                         loading={index === 0 ? "eager" : "lazy"}
+                        use3D={use3D}
                       />
                     )}
                   </div>

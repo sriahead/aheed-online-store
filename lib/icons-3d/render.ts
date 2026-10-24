@@ -34,44 +34,59 @@ export function renderIconSvg(
   const size = options.size || 96;
 
   let animClass = "";
-  if (animType === "float") animClass = `class="anim-float-${prefix}"`;
-  else if (animType === "pop") animClass = `class="anim-pop-${prefix}"`;
-
-  const styles = `
-    <style>
+  let styles = "";
+  if (animType === "float") {
+    animClass = `class="anim-float-${prefix}"`;
+    styles = `<style>
       @keyframes float-${prefix} {
         0%, 100% { transform: translateY(0px) perspective(600px) rotateX(0deg); }
         50% { transform: translateY(-5px) perspective(600px) rotateX(4deg); }
       }
+      .anim-float-${prefix} {
+        animation: float-${prefix} ${duration}s ease-in-out infinite;
+        transform-origin: 48px 48px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .anim-float-${prefix} {
+          animation: none !important;
+          transform: none !important;
+        }
+      }
+    </style>`;
+  } else if (animType === "pop") {
+    animClass = `class="anim-pop-${prefix}"`;
+    styles = `<style>
       @keyframes pop-${prefix} {
         0% { transform: scale(1); }
         50% { transform: scale(1.08); }
         100% { transform: scale(1); }
-      }
-      .anim-float-${prefix} {
-        animation: float-${prefix} ${duration}s ease-in-out infinite;
-        transform-origin: 48px 48px;
       }
       .anim-pop-${prefix} {
         animation: pop-${prefix} ${(Number(duration) * 0.4).toFixed(2)}s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite;
         transform-origin: 48px 48px;
       }
       @media (prefers-reduced-motion: reduce) {
-        .anim-float-${prefix}, .anim-pop-${prefix} {
+        .anim-pop-${prefix} {
           animation: none !important;
           transform: none !important;
         }
       }
-    </style>
-  `;
+    </style>`;
+  }
 
   const body = item.render(palette, prefix);
 
   const dataIconAttr = `data-icon="${escapeXml(options.dataIcon || item.id)}"`;
+  const isDecorative = options.decorative === true;
+  const a11yAttrs = isDecorative
+    ? 'aria-hidden="true"'
+    : `role="img" aria-label="${escapeXml(label)}"`;
+  const metaTags = isDecorative
+    ? ""
+    : `<title>${escapeXml(item.name)}</title>\n  <desc>${escapeXml(item.purpose)}</desc>`;
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" ${dataIconAttr} viewBox="0 0 96 96" width="${size}" height="${size}" role="img" aria-label="${escapeXml(label)}" style="overflow:visible">
-  <title>${escapeXml(item.name)}</title>
-  <desc>${escapeXml(item.purpose)}</desc>
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" ${dataIconAttr} viewBox="0 0 96 96" width="${size}" height="${size}" ${a11yAttrs} style="overflow:visible">
+  ${metaTags}
   ${styles}
   <g ${animClass} style="transform-origin: 48px 48px;">
     ${body}
