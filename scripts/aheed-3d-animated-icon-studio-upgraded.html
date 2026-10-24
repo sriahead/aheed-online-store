@@ -1,0 +1,1038 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aheed Food Centre — 3D Animated Icon Library</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+
+      /* 3D & Animation Keyframes */
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0px) perspective(600px) rotateX(0deg);
+        }
+        50% {
+          transform: translateY(-6px) perspective(600px) rotateX(5deg);
+        }
+      }
+      @keyframes pop {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.15);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+      @keyframes draw {
+        to {
+          stroke-dashoffset: 0;
+        }
+      }
+      @keyframes spin-slow {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .anim-float {
+        animation: float 3s ease-in-out infinite;
+        transform-origin: center;
+      }
+      .anim-pop {
+        animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite;
+        transform-origin: center;
+      }
+      .anim-draw {
+        stroke-dasharray: 100;
+        stroke-dashoffset: 100;
+        animation: draw 1.5s ease forwards;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      /* Hover 3D Tilt Effect */
+      .hover-3d {
+        transition:
+          transform 0.3s ease,
+          filter 0.3s ease;
+      }
+      .hover-3d:hover {
+        transform: perspective(600px) rotateX(10deg) rotateY(-10deg) translateY(-4px);
+        filter: drop-shadow(0 10px 8px rgb(0 0 0 / 0.15));
+      }
+
+      /* Checkerboard background for transparency preview */
+      .bg-checker {
+        background-image:
+          linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
+          linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
+          linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+        background-size: 20px 20px;
+        background-position:
+          0 0,
+          0 10px,
+          10px -10px,
+          -10px 0px;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen h-screen flex flex-col bg-gray-50 text-gray-800 overflow-hidden">
+    <!-- Header -->
+    <header
+      class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-20"
+    >
+      <div class="flex items-center gap-3">
+        <div
+          class="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-700 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-lg"
+        >
+          3D
+        </div>
+        <div>
+          <h1 class="font-semibold text-gray-900 leading-tight">Aheed Food Centre</h1>
+          <p class="text-xs text-gray-500">3D Animated Icon Studio</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <label class="text-xs text-gray-500 flex items-center gap-2"
+          >Theme
+          <select
+            id="theme-mode"
+            onchange="app.updateSetting('themeMode', this.value)"
+            class="text-sm border border-gray-300 rounded-md px-2 py-1.5 bg-white text-gray-700"
+          >
+            <option value="auto">Auto</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+        <button
+          onclick="app.exportManifest()"
+          class="text-sm text-emerald-700 hover:text-emerald-900 px-3 py-1.5 rounded-md transition-colors"
+        >
+          Export API Manifest
+        </button>
+        <button
+          onclick="app.resetProject()"
+          class="text-sm text-gray-500 hover:text-red-600 px-3 py-1.5 rounded-md transition-colors"
+        >
+          Reset Project
+        </button>
+        <div class="h-4 w-px bg-gray-300"></div>
+        <span
+          class="text-xs font-medium px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200"
+          >Auto-Saved</span
+        >
+      </div>
+    </header>
+
+    <!-- Main Layout -->
+    <main class="flex-1 flex overflow-hidden">
+      <!-- Left Sidebar -->
+      <aside
+        class="w-64 max-lg:w-52 max-md:hidden bg-white border-r border-gray-200 flex flex-col shrink-0"
+      >
+        <nav class="p-4 space-y-1">
+          <button
+            onclick="app.setView('inventory')"
+            id="nav-inventory"
+            class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg bg-emerald-50 text-emerald-700 transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 10h16M4 14h16M4 18h16"
+              ></path>
+            </svg>
+            Icon Inventory
+          </button>
+          <button
+            onclick="app.setView('analysis')"
+            id="nav-analysis"
+            class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              ></path>
+            </svg>
+            Website Analysis
+          </button>
+        </nav>
+
+        <div class="mt-auto p-4 border-t border-gray-200">
+          <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <p class="text-xs font-semibold text-gray-700 mb-1">Project Progress</p>
+            <div class="w-full bg-gray-200 rounded-full h-1.5 mb-2">
+              <div
+                id="progress-bar"
+                class="bg-emerald-600 h-1.5 rounded-full transition-all duration-500"
+                style="width: 0%"
+              ></div>
+            </div>
+            <p class="text-xs text-gray-500">
+              <span id="generated-count">0</span> of <span id="total-count">0</span> generated
+            </p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Workspace -->
+      <section class="flex-1 flex flex-col min-w-0 bg-gray-50/50">
+        <div
+          class="h-14 border-b border-gray-200 bg-white flex items-center justify-between px-6 shrink-0"
+        >
+          <div class="flex items-center gap-3 flex-1">
+            <div class="relative flex-1 max-w-md">
+              <svg
+                class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                ></path>
+              </svg>
+              <input
+                type="text"
+                id="search-input"
+                placeholder="Search icons..."
+                class="w-full pl-9 pr-4 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                oninput="app.filterInventory()"
+              />
+            </div>
+          </div>
+          <button
+            onclick="app.generateAll()"
+            class="text-sm bg-gray-900 text-white px-4 py-1.5 rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              ></path>
+            </svg>
+            Generate All
+          </button>
+        </div>
+
+        <div id="workspace-content" class="flex-1 overflow-y-auto p-6"></div>
+      </section>
+
+      <!-- Right Panel: Editor & Preview -->
+      <aside
+        class="w-96 max-xl:w-80 max-lg:w-72 max-md:hidden bg-white border-l border-gray-200 flex flex-col shrink-0 overflow-hidden"
+        id="right-panel"
+      >
+        <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 class="font-semibold text-gray-900 truncate mr-2" id="editor-title">
+            Select an Icon
+          </h2>
+          <div class="flex bg-gray-100 rounded-lg p-0.5 shrink-0">
+            <button
+              onclick="app.setEditorTab('edit')"
+              id="tab-edit"
+              class="px-3 py-1 text-xs font-medium rounded-md bg-white shadow-sm text-gray-900 transition-all"
+            >
+              Edit
+            </button>
+            <button
+              onclick="app.setEditorTab('placement')"
+              id="tab-placement"
+              class="px-3 py-1 text-xs font-medium rounded-md text-gray-500 hover:text-gray-900 transition-all"
+            >
+              Placement
+            </button>
+            <button
+              onclick="app.setEditorTab('export')"
+              id="tab-export"
+              class="px-3 py-1 text-xs font-medium rounded-md text-gray-500 hover:text-gray-900 transition-all"
+            >
+              Export
+            </button>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-6" id="editor-content">
+          <div class="text-center py-12 text-gray-400">
+            <svg
+              class="w-12 h-12 mx-auto mb-3 opacity-50"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+                d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
+              ></path>
+            </svg>
+            <p class="text-sm">Select an icon to customize and generate in 3D.</p>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Toast Notification -->
+    <div
+      id="toast"
+      class="fixed bottom-6 right-6 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-3 z-50"
+    >
+      <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M5 13l4 4L19 7"
+        ></path>
+      </svg>
+      <span id="toast-message" class="text-sm font-medium">Action successful</span>
+    </div>
+
+    <script>
+      // --- 1. DATA & STATE MANAGEMENT ---
+      const defaultInventory = [
+        {
+          id: "delivery-van",
+          name: "Delivery Van",
+          category: "Commerce",
+          purpose: "Local delivery across Milton Keynes",
+          recommendedAnim: "float",
+          status: "Not generated",
+          placement: "Trust strip & hero delivery claim",
+        },
+        {
+          id: "halal-certified",
+          name: "HMC Halal Certified Badge",
+          category: "Trust",
+          purpose: "Highlight 100% Certified HMC halal produce",
+          recommendedAnim: "pop",
+          status: "Not generated",
+          placement: "Hero section & meat department",
+        },
+        {
+          id: "postcode-search",
+          name: "Postcode Checker",
+          category: "Navigation",
+          purpose: "Visual cue for delivery radius check",
+          recommendedAnim: "float",
+          status: "Not generated",
+          placement: "Delivery postcode checker modal",
+        },
+        {
+          id: "cart-add",
+          name: "Supermarket Trolley (Cart)",
+          category: "Commerce",
+          purpose: "Add to cart action & floating cart trigger",
+          recommendedAnim: "pop",
+          status: "Not generated",
+          placement: "Floating cart trigger & drawer header",
+        },
+        {
+          id: "secure-checkout",
+          name: "Secure Checkout Shield",
+          category: "Trust",
+          purpose: "Stripe encrypted card payments",
+          recommendedAnim: "float",
+          status: "Not generated",
+          placement: "Trust strip & checkout header",
+        },
+        {
+          id: "order-updates",
+          name: "Notification Bell",
+          category: "Trust",
+          purpose: "Order status changes by email alert",
+          recommendedAnim: "pop",
+          status: "Not generated",
+          placement: "Trust strip order updates tile",
+        },
+        {
+          id: "fruit-veg",
+          name: "Fresh Fruit & Veg",
+          category: "Departments",
+          purpose: "Fresh produce & orchard department",
+          recommendedAnim: "float",
+          status: "Not generated",
+          placement: "Department hero & scroller",
+        },
+        {
+          id: "halal-meat",
+          name: "Prime Halal Cut",
+          category: "Departments",
+          purpose: "Butcher & certified halal meats",
+          recommendedAnim: "pop",
+          status: "Not generated",
+          placement: "Department hero & scroller",
+        },
+        {
+          id: "bakery",
+          name: "Golden Croissant",
+          category: "Departments",
+          purpose: "Artisan bakery & breads",
+          recommendedAnim: "float",
+          status: "Not generated",
+          placement: "Department hero & scroller",
+        },
+        {
+          id: "dairy-eggs",
+          name: "Dairy Milk & Eggs",
+          category: "Departments",
+          purpose: "Farm fresh dairy produce",
+          recommendedAnim: "float",
+          status: "Not generated",
+          placement: "Department hero & scroller",
+        },
+        {
+          id: "beverages",
+          name: "Hot & Cold Drinks",
+          category: "Departments",
+          purpose: "Tea, coffee, sodas and juices",
+          recommendedAnim: "float",
+          status: "Not generated",
+          placement: "Department hero & scroller",
+        },
+        {
+          id: "snacks",
+          name: "Choc-Chip Cookie",
+          category: "Departments",
+          purpose: "Biscuits, snacks and confectionery",
+          recommendedAnim: "pop",
+          status: "Not generated",
+          placement: "Department hero & scroller",
+        },
+        {
+          id: "frozen-foods",
+          name: "Frost Snowflake",
+          category: "Departments",
+          purpose: "Frozen meals & ice creams",
+          recommendedAnim: "float",
+          status: "Not generated",
+          placement: "Department hero & scroller",
+        },
+        {
+          id: "household",
+          name: "Soap Pump Dispenser",
+          category: "Departments",
+          purpose: "Household & cleaning supplies",
+          recommendedAnim: "float",
+          status: "Not generated",
+          placement: "Department hero & scroller",
+        },
+        {
+          id: "rewards-coin",
+          name: "Gold Loyalty Coin",
+          category: "Rewards",
+          purpose: "Customer loyalty points & coins",
+          recommendedAnim: "pop",
+          status: "Not generated",
+          placement: "Rewards panel & account points",
+        },
+        {
+          id: "rewards-gift",
+          name: "Wrapped Gift Box",
+          category: "Rewards",
+          purpose: "Promotions, gifts and discounts",
+          recommendedAnim: "pop",
+          status: "Not generated",
+          placement: "Rewards panel & promo banners",
+        },
+      ];
+
+      // Base paths for icons (simplified for layering)
+      const iconPaths = {
+        "icon-delivery-van": `<path d="M3 12h15l3 4v5h-2v-2h-14v2h-2v-5l3-4z"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/>`,
+        "icon-halal-certified": `<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>`,
+        "icon-postcode-search": `<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35" stroke-linecap="round"/>`,
+        "icon-cart-add": `<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/><path d="M12 14v6"/><path d="M9 17h6"/>`,
+        "icon-secure-checkout": `<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>`,
+      };
+
+      let appState = {
+        inventory: JSON.parse(JSON.stringify(defaultInventory)),
+        activeIconId: null,
+        settings: {
+          primaryColor: "#059669",
+          themeMode: "auto",
+          iconStyle: "3d",
+          animSpeed: 1,
+          loop: true,
+          hover3D: true,
+        },
+        generatedData: {},
+      };
+
+      // --- 2. HELPER FUNCTIONS ---
+      function adjustColor(hex, amount) {
+        hex = String(hex || "#059669").replace("#", "");
+        if (!/^[0-9a-f]{6}$/i.test(hex)) hex = "059669";
+        const n = parseInt(hex, 16);
+        const r = Math.max(0, Math.min(255, (n >> 16) + amount));
+        const g = Math.max(0, Math.min(255, ((n >> 8) & 255) + amount));
+        const b = Math.max(0, Math.min(255, (n & 255) + amount));
+        return "#" + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+      }
+      function getThemePalette() {
+        const mode = appState.settings.themeMode || "auto";
+        const dark =
+          mode === "dark" ||
+          (mode === "auto" &&
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        const accent = appState.settings.primaryColor || "#059669";
+        return {
+          mode: dark ? "dark" : "light",
+          accent,
+          accentDark: adjustColor(accent, -35),
+          accentLight: adjustColor(accent, 45),
+          surface: dark ? "#18212b" : "#fff",
+          outline: dark ? "#dbeafe" : "#334155",
+          shadow: dark ? "#020617" : "#64748b",
+        };
+      }
+      function safeSvgId(value) {
+        return String(value).replace(/[^a-zA-Z0-9_-]/g, "-");
+      }
+      function buildIllustration(id, p) {
+        const a = p.accent,
+          ad = p.accentDark,
+          al = p.accentLight,
+          ink = p.outline,
+          sh = p.shadow,
+          sid = safeSvgId(id);
+        const defs = `<defs>
+              <linearGradient id="body-${sid}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${al}"/><stop offset=".52" stop-color="${a}"/><stop offset="1" stop-color="${ad}"/></linearGradient>
+              <linearGradient id="metal-${sid}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f8fafc"/><stop offset=".5" stop-color="#cbd5e1"/><stop offset="1" stop-color="#64748b"/></linearGradient>
+              <linearGradient id="glass-${sid}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e0f2fe"/><stop offset="1" stop-color="#7dd3fc"/></linearGradient>
+              <filter id="soft-${sid}" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="${sh}" flood-opacity=".24"/></filter>
+            </defs><ellipse cx="48" cy="83" rx="30" ry="5" fill="${sh}" opacity=".18"/>`;
+        const art = {
+          "delivery-van": `<g filter="url(#soft-${sid})"><path d="M12 34q0-4 5-4h35q3 0 3 4v25H12Z" fill="url(#body-${sid})" stroke="${ad}" stroke-width="1.5"/><path d="M55 40h13q3 0 5 4l7 9v6H55Z" fill="#f8fafc" stroke="${ink}" stroke-width="1.5"/><path d="M59 43h8q2 0 3 3l4 5H59Z" fill="url(#glass-${sid})" stroke="#94a3b8"/><path d="M18 36h28" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/><rect x="19" y="41" width="27" height="12" rx="2" fill="#fff"/><path d="m25 47 4-4 4 4-4 4Z" fill="${a}"/><path d="M35 45h7M35 49h5" stroke="${ad}" stroke-width="1.5" stroke-linecap="round"/><path d="M12 57h68v3q0 3-3 3H15q-3 0-3-3Z" fill="${ad}"/><circle cx="28" cy="62" r="7" fill="#1e293b"/><circle cx="28" cy="62" r="3.2" fill="url(#metal-${sid})"/><circle cx="66" cy="62" r="7" fill="#1e293b"/><circle cx="66" cy="62" r="3.2" fill="url(#metal-${sid})"/><rect x="74" y="54" width="4" height="4" rx="1" fill="#fca5a5"/></g>`,
+          "halal-certified": `<g filter="url(#soft-${sid})"><path d="m48 10 9 5 10 0 3 10 8 7-4 10 2 10-10 6-5 9-11-2-9 6-8-7-11-2-1-11-6-8 4-10-1-10 11-4 7-8Z" fill="url(#body-${sid})" stroke="${ad}" stroke-width="1.8"/><path d="m48 18 7 4 8 0 2 8 6 5-3 8 2 7-8 5-4 7-8-2-7 5-6-6-8-1-1-8-5-7 3-7-1-7 9-3 5-8Z" fill="#ffffff" opacity="0.95"/><circle cx="48" cy="46" r="21" fill="#f59e0b" stroke="#d97706" stroke-width="1.5"/><circle cx="48" cy="46" r="17" fill="#ffffff"/><path d="m39 46 6 6 13-14" fill="none" stroke="${a}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M37 60q11 4 22-1" fill="none" stroke="${al}" stroke-width="2" stroke-linecap="round"/></g>`,
+          "postcode-search": `<g filter="url(#soft-${sid})"><path d="M48 13C34 13 24 23 24 36c0 16 24 34 24 34s24-18 24-34C72 23 62 13 48 13Z" fill="url(#body-${sid})" stroke="${ad}" stroke-width="1.5"/><circle cx="48" cy="35" r="14" fill="#fff"/><path d="M39 29h18M39 35h12M39 41h15" stroke="${a}" stroke-width="2.5" stroke-linecap="round"/><circle cx="64" cy="58" r="11" fill="url(#metal-${sid})" stroke="${ink}" stroke-width="2"/><circle cx="64" cy="58" r="6.5" fill="#fff"/><path d="m72 66 7 7" stroke="${ink}" stroke-width="4" stroke-linecap="round"/></g>`,
+          "cart-add": `<g filter="url(#soft-${sid})"><path d="M16 23h8l7 34h34l8-25H29" fill="none" stroke="${ink}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 35h37l-5 17H34Z" fill="url(#body-${sid})" stroke="${ad}" stroke-width="1.5"/><path d="M35 38h26" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/><circle cx="38" cy="65" r="5.5" fill="#1e293b"/><circle cx="38" cy="65" r="2.5" fill="url(#metal-${sid})"/><circle cx="62" cy="65" r="5.5" fill="#1e293b"/><circle cx="62" cy="65" r="2.5" fill="url(#metal-${sid})"/><circle cx="67" cy="22" r="13" fill="#fbbf24" stroke="#d97706" stroke-width="1.5"/><path d="M67 15v14M60 22h14" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g>`,
+          "secure-checkout": `<g filter="url(#soft-${sid})"><path d="m48 12 24 9v18c0 16-11 25-24 32-13-7-24-16-24-32V21Z" fill="url(#body-${sid})" stroke="${ad}" stroke-width="1.5"/><path d="m48 19 17 6v14c0 11-7 18-17 24-10-6-17-13-17-24V25Z" fill="#fff"/><rect x="37" y="36" width="22" height="17" rx="3" fill="url(#metal-${sid})" stroke="${ink}" stroke-width="1.5"/><path d="M41 36v-5a7 7 0 0 1 14 0v5" fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><circle cx="48" cy="43" r="2" fill="${a}"/><path d="M48 45v3" stroke="${a}" stroke-width="2" stroke-linecap="round"/></g>`,
+          "order-updates": `<g filter="url(#soft-${sid})"><path d="M48 16a6 6 0 0 0-6 6v2a18 18 0 0 0-14 17c0 8-3 12-3 12h46s-3-4-3-12a18 18 0 0 0-14-17v-2a6 6 0 0 0-6-6Z" fill="#f59e0b" stroke="#b45309" stroke-width="1.5"/><path d="M43 57a5 5 0 0 0 10 0" fill="none" stroke="#b45309" stroke-width="2.5" stroke-linecap="round"/><circle cx="68" cy="24" r="8" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"/><path d="M68 20v8M64 24h8" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/></g>`,
+          "fruit-veg": `<g filter="url(#soft-${sid})"><path d="M48 20c-8-8-22-3-22 14 0 20 18 34 22 36 4-2 22-16 22-36 0-17-14-22-22-14Z" fill="#ef4444" stroke="#991b1b" stroke-width="1.5"/><path d="M48 19c0-6 4-11 8-12" fill="none" stroke="#78350f" stroke-width="3" stroke-linecap="round"/><path d="M54 10c4-1 9 1 10 5-3 3-8 2-10-5Z" fill="url(#body-${sid})" stroke="${ad}" stroke-width="1"/><path d="M35 30q-4 8 2 16" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/></g>`,
+          "halal-meat": `<g filter="url(#soft-${sid})"><ellipse cx="48" cy="48" rx="28" ry="18" fill="#ef4444" stroke="#991b1b" stroke-width="1.8" transform="rotate(-15 48 48)"/><path d="M32 46q16-8 32-2" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.8"/><circle cx="34" cy="45" r="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/><circle cx="34" cy="45" r="2.5" fill="#e2e8f0"/></g>`,
+          bakery: `<g filter="url(#soft-${sid})"><path d="M22 56c4-16 16-26 26-26s22 10 26 26c-8-4-16-6-26-6s-18 2-26 6Z" fill="#f59e0b" stroke="#b45309" stroke-width="1.5"/><path d="M30 46c6-10 12-12 18-12s12 2 18 12" fill="none" stroke="#78350f" stroke-width="2" stroke-linecap="round"/><path d="M38 38c3-4 7-6 10-6s7 2 10 6" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.6"/></g>`,
+          "dairy-eggs": `<g filter="url(#soft-${sid})"><rect x="24" y="24" width="22" height="38" rx="4" fill="url(#glass-${sid})" stroke="#0284c7" stroke-width="1.5"/><rect x="27" y="19" width="16" height="6" rx="2" fill="#0284c7"/><path d="M25 40h20v20H25Z" fill="#ffffff" opacity="0.95"/><ellipse cx="60" cy="50" rx="14" ry="17" fill="#f59e0b" stroke="#b45309" stroke-width="1.5" transform="rotate(10 60 50)"/><circle cx="58" cy="48" r="7" fill="#ffffff" opacity="0.3"/></g>`,
+          beverages: `<g filter="url(#soft-${sid})"><path d="M26 32h34v22a14 14 0 0 1-14 14H40a14 14 0 0 1-14-14V32Z" fill="url(#body-${sid})" stroke="${ad}" stroke-width="1.8"/><path d="M60 38h7a7 7 0 0 1 7 7v2a7 7 0 0 1-7 7h-7" fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><path d="M34 24q3-6 0-11M43 24q3-6 0-11M52 24q3-6 0-11" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" opacity="0.7"/></g>`,
+          snacks: `<g filter="url(#soft-${sid})"><circle cx="48" cy="48" r="24" fill="#f59e0b" stroke="#b45309" stroke-width="1.8"/><circle cx="40" cy="40" r="3.5" fill="#451a03"/><circle cx="56" cy="38" r="3" fill="#451a03"/><circle cx="48" cy="54" r="4" fill="#451a03"/><circle cx="36" cy="52" r="2.8" fill="#451a03"/><circle cx="58" cy="54" r="3.2" fill="#451a03"/></g>`,
+          "frozen-foods": `<g filter="url(#soft-${sid})"><circle cx="48" cy="48" r="24" fill="#0284c7" stroke="#0369a1" stroke-width="1.5"/><path d="M48 28v40M28 48h40M34 34l28 28M34 62l28-28" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/><circle cx="48" cy="48" r="5" fill="#ffffff"/></g>`,
+          household: `<g filter="url(#soft-${sid})"><rect x="34" y="32" width="28" height="34" rx="6" fill="url(#body-${sid})" stroke="${ad}" stroke-width="1.8"/><rect x="44" y="24" width="8" height="8" fill="url(#metal-${sid})" stroke="${ink}" stroke-width="1.5"/><path d="M44 24h18v-4H48q-4 0-4 4Z" fill="url(#metal-${sid})" stroke="${ink}" stroke-width="1.5"/><path d="M42 42h12" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.8"/></g>`,
+          "rewards-coin": `<g filter="url(#soft-${sid})"><circle cx="48" cy="48" r="26" fill="#f59e0b" stroke="#b45309" stroke-width="2"/><circle cx="48" cy="48" r="21" fill="none" stroke="#fef08a" stroke-width="1.5" stroke-dasharray="3 3"/><path d="m48 34 3.5 7 7.5 1-5.5 5.5 1.5 7.5-7-3.5-7 3.5 1.5-7.5-5.5-5.5 7.5-1Z" fill="#ffffff" stroke="#b45309" stroke-width="1"/></g>`,
+          "rewards-gift": `<g filter="url(#soft-${sid})"><rect x="22" y="36" width="52" height="34" rx="4" fill="url(#body-${sid})" stroke="${ad}" stroke-width="1.5"/><rect x="18" y="28" width="60" height="10" rx="3" fill="#f59e0b" stroke="#b45309" stroke-width="1.5"/><path d="M44 28v42h8V28Z" fill="#f59e0b" stroke="#b45309" stroke-width="1"/><path d="M48 28c-6-8-14-6-12 0 4 6 12 0 12 0Zm0 0c6-8 14-6 12 0-4 6-12 0-12 0Z" fill="#f59e0b" stroke="#b45309" stroke-width="1.5"/></g>`,
+        };
+        return (
+          defs +
+          (art[id] ||
+            `<g filter="url(#soft-${sid})"><circle cx="48" cy="44" r="28" fill="url(#body-${sid})"/><path d="M34 44h28M48 30v28" stroke="#fff" stroke-width="4" stroke-linecap="round"/></g>`)
+        );
+      }
+
+      // --- 3. CORE APPLICATION LOGIC ---
+      const app = {
+        init() {
+          const saved = localStorage.getItem("aheed-3d-icon-generator");
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            appState = { ...appState, ...parsed };
+          }
+          this.updateProgress();
+          const themeControl = document.getElementById("theme-mode");
+          if (themeControl) themeControl.value = appState.settings.themeMode || "auto";
+          this.applyTheme();
+          this.setView("inventory");
+          this.renderEditor();
+          if (window.matchMedia)
+            window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => {
+              if ((appState.settings.themeMode || "auto") === "auto") this.refreshGeneratedIcons();
+            });
+        },
+
+        save() {
+          localStorage.setItem("aheed-3d-icon-generator", JSON.stringify(appState));
+          this.updateProgress();
+        },
+
+        resetProject() {
+          if (confirm("Reset all generated icons and settings?")) {
+            localStorage.removeItem("aheed-3d-icon-generator");
+            location.reload();
+          }
+        },
+
+        updateProgress() {
+          const total = appState.inventory.length;
+          const generated = appState.inventory.filter((i) => i.status === "Generated").length;
+          document.getElementById("generated-count").textContent = generated;
+          document.getElementById("total-count").textContent = total;
+          document.getElementById("progress-bar").style.width = `${(generated / total) * 100}%`;
+        },
+
+        setView(view) {
+          document.querySelectorAll("nav button").forEach((b) => {
+            b.classList.remove("bg-emerald-50", "text-emerald-700");
+            b.classList.add("text-gray-600", "hover:bg-gray-50");
+          });
+          document.getElementById(`nav-${view}`).classList.add("bg-emerald-50", "text-emerald-700");
+          document
+            .getElementById(`nav-${view}`)
+            .classList.remove("text-gray-600", "hover:bg-gray-50");
+
+          const content = document.getElementById("workspace-content");
+          if (view === "inventory") this.renderInventory(content);
+          else if (view === "analysis") this.renderAnalysis(content);
+        },
+
+        renderInventory(container) {
+          const search = document.getElementById("search-input").value.toLowerCase();
+          const filtered = appState.inventory.filter(
+            (item) =>
+              item.name.toLowerCase().includes(search) ||
+              item.purpose.toLowerCase().includes(search),
+          );
+
+          let html = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
+          filtered.forEach((item) => {
+            const statusColor =
+              item.status === "Generated"
+                ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                : item.status === "Generating"
+                  ? "bg-amber-100 text-amber-700 border-amber-200"
+                  : "bg-gray-100 text-gray-600 border-gray-200";
+
+            html += `
+                    <div onclick="app.selectIcon('${item.id}')" class="group bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg hover:border-emerald-300 transition-all cursor-pointer ${appState.activeIconId === item.id ? "ring-2 ring-emerald-500 border-transparent" : ""}">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                            </div>
+                            <span class="text-xs font-medium px-2 py-1 rounded-full border ${statusColor}">${item.status}</span>
+                        </div>
+                        <h3 class="font-semibold text-gray-900 mb-1">${item.name}</h3>
+                        <p class="text-xs text-gray-500 mb-3 line-clamp-2">${item.purpose}</p>
+                        <div class="flex items-center gap-2 text-xs text-gray-400">
+                            <span class="bg-gray-100 px-2 py-0.5 rounded">${item.category}</span>
+                        </div>
+                    </div>`;
+          });
+          html += `</div>`;
+          container.innerHTML = html;
+        },
+
+        renderAnalysis(container) {
+          container.innerHTML = `
+                    <div class="max-w-3xl mx-auto bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">3D Icon Strategy for Aheed Food Centre</h2>
+                        <div class="prose prose-sm text-gray-600 space-y-4">
+                            <p><strong>Rendering approach:</strong> Custom multi-colour SVG illustrations use gradients, highlight strokes, material cues and soft shadows. They are lightweight 3D-style vector illustrations, not photorealistic rendered 3D models.</p>
+                            <p><strong>Implementation Strategy:</strong></p>
+                            <ul class="list-disc pl-5 space-y-2">
+                                <li><strong>Illustration detail:</strong> Each core icon has a bespoke silhouette, multiple material colours, highlights, gradients and soft shadows.</li>
+                                <li><strong>Theme-aware palette:</strong> Accent colour and light/dark theme are applied consistently to generated and API-returned icons.</li>
+                                <li><strong>Website integration:</strong> <code>window.AheedIconAPI</code> supports icon listing, SVG retrieval, theme switching and data-URL helpers. Export a manifest to bundle assets for deployment.</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+        },
+
+        selectIcon(id) {
+          appState.activeIconId = id;
+          this.save();
+          this.setView("inventory");
+          this.setEditorTab("edit");
+          this.renderEditor();
+        },
+
+        async generateIcon(id) {
+          const item = appState.inventory.find((i) => i.id === id);
+          if (!item) return;
+          item.status = "Generating";
+          this.save();
+          this.renderEditor();
+          await new Promise((r) => requestAnimationFrame(r));
+          const settings = appState.settings,
+            palette = getThemePalette();
+          const duration = Math.max(0.5, 3 / (Number(settings.animSpeed) || 1));
+          const animClass = item.recommendedAnim === "pop" ? "anim-pop" : "anim-float";
+          let svgContent;
+          if (settings.iconStyle === "outline") {
+            const path = iconPaths[id] || '<circle cx="12" cy="12" r="10"/>';
+            svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="${this.escapeHtml(item.name)}"><g transform="scale(4)" fill="none" stroke="${palette.accent}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${path}</g></svg>`;
+          } else {
+            svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="${this.escapeHtml(item.name)}" style="overflow:visible"><g class="${settings.loop ? animClass : ""}" style="transform-origin:48px 48px;animation-duration:${duration}s">${buildIllustration(id, palette)}</g></svg>`;
+          }
+          appState.generatedData[id] = {
+            svg: svgContent,
+            prompt: `Detailed multi-colour 3D-style illustration for ${item.name}; ${palette.mode} theme; ${palette.accent} accent.`,
+            theme: palette.mode,
+            primaryColor: palette.accent,
+            timestamp: new Date().toISOString(),
+          };
+          item.status = "Generated";
+          this.save();
+          this.renderEditor();
+          this.showToast(`"${item.name}" generated`);
+        },
+
+        refreshGeneratedIcons() {
+          Object.keys(appState.generatedData).forEach((id) => {
+            const item = appState.inventory.find((x) => x.id === id);
+            if (item) item.status = "Not generated";
+            delete appState.generatedData[id];
+          });
+          this.save();
+          if (appState.activeIconId) this.renderEditor();
+          this.renderInventory(document.getElementById("workspace-content"));
+        },
+
+        applyTheme() {
+          const p = getThemePalette();
+          document.documentElement.dataset.iconTheme = p.mode;
+          document.documentElement.style.colorScheme = p.mode;
+          document.documentElement.style.setProperty("--studio-accent", p.accent);
+        },
+
+        exportManifest() {
+          const manifest = {
+            name: "Aheed Food Centre Icon API",
+            version: "1.0.0",
+            generatedAt: new Date().toISOString(),
+            theme: getThemePalette(),
+            icons: appState.inventory.map((item) => ({
+              id: item.id,
+              name: item.name,
+              category: item.category,
+              purpose: item.purpose,
+              status: item.status,
+              svg: appState.generatedData[item.id]?.svg || null,
+            })),
+          };
+          const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob),
+            a = document.createElement("a");
+          a.href = url;
+          a.download = "aheed-icon-api-manifest.json";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          this.showToast("API manifest exported");
+        },
+
+        setEditorTab(tab) {
+          ["edit", "placement", "export"].forEach((t) => {
+            const btn = document.getElementById(`tab-${t}`);
+            if (t === tab) {
+              btn.classList.add("bg-white", "shadow-sm", "text-gray-900");
+              btn.classList.remove("text-gray-500");
+            } else {
+              btn.classList.remove("bg-white", "shadow-sm", "text-gray-900");
+              btn.classList.add("text-gray-500");
+            }
+          });
+          this.renderEditor(tab);
+        },
+
+        renderEditor(tab = "edit") {
+          const panel = document.getElementById("editor-content");
+          const title = document.getElementById("editor-title");
+
+          if (!appState.activeIconId) {
+            title.textContent = "Select an Icon";
+            panel.innerHTML = `<div class="text-center py-12 text-gray-400"><p class="text-sm">Select an icon to customize.</p></div>`;
+            return;
+          }
+
+          const item = appState.inventory.find((i) => i.id === appState.activeIconId);
+          const data = appState.generatedData[item.id];
+          title.textContent = item.name;
+
+          if (tab === "edit") {
+            if (!data || item.status === "Generating") {
+              panel.innerHTML = `
+                            <div class="text-center py-8">
+                                <div class="w-16 h-16 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-emerald-600 shadow-inner">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                                </div>
+                                <h3 class="font-medium text-gray-900 mb-2">Generate 3D Icon</h3>
+                                <p class="text-sm text-gray-500 mb-6 max-w-xs mx-auto">Create a lightweight, layered 3D SVG animation for ${item.name}.</p>
+                                <button onclick="app.generateIcon('${item.id}')" class="bg-emerald-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2 mx-auto shadow-lg shadow-emerald-200">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                    Generate 3D Icon
+                                </button>
+                            </div>
+                        `;
+              return;
+            }
+
+            panel.innerHTML = `
+                        <!-- Preview -->
+                        <div class="bg-checker rounded-xl border border-gray-200 p-8 flex items-center justify-center min-h-[200px] relative group">
+                            <div id="live-preview" class="transition-all duration-300">${data.svg}</div>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Icon Style</label>
+                                <select onchange="app.updateSetting('iconStyle', this.value)" class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                    <option value="3d" ${appState.settings.iconStyle === "3d" ? "selected" : ""}>Modern 3D Pop (Layered)</option>
+                                    <option value="outline" ${appState.settings.iconStyle === "outline" ? "selected" : ""}>Minimal Outline</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Primary Color</label>
+                                <div class="flex gap-2">
+                                    <input type="color" value="${appState.settings.primaryColor}" onchange="app.updateSetting('primaryColor', this.value)" class="h-9 w-14 rounded border border-gray-300 cursor-pointer">
+                                    <input type="text" value="${appState.settings.primaryColor}" onchange="app.updateSetting('primaryColor', this.value)" class="flex-1 text-sm border border-gray-300 rounded-md px-3 focus:ring-2 focus:ring-emerald-500 focus:outline-none uppercase">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Animation Speed: <span id="speed-val">${appState.settings.animSpeed}x</span></label>
+                                <input type="range" min="0.5" max="3" step="0.5" value="${appState.settings.animSpeed}" oninput="app.updateSetting('animSpeed', this.value); document.getElementById('speed-val').textContent=this.value+'x'" class="w-full accent-emerald-600">
+                            </div>
+
+                            <div class="flex items-center justify-between py-2 border-t border-gray-100">
+                                <span class="text-sm text-gray-700">Infinite Loop</span>
+                                <input type="checkbox" ${appState.settings.loop ? "checked" : ""} onchange="app.updateSetting('loop', this.checked)" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                            </div>
+                            <div class="flex items-center justify-between py-2 border-t border-gray-100">
+                                <span class="text-sm text-gray-700">3D Hover Tilt Effect</span>
+                                <input type="checkbox" ${appState.settings.hover3D ? "checked" : ""} onchange="app.updateSetting('hover3D', this.checked)" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                            </div>
+
+                            <button onclick="app.generateIcon('${item.id}')" class="w-full mt-4 bg-gray-900 text-white py-2.5 rounded-lg font-medium hover:bg-gray-800 transition-colors text-sm shadow-md">
+                                Regenerate with New Settings
+                            </button>
+                        </div>
+                    `;
+          } else if (tab === "placement") {
+            panel.innerHTML = `
+                        <div class="space-y-4">
+                            <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-800">
+                                <strong>Recommended Placement:</strong> ${item.placement}
+                            </div>
+                            <div class="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                                <div class="bg-gray-50 border-b border-gray-200 px-4 py-2 flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full bg-red-400"></div>
+                                    <div class="w-2 h-2 rounded-full bg-amber-400"></div>
+                                    <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+                                    <span class="text-xs text-gray-400 ml-2">aheedfoodcentre.nocaped.com</span>
+                                </div>
+                                <div class="p-4 bg-gray-50/50">
+                                    ${this.getPlacementMockup(item.id, data ? data.svg : "")}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+          } else if (tab === "export") {
+            if (!data) {
+              panel.innerHTML = `<p class="text-sm text-gray-500 text-center py-8">Generate the icon first.</p>`;
+              return;
+            }
+            panel.innerHTML = `
+                        <div class="space-y-4">
+                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                <p class="text-xs font-semibold text-gray-700 mb-1">File Details</p>
+                                <p class="text-xs text-gray-500">Format: Theme-aware SVG illustration</p>
+                                <p class="text-xs text-gray-500">Size: Depends on illustration detail and SVG filters</p>
+                                <p class="text-xs text-gray-500">No external JS libraries required</p>
+                            </div>
+
+                            <button onclick="app.downloadSVG('${item.id}')" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 text-sm shadow-md shadow-emerald-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                Download .SVG File
+                            </button>
+
+                            <div class="space-y-2">
+                                <label class="text-xs font-semibold text-gray-700">HTML Embed Code</label>
+                                <textarea readonly class="w-full h-32 text-xs bg-gray-50 border border-gray-300 rounded-md p-2 font-mono text-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none">${this.escapeHtml(data.svg)}</textarea>
+                                <button onclick="app.copyToClipboard(this.previousElementSibling.value)" class="text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    Copy to Clipboard
+                                </button>
+                            </div>
+                        </div>
+                    `;
+          }
+        },
+
+        updateSetting(key, value) {
+          appState.settings[key] = value;
+          if (key === "themeMode") {
+            const control = document.getElementById("theme-mode");
+            if (control) control.value = value;
+            this.applyTheme();
+          }
+          this.save();
+          if (["themeMode", "primaryColor", "iconStyle"].includes(key)) {
+            this.refreshGeneratedIcons();
+            this.showToast("Settings updated — regenerate icons to apply");
+          } else if (appState.activeIconId && appState.generatedData[appState.activeIconId])
+            this.generateIcon(appState.activeIconId);
+        },
+
+        downloadSVG(id) {
+          const data = appState.generatedData[id];
+          if (!data) return;
+          const blob = new Blob([data.svg], { type: "image/svg+xml" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${id.replace("icon-", "")}-3d.svg`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          this.showToast("3D SVG downloaded successfully");
+        },
+
+        copyToClipboard(text) {
+          navigator.clipboard.writeText(text).then(() => {
+            this.showToast("Copied to clipboard");
+          });
+        },
+
+        showToast(msg) {
+          const toast = document.getElementById("toast");
+          document.getElementById("toast-message").textContent = msg;
+          toast.classList.remove("translate-y-20", "opacity-0");
+          setTimeout(() => {
+            toast.classList.add("translate-y-20", "opacity-0");
+          }, 3000);
+        },
+
+        escapeHtml(unsafe) {
+          return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        },
+
+        getPlacementMockup(id, svg) {
+          if (id === "icon-delivery-van") {
+            return `<div class="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100 shadow-sm"><div class="shrink-0 w-10 h-10 flex items-center justify-center scale-75 origin-left">${svg}</div><div><p class="text-sm font-bold text-gray-900">Local Delivery</p><p class="text-xs text-gray-500">Across Milton Keynes</p></div></div>`;
+          } else if (id === "icon-cart-add") {
+            return `<div class="bg-white rounded-xl border border-gray-200 p-3 shadow-sm max-w-[200px]"><div class="h-20 bg-gray-100 rounded-lg mb-3"></div><div class="h-3 bg-gray-200 rounded w-3/4 mb-2"></div><div class="h-3 bg-gray-200 rounded w-1/2 mb-4"></div><button class="w-full bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-md shadow-emerald-200"><span class="scale-75 -my-1">${svg}</span> <span>Shop Now</span></button></div>`;
+          } else if (id === "icon-halal-certified") {
+            return `<div class="flex items-center gap-2 bg-white border border-emerald-200 px-4 py-2 rounded-full w-fit shadow-sm"><div class="w-6 h-6 flex items-center justify-center scale-75">${svg}</div><span class="text-xs font-bold text-emerald-800">100% HMC Certified</span></div>`;
+          } else {
+            return `<div class="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100 shadow-sm"><div class="shrink-0 w-10 h-10 flex items-center justify-center scale-75">${svg}</div><span class="text-sm font-medium text-gray-700">Placement preview for ${id.replace("icon-", "")}</span></div>`;
+          }
+        },
+
+        filterInventory() {
+          this.renderInventory(document.getElementById("workspace-content"));
+        },
+
+        async generateAll() {
+          for (const item of appState.inventory) {
+            if (item.status !== "Generated") {
+              await this.generateIcon(item.id);
+            }
+          }
+          this.showToast("All 3D icons generated successfully");
+        },
+      };
+
+      window.AheedIconAPI = {
+        version: "2.0.0",
+        baseUrl: window.location.origin,
+        apiEndpoints: {
+          manifest: "/api/icons",
+          icon: (id, params = "") => `/api/icons/${id}${params ? "?" + params : ""}`,
+        },
+        list() {
+          return appState.inventory.map(({ id, name, category, purpose }) => ({
+            id,
+            name,
+            category,
+            purpose,
+          }));
+        },
+        getIcon(id, options = {}) {
+          const item = appState.inventory.find((x) => x.id === id);
+          if (!item) return null;
+          if (options.theme) appState.settings.themeMode = options.theme;
+          if (options.primaryColor) appState.settings.primaryColor = options.primaryColor;
+          const p = getThemePalette(),
+            cached = appState.generatedData[id];
+          if (cached && cached.theme === p.mode && cached.primaryColor === p.accent)
+            return cached.svg;
+          return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="${String(item.name).replace(/[&<>"]/g, "")}">${buildIllustration(id, p)}</svg>`;
+        },
+        setTheme(theme, primaryColor) {
+          if (theme) appState.settings.themeMode = theme;
+          if (primaryColor) appState.settings.primaryColor = primaryColor;
+          app.applyTheme();
+          app.refreshGeneratedIcons();
+          app.save();
+          return getThemePalette();
+        },
+        toDataURL(id, options = {}) {
+          const svg = this.getIcon(id, options);
+          return svg ? "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg) : null;
+        },
+        async fetchFromApi(id, params = {}) {
+          const query = new URLSearchParams(params).toString();
+          const res = await fetch(`/api/icons/${id}${query ? "?" + query : ""}`);
+          if (!res.ok) throw new Error(`API error: ${res.statusText}`);
+          return await res.text();
+        },
+      };
+      document.addEventListener("DOMContentLoaded", () => {
+        app.init();
+      });
+    </script>
+  </body>
+</html>

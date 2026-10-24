@@ -29,6 +29,7 @@ import {
 } from "@/lib/storage-keys";
 import { STORE_TIMEZONE } from "@/lib/local-datetime";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon3D } from "@/components/icons/Icon3D";
 
 export const dynamic = "force-dynamic";
 
@@ -115,7 +116,13 @@ export default async function CheckoutPage() {
 
   return (
     <PageContainer width="narrow" padY="tight">
-      <h1 className="mb-4 text-xl font-bold text-primary">Checkout</h1>
+      <div className="mb-6 flex items-center gap-3.5 border-b border-black/10 pb-4">
+        <Icon3D name="secure-checkout" size={44} />
+        <div>
+          <h1 className="text-2xl font-extrabold text-primary leading-tight">Secure Checkout</h1>
+          <p className="text-xs text-black/60">Bank-grade encrypted Stripe card payment</p>
+        </div>
+      </div>
 
       {progress.kind === "below-minimum" && (
         <p className="mb-4 rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger">

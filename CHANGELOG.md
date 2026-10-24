@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Production-ready 3D Icon Studio API and modern 3D icon suite integration** (issue `#1245`; `specs/2026-10-24-p1245-3d-icon-system/`).
+  - **3D Icon Core Engine & Catalog (`lib/icons-3d/`):** Implemented high-performance, theme-adaptive vector 3D icon compiler with layered gradients, ambient drop shadows, specular depth highlights, and keyframe animations with strict `prefers-reduced-motion` silencing.
+  - **Production API Endpoints (`app/api/icons/`):** Added `GET /api/icons` (JSON catalog manifest) and `GET /api/icons/[id]` (standalone SVG delivery with Zod validation, `X-Content-Type-Options: nosniff`, and Cloudflare edge caching headers).
+  - **Universal `<Icon3D>` Component (`components/icons/Icon3D.tsx`):** Added theme-aware 3D icon component supporting both inline SSR (zero network overhead, instant paint) and remote image embed modes.
+  - **Storefront Modernization:** Replaced flat placeholder icons with polished 3D illustrations on homepage hero (3D delivery badge, 3D HMC certified halal medal), trust values strip (3D delivery van, 3D secure checkout shield, 3D order updates notification bell), delivery availability modal (3D postcode search pin), floating cart trigger, and checkout page header.
+  - **Upgraded Visual Studio & Developer Reference:** Upgraded `scripts/aheed-3d-animated-icon-studio-upgraded.html` with full 16-icon catalog and direct API connectivity; added comprehensive API documentation in `docs/developer-portal/3d-icon-api.md`.
+
 - **Supermarket trolley icon for checkout and group icon for contact cluster** (issue `#1242`; `specs/2026-10-24-p1242-trolley-group-icons/`).
   - Added `"shopping-cart"` to `ICON_REGISTRY` mapped to Google Noto Emoji `shopping-cart` (supermarket trolley 🛒).
   - Updated floating checkout/cart button and drawer header in `components/cart/CartDrawerShell.tsx` and empty basket in `components/cart/CartContents.tsx` to render `<Icon name="shopping-cart" />`.
