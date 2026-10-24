@@ -81,6 +81,7 @@ export function StorefrontFooter({
     facebookUrl: profile.facebookUrl,
     instagramUrl: profile.instagramUrl,
     whatsappNumber: profile.whatsappNumber,
+    whatsappCommunityUrl: profile.whatsappCommunityUrl,
     assistantAvailable,
   });
   // #1169 — the contact-channel buttons live in this column now, so it shows for them too: a store
@@ -240,11 +241,6 @@ export function StorefrontFooter({
 
           <Column title="Shop with us">
             <ul className="space-y-0.5">
-              <li>
-                <Link href="/whatsapp-offers" className={LINK}>
-                  Offers &amp; deals
-                </Link>
-              </li>
               <li>
                 <Link href="/help" className={LINK}>
                   Help guide

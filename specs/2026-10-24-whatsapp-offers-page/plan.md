@@ -29,8 +29,8 @@ Instead, `VendorConfig` (`prisma/schema.prisma`) gains two nullable columns:
 
 Following the `#239` null-hides rule:
 
-- When `profile.whatsappCommunityUrl` is non-null, `/whatsapp-offers` renders the top WhatsApp community banner (heading `"Stay Updated with Our Latest Offers!"`, vendor-neutral supporting copy naming `profile.name`, green `"Join Our WhatsApp Group"` button with the WhatsApp SVG icon, `"Free to join. Leave anytime."` reassurance, and the QR code card when `profile.whatsappCommunityQrKey` is also set) plus the secondary bottom WhatsApp call-to-action card.
-- When `profile.whatsappCommunityUrl` is `null` (for example on SriMart), both WhatsApp call-to-action blocks are omitted and `/whatsapp-offers` renders only that vendor's genuine catalogue offers.
+- When `profile.whatsappCommunityUrl` is non-null, `<WhatsappCommunityBanner>` (`components/layout/WhatsappCommunityBanner.tsx`) renders the WhatsApp community banner (heading `"Stay Updated with Our Latest Offers!"`, vendor-neutral supporting copy naming `profile.name`, green `"Join Our WhatsApp Group"` button with the WhatsApp SVG icon, `"Free to join. Leave anytime."` reassurance, and the QR code card when `profile.whatsappCommunityQrKey` is also set) on both `/categories` (when clicking `"Shop"`) and `/whatsapp-offers`.
+- When `profile.whatsappCommunityUrl` is `null` (for example on SriMart), the WhatsApp community banner is omitted (`#239`).
 
 ### 2. Genuine offers grouped by the vendor's real departments
 
@@ -47,11 +47,10 @@ Rather than inventing promotional categories, fake discounts, or unverified expi
 
 > `"Join the ${profile.name} WhatsApp group to discover special promotions, exclusive deals, fresh arrivals, and exciting savings on your favourite products."`
 
-### 4. Storefront navigation and SEO
+### 4. Storefront Shop page, contact channels, and SEO
 
-- **Header (`components/layout/Header.tsx`)**: adds an `"Offers"` link (`/whatsapp-offers`) with `<Icon name="tag" />` alongside `"Shop"` (`/categories`), `"Quick Shop"` (`ShoppingListLink`), and `"Rewards"`. The text label is hidden below `sm` (`hidden sm:inline`), matching `ShoppingListLink` and the Rewards link so the 360px mobile header never overflows horizontally.
-- **Collection navigation (`components/product/CollectionNav.tsx`)**: adds `"Offers & Deals"` (`/whatsapp-offers`) with `<Icon name="tag" />` as the first entry in `COLLECTIONS` so shoppers browsing `/categories`, `/categories/[slug]`, `/search`, `/bundles`, or `/whatsapp-offers` can switch directly to the offers collection.
-- **Footer (`components/layout/StorefrontFooter.tsx`)**: adds `"Offers & deals"` (`/whatsapp-offers`) to the `"Shop with us"` column.
+- **Shop page (`app/(storefront)/categories/page.tsx`)**: renders `<WhatsappCommunityBanner>` directly below the `"Shop by department"` scroller when `profile.whatsappCommunityUrl` is set, so shoppers clicking `"Shop"` in the header immediately see the WhatsApp community invite and QR code without needing a separate `"Offers"` navigation link in the header, `CollectionNav`, or footer `"Shop with us"` column.
+- **Floating contact cluster & footer contact channels (`lib/contact-channels.ts`, `components/layout/StorefrontChrome.tsx`, `components/layout/StorefrontFooter.tsx`, `components/layout/FloatingContact.tsx`, `components/layout/contact-channel-icons.tsx`)**: passes `whatsappCommunityUrl: profile.whatsappCommunityUrl` into `contactChannels()`, emitting `{ kind: "whatsapp-community", href: whatsappCommunityUrl, label: "Join <vendorName> WhatsApp group" }` (with `WhatsappGlyph`) alongside Facebook, Instagram, and the Help Assistant (`?`) in both the floating bottom-right contact menu and the footer's `"Visit & contact us"` icon row.
 - **Sitemap (`app/sitemap.ts`)**: adds `"/whatsapp-offers"` to `STATIC_PATHS` so search engines index each vendor's offers page on that vendor's own host.
 - **Metadata (`lib/page-metadata.ts` & `app/(storefront)/whatsapp-offers/page.tsx`)**: pure `buildOffersMetadata({ host, vendorName })` helper in `lib/page-metadata.ts` builds `title: "Offers & Deals | <vendorName>"`, a bounded vendor-neutral description, and an absolute canonical URL `https://<host>/whatsapp-offers`.
 

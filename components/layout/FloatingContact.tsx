@@ -66,6 +66,7 @@ interface FloatingContactProps {
   facebookUrl: string | null;
   instagramUrl: string | null;
   whatsappNumber: string | null;
+  whatsappCommunityUrl?: string | null;
   /**
    * #1015 — `assistantEnabled` and a WhatsApp number, computed by `StorefrontChrome` from the
    * profile it already loaded. When true, the disclosure gains a help-assistant control.

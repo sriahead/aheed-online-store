@@ -184,7 +184,7 @@ describe("formatCampaignValidity (#1233 R15a)", () => {
 });
 
 describe("WhatsappOffersView (#1233 R13, R14, R15)", () => {
-  it("renders the top WhatsApp banner, QR code image, and bottom WhatsApp CTA when whatsappCommunityUrl and qrImageUrl are present (R13)", () => {
+  it("renders the top WhatsApp banner and QR code image when whatsappCommunityUrl and qrImageUrl are present (R13)", () => {
     const html = renderToStaticMarkup(createElement(WhatsappOffersView, baseProps()));
 
     expect(html).toContain("Stay Updated with Our Latest Offers!");
@@ -196,7 +196,7 @@ describe("WhatsappOffersView (#1233 R13, R14, R15)", () => {
     expect(html).toContain('href="https://chat.whatsapp.com/FTgLVoelRw7262i0OvAIzS"');
     expect(html).toContain('src="https://cdn.example/vendors/v1/whatsapp-qr.png"');
     expect(html).toContain('alt="Scan to join the First Store WhatsApp group"');
-    expect(html).toContain("Never miss a deal at First Store");
+    expect(html).not.toContain("Never miss a deal at");
   });
 
   it("omits the QR code card when qrImageUrl is null while keeping the WhatsApp join button (R13b)", () => {
@@ -209,7 +209,7 @@ describe("WhatsappOffersView (#1233 R13, R14, R15)", () => {
     expect(html).not.toContain("Scan to join the First Store WhatsApp group");
   });
 
-  it("hides both the top WhatsApp banner and bottom WhatsApp CTA when whatsappCommunityUrl is null (#239, R14)", () => {
+  it("hides the WhatsApp banner when whatsappCommunityUrl is null (#239, R14)", () => {
     const html = renderToStaticMarkup(
       createElement(
         WhatsappOffersView,
@@ -224,7 +224,6 @@ describe("WhatsappOffersView (#1233 R13, R14, R15)", () => {
     expect(html).not.toContain("Stay Updated with Our Latest Offers!");
     expect(html).not.toContain("Join Our WhatsApp Group");
     expect(html).not.toContain("chat.whatsapp.com");
-    expect(html).not.toContain("Never miss a deal at");
     expect(html).toContain("Latest Offers &amp; Deals");
     expect(html).toContain("Department One");
   });

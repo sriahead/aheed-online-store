@@ -64,6 +64,7 @@ export async function StorefrontChrome({
               facebookUrl={profile.facebookUrl}
               instagramUrl={profile.instagramUrl}
               whatsappNumber={profile.whatsappNumber}
+              whatsappCommunityUrl={profile.whatsappCommunityUrl}
               assistantAvailable={assistantAvailable}
             />
           </AssistantLauncherProvider>
