@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Coins, Sparkles, UserPlus } from "lucide-react";
 import { formatPrice } from "@/components/product/format-price";
 import { MIN_REFERRAL_ORDER_PENCE, REFERRAL_DISCOUNT_PENCE } from "@/lib/referrals";
+import { Icon } from "@/components/icons/Icon";
 
 export function WaysToEarnAccordion({
   pointsPerPoundEarned = 1,
@@ -41,15 +41,15 @@ export function WaysToEarnAccordion({
               isDark ? "bg-amber-400/20 text-amber-400" : "bg-action-tint text-action"
             }`}
           >
-            <Coins className="h-4 w-4" aria-hidden="true" />
+            <Icon name="coins" className="h-4 w-4" />
           </div>
           <span className="text-sm font-semibold">Ways to earn</span>
         </div>
-        <ChevronDown
+        <Icon
+          name="chevron-down"
           className={`h-4 w-4 transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
           } ${isDark ? "text-stone-400" : "text-primary-muted"}`}
-          aria-hidden="true"
         />
       </button>
 
@@ -60,7 +60,8 @@ export function WaysToEarnAccordion({
           }`}
         >
           <div className="flex items-start gap-2.5">
-            <Coins
+            <Icon
+              name="coins"
               className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? "text-amber-400" : "text-action"}`}
             />
             <div>
@@ -78,7 +79,8 @@ export function WaysToEarnAccordion({
 
           {maxMultiplier > 1 && (
             <div className="flex items-start gap-2.5">
-              <Sparkles
+              <Icon
+                name="sparkles"
                 className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? "text-amber-400" : "text-accent"}`}
               />
               <div>
@@ -93,7 +95,8 @@ export function WaysToEarnAccordion({
           )}
 
           <div className="flex items-start gap-2.5">
-            <UserPlus
+            <Icon
+              name="user-plus"
               className={`h-4 w-4 shrink-0 mt-0.5 ${isDark ? "text-amber-400" : "text-action"}`}
             />
             <div>

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { ShoppingBag, X } from "lucide-react";
 import { CartDrawerContext } from "./drawer-context";
+import { Icon } from "@/components/icons/Icon";
 
 /** Everything focusable we expect inside the drawer, in DOM order. */
 const FOCUSABLE =
@@ -118,7 +118,7 @@ export function CartDrawerShell({
         aria-expanded={open}
         className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full bg-primary px-4 py-3 text-sm font-bold text-white shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-transform hover:scale-105 motion-reduce:hover:scale-100 hover:bg-primary/90 hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] sm:bottom-8 sm:right-8 group"
       >
-        <ShoppingBag className="h-5 w-5" aria-hidden />
+        <Icon name="shopping-bag" className="h-5 w-5" />
         {itemCount > 0 && (
           <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-extrabold text-white shadow-sm">
             {itemCount}
@@ -159,7 +159,7 @@ export function CartDrawerShell({
             >
               <div className="flex items-center justify-between bg-primary p-4 text-white">
                 <div className="flex items-center gap-2">
-                  <ShoppingBag className="h-5 w-5" aria-hidden />
+                  <Icon name="shopping-bag" className="h-5 w-5" />
                   <h2 id={titleId} className="text-base font-bold">
                     My Cart ({itemCount})
                   </h2>
@@ -171,7 +171,7 @@ export function CartDrawerShell({
                   data-tap-surface="cart-drawer-close"
                   className="flex size-tap items-center justify-center rounded-full p-1.5 text-white transition-colors hover:bg-black/15 lg:size-auto"
                 >
-                  <X className="h-5 w-5" aria-hidden />
+                  <Icon name="x" className="h-5 w-5" />
                 </button>
               </div>
 

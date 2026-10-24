@@ -4,7 +4,9 @@ import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getRequestCartQuantities } from "@/lib/cart-summary";
 import { getRequestFavouriteState } from "@/lib/favourites-summary";
 import { getEnv } from "@/lib/config";
+import { composePublicUrl } from "@/lib/storage";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
+import { WhatsappCommunityBanner } from "@/components/layout/WhatsappCommunityBanner";
 import { ProductRow } from "@/components/product/ProductRow";
 import { BundleRow } from "@/components/bundle/BundleRow";
 import { getBundlesForStorefront } from "@/lib/bundles-service";
@@ -35,7 +37,8 @@ export async function generateMetadata() {
 
 export default async function CategoriesPage() {
   const productsRepo = getProductRepository();
-  const [categories, newArrivalsPage, featuredPage, bundles] = await Promise.all([
+  const [profile, categories, newArrivalsPage, featuredPage, bundles] = await Promise.all([
+    getCurrentVendorProfile(),
     getCategoryRepository().listTopLevel(),
     productsRepo.list({ take: 8 }), // recent products (#511 — 8, not 4: a scroller over 4 has nothing to scroll)
     productsRepo.list({ take: 8, isFeatured: true }), // vendor-curated featured products (#511)
@@ -49,6 +52,10 @@ export default async function CategoriesPage() {
   // #232 — request-memoised, so both product rows below share ONE favourite query.
   const favouriteState = await getRequestFavouriteState();
   const { CDN_BASE_URL } = getEnv();
+  const qrImageUrl =
+    profile?.whatsappCommunityQrKey && CDN_BASE_URL
+      ? composePublicUrl(CDN_BASE_URL, profile.whatsappCommunityQrKey)
+      : null;
 
   return (
     <PageContainer width="wide" padY="tight" className="space-y-8">
@@ -56,6 +63,12 @@ export default async function CategoriesPage() {
         <h1 className="mb-4 text-xl font-bold text-primary">Shop by department</h1>
         <DepartmentScroller categories={categories} />
       </section>
+
+      <WhatsappCommunityBanner
+        vendorName={profile?.name ?? ""}
+        whatsappCommunityUrl={profile?.whatsappCommunityUrl ?? null}
+        qrImageUrl={qrImageUrl}
+      />
 
       {/* P8.5c (#347): after the departments, before the product rows — the
           shop page's merchandising slot. The landing page stays as P8.5f left

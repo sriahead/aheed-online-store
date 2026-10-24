@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Truck } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import {
   exampleDeliveryAreaForVendor,
@@ -16,6 +15,7 @@ import {
   type StoreDefaultCharges,
 } from "@/components/staff/DeliveryAreaManager";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and this vendor's delivery areas — must render per-request.
 export const dynamic = "force-dynamic";
@@ -68,7 +68,7 @@ export default async function StaffDeliveryAreasPage() {
   return (
     <PageContainer width="standard">
       <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-primary">
-        <Truck className="h-5 w-5" aria-hidden="true" />
+        <Icon name="truck" className="h-5 w-5" />
         Delivery areas
       </h1>
       <p className="mb-6 text-sm text-primary-muted">

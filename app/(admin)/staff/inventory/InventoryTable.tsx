@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, Minus, Plus, Search } from "lucide-react";
 import { updateInventoryAction } from "./actions";
 import { composePublicUrl } from "@/lib/storage";
+import { RESTRICTION_LABELS, STOCK_MODE_LABELS } from "@/lib/product-restriction";
 import type { StaffInventoryRow } from "@/lib/repositories/products";
+import { Icon } from "@/components/icons/Icon";
 
 export function InventoryTable({
   initialItems,
@@ -35,7 +36,10 @@ export function InventoryTable({
     <div className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden mt-6">
       <div className="p-4 border-b border-black/10">
         <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/60" />
+          <Icon
+            name="search"
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/60"
+          />
           <input
             type="text"
             placeholder="Filter inventory by name..."
@@ -86,6 +90,7 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
   const [isUpdating, startTransition] = useTransition();
   const [optimisticQuantity, setOptimisticQuantity] = useState(item.quantity);
   const [optimisticActive, setOptimisticActive] = useState(item.isActive);
+  const [error, setError] = useState<string | null>(null);
 
   const imageUrl = item.primaryImage?.storageKey
     ? composePublicUrl(cdnBaseUrl, item.primaryImage.storageKey)
@@ -102,8 +107,14 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
   const toggleActive = () => {
     const next = !optimisticActive;
     setOptimisticActive(next);
+    setError(null);
     startTransition(async () => {
-      await updateInventoryAction(item.id, { isActive: next });
+      const result = await updateInventoryAction(item.id, { isActive: next });
+      // #1211 (R15b) — a refused toggle (a restricted product) must not keep showing "In Stock".
+      if (!result.ok) {
+        setOptimisticActive(!next);
+        setError(result.error ?? "That change was not saved.");
+      }
     });
   };
 
@@ -132,23 +143,31 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
         <p className="text-xs text-black/60">({item.basePrice}p)</p>
       </td>
       <td className="px-6 py-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => updateQuantity(-1)}
-            disabled={isUpdating || optimisticQuantity <= 0}
-            className="flex h-6 w-6 items-center justify-center rounded-2xl bg-black/5 hover:bg-black/10 disabled:opacity-50"
-          >
-            <Minus className="h-3 w-3" />
-          </button>
-          <span className="w-6 text-center font-bold">{optimisticQuantity}</span>
-          <button
-            onClick={() => updateQuantity(1)}
-            disabled={isUpdating}
-            className="flex h-6 w-6 items-center justify-center rounded-2xl bg-black/5 hover:bg-black/10 disabled:opacity-50"
-          >
-            <Plus className="h-3 w-3" />
-          </button>
-        </div>
+        {/* #1211 (R15b) — a count only means something under TRACKED, so only TRACKED rows get
+            the +/- control; the other two modes say what they are instead. */}
+        {item.stockMode !== "TRACKED" ? (
+          <span className="text-xs font-semibold text-black/60">
+            {STOCK_MODE_LABELS[item.stockMode]}
+          </span>
+        ) : (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => updateQuantity(-1)}
+              disabled={isUpdating || optimisticQuantity <= 0}
+              className="flex h-6 w-6 items-center justify-center rounded-2xl bg-black/5 hover:bg-black/10 disabled:opacity-50"
+            >
+              <Icon name="minus" className="h-3 w-3" />
+            </button>
+            <span className="w-6 text-center font-bold">{optimisticQuantity}</span>
+            <button
+              onClick={() => updateQuantity(1)}
+              disabled={isUpdating}
+              className="flex h-6 w-6 items-center justify-center rounded-2xl bg-black/5 hover:bg-black/10 disabled:opacity-50"
+            >
+              <Icon name="plus" className="h-3 w-3" />
+            </button>
+          </div>
+        )}
       </td>
       <td className="px-6 py-4">
         <button
@@ -162,16 +181,26 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
         >
           {optimisticActive ? (
             <>
-              <Eye className="h-3.5 w-3.5" />
+              <Icon name="eye" className="h-3.5 w-3.5" />
               In Stock
             </>
           ) : (
             <>
-              <EyeOff className="h-3.5 w-3.5" />
+              <Icon name="eye-off" className="h-3.5 w-3.5" />
               Hidden
             </>
           )}
         </button>
+        {item.restriction !== null && (
+          <p className="mt-1 text-xs font-semibold text-danger">
+            {RESTRICTION_LABELS[item.restriction]}
+          </p>
+        )}
+        {error !== null && (
+          <p role="alert" className="mt-1 max-w-xs text-xs text-danger">
+            {error}
+          </p>
+        )}
       </td>
     </tr>
   );

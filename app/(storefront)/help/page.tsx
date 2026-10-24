@@ -7,18 +7,10 @@ import { helpDeliveryFacts, freeDeliveryOffered, pointsExpirySentence } from "@/
 import { formatPrice } from "@/components/product/format-price";
 import { PageContainer } from "@/components/layout/PageContainer";
 import Link from "next/link";
-import {
-  ShieldAlert,
-  MapPin,
-  Sparkles,
-  TicketPercent,
-  Lock,
-  HelpCircle,
-  Store,
-} from "lucide-react";
 import { DocumentSectionRenderer } from "@/components/ui/DocumentSectionRenderer";
 import { getPublicShopperGuide } from "@/lib/public-docs";
 import { HelpContactCard } from "@/components/assistant/HelpContactCard";
+import { Icon } from "@/components/icons/Icon";
 
 export const metadata: Metadata = {
   title: "Help Centre",
@@ -93,7 +85,7 @@ export default async function HelpPage() {
         <section className="bg-primary/5 rounded-2xl p-6 sm:p-8 border border-primary/20">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <ShieldAlert className="w-5 h-5 text-primary" />
+              <Icon name="shield-alert" className="w-5 h-5 text-primary" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-primary">Internal Staff Resources</h2>
@@ -142,7 +134,7 @@ export default async function HelpPage() {
           className="scroll-mt-24 bg-white rounded-2xl p-6 border border-black/10"
         >
           <div className="flex items-center gap-3 mb-4">
-            <MapPin className="w-5 h-5 text-action-tint" />
+            <Icon name="map-pin" className="w-5 h-5 text-action-tint" />
             <h2 className="font-bold text-lg">Delivery &amp; Minimums</h2>
           </div>
           <div className="space-y-3 text-sm text-black/70">
@@ -226,7 +218,7 @@ export default async function HelpPage() {
         {offersCollection && (
           <section className="bg-white rounded-2xl p-6 border border-black/10">
             <div className="flex items-center gap-3 mb-4">
-              <Store className="w-5 h-5 text-action-tint" />
+              <Icon name="store" className="w-5 h-5 text-action-tint" />
               <h2 className="font-bold text-lg">Click &amp; Collect</h2>
             </div>
             <div className="space-y-3 text-sm text-black/70">
@@ -251,7 +243,7 @@ export default async function HelpPage() {
         {loyalty.loyaltyEnabled && (
           <section className="bg-white rounded-2xl p-6 border border-black/10">
             <div className="flex items-center gap-3 mb-4">
-              <Sparkles className="w-5 h-5 text-amber-500" />
+              <Icon name="sparkles" className="w-5 h-5 text-amber-500" />
               <h2 className="font-bold text-lg">Loyalty Points</h2>
             </div>
             <div className="space-y-3 text-sm text-black/70">
@@ -288,7 +280,7 @@ export default async function HelpPage() {
 
         <section className="bg-white rounded-2xl p-6 border border-black/10">
           <div className="flex items-center gap-3 mb-4">
-            <TicketPercent className="w-5 h-5 text-accent" />
+            <Icon name="ticket-percent" className="w-5 h-5 text-accent" />
             <h2 className="font-bold text-lg">Discount Codes</h2>
           </div>
           <div className="space-y-3 text-sm text-black/70">
@@ -305,7 +297,7 @@ export default async function HelpPage() {
 
         <section className="bg-white rounded-2xl p-6 border border-black/10">
           <div className="flex items-center gap-3 mb-4">
-            <Lock className="w-5 h-5 text-black/60" />
+            <Icon name="lock" className="w-5 h-5 text-black/60" />
             <h2 className="font-bold text-lg">Privacy &amp; Data Rights</h2>
           </div>
           <div className="space-y-3 text-sm text-black/70">
@@ -327,7 +319,7 @@ export default async function HelpPage() {
       {faqs.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center gap-3">
-            <HelpCircle className="w-5 h-5 text-action-tint" />
+            <Icon name="circle-question-mark" className="w-5 h-5 text-action-tint" />
             <h2 className="text-2xl font-bold">Questions we are asked</h2>
           </div>
           <dl className="space-y-4">

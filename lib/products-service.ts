@@ -18,6 +18,7 @@ import {
   listActiveProductSlugs,
   listCategorySpotlights,
   listInventoryForStaff as listInventoryForStaffRepo,
+  listOfferProducts as listOfferProductsRepo,
   listProducts,
   listProductsByCategory,
   listProductsForAdmin as listProductsForAdminRepo,
@@ -165,6 +166,17 @@ export function getProductRepository(): ProductRepository {
     async categorySpotlights(categoryIds) {
       return listCategorySpotlights(prisma, await vendorId(), categoryIds);
     },
+
+    async listOfferProducts(take) {
+      const [items, today] = await Promise.all([
+        listOfferProductsRepo(prisma, await vendorId(), take),
+        vendorToday(),
+      ]);
+      return items.map((entry) => ({
+        ...entry,
+        product: withCurrentRestock(entry.product, today),
+      }));
+    },
   };
 }
 
@@ -193,13 +205,7 @@ export async function listInventoryForStaff(
 
 export async function listProductsForAdmin(
   vendorId: string,
-  options: {
-    take: number;
-    cursor?: string;
-    search?: string | null;
-    isActive?: boolean;
-    categoryIds?: readonly string[];
-  },
+  options: Parameters<typeof listProductsForAdminRepo>[2],
 ): Promise<AdminProductPage> {
   return listProductsForAdminRepo(getPrisma(), vendorId, options);
 }

@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
-import { categoryIcon } from "@/components/product/category-icon";
+
+import { categoryIconName } from "@/components/product/category-icon";
 import { formatPrice } from "@/components/product/format-price";
 import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { composePublicUrl } from "@/lib/storage";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * P8.5b (#346) — the homepage's department hero.
@@ -20,7 +21,7 @@ import { composePublicUrl } from "@/lib/storage";
  *
  * IMAGE-OPTIONAL BY DESIGN. `Category` has no image field, and #279 records
  * that no vendor artwork exists at all — so a photographic hero could not ship
- * today. Each panel falls back to `categoryIcon()`'s existing slug-to-lucide
+ * today. Each panel falls back to `categoryIconName()`'s existing slug-to-icon
  * mapping, which already handles unknown slugs. `imageKey` is accepted now so
  * that adding `Category.imageKey` later needs no change to this component.
  *
@@ -164,7 +165,7 @@ export function DepartmentHero({
         style={{ transform: `translateX(-${current * 100}%)` }}
       >
         {departments.map((department, index) => {
-          const Icon = categoryIcon(department.slug);
+          const iconName = categoryIconName(department.slug);
           const imageUrl =
             department.imageKey && cdnBaseUrl
               ? composePublicUrl(cdnBaseUrl, department.imageKey)
@@ -279,7 +280,7 @@ export function DepartmentHero({
                           (R11) — one fewer free-text a11y surface than the
                           approved direction implied. */}
                       Shop {department.name}
-                      <ArrowRight className="h-4 w-4" aria-hidden />
+                      <Icon name="arrow-right" className="h-4 w-4" />
                     </Link>
                   </div>
                 </div>
@@ -301,17 +302,17 @@ export function DepartmentHero({
                         className="h-32 w-32 rounded-2xl object-cover md:h-40 md:w-40"
                         fallback={
                           <Icon
+                            name={iconName}
                             className="h-24 w-24 text-white/85 md:h-32 md:w-32"
                             strokeWidth={1.25}
-                            aria-hidden
                           />
                         }
                       />
                     ) : (
                       <Icon
+                        name={iconName}
                         className="h-24 w-24 text-white/85 md:h-32 md:w-32"
                         strokeWidth={1.25}
-                        aria-hidden
                       />
                     )}
                   </div>
@@ -330,7 +331,7 @@ export function DepartmentHero({
             className="absolute top-1/2 left-2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50"
             aria-label="Previous department"
           >
-            <ChevronLeft className="h-5 w-5" aria-hidden />
+            <Icon name="chevron-left" className="h-5 w-5" />
           </button>
           <button
             type="button"
@@ -338,7 +339,7 @@ export function DepartmentHero({
             className="absolute top-1/2 right-2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50"
             aria-label="Next department"
           >
-            <ChevronRight className="h-5 w-5" aria-hidden />
+            <Icon name="chevron-right" className="h-5 w-5" />
           </button>
 
           <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2">
@@ -357,9 +358,9 @@ export function DepartmentHero({
               aria-label={paused ? "Resume department rotation" : "Pause department rotation"}
             >
               {paused ? (
-                <Play className="h-3 w-3" aria-hidden />
+                <Icon name="play" className="h-3 w-3" />
               ) : (
-                <Pause className="h-3 w-3" aria-hidden />
+                <Icon name="pause" className="h-3 w-3" />
               )}
             </button>
 

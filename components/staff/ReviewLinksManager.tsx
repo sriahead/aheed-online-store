@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { ExternalLink, Plus, Trash2 } from "lucide-react";
 import { saveReviewLink, deleteReviewLinkAction } from "@/features/admin/review-links";
 import {
   initialReviewLinkState,
@@ -13,6 +12,7 @@ import {
 import type { ReviewLink } from "@/lib/repositories/vendor-review-links";
 import { labelClass } from "@/lib/form-classes";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * External review-link admin (P9.2, #818).
@@ -87,7 +87,7 @@ export function ReviewLinksManager({ links }: { links: ReviewLink[] }) {
                   )}
                 </p>
                 <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-primary-muted">
-                  <ExternalLink className="h-3 w-3 shrink-0" aria-hidden />
+                  <Icon name="external-link" className="h-3 w-3 shrink-0" />
                   {link.url}
                 </p>
               </div>
@@ -99,7 +99,7 @@ export function ReviewLinksManager({ links }: { links: ReviewLink[] }) {
                   aria-label={`Remove ${link.platform}`}
                   className="inline-flex items-center gap-2 rounded-full border border-black/15 px-3 py-1.5 text-sm font-semibold text-primary transition-colors hover:border-danger hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden />
+                  <Icon name="trash" className="h-4 w-4" />
                   Remove
                 </button>
               </form>
@@ -171,7 +171,7 @@ export function ReviewLinksManager({ links }: { links: ReviewLink[] }) {
 
         <div>
           <Button type="submit" disabled={pending}>
-            <Plus className="h-4 w-4" aria-hidden />
+            <Icon name="plus" className="h-4 w-4" />
             {pending ? "Saving…" : "Save review link"}
           </Button>
         </div>

@@ -69,3 +69,7 @@ kms/site-*/public/_pagefind/
 # Deliberately one named path rather than a docs/*.xls glob — a second export
 # under a different name should get its own decision, not silent coverage.
 docs/StockList.xls
+
+# Catalogue import reports (#1216). They name every rejected source row, product and price from a
+# client's export — their commercial data, so never committed. Written by scripts/import-catalogue.ts.
+.import-reports/

@@ -26,6 +26,7 @@ import {
 import {
   FACEBOOK_URL_FIELD,
   INSTAGRAM_URL_FIELD,
+  WHATSAPP_COMMUNITY_URL_FIELD,
   WHATSAPP_NUMBER_FIELD,
   initialSocialContactState,
 } from "@/lib/social-contact-form";
@@ -42,6 +43,7 @@ import {
 } from "@/lib/product-grid-density";
 import { VendorLogoUploader } from "@/components/staff/VendorLogoUploader";
 import { VendorMarkUploader } from "@/components/staff/VendorMarkUploader";
+import { WhatsappQrUploader } from "@/components/staff/WhatsappQrUploader";
 
 /** The eight `VendorBranding` brand primitives — every column that is a hex string. */
 type BrandColorFieldName =
@@ -74,6 +76,7 @@ export function StorefrontConfigForm({
   vendorThemes,
   logoUrl,
   markUrl,
+  whatsappQrUrl = null,
 }: {
   initialConfig: VendorConfig;
   initialBranding: VendorBranding;
@@ -88,6 +91,8 @@ export function StorefrontConfigForm({
   logoUrl: string | null;
   /** #1069 — the current mark's `192.png`, or null. */
   markUrl: string | null;
+  /** #1233 — the current WhatsApp community group QR code image URL, or null. */
+  whatsappQrUrl?: string | null;
 }) {
   const router = useRouter();
   const [themePending, startThemeTransition] = useTransition();
@@ -816,6 +821,26 @@ export function StorefrontConfigForm({
           </p>
         </div>
 
+        <div className="flex flex-col gap-2">
+          <label htmlFor="whatsappCommunityUrl" className="font-bold text-black">
+            WhatsApp community group link
+          </label>
+          <input
+            id="whatsappCommunityUrl"
+            name="whatsappCommunityUrl"
+            type="text"
+            inputMode="url"
+            defaultValue={initialConfig.whatsappCommunityUrl ?? ""}
+            className={fieldClass(socialState.field === WHATSAPP_COMMUNITY_URL_FIELD)}
+            placeholder="e.g. https://chat.whatsapp.com/your-invite-code"
+          />
+          <p className="text-xs text-black/60">
+            Must start with https://chat.whatsapp.com/ followed by your group invite code. Shown on
+            the Offers &amp; Deals page (/whatsapp-offers); leave blank to hide the WhatsApp group
+            banner on that page.
+          </p>
+        </div>
+
         {socialState.error && (
           <p className="rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger">
             {socialState.error}
@@ -835,6 +860,8 @@ export function StorefrontConfigForm({
           {socialPending ? "Saving…" : "Save Social & Contact Links"}
         </button>
       </form>
+
+      <WhatsappQrUploader currentQrUrl={whatsappQrUrl} />
 
       {/* #905 — a fourth sibling <form>, never nested. The labels gate the staff product form only;
           switching one off never clears a product's stored value (saveProduct strips it). */}

@@ -52,3 +52,37 @@ catalogue, and that is expected** — importing a catalogue is `#1201`, a separa
    See ADR-004's 2026-10-21 implementation note for why this is not yet data-only.
 2. **A logo is an upload, not a file in this repo** (ADR-003). Leave `logoStorageKey` as `null` and
    upload on `/staff/storefront`, which writes the relative key itself.
+
+## Placeholders, readiness and the route block (#1216)
+
+A manifest may contain values the owner has not confirmed yet (delivery fee, free-delivery threshold,
+minimum order, postcode prefixes, sender e-mail, footer address). The schema stays strict, so a
+placeholder is a real value of the right type, marked in one of two ways:
+
+- the top-level `placeholders` array lists dotted field paths (`"config.deliveryFeePence"`,
+  `"deliveryPrefixes"`, `"footer.location"`), and each must name a real field — this is the only way a
+  number can carry the mark;
+- a string containing `OWNER TO CONFIRM`, ending `.invalid`, or written `[IN BRACKETS AND CAPS]`.
+
+```bash
+npx tsx scripts/provision-vendor.ts <manifest> --check-ready
+npx tsx scripts/provision-vendor.ts <manifest> --emit-route --env staging
+```
+
+`--check-ready` needs no database and exits 1, listing every path still awaiting the owner.
+`--emit-route --env staging|production` prints the `wrangler.toml` route block **only** for a ready
+manifest whose host is deployable (no port, not `localhost`); otherwise it exits 1 and prints nothing
+on stdout. Provisioning a **dev** database with placeholders is allowed and prints the list.
+
+These are gates the operator runs, not CI checks: a real manifest is never committed, so CI cannot
+see one. See `docs/developer-portal/client-onboarding-prerequisites.md`.
+
+## Importing a catalogue
+
+`example-import-profile.json` is a worked import profile with neutral names; a real client's profile
+(its column headings and the owner's department rulings) is held outside the repository, like its
+manifest. It is used by `scripts/import-catalogue.ts`:
+
+```bash
+npx tsx scripts/import-catalogue.ts --validate-profile prisma/manifests/example-import-profile.json
+```

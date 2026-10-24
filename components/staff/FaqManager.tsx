@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { HelpCircle, Plus, Trash2 } from "lucide-react";
 import {
   deleteFaqAction,
   reorderFaqAction,
@@ -20,6 +19,7 @@ import {
 import type { VendorFaqRow } from "@/lib/repositories/vendor-faqs";
 import { labelClass } from "@/lib/form-classes";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * The approved-answer editor (P10, #1012).
@@ -92,7 +92,7 @@ export function FaqManager({ faqs }: { faqs: VendorFaqRow[] }) {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="flex items-start gap-1.5 font-semibold text-primary">
-                    <HelpCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                    <Icon name="circle-question-mark" className="mt-0.5 h-4 w-4 shrink-0" />
                     <span className="min-w-0">{faq.question}</span>
                     {!faq.isActive && (
                       <span className="shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-xs font-medium text-primary-muted">
@@ -156,7 +156,7 @@ export function FaqManager({ faqs }: { faqs: VendorFaqRow[] }) {
                       aria-label={`Remove the answer to: ${faq.question}`}
                       className="inline-flex items-center gap-2 rounded-full border border-black/15 px-3 py-1.5 text-sm font-semibold text-primary transition-colors hover:border-danger hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
                     >
-                      <Trash2 className="h-4 w-4" aria-hidden />
+                      <Icon name="trash" className="h-4 w-4" />
                       Remove
                     </button>
                   </form>
@@ -238,7 +238,7 @@ export function FaqManager({ faqs }: { faqs: VendorFaqRow[] }) {
 
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" disabled={pending}>
-            <Plus className="h-4 w-4" aria-hidden />
+            <Icon name="plus" className="h-4 w-4" />
             {pending ? "Saving…" : editing ? "Save changes" : "Add answer"}
           </Button>
           {editing && (

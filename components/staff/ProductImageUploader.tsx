@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { ImageUp } from "lucide-react";
 import { attachProductImage, requestImageUpload } from "@/features/admin/product-image";
 import {
   IMAGE_CONTENT_TYPE,
@@ -9,6 +8,7 @@ import {
   MAX_IMAGE_EDGE_PX,
   fitWithinEdge,
 } from "@/lib/product-image";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Product image upload (P6b2, #167).
@@ -198,7 +198,7 @@ export function ProductImageUploader({ productId, productName }: ProductImageUpl
         disabled={pending}
         className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <ImageUp className="h-4 w-4" aria-hidden />
+        <Icon name="image-up" className="h-4 w-4" />
         {pending ? "Uploading…" : "Upload image"}
       </button>
     </div>

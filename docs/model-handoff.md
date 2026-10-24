@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.127.0"
-updated: 2026-10-21
+version: "1.139.0"
+updated: 2026-10-23
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,6 +39,42 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
+- **2026-10-23, `#1223` icon system: Phases 1 and 2a are MERGED TO `staging`, NOT PROMOTED.** PR #1225
+  (`c439d3b`) and PR #1229 (`87b1792`); `deploy-staging` succeeded for both. Spec
+  `specs/2026-10-22-icon-system/`, decision `specs/decisions/ADR-008-icon-system.md`, roadmap rows in
+  `specs/roadmap.md` 1.178.0. The spec covers **five PRs**; **P2b is BUILT (commit `2a1b98f9`, branch `feature/icon-system-p2b`, not yet in a PR; merge gate `#1231`: live R34, R35, R37 on the owner's machine). Original scope: P2b** (the 39 files still importing
+  `lucide-react` under `app/(admin)` and `components/staff`, the AST import-ban test
+  `tests/icon-imports.test.ts`, and the `CLAUDE.md` icon-bullet wording, R32, R36, R62), on
+  `feature/icon-system-p2b`, cut from `staging` with this documentation. P3 (colour) and P4a (department
+  illustrations) are unbuilt. Both PRs used `Refs #1223`, not `Closes`: only P4a's PR should close it.
+  `#1224` (AI-generated per-vendor illustrations) is a later slice gated on an experiment. Owner answer
+  still open: whether a footer link to `/third-party-icon-licenses.txt` is wanted.
+  - **P2a's live comparison passed (`#1227`, closed): 34 of 34 pages identical to BASE `6a09b001` on both
+    vendors.** Phase 1's live rows passed too (`#1226`, closed). **Not read by any session:** staging
+    `/api/health` at `87b1792` (a cloud session's proxy refuses the staging hosts); ask the owner to read it.
+    A cloud session cannot run any live row (no `.env`/`.dev.vars`); the owner runs them with a local Claude
+    Code session using the procedure in `specs/2026-10-22-icon-system/validation.md` "Setup".
+  - **`scripts/verify-classname-parity.ts` skips nine files** (`tests/fixtures/classname-parity-allowlist.ts`):
+    the five hand-migrated in P2a and four from P1, all because an icon was a component *value* at BASE. P2b
+    runs it with `--require-migrated` and expects `0 not migrated`.
+  - **BASE for P2b is `6a09b001`** (the commit before PR #1225's squash). `../icon-base` was left in place on
+    the owner's machine and in the last cloud session; recreate it with `git worktree add ../icon-base 6a09b001`.
+  - **`@iconify-json/lucide` is pinned to 1.2.122 on purpose** (the release matching the installed
+    `lucide-react` 1.30.0; the newest redrew six icons). Bumping `lucide-react` means re-running
+    `tests/icon-lucide-parity.test.ts` and probably moving that pin.
+  - **The first audit's icon count was wrong: 102, not 141** (it also walked the `docs/ui-ref` mockups);
+    `#1223`'s body still says 141. Scope any count of `lucide-react` usage to `app`, `components`, `features`
+    and `lib` and parse with the TypeScript compiler, not a line grep.
+  - **Demo accounts (`#1230`).** The dev demo passwords were rotated by hand on 2026-10-23 to a new value
+    (kept in `.dev.vars`, the source of truth; `.env` must match). `scripts/demo-accounts.ts add` still never
+    resets an existing password, reads `.env` while preview uses `.dev.vars`, and `remove` deletes every demo
+    account (so do not use it to reset one). **Staging and production demo accounts were not touched and may
+    still use a password that older spec notes record in plain text.** Details: `local-dev-playbook.md`,
+    `env-setup.md`.
+  - **Do not `npm install` a package in the cloud container and commit the lockfile as it comes out** (its
+    npm 10.9.4 strips the `libc` markers from 68 platform packages). **A cloud session also cannot use `gh`'s
+    GraphQL** (PR create, merge, checks, Project #2): see `specs/sdd-workflow.md` "Ship". Moving a board
+    item needs the owner or a local session; the board is **not** updated for `#1223`, `#1226`-`#1230`.
 - **2026-10-21, `#1186`/`#1187` Document (supersedes this entry's own "BUILT, NOT VALIDATED AND NOT
   MERGED" predecessor). The Quick Shop hub and the Regulars placeholder are IN PRODUCTION.** The
   programme's remaining two slices shipped as **one**,
@@ -1054,39 +1090,93 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **`P11 — Repeatable Vendor Onboarding` is OPEN (new, 2026-10-21), and its first slice is BUILT
-  BUT NOT VALIDATED.** Opened after `/discover` on an external brief to onboard a new
-  inventory-and-stock-management client with their real 6,167-row stock export (eleventh Discover
-  pass, `docs/research/discovery-log.md`). Milestone #24; Project #2's Phase field gained a `P11`
-  option additively, all 19 pre-existing options passed through with their own ids and all 452 set
-  Phase values across 601 items verified unchanged.
+- **P11 `#1216` — placeholder manifests, catalogue importer, onboarding runbook — MERGED TO STAGING, NOT
+  PROMOTED, DATABASE ROWS UNVERIFIED (2026-10-22).**
+  - **Where it is:** PR **#1222** (squash `6a09b00`, `staging`); `deploy-staging` run `39787197314`
+    completed success (no migration in this slice). Spec `specs/2026-10-22-aheedsuperstore-onboarding/`;
+    read its `build-notes.md` first. **It is not on `main`; `#1216` stays open until promotion.**
+  - **Validation was not independent and every dev-database row is UNVERIFIED** (`validation.md` R4,
+    R19-R25 database parts, R27, R29, R33, R34, R37 database modes). Run them on a machine with `.env`,
+    `secrets/*.vars` and the client's stock file (never in the repo), starting with
+    `verify-catalogue-import.ts --unique-probe`, which reveals the real `.code` the Neon WebSocket adapter
+    raises for a unique violation (`isUniqueViolation` accepts `"23505"` and `"P2002"`; a miss fails safe).
+    Nothing has been written to any database by this slice. The `aheedsuperstore` test vendor has **not**
+    been created.
+  - **Owner decisions that stand:** the test vendor is added alongside existing vendors in the **dev**
+    database (`ep-dry-morning-zab7dx08`, confirm it is dev first); products import **hidden, stock
+    `UNKNOWN`**, categories **inactive** and named **exactly as the client wrote them**; the placeholder
+    gate is operator-run, not CI (`#1221`); no push to `main`, deploy or deletion without approval.
+  - **Deferred, tracked:** `#1218` category standardisation + versioned import template, `#1219`
+    deployed isolated dev environment, `#1220` enrichment before activation (unit label, description,
+    images, VAT), `#1221` slug identity and the placeholder gate. **`#1217`** provider-agnostic outgoing
+    email (Cloudflare Email Sending first, Resend kept as fallback, non-production recipients
+    allowlisted) is specified in the plan's section 5.5 and **not started**; Cloudflare's docs host was
+    unreachable from the planning session, so its prerequisites are unverified.
+  - **Cloud-session environment facts:** no GitHub GraphQL (`gh pr view`, `gh project ...`,
+    `closingIssuesReferences` fail; use `gh api` REST and set board Status/Phase by hand); no `.env`, so
+    the host guard refuses every database run; `developers.cloudflare.com` and the staging hosts'
+    `/api/health` are blocked by the session proxy; the container's npm (10.9.4) rewrites unrelated
+    `package-lock.json` lines (`devOptional`, `libc`), so edit the lockfile by hand or use the
+    repository's npm; and the stop hook's "unpushed commits / no remote branch" warning is a false alarm
+    whenever the branch is already on `origin` (check `git ls-remote --heads origin <branch>`).
+- **P11 slice 2 — `#1211`, catalogue safety layer — MERGED TO STAGING, NOT PROMOTED (2026-10-22).**
+  - **Where it is:** PR **#1215** (squash `af67cfd`, `staging`); `deploy-staging` run
+    `39742147580` succeeded, which applied migration `20261022120000_p1211_restrictions_stock_states`
+    to staging. It is NOT on `main`, so production does not have the migration yet. Spec:
+    `specs/2026-10-22-catalogue-restrictions-stock-states/` (`build-notes.md`, "Validation run 1").
+  - **Validation was not independent** (same context as Build, on Opus). Unverified: R15b client
+    half, the SriMart second-vendor UI check, and the pre-migration `Inventory` count.
+  - **`#1211` stays open and its board item should read In Review** until the promotion PR merges.
+    The board move could not be made from the cloud session (GraphQL blocked): verify live.
+  - **Owner rulings of 2026-10-22, standing decisions** (ADR-007): `#1196` is storefront-only, not
+    stock management (close it once ADR-007 is confirmed on `staging`); `#1200` is import everything
+    hidden and closes when `#1211` reaches production; stock has three explicit states and
+    `UNKNOWN` is never purchasable.
+  - **`#1201` (the Excel importer) is still BLOCKED** on the client's answers (opening stock, a
+    barcode/supplier export, the `DEFAULT`/£0.00 rows). When unblocked it must write through
+    `lib/catalogue-import-policy.ts`.
+  - **Deferred, tracked:** `#1212` (age verification), `#1213` (filter-wide bulk actions), `#1214`
+    (correcting a mis-tagged hard block).
+- **`P11 — Repeatable Vendor Onboarding` is OPEN (2026-10-21), and its first slice is IN
+  PRODUCTION (2026-10-22).** Promotion PR **#1208** merged as `7b703b9` (`staging -> main`, two
+  parents); `deploy-production` run `39689968404` succeeded, including the first production run of
+  the route-verification step; both production hosts serve `7b703b9` with `db.ok: true` and two
+  reference `sources`; `#490`, `#1197`, `#1198` are closed and `Done`. The "In Review" and
+  "outstanding" wording in the bullets below predates the promotion. Opened after `/discover` on an external brief to onboard
+  a new inventory-and-stock-management client with their real 6,167-row stock export (eleventh
+  Discover pass, `docs/research/discovery-log.md`). Milestone #24; Project #2's Phase field gained
+  a `P11` option additively, all 19 pre-existing options passed through with their own ids and all
+  452 set Phase values across 601 items verified unchanged.
   - **Slice 1 — `specs/2026-10-21-p11-onboarding-foundation/`**, closing **`#490`**, **`#1198`**,
-    **`#1197`**. Built on branch `feature/p11-onboarding-foundation`, commits `ce9ff81` (spec) and
-    `099ad05` (implementation). **Not validated, not merged, no PR.** 30 requirements; `lint`,
-    `typecheck`, `format:check`, `kms:validate` and vitest (292 files / 3642 tests, `--maxWorkers=4`)
-    green, docs site 255 pages.
-    - **The database-dependent requirements were run in-session on 2026-10-21 and PASS — but that is
-      NOT Gate 3.** It ran in the same context that wrote the code, so it cannot catch what that
-      context is blind to. **The slice remains BUILT, NOT INDEPENDENTLY VALIDATED**, and still needs
-      `/validate` from a fresh context on Sonnet 5. R7, R10, R11, R12, R13, R18, R19 and R21 passed;
-      **R6 is PARTIAL** — the guard's refusal is proven (including against the real exported
-      production `DIRECT_URL`), but its end-to-end seed form needs valid staging credentials this
-      validation would not use. R11 passed by a different mechanism than its validation row
-      describes, because this dev database holds the real staging hostnames rather than the
-      `localhost` ones the row assumes. Full record and both caveats:
-      `specs/2026-10-21-p11-onboarding-foundation/build-notes.md`.
-    - **The branch split was tested and rejected on evidence.** A `git rebase --onto origin/staging
-      643237b` conflicts on `specs/roadmap.md` at commit 3 of 6 — five of `643237b`'s seven files
-      (`ARTIFACT_INDEX.md`, `CLAUDE.md`, `app/(admin)/staff/runbook/docs.ts`,
-      `docs/model-handoff.md`, `specs/roadmap.md`) are also touched by the P11 commits, and the
-      change-log conflict would force a hand-decision about `#1186`/`#1187`'s own PR #1193/#1194
-      rows, which must reach `staging` regardless. The scratch branch was deleted and the real
-      branch is untouched. **Ship the docs tail along with P11 and say so in the PR body.**
-  - **Branch caveat.** That branch's first commit is `643237b`, the undelivered `#1186`/`#1187`
-    documentation tail, which rides along because cherry-picking the P11 commits onto `staging`
-    would conflict on `specs/roadmap.md` (both touched its front-matter and change-log tail, in a
-    file carrying 1,063 pre-existing mojibake sequences, `#762`). `docs/p1186-1187-document` still
-    points at `b882491` and has no PR. Decide whether to split before opening the PR.
+    **`#1197`**. PR **#1207** merged (squash) to `staging` as `12083ee`, 2026-10-21.
+    `deploy-staging` succeeded; `/api/health` on staging confirmed `commit: "12083ee"`,
+    `db.ok: true`, `reference.reachable: true`, two populated `sources`. All three issues moved to
+    board status **In Review** (not `Done` — that's reserved for the `main` promotion, still
+    outstanding).
+    - **`/validate` ran from a fresh context and found two real gaps, both fixed before shipping —
+      this was not a rubber-stamp of the in-session Build-time check.** (1) R6: the host guard's
+      own safety claim ("no connection is attempted") was false whenever `SEED_SCALE_PRODUCTS` was
+      set, because `prisma/seed.ts`'s `main()` queried the database ~100 lines before the guard was
+      ever reached — a bogus password masked the refusal behind an unrelated auth error instead of
+      proving it. Fixed by adding a second, early call to the guard at the very top of `main()`;
+      re-proven end-to-end with an isolated fixture `secrets/staging.vars` (no real host or
+      credential touched). (2) R19: the committed `prisma/manifests/example.json` shipped with
+      `loyaltyTiers: []`, so the worked example never demonstrated that field. Fixed by adding one
+      sample tier. Both re-verified independently (two consecutive `npm run db:seed` runs, two
+      consecutive `scripts/provision-vendor.ts` runs, dev database restored to baseline each time).
+      Full record: `specs/2026-10-21-p11-onboarding-foundation/build-notes.md`.
+    - **`/ship` caught a third gap real CI surfaces that nothing local did: `kms:coverage` failed on
+      `prisma/manifests: baseline 0, measured 1`.** New directory, its `README.md` has no
+      front-matter (matching sibling READMEs elsewhere) — a legitimate re-baseline, re-ran via
+      `kms:coverage -- --update` and hand-kept to only the `prisma/manifests` line. **This is a
+      different entry from `#1204`'s `misc:` ratchet failure** (still open, still correctly
+      untouched — that one's recommended fix is the harmful one; this one's was the correct one).
+      `kms:coverage` is not one of `validation.md`'s rows and is "CI-only otherwise" per
+      `CLAUDE.md` — worth remembering that a new top-level directory can ratchet-fail in CI with
+      nothing local to catch it first.
+    - **The undelivered `#1186`/`#1187` documentation tail (`643237b`) rode this branch as
+      planned** and is now on `staging` with it, per the carry-forward rule. `docs/p1186-1187-document`
+      still points at `b882491` and has no PR of its own — expected, not a gap.
   - **Two owner decisions gate the rest of P11**, both board Status `Deferred`: **`#1196`** —
     storefront or stock management, which sizes `#1199` (VAT) entirely; and **`#1200`** — which of
     the 51 restricted and non-deliverable catalogue lines may be sold. **`#1201`** (the Excel
@@ -2040,7 +2130,8 @@ with `db.ok: true` and storage configured. That does not verify any item above.
    shipped and `staging` promoted to `main` via PR #759. Compare `origin/main` with `origin/staging`
    live (step 3) rather than trusting that either state here — a new hold or divergence may exist by
    the time this is read.
-5. Query Project #2 with `--limit 600`; filter `Priority == High` and read Status, Phase and
+5. Query Project #2 with `--limit 2000` (if the returned count equals the limit, it truncated —
+   raise it); filter `Priority == High` and read Status, Phase and
    Complexity. Re-open issue bodies before accepting stale/duplicate findings.
 6. Read `docs/research/discovery-log.md` for newer evidence touching the selected scope.
 7. Verify health/deployment state and any scope-dependent secret, database or Cloudflare fact live.

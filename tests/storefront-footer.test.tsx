@@ -192,6 +192,23 @@ describe("StorefrontFooter (#1055)", () => {
     expect(within(row).queryByRole("link", { name: /WhatsApp/ })).toBeNull();
   });
 
+  it("renders the WhatsApp community group link in the contact-channel row alongside the help assistant (#1233)", () => {
+    const footer = renderFooter(
+      {
+        ...SEEDED,
+        whatsappNumber: "447700900123",
+        whatsappCommunityUrl: "https://chat.whatsapp.com/FTgLVoelRw7262i0OvAIzS",
+      },
+      undefined,
+      true,
+    );
+    const row = within(footer).getByRole("list", { name: "Contact us" });
+    expect(within(row).getAllByRole("listitem")).toHaveLength(3);
+    const groupLink = within(row).getByRole("link", { name: "Join First Shop WhatsApp group" });
+    expect(groupLink.getAttribute("href")).toBe("https://chat.whatsapp.com/FTgLVoelRw7262i0OvAIzS");
+    expect(within(row).getByRole("button", { name: "Open help assistant" })).toBeTruthy();
+  });
+
   it("puts the contact-channel buttons under Visit & contact us, not Shop with us (#1169 R10)", () => {
     const footer = renderFooter(SEEDED);
     const row = within(footer).getByRole("list", { name: "Contact us" });

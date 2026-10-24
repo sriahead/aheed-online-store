@@ -1,0 +1,415 @@
+{
+  "producedBy": "npx tsx scripts/list-lucide-imports.ts --root <checkout of BASE>  (the export names; `key` is the registry key chosen for each)",
+  "base": "a8d4762397ae517793655fc6fc758cd085b7c2e1 (BASE as defined in specs/2026-10-22-icon-system/requirements.md: the parent of the spec commit c8fd46a)",
+  "count": 102,
+  "icons": [
+    {
+      "export": "AlertCircle",
+      "key": "circle-alert"
+    },
+    {
+      "export": "AlertTriangle",
+      "key": "triangle-alert"
+    },
+    {
+      "export": "Apple",
+      "key": "apple"
+    },
+    {
+      "export": "ArrowLeft",
+      "key": "arrow-left"
+    },
+    {
+      "export": "ArrowRight",
+      "key": "arrow-right"
+    },
+    {
+      "export": "BadgeCheck",
+      "key": "badge-check"
+    },
+    {
+      "export": "Ban",
+      "key": "ban"
+    },
+    {
+      "export": "Banknote",
+      "key": "banknote"
+    },
+    {
+      "export": "Beef",
+      "key": "beef"
+    },
+    {
+      "export": "BellRing",
+      "key": "bell-ring"
+    },
+    {
+      "export": "BookA",
+      "key": "book-a"
+    },
+    {
+      "export": "BookOpen",
+      "key": "book-open"
+    },
+    {
+      "export": "Bookmark",
+      "key": "bookmark"
+    },
+    {
+      "export": "BookmarkPlus",
+      "key": "bookmark-plus"
+    },
+    {
+      "export": "Boxes",
+      "key": "boxes"
+    },
+    {
+      "export": "Bug",
+      "key": "bug"
+    },
+    {
+      "export": "CalendarClock",
+      "key": "calendar-clock"
+    },
+    {
+      "export": "Check",
+      "key": "check"
+    },
+    {
+      "export": "CheckCircle2",
+      "key": "circle-check"
+    },
+    {
+      "export": "ChevronDown",
+      "key": "chevron-down"
+    },
+    {
+      "export": "ChevronLeft",
+      "key": "chevron-left"
+    },
+    {
+      "export": "ChevronRight",
+      "key": "chevron-right"
+    },
+    {
+      "export": "ChevronUp",
+      "key": "chevron-up"
+    },
+    {
+      "export": "CircleAlert",
+      "key": "circle-alert"
+    },
+    {
+      "export": "CircleCheck",
+      "key": "circle-check"
+    },
+    {
+      "export": "CircleHelp",
+      "key": "circle-question-mark"
+    },
+    {
+      "export": "CircleUserRound",
+      "key": "circle-user-round"
+    },
+    {
+      "export": "ClipboardList",
+      "key": "clipboard-list"
+    },
+    {
+      "export": "Clock",
+      "key": "clock"
+    },
+    {
+      "export": "Coffee",
+      "key": "coffee"
+    },
+    {
+      "export": "Coins",
+      "key": "coins"
+    },
+    {
+      "export": "Contact",
+      "key": "contact"
+    },
+    {
+      "export": "Cookie",
+      "key": "cookie"
+    },
+    {
+      "export": "Copy",
+      "key": "copy"
+    },
+    {
+      "export": "CreditCard",
+      "key": "credit-card"
+    },
+    {
+      "export": "Croissant",
+      "key": "croissant"
+    },
+    {
+      "export": "Download",
+      "key": "download"
+    },
+    {
+      "export": "ExternalLink",
+      "key": "external-link"
+    },
+    {
+      "export": "Eye",
+      "key": "eye"
+    },
+    {
+      "export": "EyeOff",
+      "key": "eye-off"
+    },
+    {
+      "export": "FolderTree",
+      "key": "folder-tree"
+    },
+    {
+      "export": "Gauge",
+      "key": "gauge"
+    },
+    {
+      "export": "Gift",
+      "key": "gift"
+    },
+    {
+      "export": "Globe",
+      "key": "globe"
+    },
+    {
+      "export": "Heart",
+      "key": "heart"
+    },
+    {
+      "export": "HelpCircle",
+      "key": "circle-question-mark"
+    },
+    {
+      "export": "Home",
+      "key": "house"
+    },
+    {
+      "export": "ImageUp",
+      "key": "image-up"
+    },
+    {
+      "export": "Layers",
+      "key": "layers"
+    },
+    {
+      "export": "LayoutDashboard",
+      "key": "layout-dashboard"
+    },
+    {
+      "export": "ListChecks",
+      "key": "list-checks"
+    },
+    {
+      "export": "Loader2",
+      "key": "loader-circle"
+    },
+    {
+      "export": "Lock",
+      "key": "lock"
+    },
+    {
+      "export": "LogIn",
+      "key": "log-in"
+    },
+    {
+      "export": "LogOut",
+      "key": "log-out"
+    },
+    {
+      "export": "Mail",
+      "key": "mail"
+    },
+    {
+      "export": "MapPin",
+      "key": "map-pin"
+    },
+    {
+      "export": "Megaphone",
+      "key": "megaphone"
+    },
+    {
+      "export": "MessageCircle",
+      "key": "message-circle"
+    },
+    {
+      "export": "MessageSquareQuote",
+      "key": "message-square-quote"
+    },
+    {
+      "export": "MessagesSquare",
+      "key": "messages-square"
+    },
+    {
+      "export": "Milk",
+      "key": "milk"
+    },
+    {
+      "export": "Minus",
+      "key": "minus"
+    },
+    {
+      "export": "Navigation",
+      "key": "navigation"
+    },
+    {
+      "export": "Package",
+      "key": "package"
+    },
+    {
+      "export": "PackageOpen",
+      "key": "package-open"
+    },
+    {
+      "export": "PackageX",
+      "key": "package-x"
+    },
+    {
+      "export": "PanelLeftClose",
+      "key": "panel-left-close"
+    },
+    {
+      "export": "PanelLeftOpen",
+      "key": "panel-left-open"
+    },
+    {
+      "export": "Pause",
+      "key": "pause"
+    },
+    {
+      "export": "Pencil",
+      "key": "pencil"
+    },
+    {
+      "export": "Percent",
+      "key": "percent"
+    },
+    {
+      "export": "Phone",
+      "key": "phone"
+    },
+    {
+      "export": "Play",
+      "key": "play"
+    },
+    {
+      "export": "Plus",
+      "key": "plus"
+    },
+    {
+      "export": "Repeat",
+      "key": "repeat"
+    },
+    {
+      "export": "RotateCcw",
+      "key": "rotate-ccw"
+    },
+    {
+      "export": "Ruler",
+      "key": "ruler"
+    },
+    {
+      "export": "Save",
+      "key": "save"
+    },
+    {
+      "export": "Search",
+      "key": "search"
+    },
+    {
+      "export": "Share2",
+      "key": "share"
+    },
+    {
+      "export": "Shield",
+      "key": "shield"
+    },
+    {
+      "export": "ShieldAlert",
+      "key": "shield-alert"
+    },
+    {
+      "export": "ShieldCheck",
+      "key": "shield-check"
+    },
+    {
+      "export": "ShoppingBag",
+      "key": "shopping-bag"
+    },
+    {
+      "export": "SlidersHorizontal",
+      "key": "sliders-horizontal"
+    },
+    {
+      "export": "Sparkles",
+      "key": "sparkles"
+    },
+    {
+      "export": "Star",
+      "key": "star"
+    },
+    {
+      "export": "Store",
+      "key": "store"
+    },
+    {
+      "export": "Tag",
+      "key": "tag"
+    },
+    {
+      "export": "TicketPercent",
+      "key": "ticket-percent"
+    },
+    {
+      "export": "Timer",
+      "key": "timer"
+    },
+    {
+      "export": "Trash2",
+      "key": "trash"
+    },
+    {
+      "export": "TrendingUp",
+      "key": "trending-up"
+    },
+    {
+      "export": "Truck",
+      "key": "truck"
+    },
+    {
+      "export": "User",
+      "key": "user"
+    },
+    {
+      "export": "UserCheck",
+      "key": "user-check"
+    },
+    {
+      "export": "UserPlus",
+      "key": "user-plus"
+    },
+    {
+      "export": "UserX",
+      "key": "user-x"
+    },
+    {
+      "export": "Users",
+      "key": "users"
+    },
+    {
+      "export": "X",
+      "key": "x"
+    },
+    {
+      "export": "XCircle",
+      "key": "circle-x"
+    }
+  ]
+}

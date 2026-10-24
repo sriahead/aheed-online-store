@@ -96,8 +96,8 @@ describe("FilterPanel is a disclosure, not a dialog (R3, R4)", () => {
   it("gives the mobile summary the filter icon and a reduced-motion chevron (#1173 R17)", () => {
     const { container } = renderPanel();
     const summary = container.querySelector("details > summary");
-    expect(summary?.querySelector("svg.lucide-sliders-horizontal")).not.toBeNull();
-    const chevron = summary?.querySelector("svg.lucide-chevron-down");
+    expect(summary?.querySelector('svg[data-icon="sliders-horizontal"]')).not.toBeNull();
+    const chevron = summary?.querySelector('svg[data-icon="chevron-down"]');
     expect(chevron?.getAttribute("class")).toContain("group-open:rotate-180");
     expect(chevron?.getAttribute("class")).toContain("motion-reduce:transition-none");
   });

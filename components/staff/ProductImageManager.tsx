@@ -2,7 +2,6 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ImageUp, Star, Trash2, ChevronUp, ChevronDown, Sparkles } from "lucide-react";
 import {
   addProductImage,
   promoteProductImage,
@@ -21,6 +20,7 @@ import {
   nextConfirmedPhotoSource,
   type ProductImageSource,
 } from "@/lib/product-image";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Multi-image gallery management (#211, GAP-014/GAP-015): add a second+ image,
@@ -251,7 +251,7 @@ export function ProductImageManager({
                     title="Primary image"
                     className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-accent"
                   >
-                    <Star className="h-3.5 w-3.5 fill-current" aria-hidden />
+                    <Icon name="star" className="h-3.5 w-3.5 fill-current" />
                   </span>
                 )}
               </div>
@@ -263,7 +263,7 @@ export function ProductImageManager({
                   aria-label="Move earlier"
                   className="rounded-lg p-1 text-primary-muted hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-30"
                 >
-                  <ChevronUp className="h-4 w-4" aria-hidden />
+                  <Icon name="chevron-up" className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
@@ -272,7 +272,7 @@ export function ProductImageManager({
                   aria-label="Move later"
                   className="rounded-lg p-1 text-primary-muted hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-30"
                 >
-                  <ChevronDown className="h-4 w-4" aria-hidden />
+                  <Icon name="chevron-down" className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
@@ -281,7 +281,7 @@ export function ProductImageManager({
                   aria-label="Remove image"
                   className="rounded-lg p-1 text-danger hover:bg-danger-tint disabled:cursor-not-allowed disabled:opacity-30"
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden />
+                  <Icon name="trash" className="h-4 w-4" />
                 </button>
               </div>
               {!image.isPrimary && (
@@ -332,7 +332,7 @@ export function ProductImageManager({
           disabled={pending || generating}
           className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-white px-4 py-3 text-sm font-bold text-primary shadow-sm transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <ImageUp className="h-4 w-4" aria-hidden />
+          <Icon name="image-up" className="h-4 w-4" />
           {pending ? "Working…" : "Add another image"}
         </button>
         <button
@@ -341,7 +341,7 @@ export function ProductImageManager({
           disabled={pending || generating}
           className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-action/30 bg-action/10 px-4 py-3 text-sm font-bold text-action shadow-sm transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Sparkles className="h-4 w-4" aria-hidden />
+          <Icon name="sparkles" className="h-4 w-4" />
           {generating ? "Generating…" : "✨ Auto-Generate Image"}
         </button>
       </div>

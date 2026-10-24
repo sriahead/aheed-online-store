@@ -4,12 +4,12 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.42.0"
-updated: 2026-10-19
+version: "1.43.0"
+updated: 2026-10-22
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
-related: [adr-001-hosting, adr-002-auth-library, adr-003-storage-abstraction, adr-004-multi-tenancy, multitenancy-slice1-vendor-schema]
+related: [adr-001-hosting, adr-002-auth-library, adr-003-storage-abstraction, adr-004-multi-tenancy, adr-007-storefront-scope-restrictions-stock-states, multitenancy-slice1-vendor-schema]
 ---
 
 # System Architecture — Aheed Online Store
@@ -715,6 +715,46 @@ database rather than the app.
 **Connection handling.** Serverless functions use Neon's pooled endpoint (PgBouncer) at runtime and
 the **direct** endpoint for migrations (`DIRECT_URL`). This keeps connection counts flat under
 bursty Worker invocations.
+
+### Restricted products and stock states (`#1211`, ADR-007)
+
+These are owner rulings, recorded in `specs/decisions/ADR-007-storefront-scope-restrictions-stock-states.md`.
+The slice spec is `specs/2026-10-22-catalogue-restrictions-stock-states/`.
+
+- **Imported, visible and purchasable are three different states.**
+  - **Visible** is `Product.isActive`.
+  - **Purchasable** is decided by exactly one function, `purchasableQuantity()` in
+    `lib/cart-rules.ts`, called by the cart, the checkout render, bundles, the storefront mappers
+    and `placeOrder`.
+  - Nothing else derives availability. A guard test fails on a re-derived quantity comparison.
+- **A restricted product is never active, enforced by Postgres:**
+  `CHECK "Product_restricted_inactive_check"`. `Product.restriction` has two classes:
+  - **Hard blocks:** `PROHIBITED` and `AGE_RESTRICTED`. No path, role or confirmation enables them.
+    That holds until age verification with a record of the check exists (`#1200` option 2).
+  - **Admin overrides:** `NOT_DELIVERABLE` and `NEEDS_REVIEW`. An ADMIN may enable one only after
+    confirming it is legally sellable and can be fulfilled, with a reason. Enabling clears the
+    restriction in one conditional write and appends to `ProductRestrictionAuditLog`.
+
+  The rules live in `lib/product-restriction.ts`; bulk actions call the same functions per product.
+  A restriction can be tightened but never loosened, except by that audited clear.
+- **The audit log is append-only by construction.** No application code may update or delete
+  `ProductRestrictionAuditLog`, and a guard test enforces it.
+- **Stock has three explicit states on `Inventory.stockMode`, and none means stock management**
+  (ADR-007 Decision 1):
+
+  | State | Purchasing |
+  | --- | --- |
+  | `UNTRACKED` | Allowed, no quantity check, no decrement. A cart line is capped at `MAX_ADD_QUANTITY`. |
+  | `TRACKED` | Allowed while quantity > 0, under the existing atomic oversell guard. |
+  | `UNKNOWN`, or no `Inventory` row | **Blocked**, and also the column default, so a code path that forgets to choose fails closed. |
+
+  `quantity` is meaningful only under `TRACKED`. Stock writes in `placeOrder` and the cancellation
+  paths filter on `stockMode: "TRACKED"`.
+- **A catalogue import writes through `lib/catalogue-import-policy.ts`:**
+  - every row is created hidden, with stock `UNKNOWN`;
+  - a re-import never activates a product, never clears or loosens a restriction, and never touches
+    stock;
+  - the department → restriction map is per-client import input, never platform code (ADR-004).
 
 ---
 

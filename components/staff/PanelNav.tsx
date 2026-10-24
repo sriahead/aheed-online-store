@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, LayoutDashboard } from "lucide-react";
+
 import { visibleGroups, type StaffNavGroup, type StaffNavTier } from "./nav-items";
+import { Icon } from "@/components/icons/Icon";
 
 export interface PanelNavProps {
   canSeeOrders: boolean;
@@ -125,7 +126,7 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
               : "border-transparent text-black/60 hover:border-black/20 hover:text-black/80"
           }`}
         >
-          <LayoutDashboard className="h-4 w-4" aria-hidden />
+          <Icon name="layout-dashboard" className="h-4 w-4" />
           Overview
         </Link>
 
@@ -151,9 +152,9 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
                 }`}
               >
                 {group.label}
-                <ChevronDown
+                <Icon
+                  name="chevron-down"
                   className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
-                  aria-hidden
                 />
               </button>
 
@@ -164,7 +165,6 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
               >
                 <ul>
                   {group.items.map((item) => {
-                    const Icon = item.icon;
                     const active = isRouteActive(item.href, pathname);
 
                     return (
@@ -176,7 +176,7 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
                             active ? "font-bold text-primary" : "text-black/70"
                           }`}
                         >
-                          <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                          <Icon name={item.icon} className="h-4 w-4 shrink-0" />
                           {item.label}
                         </Link>
                       </li>

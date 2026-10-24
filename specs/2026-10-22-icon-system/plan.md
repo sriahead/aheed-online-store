@@ -1,0 +1,269 @@
+---
+id: icon-system-plan
+title: "Colourful, vendor-themed, provider-agnostic icon system (plan)"
+audience: [dev]
+type: spec
+status: draft
+version: "1.2.0"
+updated: 2026-10-23
+visibility: internal
+summary: One Icon component over a semantic-name registry and build-time bundled Iconify data (Lucide functional, Phosphor duotone decorative, Noto department illustrations), themed per vendor from existing tokens. Phases 1 to 4a of issue 1223.
+tags: [icons, design-system, theming, iconify, accessibility, multi-tenancy]
+related: [adr-008-icon-system, adr-004-multi-tenancy, design-system, tech-stack]
+---
+
+# Colourful, vendor-themed, provider-agnostic icon system (plan)
+
+Issue `#1223`, approved by the owner on 2026-10-22 ("go ahead with recommendation"). The proposal
+that preceded this spec is summarised on the issue; the decision record is
+`specs/decisions/ADR-008-icon-system.md`. This file is the narrative a validator who was not in the
+conversation needs in order to trust `requirements.md`.
+
+**Goal:** make the storefront's icons colourful in the style of a modern delivery app (glossy
+department illustrations on tinted tiles, two-hue glyphs elsewhere) **without** tying any component to
+an icon library, **without** breaking per-vendor branding, and **without** adding a runtime network
+dependency. Shipping this proves that one icon change can be made in one file (the registry) and that
+a second vendor's palette reaches the icons with no new tokens.
+
+## What exists today (measured 2026-10-22, base `docs/1216-document-pass`)
+
+- 107 files import `lucide-react`; **102 distinct icons** are in use (a single-line grep reports fewer and
+  undercounts multi-line imports; the first audit said 141 because its script also walked the
+  `docs/ui-ref` mockups, corrected at Build). Sizing is Tailwind classes on the icon (`h-4 w-4` appears 175 times).
+- Icons are passed around as **component values**: `AccountNav`'s `NavLink` takes an `icon` component
+  prop, `components/staff/nav-items.ts` types `icon: LucideIcon`, `ViewSwitcher` and `PanelNav` read
+  `item.icon`, and `components/product/category-icon.ts` returns a component. These are the type leaks
+  the registry removes.
+- **Callers rely on Lucide's SVG structure.** Lucide-react puts `fill="none"` and the stroke attributes
+  on the root `<svg>`, so Tailwind classes such as `fill-current` (the favourite heart, `FavouriteButton`)
+  and `fill-amber-400` (star ratings) override them on the root. The Iconify Lucide data puts those
+  attributes on every child instead, where a root class cannot reach them. A naive swap would silently
+  hollow every filled star and heart. This is why R13 exists. `DepartmentHero` also passes
+  `strokeWidth` (1.25) to its fallback glyph, so the wrapper must accept it (R20).
+- Three tests select Lucide's generated class names (`svg.lucide-circle-user-round` and similar) and one
+  imports icon objects.
+- `components/layout/DepartmentScroller.tsx` and `DepartmentHero.tsx` are **client components**. Anything
+  inlined into them ships in the client bundle, which is why illustrations are static `<img>` files.
+- The CSP (`next.config.mjs`) allows `connect-src 'self' https://*.r2.cloudflarestorage.com` and
+  `img-src 'self' data: https://*.nocaped.com`. Iconify's public API is allowed by neither, so icon
+  data is bundled at build time and nothing is fetched at runtime.
+- `brandStyle()` (`lib/vendor-theme.ts`) already emits per-vendor, contrast-clamped
+  `--color-primary`, `--color-action`, `--color-accent`, `--color-danger` and the three tints inline, and
+  inline beats `tokens.css` (the #251 trap). **This slice adds no token and does not touch
+  `brandStyle()`**: icons read the variables it already emits, so the trap cannot recur.
+
+## Scope (this slice, five PRs)
+
+| PR | Phase | Visual change | Contents |
+| --- | --- | --- | --- |
+| 1 | P1 Foundation | none | ADR-008, design-system/tech-stack/CLAUDE.md text, devDependencies, generator, registry, `Icon`, parity test, licence file, `category-icon` and `nav-items` moved to semantic names, the three coupled tests rewritten, `scripts/verify-icon-markup.ts` |
+| 2 | P2a Storefront migration | none | the 60 files outside `app/(admin)` and `components/staff` that still import `lucide-react` (55 by the codemod, 5 by hand: R57); `className` carried over verbatim, no `size` prop; adds `scripts/verify-classname-parity.ts` (R58 to R60) and the playbook notes (R61) |
+| 3 (**PR A**) | P2b Admin/staff migration | none | the 39 files under `app/(admin)` and `components/staff`, the import-ban guard test (R32), the `CLAUDE.md` wording (R62) |
+| 4 (**PR B**) | P3 Colour and P4a Illustrations, together | yes | decorative two-hue glyphs on the surfaces listed below, and static department illustrations on the department strip and hero; one visual review, one screenshot set, one bundle budget (30 KB, 100 KiB) |
+
+P1 to P2b are required to be behaviour-preserving: any difference in the rendered SVG inventory is a
+defect, not a taste question (R34, R35, R58 to R60). Colour is introduced only after that is proven.
+
+### Architecture (decisions; the rationale is in ADR-008)
+
+- `components/icons/registry.ts`: `ICON_REGISTRY`, keyed by **semantic name**, each entry
+  `{ tier, provider, id }`. Names are generic nouns (`search`, `delivery`, `chevron-down`), never a
+  provider's id with a numeric suffix. Changing a provider is a one-line registry edit.
+- `scripts/build-icons.ts` (`npm run icons:build`) reads the installed `@iconify-json/*` packages and
+  writes **only the registry's icons** to `components/icons/generated/icon-data.ts`, plus
+  `public/third-party-icon-licenses.txt` and (P4a) the illustration assets. `npm run icons:check`
+  rebuilds in memory and diffs; CI runs it from `.github/workflows/quality.yml`.
+- `components/icons/Icon.tsx`: server-compatible, no hooks, renders an inline `<svg>` with
+  `data-icon="<name>"`. Props: `name`, `size` (`xs` 12, `sm` 16, `md` 20, `lg` 24, `xl` 32, `2xl` 48
+  pixels, default 24 to match `lucide-react`), `tone`, `label`, `className`, `style`, `strokeWidth`.
+- **Tiers** (the registry field): `functional` (Lucide only; controls and navigation), `status`
+  (Lucide or Phosphor; alerts, success), `decorative` (Phosphor duotone; meaning is in adjacent text).
+  Department illustrations are a fourth, separate mechanism: `components/icons/illustrations.ts` and
+  static files, not inline SVG.
+- **Two-hue glyphs.** Phosphor's duotone bodies share one pattern: a single layer carrying
+  `opacity=".2"` (1,524 of 1,526 duotone icons; the two exceptions are `cell-signal-none` and
+  `wifi-none`). The generator rewrites that layer to
+  `style="fill:var(--icon-secondary,currentColor);opacity:var(--icon-secondary-opacity,.2)"` and fails if
+  the pattern is absent. With no `tone` the icon looks as Phosphor drew it; with a `tone`, `Icon` sets
+  `--icon-secondary` to a second vendor token and `--icon-secondary-opacity` to `.7`. Verified in
+  headless Chromium on 2026-10-22: `var()` resolves in both a presentation attribute and a `style`
+  attribute (computed `fill` read back as the token's value).
+- **Tone map (single source in `Icon.tsx`).** `tone` adds a text colour class; the secondary layer takes
+  the paired token:
+
+  | tone | class | secondary layer |
+  | --- | --- | --- |
+  | `current` | none | none |
+  | `muted` | `text-primary-muted` | none |
+  | `primary` | `text-primary` | `var(--color-accent)` |
+  | `action` | `text-action` | `var(--color-accent)` |
+  | `accent` | `text-accent` | `var(--color-action)` |
+  | `danger` | `text-danger` | `var(--color-accent)` |
+
+  `danger` exists only because the landing page's Order Updates tile already uses it today; this slice
+  does not add red to any new decorative surface.
+- Existing pairs already satisfy contrast: `brandStyle()` clamps each foreground against white, the
+  vendor's cream and its own matching tint (primary against all three tints). The secondary layer is
+  decorative and exempt from the non-text contrast rule, but it never carries meaning.
+
+### Phase 3 surfaces (exhaustive)
+
+| File | Icons converted to decorative two-hue | Tone today kept |
+| --- | --- | --- |
+| `app/(landing)/page.tsx`, trust strip section (three tiles) | `Truck` (line 206), `CreditCard` (line 222), `BellRing` (line 234) | primary, accent, danger, on the tile tints already there |
+| `components/rewards/RewardsLauncher.tsx` | `Gift` | accent |
+| `components/rewards/RewardsPanel.tsx` | `Sparkles` | accent |
+| `components/rewards/WaysToEarnAccordion.tsx` | `Coins`, `Sparkles`, `UserPlus` | accent, accent, action |
+| `components/rewards/WaysToRedeemAccordion.tsx` | `Gift`, `ShoppingBag`, `Percent` | accent, action, primary |
+| `components/rewards/AvailableRewardsSection.tsx` | `Gift` | accent |
+
+Everything else in those files (close `X`, `ChevronDown`, `Lock`, `CheckCircle2`, `Check`, `Copy`,
+`Share2`, `Users`) stays functional or status Lucide. A registry name has one provider and tier for the
+whole app, so where an icon is decorative here and functional elsewhere (`Gift`, `Sparkles` and `Truck`
+are candidates) the decorative use gets its own new semantic name (for example `rewards-gift`); no
+existing name changes provider (R38).
+
+### Phase 4a: department illustrations
+
+16 slugs map to Noto Emoji (Apache-2.0) ids; the generator writes one SVG per slug to
+`public/illustrations/departments/<slug>.svg` (about 71 KB in total, measured). Mapping: `fruit-veg`
+red-apple, `bakery` croissant, `dairy-eggs` glass-of-milk, `halal-meat` cut-of-meat, `groceries`
+shopping-cart, `international` globe-showing-europe-africa, `beverages` hot-beverage, `snacks` cookie,
+`household` soap, `frozen-foods` ice-cream, `health-beauty` lipstick, `baby-kids` teddy-bear,
+`pet-supplies` dog-face, `fish` fish, `sri-electronics` headphone, `sri-home` light-bulb. Any other slug
+renders a neutral decorative `tag` glyph, never a grocery picture (#729). The slug-to-art map lives in
+code, exactly as `category-icon.ts` does today; making it data-driven is `#1224`.
+
+## Deliberately excluded (so the question is not re-asked)
+
+- **`AccountNav`, `PanelNav`, `ViewSwitcher` and every staff-panel icon stay monochrome.** The account
+  tab bar signals the active tab by colour (`text-primary` plus a border) and is specified to mirror the
+  staff `PanelNav`; coloured glyphs would compete with that. Staff colour badges are a later slice.
+- **The Quick Shop hub (`app/(storefront)/quick-shop/page.tsx`)** is superseded by `#1195` (three tabs
+  under `/account`), so colouring it now would be thrown away.
+- Checkout, forms, header, footer, contact-channel glyphs, star ratings, favourite heart: functional.
+  The two hand-rolled brand glyph files (`contact-channel-icons.tsx`, `ReferralCard.tsx`) are unchanged.
+- **Larger Just Eat-style overflowing tiles.** P4a keeps the strip's 64 pixel tile geometry (so the
+  scroller's arrow offsets and the page layout do not move) and fits a 48 pixel illustration inside it.
+  A bigger tile is a layout decision for the owner after seeing P4a live.
+- **AI-generated per-vendor illustrations** are `#1224`, gated on an experiment and a schema change.
+- **Removing `lucide-react` (Phase 5)** is optional and not done here: the parity test needs it
+  (R26). **Derived `--color-icon-1..4` tokens** are not added. **A public credits page** is not added;
+  the licence text ships as a static file (R27, R28) and a footer link is the owner's call.
+- Long-cache hashed filenames for illustration files, and WebP/PNG variants: not needed at 71 KB.
+
+## Risks the requirements are written against
+
+| Risk | Where it is pinned |
+| --- | --- |
+| Hollow stars and hearts (root `fill` class cannot reach children) | R13 |
+| A "no visual change" migration that quietly changes sizes or geometry | R26, R31, R34, R35 |
+| A provider id leaking into component code, defeating the abstraction | R15, R16, R32 |
+| Unsafe markup in generated bodies (they are injected unescaped) | R10 |
+| A stale generated file reaching a deploy | R8, R9 |
+| Vendor colours not reaching icons (the #251 shape) | R39, R40 |
+| Bundle growth from bodies shipped in client components | R37 |
+| Grocery pictures on a non-grocery vendor | R49, R51 |
+| New runtime network dependency or CSP widening | R50 |
+
+## Phase 2 amendment (written 2026-10-23, before P2a is built)
+
+Approved on `#1223` (proposal comment, owner answers recorded there). Measured at that point on the P1 merge
+(`c439d3b`), not carried from the first audit:
+
+- **99 files still import `lucide-react`: 60 outside `app/(admin)` and `components/staff` (P2a) and 39 inside
+  them (P2b).** The proposal's "about 77" was a miscount. A dry run of `scripts/codemod-lucide-to-icon.ts`
+  converts 94 and refuses 5, each because the file already has a local binding called `Icon`:
+  `app/(storefront)/quick-shop/page.tsx`, `AccountNav`, `ViewSwitcher`, `CollectionNav`, `AddToCartButton`.
+  Four pass an icon as a component value (the R36 shape); `AddToCartButton` picks `Loader2`, `Check` or `Plus`
+  at render time. All five are hand-migrated in P2a (R57), and none of them is staff code.
+- **P1 is proved against BASE on 2026-10-23 (`#1226`):** 10 and 10 storefront pages, 7 customer pages and 5
+  Aheed staff pages identical; the licence file served `200 text/plain` on both hosts; staging health ok. The
+  two SriMart staff pages were not compared (a stale demo password in the dev database). That is why BASE stays
+  the reference for P2a and P2b: the comparison is cumulative, and a difference can only be new in P2.
+
+### What this amendment changes, and why
+
+| Change | Why |
+| --- | --- |
+| R34 now includes the signed-in customer list; R35 runs the staff lists at **both** P2a and P2b | P2a migrates `/account` and `/quick-shop`, which the old R35 only compared in P2b, and staff pages render shared components that P2a migrates (`components/errors/ErrorPanel` is one, found by an import scan; `Header` was P1 and is already proved), so a P2a change can reach them |
+| R35's SriMart staff pair has a sign-in precondition and is UNVERIFIED, not failed, in P2a | The owner repairs a dev-database account; a validator must not be asked to write to a database |
+| R56 pins the 60/39 split and forbids a P2a edit under the 39 | Keeps the two PRs separable and reviewable, and makes P2b's diff predictable |
+| R57 to R60 add a cloud-runnable className parity check (its allowlist is nine files, not five: Build found that the four P1 files whose icon was a value at BASE cannot be paired either) | R34 and R35 need the owner's machine; the main risk of a mechanical migration (a changed class, a lost size, a stray prop) is decidable from source, so it is checked in every cloud validation. It does **not** replace R34 and R35, which prove the rendered markup |
+| R61 records two traps in the playbook | Both cost real time in `#1226`: Node on Windows cannot resolve `*.localhost`, and `demo-accounts.ts add` does not reset an existing account's password |
+| R62 updates `CLAUDE.md` when the ban lands | The bullet says files "are being migrated"; once `tests/icon-imports.test.ts` enforces the ban that sentence is false, and a future session would read it as permission to leave a file behind |
+| R37 adds a P2a checkpoint | The budget was only checked after P2b; P2a moves 60 files and the client bundle shape is the named risk |
+
+### Deliberately not in P2a or P2b
+
+- **Registry pruning.** The 99 keys stay (a few have no JSX use yet). Pruning would shrink the generated data by
+  a few hundred bytes and break R31 for no benefit; R62 forbids removing or changing a key.
+- **`AccountNav` and `quick-shop` redesign.** `#1195` (Quick Shop as three tabs under `/account`, open) edits the
+  same two files. This slice only changes their icon plumbing; whichever lands second rebases, and the five-file
+  allowlist and R57 are written so the rebase can be checked by the same commands.
+- **Any `size`, `tone` or provider change.** P2 is behaviour-preserving; colour is P3.
+- **Splitting the icon data by tier** (a bundle fallback). Only if R37 fails; P1 added 794 bytes.
+- **`lucide-react` removal** stays Phase 5, out of scope (R53).
+
+## Phase 2b, 3 and 4a clubbing (written 2026-10-23, before PR A is built)
+
+Owner decision on `#1223` (comment `6374582601`): club the three remaining phases into one slice, shipped as
+**two PRs**. PR A is Phase 2b alone; PR B is Phases 3 and 4a together, cut from `staging` after PR A merges.
+
+### Why two PRs and not one
+
+- **The "nothing changed" proof dies the moment colour lands.** P2b is behaviour-preserving and is proved by
+  R34 and R35 (rendered markup identical to BASE, both vendors, every list). In the same PR as P3 and P4a the
+  markup differs on purpose, and that comparison could no longer tell an intended change from an accidental one
+  in the 39 admin and staff files. PR A keeps the proof clean and is quick to validate.
+- **Merges are squashed, so one PR is one commit on `staging`.** Had all three shared a PR, a bad illustration
+  could only be reverted together with the migration. Two PRs keep that separable.
+- **P3 and P4a belong together** because both are visible, both need the owner's eyes, and both touch files
+  Phase 2a already migrated, so there is no ordering between them. They share the screenshot evidence, the
+  licence work and the bundle budget.
+
+### What PR B is checked against, since "identical to BASE" cannot apply
+
+The markup of every storefront page changes (the Rewards launcher's gift glyph is on every storefront page of
+a loyalty vendor, and the department strip is on `/categories`, `/categories/[slug]`, `/search` and `/bundles`),
+so no per-page identical check exists for storefront pages. PR B is bounded three other ways: **R64** (the PR
+may touch only the files named for Phases 3 and 4a, enumerated; anything else is a failure and a spec change),
+**R65** (the staff path lists must stay identical to the PR A head, which is checkable because the admin
+layout imports `Header` only and renders none of the surfaces), and the existing surface checks **R38 to R51**
+(decorative names, `--icon-secondary`, the 16 illustrations, vendor-specific art) plus the owner's screenshots.
+R34, R35 and R56 to R60 are **not** required at the PR B head; each says so.
+
+### Noto Emoji's licence text (a finding, and a spec defect corrected)
+
+R27 said every licence block is the upstream `LICENSE` "verbatim from the URL in that set's `info.json`". For
+Noto Emoji that is impossible: `info.json` points at `.../noto-emoji/blob/main/svg/LICENSE`, which returns
+HTTP 404; the repository's root `LICENSE` is the **SIL Open Font License** for the fonts; and the README says
+"Tools and most image resources are under the Apache license, version 2.0" (and exempts the region flags, none of
+which is among the 16 slugs). **R63** therefore requires the canonical Apache 2.0 text (apache.org), a section
+that records the 404 and quotes the README, and that the generator emits it (so `icons:check` covers it).
+ADR-008 Decision 5 is corrected to match. The residual risk is that the 404 means upstream reorganised its
+licensing: the owner may want a lawyer's eye before the illustrations reach production, which this spec does
+not decide.
+
+### Deliberately not in PR A or PR B
+
+- **A markup-diff tool that tolerates named changes** (`verify-icon-markup.ts --compare ... --allow-name`): it
+  would give a per-page proof for PR B, but R33 fixes the script's output keys, so it needs a new flag and its
+  own tests. R64 and R65 are the cheaper bound; build the tool only if PR B's validation shows it is needed.
+- **A footer link to `/third-party-icon-licenses.txt`**: still the owner's call (open since Phase 1).
+- **`#1224`** (AI-generated illustrations), **`#1195`** (Quick Shop re-homing), the `#1230` demo-accounts tool
+  fix and the `#1228` `AddToCartButton` test.
+- **Larger Just Eat-style tiles**: unchanged from "Deliberately excluded" above.
+
+## Open items carried forward
+
+- **Credits page (owner).** Whether a footer link to `/third-party-icon-licenses.txt` is wanted is
+  undecided; this slice ships the file only. Tracked on `#1223`.
+- **Model.** `CLAUDE.md` assigns Spec and Build to Opus 5; this spec was written on Sonnet 5.5 at the
+  owner's `/spec` instruction. Build should run on Opus 5 once the owner switches.
+- **`#1226`** (the two SriMart staff pages and the stale demo-account password), a precondition of R35 and a P2b gate.
+- **`#1224`** (AI illustrations) and **`#1195`** (Quick Shop re-homing, which also changes `AccountNav`).
+- **Unverified at spec time:** client and Worker bundle baselines (recorded at Build start, R37); whether
+  Lucide's Iconify data and the installed `lucide-react` differ in any icon's geometry (R26 finds out and
+  records every divergence); real-browser appearance of the two-hue glyphs in the app itself (only a
+  static preview sheet was seen).

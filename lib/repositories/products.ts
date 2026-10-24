@@ -9,7 +9,15 @@ import {
   type NetContent,
   type NetContentUnit,
 } from "@/components/product/unit-price";
-import { effectiveStock } from "@/lib/cart-rules";
+import {
+  ELIGIBILITY_SELECT,
+  PURCHASABILITY_SELECT,
+  purchasableQuantity,
+  stockModeOf,
+  type ProductRestriction,
+  type StockMode,
+} from "@/lib/cart-rules";
+import { restrictedEnableError } from "@/lib/product-restriction";
 import { restockDayFromStored } from "@/lib/restock";
 import { calendarDayToUtcMidnight } from "@/lib/local-datetime";
 import { CANDIDATE_QUERY_LIMIT, type ListCandidate } from "@/lib/shopping-list";
@@ -94,15 +102,20 @@ export interface ProductSummary {
    * `inStock`. Both come from the `Inventory` row that was already joined for
    * `inStock`, so this adds no query and no migration.
    *
-   * `stockQuantity` is normalised through `effectiveStock()`, so a negative or
-   * null inventory reads as 0 rather than leaking a nonsense number into the
-   * UI. `lowStockThreshold` falls back to the schema default (3) when there is
+   * `stockQuantity` comes from `purchasableQuantity()` (#1211), so a negative,
+   * null or UNKNOWN inventory reads as 0 rather than leaking a nonsense number
+   * into the UI, and an UNTRACKED product reads as the per-line cap. `lowStockThreshold` falls back to the schema default (3) when there is
    * no inventory row at all — a product with no inventory is out of stock, so
    * the threshold is never actually consulted for it, but a number keeps the
    * type honest and the card free of null handling.
    */
   stockQuantity: number;
   lowStockThreshold: number;
+  /**
+   * #1211 — whether `stockQuantity` is a real count. Only a TRACKED product may show "Only N
+   * left" or the low-stock badge; an UNTRACKED one's quantity is the per-line cap, not stock.
+   */
+  stockMode: StockMode;
   /**
    * #876 — the vendor-local day (`YYYY-MM-DD`) the product is expected back, or null. Mapped here
    * from the same joined `Inventory` row as `inStock`. The repository returns whatever is stored;
@@ -446,6 +459,16 @@ export interface ProductRepository {
    * in a single query. Keyed by category id.
    */
   categorySpotlights(categoryIds: readonly string[]): Promise<Map<string, CategorySpotlight>>;
+  /**
+   * #1233 — active products on offer (`originalPrice` markdown or active `priceTier`), carrying
+   * their `categoryId` so `/whatsapp-offers` can group them by top-level department in one query.
+   */
+  listOfferProducts(take: number): Promise<OfferProductWithCategory[]>;
+}
+
+export interface OfferProductWithCategory {
+  product: ProductSummary;
+  categoryId: string;
 }
 
 const productImageSelect = { storageKey: true, alt: true, isPrimary: true } as const;
@@ -476,7 +499,12 @@ export function buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereIn
     };
   }
   if (filters.inStockOnly) {
-    where.inventory = { quantity: { gt: 0 } };
+    // #1211 — the stock half of purchasableQuantity() as a predicate: UNTRACKED, or TRACKED with
+    // stock. UNKNOWN never matches. The OR is nested under `inventory`, never top-level, so it
+    // cannot collide with another filter's OR (architecture.md "Composing `where` fragments").
+    where.inventory = {
+      OR: [{ stockMode: "UNTRACKED" }, { stockMode: "TRACKED", quantity: { gt: 0 } }],
+    };
   }
   if (filters.isHalal) where.isHalal = true;
   if (filters.isFresh) where.isFresh = true;
@@ -616,7 +644,16 @@ const productSummarySelect = {
   averageRating: true,
   reviewCount: true,
   images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
-  inventory: { select: { quantity: true, lowStockThreshold: true, expectedRestockDate: true } },
+  // #1211 — isActive and restriction travel for purchasableQuantity(), not for display.
+  ...ELIGIBILITY_SELECT,
+  inventory: {
+    select: {
+      quantity: true,
+      stockMode: true,
+      lowStockThreshold: true,
+      expectedRestockDate: true,
+    },
+  },
   // #918 — only the values of filters the vendor marked "Show on product cards". A vendor with no
   // such filter (Aheed today) gets an empty list back from the same query.
   attributeValues: {
@@ -660,8 +697,9 @@ function toProductSummary(row: ProductSummaryRow, tier: ProductTier | null): Pro
     averageRating: row.averageRating,
     reviewCount: row.reviewCount,
     primaryImage: row.images[0] ?? null,
-    inStock: (row.inventory?.quantity ?? 0) > 0,
-    stockQuantity: effectiveStock(row.inventory?.quantity),
+    inStock: purchasableQuantity(row) > 0,
+    stockQuantity: purchasableQuantity(row),
+    stockMode: stockModeOf(row.inventory),
     lowStockThreshold: row.inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
     expectedRestockDay: restockDayFromStored(row.inventory?.expectedRestockDate),
     tier,
@@ -831,6 +869,43 @@ export async function listActiveProductSlugs(
     select: { slug: true },
   });
   return rows.map((row) => row.slug);
+}
+
+/**
+ * #1233 — active products on offer (`originalPrice` not null or `priceTier` not null) in visible
+ * categories, alongside each product's `categoryId` so `/whatsapp-offers` can group them by the
+ * vendor's top-level departments in one query without altering `ProductSummary`'s shape.
+ */
+export async function listOfferProducts(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  take: number,
+): Promise<OfferProductWithCategory[]> {
+  const rows = await prisma.product.findMany({
+    where: {
+      vendorId,
+      isActive: true,
+      category: visibleCategoryWhere,
+      ...buildFilterWhere({ onOffer: true }),
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take,
+    select: {
+      ...productSummarySelect,
+      categoryId: true,
+    },
+  });
+
+  const tiers = await listActiveTiersForProducts(
+    prisma,
+    vendorId,
+    rows.map((r) => r.id),
+  );
+
+  return rows.map((row) => ({
+    product: toProductSummary(row, tiers.get(row.id) ?? null),
+    categoryId: row.categoryId,
+  }));
 }
 
 /**
@@ -1464,8 +1539,15 @@ export async function getProductBySlug(
       averageRating: true,
       reviewCount: true,
       images: { orderBy: { sortOrder: "asc" }, select: productImageSelect },
+      // #1211 — isActive and restriction travel for purchasableQuantity(), not for display.
+      ...ELIGIBILITY_SELECT,
       inventory: {
-        select: { quantity: true, lowStockThreshold: true, expectedRestockDate: true },
+        select: {
+          quantity: true,
+          stockMode: true,
+          lowStockThreshold: true,
+          expectedRestockDate: true,
+        },
       },
       // #912 — same query as the rest of the product; ordered below, since Prisma cannot order a
       // relation list by a field of a further relation.
@@ -1476,7 +1558,17 @@ export async function getProductBySlug(
   });
   if (!product) return null;
 
-  const { inventory, images, attributeValues, allowsCustomNote, category, ...rest } = product;
+  const {
+    inventory,
+    images,
+    attributeValues,
+    allowsCustomNote,
+    category,
+    isActive,
+    restriction,
+    ...rest
+  } = product;
+  const purchasable = purchasableQuantity({ isActive, restriction, inventory });
   const tiers = await listActiveTiersForProducts(prisma, vendorId, [product.id]);
   return {
     ...rest,
@@ -1488,8 +1580,9 @@ export async function getProductBySlug(
       attributeValues.filter((value) => value.attribute.showOnCard),
     ),
     primaryImage: images.find((i) => i.isPrimary) ?? images[0] ?? null,
-    inStock: (inventory?.quantity ?? 0) > 0,
-    stockQuantity: effectiveStock(inventory?.quantity),
+    inStock: purchasable > 0,
+    stockQuantity: purchasable,
+    stockMode: stockModeOf(inventory),
     lowStockThreshold: inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
     expectedRestockDay: restockDayFromStored(inventory?.expectedRestockDate),
     tier: tiers.get(product.id) ?? null,
@@ -1761,7 +1854,7 @@ export async function suggestProducts(
       id: true,
       slug: true,
       name: true,
-      inventory: { select: { quantity: true } },
+      ...PURCHASABILITY_SELECT,
     },
   });
 
@@ -1769,7 +1862,7 @@ export async function suggestProducts(
     id: row.id,
     slug: row.slug,
     name: row.name,
-    inStock: (row.inventory?.quantity ?? 0) > 0,
+    inStock: purchasableQuantity(row) > 0,
   }));
   return rankSearchCandidates(candidates, groups);
 }
@@ -1809,7 +1902,7 @@ export async function matchProductListTerms(
       name: true,
       basePrice: true,
       unitLabel: true,
-      inventory: { select: { quantity: true } },
+      ...PURCHASABILITY_SELECT,
     },
   });
 
@@ -1819,7 +1912,7 @@ export async function matchProductListTerms(
     name: row.name,
     basePrice: row.basePrice,
     unitLabel: row.unitLabel,
-    stock: effectiveStock(row.inventory?.quantity),
+    stock: purchasableQuantity(row),
   }));
 }
 
@@ -1866,6 +1959,9 @@ export interface AdminProductRow {
   categoryName: string;
   quantity: number;
   imageNeedsReview: boolean;
+  /** #1211 — shown on the list so a reviewer can see why a product is hidden. */
+  restriction: ProductRestriction | null;
+  stockMode: StockMode;
 }
 
 export interface AdminProductPage {
@@ -1900,7 +1996,11 @@ export interface AdminProductDetail {
   isActive: boolean;
   /** #1135 — this product takes a shopper note. */
   allowsCustomNote: boolean;
+  /** #1211 — the restriction, if any; the form's enable control is decided from it. */
+  restriction: ProductRestriction | null;
   quantity: number;
+  /** #1211 — UNKNOWN when the product has no Inventory row. */
+  stockMode: StockMode;
   lowStockThreshold: number;
   /** #876 — the stored expected restock day (`YYYY-MM-DD`), past or not, for the edit form. */
   expectedRestockDay: string | null;
@@ -1953,6 +2053,11 @@ export interface ProductWriteInput {
   /** #1135 — this product takes a shopper note. Absent leaves the stored value alone on update. */
   allowsCustomNote?: boolean;
   quantity: number;
+  /**
+   * #1211 — required, so a form-driven Inventory write always states its mode and can never fall
+   * through to the column's UNKNOWN default by omission. The form defaults a new product to TRACKED.
+   */
+  stockMode: StockMode;
   lowStockThreshold: number;
   /** #876 — a `YYYY-MM-DD` day already validated by the form parser, or null to clear it. */
   expectedRestockDay: string | null;
@@ -1979,6 +2084,9 @@ export interface StaffInventoryRow {
   isActive: boolean;
   categoryName: string;
   quantity: number;
+  /** #1211 — the +/- control renders only for TRACKED; a restricted row cannot be toggled on. */
+  stockMode: StockMode;
+  restriction: ProductRestriction | null;
   primaryImage: ProductImageSummary | null;
 }
 
@@ -2015,8 +2123,9 @@ export async function listInventoryForStaff(
         unitLabel: true,
         basePrice: true,
         isActive: true,
+        restriction: true,
         category: { select: { name: true } },
-        inventory: { select: { quantity: true } },
+        inventory: { select: { quantity: true, stockMode: true } },
         images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
       },
     }),
@@ -2035,10 +2144,31 @@ export async function listInventoryForStaff(
       isActive: row.isActive,
       categoryName: row.category?.name ?? "Unknown",
       quantity: row.inventory?.quantity ?? 0,
+      stockMode: stockModeOf(row.inventory),
+      restriction: row.restriction,
       primaryImage: row.images?.[0] ?? null,
     })),
     nextCursor: hasMore ? page[page.length - 1].id : null,
   };
+}
+
+/** #1211 — the staff list's restriction filter as a `where` fragment (never a top-level OR). */
+function restrictionWhere(
+  restriction: "any" | "none" | ProductRestriction | undefined,
+): Prisma.ProductWhereInput {
+  if (restriction === undefined) return {};
+  if (restriction === "any") return { restriction: { not: null } };
+  if (restriction === "none") return { restriction: null };
+  return { restriction };
+}
+
+/** #1211 — UNKNOWN covers "no Inventory row" too, matching stockModeOf(). */
+function stockModeWhere(stockMode: StockMode | undefined): Prisma.ProductWhereInput {
+  if (stockMode === undefined) return {};
+  if (stockMode === "UNKNOWN") {
+    return { NOT: { inventory: { stockMode: { in: ["TRACKED", "UNTRACKED"] } } } };
+  }
+  return { inventory: { stockMode } };
 }
 
 /** Keyset-paginated on (createdAt, id) like findPage() above — never OFFSET. */
@@ -2051,6 +2181,8 @@ export async function listProductsForAdmin(
     search,
     isActive,
     categoryIds,
+    restriction,
+    stockMode,
   }: {
     take: number;
     cursor?: string;
@@ -2067,6 +2199,13 @@ export async function listProductsForAdmin(
      * layer stays a plain `in` and needs no hierarchy knowledge of its own.
      */
     categoryIds?: readonly string[];
+    /**
+     * #1211 — "any" = restricted at all, "none" = unrestricted, or one class. undefined applies no
+     * filter. Parsed (unknown values dropped) by parseStaffProductsQuery.
+     */
+    restriction?: "any" | "none" | ProductRestriction;
+    /** #1211 — UNKNOWN also matches a product with no Inventory row. */
+    stockMode?: StockMode;
   },
 ): Promise<AdminProductPage> {
   const rows = await runKeysetPage(keysetCursorArgs(cursor), (pageArgs) =>
@@ -2083,6 +2222,8 @@ export async function listProductsForAdmin(
         // caller never produces one (see StaffProductsQuery.categoryIds), and a
         // silently-empty result set is the worse failure of the two.
         ...(categoryIds && categoryIds.length > 0 ? { categoryId: { in: [...categoryIds] } } : {}),
+        ...restrictionWhere(restriction),
+        ...stockModeWhere(stockMode),
       },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: take + 1,
@@ -2094,8 +2235,9 @@ export async function listProductsForAdmin(
         basePrice: true,
         isActive: true,
         imageNeedsReview: true,
+        restriction: true,
         category: { select: { name: true } },
-        inventory: { select: { quantity: true } },
+        inventory: { select: { quantity: true, stockMode: true } },
       },
     }),
   );
@@ -2113,6 +2255,8 @@ export async function listProductsForAdmin(
       categoryName: row.category?.name ?? "Unknown",
       quantity: row.inventory?.quantity ?? 0,
       imageNeedsReview: row.imageNeedsReview,
+      restriction: row.restriction,
+      stockMode: stockModeOf(row.inventory),
     })),
     nextCursor: hasMore ? page[page.length - 1].id : null,
   };
@@ -2152,8 +2296,14 @@ export async function getProductForAdmin(
       isActive: true,
       allowsCustomNote: true,
       imageNeedsReview: true,
+      restriction: true,
       inventory: {
-        select: { quantity: true, lowStockThreshold: true, expectedRestockDate: true },
+        select: {
+          quantity: true,
+          stockMode: true,
+          lowStockThreshold: true,
+          expectedRestockDate: true,
+        },
       },
       images: { orderBy: { sortOrder: "asc" }, select: adminProductImageSelect },
       attributeValues: { select: { attributeId: true, optionId: true, numericValue: true } },
@@ -2171,6 +2321,7 @@ export async function getProductForAdmin(
     // A product seeded before P6b1 may have no Inventory row at all; the form
     // shows zeroes and the first save creates it (see updateProductForVendor).
     quantity: inventory?.quantity ?? 0,
+    stockMode: stockModeOf(inventory),
     lowStockThreshold: inventory?.lowStockThreshold ?? 3,
     expectedRestockDay: restockDayFromStored(inventory?.expectedRestockDate),
     tier,
@@ -2337,6 +2488,8 @@ export async function createProductForVendor(
           create: {
             vendorId,
             quantity: input.quantity,
+            // #1211 — stated, never left to the column's UNKNOWN default.
+            stockMode: input.stockMode,
             lowStockThreshold: input.lowStockThreshold,
             expectedRestockDate: toRestockDate(input.expectedRestockDay),
           },
@@ -2394,10 +2547,15 @@ export async function updateProductForVendor(
     return await prismaWs.$transaction(async (tx) => {
       const existing = await tx.product.findFirst({
         where: { id, vendorId },
-        select: { id: true },
+        select: { id: true, restriction: true },
       });
       // Another vendor's product is indistinguishable from one that never existed.
       if (!existing) return { ok: false as const, error: "That product no longer exists." };
+      // #1211 (R19) — the repository refuses this for EVERY caller, whatever their role. Clearing a
+      // restriction is a separate, audited path (lib/repositories/product-restrictions.ts).
+      if (existing.restriction !== null && input.isActive) {
+        return { ok: false as const, error: restrictedEnableError(existing.restriction) };
+      }
 
       if (!(await assertOwnCategory(tx, vendorId, input.categoryId))) return WRONG_CATEGORY;
       const badAttribute = await assertOwnAttributeValues(tx, vendorId, input.attributeValues);
@@ -2448,11 +2606,13 @@ export async function updateProductForVendor(
           vendorId,
           productId: id,
           quantity: input.quantity,
+          stockMode: input.stockMode,
           lowStockThreshold: input.lowStockThreshold,
           expectedRestockDate: toRestockDate(input.expectedRestockDay),
         },
         update: {
           quantity: input.quantity,
+          stockMode: input.stockMode,
           lowStockThreshold: input.lowStockThreshold,
           expectedRestockDate: toRestockDate(input.expectedRestockDay),
         },
@@ -2740,9 +2900,17 @@ export async function quickUpdateInventory(
     return await prismaWs.$transaction(async (tx) => {
       const existing = await tx.product.findFirst({
         where: { id: productId, vendorId },
-        select: { id: true, inventory: { select: { quantity: true, lowStockThreshold: true } } },
+        select: {
+          id: true,
+          restriction: true,
+          inventory: { select: { quantity: true, lowStockThreshold: true } },
+        },
       });
       if (!existing) return { ok: false as const, error: "That product no longer exists." };
+      // #1211 (R19) — refused for every caller; nothing is written, quantity included.
+      if (existing.restriction !== null && data.isActive === true) {
+        return { ok: false as const, error: restrictedEnableError(existing.restriction) };
+      }
 
       if (data.isActive !== undefined) {
         await tx.product.update({
@@ -2758,6 +2926,8 @@ export async function quickUpdateInventory(
             vendorId,
             productId,
             quantity: data.quantity,
+            // #1211 — staff typing a count is tracking; never the column's UNKNOWN default.
+            stockMode: "TRACKED",
             lowStockThreshold: 3,
           },
           update: { quantity: data.quantity },

@@ -1,5 +1,5 @@
-import { CalendarClock } from "lucide-react";
 import { formatRestockDay } from "@/lib/restock";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * #876 — "Back in stock <day>" for an out-of-stock product. One component for the card, the quick
@@ -21,7 +21,7 @@ export function RestockNotice({
 }) {
   return (
     <span className={`flex items-center gap-1 font-semibold text-primary ${className}`}>
-      <CalendarClock className={iconClassName} aria-hidden />
+      <Icon name="calendar-clock" className={iconClassName} />
       Back in stock {formatRestockDay(day)}
     </span>
   );

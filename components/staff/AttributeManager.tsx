@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, type ReactNode } from "react";
-import { Plus, Save, Trash2 } from "lucide-react";
 import {
   createAttribute,
   createAttributeOption,
@@ -15,6 +14,7 @@ import { confirmDeleteLabel } from "@/lib/attribute-form";
 import type { AttributeOptionRow, AttributeRow } from "@/lib/repositories/attributes";
 import { inputClass, labelClass } from "@/lib/form-classes";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Product-filter admin forms (#912), modelled on `BrandManager.tsx`.
@@ -100,7 +100,7 @@ export function AddAttributeForm() {
         />
       </div>
       <Button disabled={pending}>
-        <Plus className="h-4 w-4" aria-hidden="true" />
+        <Icon name="plus" className="h-4 w-4" />
         {pending ? "Adding…" : "Add filter"}
       </Button>
       <div className="sm:sr-only">
@@ -166,7 +166,7 @@ function RenameForm({
       </div>
       {children}
       <Button disabled={pending}>
-        <Save className="h-4 w-4" aria-hidden="true" />
+        <Icon name="save" className="h-4 w-4" />
         {pending ? "Saving…" : "Save"}
       </Button>
     </form>
@@ -198,7 +198,7 @@ function DeleteForm({
         </label>
       )}
       <button type="submit" disabled={pending} className={DELETE_BUTTON_CLASS}>
-        <Trash2 className="h-4 w-4" aria-hidden="true" />
+        <Icon name="trash" className="h-4 w-4" />
         {pending ? "Deleting…" : label}
       </button>
     </form>
@@ -262,7 +262,7 @@ function AddOptionForm({ attributeId }: { attributeId: string }) {
         />
       </div>
       <Button disabled={pending}>
-        <Plus className="h-4 w-4" aria-hidden="true" />
+        <Icon name="plus" className="h-4 w-4" />
         {pending ? "Adding…" : "Add value"}
       </Button>
       <div className="sm:sr-only">

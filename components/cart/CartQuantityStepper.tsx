@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Minus, Plus } from "lucide-react";
 import { updateQuantity } from "@/features/cart/update-quantity";
 import { clampQuantity } from "@/lib/cart-rules";
 import { createQuantityCoalescer, type QuantityCoalescer } from "./quantity-coalescer";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * P8.5a (#345) — the product grid's cart-mutating quantity stepper.
@@ -128,7 +128,7 @@ export function CartQuantityStepper({
         }
         className="flex size-tap lg:size-6 items-center justify-center rounded-lg bg-white text-primary transition-colors hover:bg-surface-muted"
       >
-        <Minus className="h-3.5 w-3.5" aria-hidden />
+        <Icon name="minus" className="h-3.5 w-3.5" />
       </button>
 
       <span
@@ -146,7 +146,7 @@ export function CartQuantityStepper({
         aria-label={`Increase quantity of ${productName}`}
         className="flex size-tap lg:size-6 items-center justify-center rounded-lg bg-primary text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        <Plus className="h-3.5 w-3.5" aria-hidden />
+        <Icon name="plus" className="h-3.5 w-3.5" />
       </button>
 
       {failed && (

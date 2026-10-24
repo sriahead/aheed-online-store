@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Trash2 } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { listProductsForAdmin } from "@/lib/products-service";
 import { getBundleForVendor } from "@/lib/bundles-service";
@@ -11,6 +10,7 @@ import { composePublicUrl } from "@/lib/storage";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { BundleForm } from "@/components/staff/BundleForm";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and one live bundle — must render per-request.
 export const dynamic = "force-dynamic";
@@ -72,7 +72,7 @@ export default async function EditBundlePage({
               type="submit"
               className="flex items-center gap-1.5 rounded-xl border border-danger/40 px-3 py-2 text-xs font-bold text-danger hover:bg-danger-tint"
             >
-              <Trash2 className="h-4 w-4" aria-hidden />
+              <Icon name="trash" className="h-4 w-4" />
               Delete
             </button>
           </form>

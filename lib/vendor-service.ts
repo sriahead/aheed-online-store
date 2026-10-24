@@ -15,6 +15,7 @@ import {
   saveVendorTheme as saveVendorThemeRepo,
   updateVendorMarkKey as updateVendorMarkKeyRepo,
   updateVendorLogoKey as updateVendorLogoKeyRepo,
+  updateVendorWhatsappQrKey as updateVendorWhatsappQrKeyRepo,
   updateVendorStorefrontConfig as updateVendorStorefrontConfigRepo,
   type BrandPrimitives,
   type VendorProfile,
@@ -94,6 +95,13 @@ export async function updateVendorLogoKey(vendorId: string, logoStorageKey: stri
 
 export async function updateVendorMarkKey(vendorId: string, markStorageKey: string) {
   return updateVendorMarkKeyRepo(getPrisma(), vendorId, markStorageKey);
+}
+
+export async function updateVendorWhatsappQrKey(
+  vendorId: string,
+  whatsappCommunityQrKey: string | null,
+) {
+  return updateVendorWhatsappQrKeyRepo(getPrisma(), vendorId, whatsappCommunityQrKey);
 }
 
 /**

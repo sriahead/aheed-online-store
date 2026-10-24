@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { X } from "lucide-react";
 import { activeFilterChips, clearAllHref, type FilterChipParams } from "./filter-chips";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Applied filters, shown above the results and individually removable (#568). Shared by both
@@ -48,7 +48,7 @@ export function FilterChips({
           className="inline-flex min-h-tap items-center gap-1.5 rounded-full border border-black/10 bg-surface-muted px-3 py-1 text-sm lg:min-h-0 text-primary transition-colors hover:bg-black/5"
         >
           {chip.label}
-          <X className="h-3.5 w-3.5 text-primary-muted" aria-hidden />
+          <Icon name="x" className="h-3.5 w-3.5 text-primary-muted" />
         </Link>
       ))}
       <Link

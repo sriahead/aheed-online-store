@@ -4,7 +4,8 @@ import {
   clampQuantity,
   classifyAdd,
   classifyBulkAdd,
-  effectiveStock,
+  PURCHASABILITY_SELECT,
+  purchasableQuantity,
   isMergePending,
   isValidAddDelta,
   resolveMerge,
@@ -244,9 +245,8 @@ async function decorate(
       name: true,
       unitLabel: true,
       basePrice: true,
-      isActive: true,
+      ...PURCHASABILITY_SELECT,
       ...NOTE_ACCEPTANCE_SELECT,
-      inventory: { select: { quantity: true } },
       images: {
         where: { isPrimary: true },
         select: { storageKey: true },
@@ -269,8 +269,9 @@ async function decorate(
   return items.flatMap((item) => {
     const p = byId.get(item.productId);
     if (!p) return []; // product deleted outright — nothing sensible to render
-    const stock = effectiveStock(p.inventory?.quantity);
-    const available = p.isActive && stock > 0;
+    // #1211 — the one purchasability rule (restriction, isActive, stock mode).
+    const stock = purchasableQuantity(p);
+    const available = stock > 0;
     const tier = tiers.get(p.id) ?? null;
     return [
       {
@@ -300,9 +301,9 @@ async function stockMap(
 ): Promise<Map<string, number>> {
   const rows = await prisma.product.findMany({
     where: { vendorId, id: { in: productIds } },
-    select: { id: true, isActive: true, inventory: { select: { quantity: true } } },
+    select: { id: true, ...PURCHASABILITY_SELECT },
   });
-  return new Map(rows.map((r) => [r.id, r.isActive ? effectiveStock(r.inventory?.quantity) : 0]));
+  return new Map(rows.map((r) => [r.id, purchasableQuantity(r)]));
 }
 
 /** #1135 — the products among `productIds` (this vendor's only) that take a note right now. */

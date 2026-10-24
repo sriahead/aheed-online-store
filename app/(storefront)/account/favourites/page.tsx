@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { getEnv } from "@/lib/config";
 import { getFavouritesRepository } from "@/lib/favourites-service";
@@ -13,6 +12,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { ProductCard } from "@/components/product/ProductCard";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { DEFAULT_PRODUCT_GRID_DENSITY } from "@/lib/product-grid-density";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Favourites (#232).
@@ -46,7 +46,7 @@ export default async function AccountFavouritesPage() {
         href="/account"
         className="mb-4 inline-flex items-center gap-1 text-sm text-primary-muted hover:text-primary"
       >
-        <ChevronLeft className="h-4 w-4" aria-hidden />
+        <Icon name="chevron-left" className="h-4 w-4" />
         Your account
       </Link>
 

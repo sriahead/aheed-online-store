@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Clock, Lock, Mail, MapPin, Navigation, Phone } from "lucide-react";
 import type { VendorProfile } from "@/lib/repositories/vendor";
 import { footerPalette, footerStyle } from "@/lib/footer-palette";
 import { isDiallablePhone, isEmailAddress, telHref } from "@/lib/footer-contact-form";
@@ -10,6 +9,7 @@ import { CookieSettingsButton } from "@/components/consent/CookieSettingsButton"
 import { buildOpeningHoursView } from "@/lib/footer-hours";
 import { contactChannels } from "@/lib/contact-channels";
 import { FooterContactChannels } from "@/components/layout/FooterContactChannels";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * The storefront footer (#1055) — three columns on desktop, stacked on mobile, then a bottom bar.
@@ -81,6 +81,7 @@ export function StorefrontFooter({
     facebookUrl: profile.facebookUrl,
     instagramUrl: profile.instagramUrl,
     whatsappNumber: profile.whatsappNumber,
+    whatsappCommunityUrl: profile.whatsappCommunityUrl,
     assistantAvailable,
   });
   // #1169 — the contact-channel buttons live in this column now, so it shows for them too: a store
@@ -110,7 +111,7 @@ export function StorefrontFooter({
                 href={phoneHref}
                 className="flex min-h-tap items-center justify-center gap-2 rounded-xl bg-[var(--footer-heading)] px-4 font-bold text-[var(--footer-bg)]"
               >
-                <Phone className="h-4 w-4" aria-hidden="true" />
+                <Icon name="phone" className="h-4 w-4" />
                 Call {contactPhone}
               </a>
             )}
@@ -121,7 +122,7 @@ export function StorefrontFooter({
                 rel="noopener noreferrer"
                 className="flex min-h-tap items-center justify-center gap-2 rounded-xl border border-[var(--footer-text)] px-4 font-bold"
               >
-                <Navigation className="h-4 w-4" aria-hidden="true" />
+                <Icon name="navigation" className="h-4 w-4" />
                 Get directions
               </a>
             )}
@@ -135,7 +136,7 @@ export function StorefrontFooter({
                 <address className="space-y-2 not-italic">
                   {location && (
                     <div className="flex gap-2">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                      <Icon name="map-pin" className="mt-0.5 h-4 w-4 shrink-0" />
                       <div>
                         <p className="font-semibold">{profile.name}</p>
                         <p>
@@ -163,7 +164,7 @@ export function StorefrontFooter({
                   )}
                   {contactPhone && (
                     <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <Icon name="phone" className="h-4 w-4 shrink-0" />
                       {phoneHref ? (
                         <a href={phoneHref} className={`${LINK} text-base font-bold`}>
                           {contactPhone}
@@ -175,7 +176,7 @@ export function StorefrontFooter({
                   )}
                   {contactEmail && (
                     <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <Icon name="mail" className="h-4 w-4 shrink-0" />
                       {emailHref ? (
                         <a href={emailHref} className={`${LINK} break-all`}>
                           {contactEmail}
@@ -231,7 +232,7 @@ export function StorefrontFooter({
               )}
               {openingHoursNote && (
                 <p className="mt-4 flex gap-2 text-xs text-[var(--footer-muted)]">
-                  <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <Icon name="clock" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   {openingHoursNote}
                 </p>
               )}
@@ -318,7 +319,7 @@ export function StorefrontFooter({
           <div className="order-1 space-y-2 lg:order-3">
             {profile.showSecureCheckoutNote && (
               <p className="flex items-center gap-1.5 whitespace-nowrap">
-                <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <Icon name="lock" className="h-3.5 w-3.5 shrink-0" />
                 Secure checkout powered by Stripe
               </p>
             )}

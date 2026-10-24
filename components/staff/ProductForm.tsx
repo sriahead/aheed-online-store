@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { Save } from "lucide-react";
 import { saveProduct } from "@/features/admin/catalogue";
 import { initialCatalogueState, toCategoryOptionGroups } from "@/lib/catalogue-form";
 import { ProductImageUploader } from "@/components/staff/ProductImageUploader";
@@ -17,6 +16,9 @@ import { errorInputClass, inputClass, labelClass } from "@/lib/form-classes";
 import { NET_CONTENT_UNIT_LABELS, NET_CONTENT_UNITS } from "@/components/product/unit-price";
 import type { ProductLabelSettings } from "@/lib/product-label-settings";
 import type { AttributeDefinition } from "@/lib/repositories/attributes";
+import { STOCK_MODES } from "@/lib/cart-rules";
+import { RESTRICTION_LABELS, STOCK_MODE_LABELS } from "@/lib/product-restriction";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Product create/edit form (P6b1, #159).
@@ -314,6 +316,30 @@ export function ProductForm({
               </select>
             </div>
 
+            {/* #1211 (R15a) — the storefront purchase state. Changing it never changes the count:
+                switching back to Tracked restores the last stored quantity. */}
+            <div>
+              <label className={labelClass} htmlFor="stockMode">
+                Stock tracking
+              </label>
+              <select
+                id="stockMode"
+                name="stockMode"
+                defaultValue={product?.stockMode ?? "TRACKED"}
+                {...fieldProps("stockMode")}
+              >
+                {STOCK_MODES.map((mode) => (
+                  <option key={mode} value={mode}>
+                    {STOCK_MODE_LABELS[mode]}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-black/60">
+                Tracked: sells while the stock count is above zero. Not tracked: sells without a
+                count. Unknown: not for sale.
+              </p>
+            </div>
+
             <div>
               <label className={labelClass} htmlFor="quantity">
                 Stock
@@ -534,11 +560,21 @@ export function ProductForm({
               label="Featured on homepage"
               defaultChecked={product?.isFeatured ?? false}
             />
-            <Checkbox
-              name="isActive"
-              label="Visible in the shop"
-              defaultChecked={product?.isActive ?? true}
-            />
+            {/* #1211 — a restricted product cannot be made visible from this form: a disabled box
+                submits nothing, so the save keeps it hidden. Clearing a restriction is the separate,
+                audited control in the Restriction section below. */}
+            {product?.restriction ? (
+              <p className="text-sm text-primary">
+                Hidden — restricted ({RESTRICTION_LABELS[product.restriction]}). See Restriction
+                below.
+              </p>
+            ) : (
+              <Checkbox
+                name="isActive"
+                label="Visible in the shop"
+                defaultChecked={product?.isActive ?? true}
+              />
+            )}
             {/* #1135 — also on when this product's category (or its parent) is ticked. */}
             <Checkbox
               name="allowsCustomNote"
@@ -612,7 +648,7 @@ export function ProductForm({
             disabled={saving}
             className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Save className="h-4 w-4" aria-hidden />
+            <Icon name="save" className="h-4 w-4" />
             {saving ? "Saving…" : isNew ? "Create product" : "Save changes"}
           </button>
           <Link

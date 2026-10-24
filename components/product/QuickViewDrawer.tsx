@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useId, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AlertTriangle, Eye, Loader2, X } from "lucide-react";
 import { useQuickView } from "./quick-view-context";
 import { ProductImageGallery } from "./ProductImageGallery";
 import { ProductRating } from "./ProductRating";
@@ -11,12 +10,14 @@ import { StarRatingInput } from "./StarRatingInput";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { formatPrice } from "./format-price";
 import { deriveUnitPriceLabel, isNetContentUnit } from "./unit-price";
+import { showsLowStock } from "@/lib/cart-rules";
 import { tierThresholdQuantity } from "@/lib/tier-pricing";
 import { submitReview } from "@/features/reviews/submit-review";
 import { deleteReview } from "@/features/reviews/delete-review";
 import type { ProductDetail } from "@/lib/repositories/products";
 import { RestockNotice } from "@/components/product/RestockNotice";
 import type { ReviewSummary, ReviewInput } from "@/lib/repositories/reviews";
+import { Icon } from "@/components/icons/Icon";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -189,10 +190,8 @@ export function QuickViewDrawer() {
       ? displayProduct.hmcReference
       : undefined);
 
-  const isLowStock =
-    displayProduct?.inStock &&
-    displayProduct.stockQuantity > 0 &&
-    displayProduct.stockQuantity <= displayProduct.lowStockThreshold;
+  // #1211 — the same rule as the card: TRACKED stock only.
+  const isLowStock = displayProduct ? showsLowStock(displayProduct) : false;
 
   const displayImages =
     data?.product?.images ?? (initialProduct?.primaryImage ? [initialProduct.primaryImage] : []);
@@ -263,7 +262,7 @@ export function QuickViewDrawer() {
           {/* Header */}
           <div className="flex items-center justify-between bg-primary p-4 text-white">
             <div className="flex items-center gap-2">
-              <Eye className="h-5 w-5" aria-hidden />
+              <Icon name="eye" className="h-5 w-5" />
               <h2 id={titleId} className="text-base font-bold">
                 Quick View
               </h2>
@@ -275,7 +274,7 @@ export function QuickViewDrawer() {
               data-tap-surface="quick-view-close"
               className="flex size-tap items-center justify-center rounded-full p-1.5 text-white transition-colors hover:bg-black/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white lg:size-auto"
             >
-              <X className="h-5 w-5" aria-hidden />
+              <Icon name="x" className="h-5 w-5" />
             </button>
           </div>
 
@@ -283,14 +282,14 @@ export function QuickViewDrawer() {
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-5 sm:p-6">
             {loading && !displayProduct && (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16 text-primary-muted">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden />
+                <Icon name="loader-circle" className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm font-medium">Loading product details...</p>
               </div>
             )}
 
             {error && !displayProduct && (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16 text-center">
-                <AlertTriangle className="h-8 w-8 text-danger" aria-hidden />
+                <Icon name="triangle-alert" className="h-8 w-8 text-danger" />
                 <p className="text-sm font-medium text-danger">{error}</p>
                 <button
                   type="button"
@@ -373,7 +372,7 @@ export function QuickViewDrawer() {
                     </span>
                     {isLowStock && (
                       <span className="flex items-center gap-1 text-xs font-semibold text-danger">
-                        <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+                        <Icon name="triangle-alert" className="h-3.5 w-3.5" />
                         Only {displayProduct.stockQuantity} left
                       </span>
                     )}
@@ -507,7 +506,7 @@ export function QuickViewDrawer() {
                         className="self-start rounded-xl bg-action px-4 py-2 text-xs font-bold text-white transition hover:bg-action-hover active:scale-95 motion-reduce:active:scale-100 disabled:opacity-50 flex min-h-tap items-center justify-center gap-1.5 shadow-sm lg:min-h-0"
                       >
                         {reviewPending && (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                          <Icon name="loader-circle" className="h-3.5 w-3.5 animate-spin" />
                         )}
                         <span>{existingReview ? "Update review" : "Submit review"}</span>
                       </button>

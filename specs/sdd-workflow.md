@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.47.0"
-updated: 2026-10-19
+version: "2.51.0"
+updated: 2026-10-23
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -247,8 +247,10 @@ Check the actual repo before proposing or building anything — not what a doc *
   noting it and moving on. This is the only check that runs *after* Ship, so treat a failure as
   real work, not a warning.
 - Read the delivery board's Status and Priority with
-  `gh project item-list 2 --owner sriahead --format json --limit 600` — the default page silently
-  truncates this board. Trust `specs/` and the filesystem for scope; a board that disagrees with the
+  `gh project item-list 2 --owner sriahead --format json --limit 2000` — the default page silently
+  truncates this board, and so does any fixed limit the board outgrows: if the returned `items`
+  count equals the limit, raise it and re-read (`600` hid a `High` item at 607 items, 2026-10-21).
+  Trust `specs/` and the filesystem for scope; a board that disagrees with the
   repo needs reconciling. Lead the orientation report with open items whose Priority is `High`, then
   give sequencing, blocker and owner-gated commentary within that set rather than replacing it with
   an assistant-generated priority list. Report `Deferred` items separately, as parked by the owner
@@ -373,6 +375,13 @@ not present.
   co-occurrence "on one line" in a document that hard-wraps needs to mean "in the same
   bullet/paragraph," not "on the same physical source line"** — word it that way, or check
   adjacency (matches within N lines of each other) instead of exact line identity.
+- **A requirement about what a command PRINTS or EXITS WITH is not proved by testing the function behind
+  it (#1216, 2026-10-22).** R5 required `--emit-route` to put nothing but the route block on stdout.
+  The exported `emitRouteCommand` returned exactly that and its tests passed, while `main()` wrote a
+  "manifest is valid" line to stdout before calling it — found only when `/validate` ran the real
+  script. Make the validation row run the script (`npx tsx …`, capture stdout and the exit code
+  separately), and when a command's output is pasted somewhere (a `wrangler.toml` block), put every
+  progress line on stderr from the start.
 - If the slice also changes a **standing decision** (architecture, tech choice, design tokens), also
   write or update the relevant **persistent doc** (`specs/architecture.md`, `tech-stack.md`,
   `design-system.md`, ...) — the dated folder is the one-time slice, the persistent doc is what
@@ -523,6 +532,11 @@ Everything that must survive the Clear. This is a **write-to-disk** stage, not a
   changed, leave the handoff untouched. This is a mandatory judgment check, not an
   `sdd:preclear` heuristic.
 - Commit it all. If it isn't committed, the Clear destroys it.
+- **`sdd:preclear` checks only slice files *added* on the branch.** A second PR into a slice folder that
+  already exists on `staging` (a multi-PR slice, `#1223` Phase 2a) only *modifies* its files, so
+  `sdd:preclear` prints `no specs/<date-slice>/ touched` and exits 0 **without running the four-file,
+  heading and CHANGELOG checks**. A skip line is not a pass: run those four checks by hand and say so in the
+  build notes.
 - **Then run `npm run sdd:preclear` and get exit 0.** It is the gate on this stage, not a
   formality: it derives the slice from the branch, requires all four spec files, requires the
   build-notes template's sections, requires a `CHANGELOG.md` diff against the base, and requires a
@@ -599,6 +613,11 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
 - **If the spec itself looks wrong**, say so rather than validating around it. A fresh context that
   conforms to a bad requirement produces a passing slice that's still broken; escalate it as a
   finding and, if it's a real design defect, go back to Spec rather than patching under Fix.
+- **A "this check can fail" guard proves nothing until you have shown the mutation landed.** At `#1223`'s
+  Phase 2a the guard for the className-parity script was "change one `className` in a scratch copy and expect
+  a non-zero exit"; the first attempt edited a file that did not contain the string, the `sed` matched nothing,
+  and the script correctly exited 0 on an unchanged tree, which looked like a pass of the wrong kind. Print the
+  match count or `diff` the copy before reading the exit code.
 - **Check `git worktree list` before concluding a slice's work doesn't exist.** If `build-notes.md`
   names a sub-agent worktree (see Document (build notes)), or if the main checkout looks clean but
   the spec claims a Build happened, the artifact may live at `.claude/worktrees/<agent-id>/` on its
@@ -747,6 +766,22 @@ Gate 3, run from a **fresh context**. Load `requirements.md` + `validation.md` +
   API key into the session output: read single keys with `grep '^KEY=' .env`, never source an env
   file. And a `validation.md` row can assume a state the dev database is no longer in (R4/R5 expect
   *restored*, the database was *hidden*); check the starting state before the first row, and say so.
+- **A thirteenth instance, P11 slice 1's `/validate` (2026-10-21): a row's own stated safety
+  property didn't hold for the code as shipped, and the named function was not the bug.**
+  `validation.md`'s `C1` documentation claimed `assertNotDeployedDatabase` throws "before a Prisma
+  client is constructed, so no connection is attempted and no credential is used" — true for the
+  call site inside `maybeSeedGeneratedCatalogue`, but `prisma/seed.ts`'s `main()` ran
+  `healthCheck.count()` roughly 100 lines earlier, so a bogus-password repro of `C1` failed on an
+  auth error before the guard was ever reached, masking the refusal instead of proving it. Not a
+  bare-word match this time: `assertNotDeployedDatabase` was itself correct and already fully
+  unit-tested; the claim that was wrong was about *when in the call sequence* it ran. Caught by
+  tracing `main()`'s actual statement order, not by re-reading the guard function in isolation.
+  Fixed with a real code change (a second, earlier call to the same guard), not a row rewrite, and
+  re-proven with an isolated fixture `secrets/staging.vars` rather than a real host. **The general
+  lesson: a validation row asserting an ordering/safety property ("X happens before Y," "nothing
+  happens until Z") is a claim about the artifact's call graph, not just about the function it
+  names — verify the actual sequence, not only that the named function works correctly on its
+  own.**
 - **A row that needs a real narrow viewport (phone-width overflow, tap targets) is not a
   Claude-in-Chrome job — check `docs/developer-portal/local-dev-playbook.md`'s "Measuring the
   storefront at real phone widths" section first.** Desktop Chrome, including a Claude in Chrome
@@ -897,6 +932,14 @@ named gates, but the part of this repo's actual history most prone to drift.
 - Open the PR referencing its issue (`Closes #NN`). Wait for the **actual** CI result before calling
   it ready — poll correctly (multi-line `gh pr checks` output breaks a naive string-equality check;
   match on absence of `pending` instead) rather than assuming a run will pass.
+- **A cloud session cannot use `gh`'s GraphQL, so `gh pr create`, `gh pr merge`, `gh pr checks`, `gh project`
+  and `gh pr view --json` all return a 403 (`#1223`).** REST works: create with `gh api repos/<o>/<r>/pulls -f
+  title=… -f head=… -f base=staging -F body=@<file>`, label with `gh api repos/<o>/<r>/issues/<n>/labels -f
+  'labels[]=…'`, poll with `gh api repos/<o>/<r>/commits/<sha>/check-runs`, and merge with `gh api -X PUT
+  repos/<o>/<r>/pulls/<n>/merge -f merge_method=squash` (`merge` for a `staging` to `main` promotion). **Project
+  #2 has no REST route here, so a board move is left to the owner or a local session and must be reported as
+  not done**, not skipped. The cloud session's egress proxy also refuses the staging and production hosts, so
+  the `/api/health` read of the post-merge step needs the owner to paste it.
 - **`gh pr checks` is a view, not the truth — cross-check a long "pending" against
   `gh run view <run-id> --json status,conclusion`.** During P5a's promotion (#140) a `gates` run
   showed every step green in the Actions UI, including `Complete job`, while the job's own status

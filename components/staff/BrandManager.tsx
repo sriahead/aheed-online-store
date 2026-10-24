@@ -1,13 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
-import { Plus, Save, Trash2 } from "lucide-react";
 import { createBrand, deleteBrand, renameBrand, setBrandImage } from "@/features/admin/brands";
 import { initialCatalogueState } from "@/lib/catalogue-form";
 import { confirmDeleteLabel } from "@/lib/attribute-form";
 import type { AdminBrandRow } from "@/lib/repositories/brands";
 import { inputClass, labelClass } from "@/lib/form-classes";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Brand admin forms (P2.6 slice 6, #569).
@@ -65,7 +65,7 @@ export function AddBrandForm() {
         />
       </div>
       <Button disabled={pending}>
-        <Plus className="h-4 w-4" aria-hidden="true" />
+        <Icon name="plus" className="h-4 w-4" />
         {pending ? "Adding…" : "Add brand"}
       </Button>
       <div className="sm:sr-only">
@@ -118,7 +118,7 @@ export function BrandRowForms({ brand }: { brand: AdminBrandRow }) {
           />
         </div>
         <Button disabled={renaming}>
-          <Save className="h-4 w-4" aria-hidden="true" />
+          <Icon name="save" className="h-4 w-4" />
           {renaming ? "Saving…" : "Rename"}
         </Button>
       </form>
@@ -143,7 +143,7 @@ export function BrandRowForms({ brand }: { brand: AdminBrandRow }) {
           </p>
         </div>
         <Button disabled={savingImage}>
-          <Save className="h-4 w-4" aria-hidden="true" />
+          <Icon name="save" className="h-4 w-4" />
           {savingImage ? "Saving…" : "Save key"}
         </Button>
       </form>
@@ -158,7 +158,7 @@ export function BrandRowForms({ brand }: { brand: AdminBrandRow }) {
           </label>
         )}
         <button type="submit" disabled={deleting} className={DELETE_BUTTON_CLASS}>
-          <Trash2 className="h-4 w-4" aria-hidden="true" />
+          <Icon name="trash" className="h-4 w-4" />
           {deleting ? "Deleting…" : "Delete brand"}
         </button>
       </form>

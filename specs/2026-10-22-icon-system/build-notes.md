@@ -1,0 +1,464 @@
+# Colourful, vendor-themed, provider-agnostic icon system (build notes)
+
+**This file covers three PRs, newest first.** The **Phase 2b build (PR A)** section directly below is the one
+under validation now (branch `feature/icon-system-p2b`, requirements tagged **P2b** and **all**). The **Phase 2a
+build (PR 2)** section after it was merged to `staging` as `87b17928` (PR #1229), and everything after that, from
+"What changed and why", is the **Phase 1 build (PR 1)**, merged as `c439d3b` (PR #1225); both are kept for history.
+The spec covers PR A (P2b) and PR B (P3 and P4a, unbuilt). A validator of PR A treats P3 and P4a rows as not
+applicable.
+
+Built in the main checkout on `feature/icon-system` (no sub-agent worktree), on Sonnet 5.5; `CLAUDE.md`
+assigns Build to Opus 5 and the owner started the stage without switching. Two spec-correction commits
+precede the implementation commit, each explained in its own message: `97273997` (R37's Worker metric)
+and `fe360784` (the icon count and R11, R26 to R28, R31, R33 to R36).
+
+## Phase 2b build (PR A)
+
+**This section is the one under validation now:** branch `feature/icon-system-p2b`, commit `2a1b98f9`, cut from
+`staging` at `87b17928` (P2a merged, PR #1229). Requirements tagged **P2b** and **all**, plus R34 to R37 and R56
+to R62 at the PR A head. P3 and P4a (PR B) are unbuilt and not applicable. Built on **Sonnet 5.5** in the cloud
+checkout; `CLAUDE.md` assigns Build to Opus 5 and the owner started the stage without switching.
+
+### What changed and why (Phase 2b)
+
+- **39 files migrated from `lucide-react` to `Icon`** (every remaining importer, all under `app/(admin)` and
+  `components/staff`), all by `scripts/codemod-lucide-to-icon.ts`: the dry run converted all 39 and refused none,
+  so there was no hand edit. Diff +127 -128 before Prettier. `className` carried over verbatim; no `size`, `tone`
+  or `label`.
+- **`tests/icon-imports.test.ts`** (R32): TypeScript AST over `app`, `components`, `features`, `lib`, excluding
+  `components/icons/` by path. Flags `import`, `export ... from` and dynamic `import()` of `lucide-react`,
+  `lucide-react/*` or any `@iconify*` specifier. No allowlist. Three tests: the real tree, an in-memory file that
+  violates in six forms, and an in-memory clean file (prose and comments are not violations).
+- **`CLAUDE.md`** icon bullet (R62): "being migrated" and "do not add new ones" removed; now says the ban is
+  enforced by that test.
+- **`CHANGELOG.md`** Phase 2b entry under `[Unreleased]` (Gate 4).
+
+### Decisions taken during the build (Phase 2b)
+
+- **No `generated` skip in the test's directory walk,** unlike `scripts/list-lucide-imports.ts`: nothing under
+  the four roots outside `components/icons/` is generated TypeScript that imports an icon library, and a skip
+  would be a hole. `app/(admin)/staff/runbook/docs.ts` mentions `lucide-react` only in prose, which is why the
+  test is AST-based (a text grep lists it).
+- **`format:check` found three files** (`feedback/page.tsx`, `InventoryTable.tsx`, the new test); fixed with
+  `prettier --write`. The codemod leaves some import lines Prettier would reflow.
+- **The BASE worktree `../icon-base` already existed** at `6a09b001` from P2a and was reused; it has no
+  `node_modules`, which the parity script does not need.
+- **Committed and pushed at the stop hook's request,** before this notes commit.
+
+### Deviations from the spec (Phase 2b)
+
+None.
+
+### Known-shaky areas (Phase 2b)
+
+- **R34, R35 and R37 have not been run.** They need the owner's machine (`.dev.vars`, preview servers); tracked
+  as **`#1231`** (merge gate, same shape as closed `#1227`). The SriMart staff pair also needs the stale
+  `demo-srimart-admin` password repaired (`#1226`, `#1230`). Until `#1231` passes, "no visual change" for the
+  admin and staff pages is proved by source only (R60's script), not by rendered markup.
+- **No file in this PR is on the parity allowlist,** so the script covers all 39 pairs; but it proves source, not
+  pixels, and cannot see a CSS or parent change. An admin icon used as a component value would have been
+  refused by the codemod; none was.
+- **R60's P2b clause was run once:** `verify-classname-parity.ts --base-root ../icon-base --head-root .` with the
+  nine `--allow` paths and `--require-migrated` printed `checked 100 file(s), 0 not migrated, 9 allowed`. I read
+  the output line but did not capture the script's own exit code (the pipeline's `$?` was `tail`'s). A validator
+  should rerun and check the exit code.
+- **Several admin pages put icons in server components** (`app/(admin)/staff/*/page.tsx`); `Icon` has no client
+  directive so this is fine, but only a rendered check (`#1231`) shows it.
+- **`npm run sdd:preclear` may skip the slice checks** (it inspects only spec files *added* on the branch); see
+  the P2a note below. The checks were run by hand.
+
+### Checks run in this context (not a validation)
+
+`npm run lint`, `npx tsc --noEmit`, `npm run icons:check` and `npm run build` exit 0; `format:check` failed on three
+files, which were then fixed with Prettier (not re-run as a whole afterwards). `npx vitest run --maxWorkers=4`:
+**309 files, 4562 tests passed, 3 skipped** (P2a ended at 308 and 4559; the difference is
+`tests/icon-imports.test.ts`, 3 tests). `grep` for a `lucide-react` import outside `components/icons/` prints nothing.
+`kms:*` were not run for the code commit; this stage runs them.
+
+---
+
+## Phase 2a build (PR 2)
+
+Built on `feature/icon-system-p2a`, cut from `docs/1223-document-pass` (which is `staging` at `c439d3b` plus
+the Document-final commit), on **Sonnet 5.5**: `CLAUDE.md` assigns Build to Opus 5 and the owner was asked
+and chose to build on Sonnet. The Spec was also written on Sonnet without a clear (owner accepted). Commits,
+oldest first: `66b4ed3b` (spec amendment, approved by the owner), `d924a593` (spec corrections from running
+the real tools), `e5de1325` (the parity script, its tests, the codemod fix), `50216457` (the migration),
+`0ada01e2` (playbook notes).
+
+### What changed and why (Phase 2a)
+
+- **60 files migrated from `lucide-react` to `Icon`** (every file outside `app/(admin)` and
+  `components/staff`): 55 by `scripts/codemod-lucide-to-icon.ts`, 5 by hand (R57). Each icon's `className` is
+  carried over verbatim; no `size`, `tone` or `label` prop is set; `aria-hidden` is dropped because `Icon`
+  supplies it. Mechanical diff: 55 files, +228 -242.
+- **The five hand files** (`app/(storefront)/quick-shop/page.tsx`, `AccountNav`, `ViewSwitcher`,
+  `CollectionNav`, `AddToCartButton`): every icon-carrying prop or field is now an `IconName` (`NavLink`'s
+  `icon`, the `views` array, `COLLECTIONS`, the quick-shop `TILES`), and `AddToCartButton` picks `loader-circle`,
+  `check` or `plus` by state. No component is held as a value, no file imports `lucide-react`.
+- **`scripts/verify-classname-parity.ts`** (R58) and its library `scripts/lib/classname-parity.ts`: pairs each
+  BASE Lucide element with a HEAD `Icon` element by TypeScript AST and compares `className` and every other
+  prop. **`tests/verify-classname-parity.test.ts`** (R59, 11 tests) spawns the real script against temp fixture
+  trees. **`tests/fixtures/classname-parity-allowlist.ts`** lists the nine files the script skips.
+- **`scripts/codemod-lucide-to-icon.ts`**: a fully removed import now takes its own line break with it, so 55
+  diffs carry no stray blank line.
+- **`docs/developer-portal/local-dev-playbook.md` 1.36.0** (R61): Node on Windows and `srimart.localhost`, with
+  the hosts-file and `NODE_OPTIONS` remedies, and the `demo-accounts.ts add` stale-password trap from `#1226`.
+- **The spec** was amended before Build (R34 to R37, R56 to R62; `plan.md` "Phase 2 amendment") and corrected
+  once during it.
+
+### Decisions taken during the build (Phase 2a)
+
+- **Which files the codemod ran on.** The 60 minus the 5 (it refuses those: each has a local binding named
+  `Icon`). The five were hand-edited and then the codemod was run over them to convert their leftover plain tags
+  (chevrons, `Minus`, `Plus`) and remove dead imports. So the five are hand-and-codemod, not hand alone.
+- **The codemod adds the `Icon` import only when it migrates a tag.** `quick-shop/page.tsx` and
+  `CollectionNav.tsx` had none left after the hand edit, so those two imports were added by hand.
+- **The script compares initialisers printed through the TypeScript printer, not raw text,** so a Prettier
+  reflow of a multi-line element is not a difference (the identical-pair test has one). A template literal's
+  contents are compared as printed, whitespace collapsed.
+- **Aliased imports resolve by local name** (`import { Search as Glass }`), covered by a test.
+- **`ViewSwitcher`'s `views` is typed `{ id: string; label: string; icon: IconName }[]`.** The original was
+  inferred and `id` was compared as a string later; narrowing it would have been an unrelated change.
+- **No registry key was added, removed or changed** (R62's registry clause holds; the registry is not pruned).
+- **Lint found one thing:** a local named `module` in the new library trips `@next/next/no-assign-module-variable`;
+  renamed `specifier`.
+- **The BASE worktree is `../icon-base`, created by `git worktree add ../icon-base "$BASE"` with `npm ci` and
+  `db:generate` run in it.** On this branch the spec's BASE formula resolves to `6a09b001` (the commit before
+  PR #1225's squash), not `a8d47623` as it did on the Phase 1 feature branch; the two differ by documentation only.
+  The worktree still exists at the end of this stage; reuse it, or remove it and recreate.
+
+### Deviations from the spec (Phase 2a)
+
+Both were found by running the real tools, were corrected in the spec in commit `d924a593`, and change
+neither scope nor acceptance intent:
+
+1. **R59 and R60: the allowlist is nine files, not five.** The real script, run against BASE, failed on four
+   files Phase 1 had migrated (`app/(admin)/staff/page.tsx`, `components/layout/DepartmentHero.tsx`,
+   `components/layout/DepartmentScroller.tsx`, `components/staff/PanelNav.tsx`). Their icon was a component
+   **value** at BASE (`const Icon = categoryIcon(slug)`, `item.icon`), so their BASE tag is a local binding, not a
+   `lucide-react` import, and no BASE element exists to pair with. The run now prints `100 checked, 39 not migrated,
+   9 allowed`. Those four were proved live against BASE by `#1226`.
+2. **R56 excludes `app/(admin)/staff/runbook/docs.ts`,** a generated file `npm run kms:build-index` rewrites
+   whenever a doc changes; without the exclusion the "touches no 2b file" check can never be empty.
+
+### Known-shaky areas (Phase 2a)
+
+- **R34 and R35 have not been run on this PR, and cannot be from a cloud session.** They need the owner's machine
+  (`.dev.vars`, preview servers). **The nine allowlisted files are exactly the ones the automated check does not
+  cover,** so for the five R57 files the live comparison is the only proof the markup is unchanged. The SriMart
+  staff pair also needs the stale demo account repaired (`#1226`).
+- **`AddToCartButton` is the riskiest hand edit:** three icon sites share `iconName`, chosen by `pending` and
+  `added`, with an `animate-spin` class that must still apply only while pending. A test file covers the feedback
+  states (`tests/add-to-cart-feedback.test.tsx`, passing, with its known flake `#983` at line 93), but nothing
+  asserts the `data-icon` name per state.
+- **The client bundle got smaller, by more than expected.** Fresh BASE and HEAD builds back to back: client gzip
+  sum 546,054 against 520,704 bytes (-25,350, 124 files against 121) and Worker `gzip:` 5,011.62 against 4,993.03 KiB
+  (-18.59 KiB). Phase 1 had added 794 bytes. A plausible cause is that each `lucide-react` icon module carries its own
+  wrapper and they are replaced by one shared data object, but **the cause was not investigated.** R37 is a ceiling,
+  so it holds either way; a validator should not treat the shrinkage as a defect, nor as proof of anything.
+- **The parity script proves source, not pixels.** It cannot see a CSS change, a parent component change, or an
+  `Icon` whose registry key points at a different glyph than the Lucide export it replaced; geometry equality for
+  every key is R26's job (P1) and passes.
+- **`DepartmentScroller` and `DepartmentHero` are P1 files that Phase 4a will rewrite;** nothing in P2a touches them.
+- **Quick Shop and `AccountNav` collide with `#1195`** (open, three tabs under `/account`); whichever lands second
+  rebases, and the allowlist plus R57 are written so the rebase can be re-checked with the same commands.
+- **`npm run sdd:preclear` exits 0 here without checking the slice.** It only inspects spec files *added* on the
+  branch (`git diff --diff-filter=A`), and this slice's folder already exists on `staging` from Phase 1, so a
+  second PR into a multi-PR slice prints "no specs/<date-slice>/ touched" and skips the four-file, heading and
+  CHANGELOG checks. They were run by hand instead and pass (four files present, four headings present,
+  `CHANGELOG.md` +7 lines against `origin/staging`, clean tree). A skip line is not a pass.
+- **Tracked rather than absorbed:** the live P2a comparison is `#1227` (a merge gate for the PR), and the missing
+  per-state `AddToCartButton` test is `#1228`.
+- **A cloud session still has no `.env`, `.dev.vars` or `secrets/`,** and its egress proxy refuses the staging
+  hosts, so `npm run preview` was not run.
+
+### Checks run in this context (not a validation)
+
+`npm run lint`, `npx tsc --noEmit`, `npm run format:check`, `npm run icons:check` and `npm run build` all exit 0;
+`npx vitest run --maxWorkers=4`: **308 files, 4559 tests passed, 3 skipped** (Phase 1 ended at 307 and 4548; the
+difference is `tests/verify-classname-parity.test.ts`, 11 tests). The parity script run by hand against BASE exits 0
+with `checked 100 file(s), 39 not migrated, 9 allowed`. `grep` for a `lucide-react` import outside
+`app/(admin)`, `components/staff` and `components/icons` prints nothing; inside them it prints 39 files.
+
+---
+
+# Phase 1 build (PR 1, merged as `c439d3b`)
+
+## What changed and why
+
+**New: `components/icons/`**
+- `types.ts`: the tier and provider types, the size scale (xs 12, sm 16, md 20, lg 24, xl 32, 2xl 48,
+  default 24), the tone tables. `RegistryEntry` is a discriminated union so a `functional` entry with
+  provider `ph` is a compile error (R16), proved by an `@ts-expect-error` line in
+  `tests/icon-registry.test.ts`.
+- `registry.ts`: `ICON_REGISTRY`, 99 keys covering the 102 `lucide-react` exports the app imported at BASE
+  (several exports are one icon: `CheckCircle2` and `CircleCheck`). Every entry is provider `lucide` in
+  this PR; Phosphor appears from P3. Tiers were judged once: 34 functional (controls, navigation), 6
+  status (alerts, confirmations), 59 decorative.
+- `Icon.tsx`: a plain function (no client directive, no hooks). `IconSvg` is the presentational half,
+  exported so tests can render fixture data (a Phosphor duotone body) through the production path.
+  Root attributes come from the data and are placed on the `<svg>`; `dangerouslySetInnerHTML` injects
+  the body, which only ever comes from the generator.
+- `generated/icon-data.ts`: generated, committed, excluded from Prettier and ESLint (`.prettierignore`,
+  `eslint.config.mjs`) so the generator owns its bytes.
+
+**New: the generator.** `scripts/lib/icon-build.ts` (pure, testable) and `scripts/build-icons.ts` (thin
+CLI: `icons:build`, `icons:check`, `--registry <json>` to validate a fixture). It resolves ids through
+`@iconify/utils`' `getIconData` (which handles aliases), hoists the Lucide root attributes onto the
+`<svg>`, rewrites a Phosphor duotone icon's `opacity=".2"` layer to read `--icon-secondary`, and rejects
+unsafe markup. It also emits `public/third-party-icon-licenses.txt` from `scripts/icon-licences/<SPDX>.txt`
+(upstream `LICENSE` text fetched verbatim from `raw.githubusercontent.com`; `ISC.txt` and `MIT.txt`
+exist, `Apache-2.0.txt` is for P4a).
+
+**New tools.** `scripts/verify-icon-markup.ts` (inventory a server's `<svg>` elements; `--compare` two
+inventories), `scripts/list-lucide-imports.ts` (the TypeScript-AST list of Lucide exports at a checkout),
+`scripts/codemod-lucide-to-icon.ts` (the mechanical migration P2a and P2b will use; it refuses
+anything that is a design edit and removes dead imports), `scripts/lib/svg-geometry.ts` (the shared
+geometry normaliser).
+
+**Migrated in this PR** (the minimum R29 and R30 need, plus the files whose tests selected Lucide's
+generated classes): `Header`, `FilterPanel`, `CollapsibleSidebar`, `DepartmentHero`, `DepartmentScroller`,
+`PanelNav`, `app/(admin)/staff/page.tsx`, with `category-icon.ts` and `nav-items.ts` now carrying icon
+**names**. Every file's classes were carried over verbatim and no `size` prop was set.
+
+**Docs and wiring:** the `design-system.md` Icons section rewritten (R2), `tech-stack.md` (R3), the
+`CLAUDE.md` bullet (R4), four exact pins in `tests/dependency-pins.test.ts` (R5), `icons:check` in
+`quality.yml` (R9), CHANGELOG (R52).
+
+## Decisions taken during the build
+
+- **`@iconify-json/lucide` is pinned to 1.2.122, not the newest.** The newest (1.2.147) redraws
+  `circle-check`, `cookie`, `trash` and others against the installed `lucide-react` 1.30.0 (published
+  2026-08-07); 1.2.122 was published the same day and all 102 icons match. The pin is explained in
+  `tests/dependency-pins.test.ts`, `specs/tech-stack.md` and the CHANGELOG. **Bumping `lucide-react`
+  means re-running the parity test and probably moving this pin with it.**
+- **Lockfile edited surgically.** `npm install` in this container (npm 10.9.4) removed `libc` markers
+  from 68 platform packages and rewrote unrelated entries, so the original `package-lock.json` was
+  restored and only the eight new packages plus a `tinyexec` 1.3.0 to 1.3.1 patch bump were grafted in
+  (the new `@antfu/install-pkg` requires `tinyexec` 1.3.1 or later, so leaving it would have left the lock out
+  of sync). `npm ci` exits 0 against it. **If CI's `npm ci` objects, regenerate with the repository's own
+  npm version.**
+- **Registry keys.** The Lucide canonical id (after alias resolution) with a trailing numeric suffix
+  dropped (`share-2` to `share`, `trash-2` to `trash`, `building-2` to `building`), and `grid-3x3` to
+  `grid` because a segment may not start with a digit. `circle-question-mark` kept its Lucide spelling
+  rather than inventing `help`; renaming a key is cheap now and expensive after P2.
+- **Geometry comparison is normalised, within 0.06 units.** See the deviations.
+- **`Icon` always emits `aria-hidden` without a `label` and `role="img"` with one.** `lucide-react` emits
+  `aria-hidden="true"` by default, so the codemod drops explicit `aria-hidden`; with an `aria-label` it
+  emits that attribute alone (no `role`), which differs from `Icon`, but no existing call site passes one.
+- **The codemod refuses rather than guesses.** A name used as a value, a spread, or any prop `Icon` does
+  not take leaves that name's import and tags untouched. `Header.tsx` lost four dead imports (`Search`,
+  `UserCheck`, `LogOut`, `Clock`), which R32 will need gone anyway.
+- **The registry holds 99 keys because it mirrors the manifest, not the live call sites.** A few (for
+  example the dead imports above) have no JSX use yet; they cost a few hundred bytes of generated data
+  and keep P2 mechanical. Pruning is a P2b candidate.
+- **`DepartmentHero`'s corner glyph stays an inline `Icon` in this PR** (`strokeWidth={1.25}` preserved).
+  R46's shared `DepartmentGlyph` component belongs to P4a.
+
+## Deviations from the spec
+
+All were found by running the real tools, are recorded in the two spec-correction commits, and change
+neither scope nor acceptance intent:
+
+1. **Icon count is 102, not 141.** The first audit globbed the whole repository and so counted the
+   `docs/ui-ref` and `docs/ui-ref-revised` mockups. The spec, ADR-008 and the CHANGELOG are corrected.
+   **GitHub issue `#1223`'s body still says 141 and was not edited.**
+2. **R37's Worker metric** is `wrangler deploy --dry-run`'s `gzip:` figure; `.open-next/worker.js` is a 2,278
+   byte shim (745 gzipped).
+3. **R11** uses `check-circle-2` (an alias in the pinned release); `trash-2` is a real icon there.
+4. **R26** compares normalised geometry within 0.06 units, not literal attribute strings (Iconify merges
+   an icon's paths, converts lines to paths, closes subpaths differently and rounds some coordinates:
+   `10.747` is stored as `10.8`). Result: zero divergences, `LUCIDE_PARITY_EXCEPTIONS` is empty.
+5. **R27/R28:** only Lucide is in the registry in P1, so Phosphor is not named in the licence file yet.
+6. **R33 to R35:** `geometry` is the normalised list rather than a hash, and `--compare` decides
+   equivalence. The script is exercised against a local HTTP server in `tests/verify-icon-markup.test.tsx`.
+7. **R36's absence grep** excludes the generated `docs.ts` (it embeds this slice's plan text).
+8. **R13's wording** ("no more own-paint attributes on children than `lucide-react`") is implemented as a
+   count comparison per icon, not a per-element match. The list of tolerated exceptions is empty.
+
+## Known-shaky areas
+
+- **Nothing was run against a live server.** This cloud session has no `.env`, `.dev.vars` or `secrets/`,
+  so `npm run preview`, sign-in and every database-backed route were unavailable. **R28 (the licence file
+  served on both hosts), R34 and R35 (BASE against HEAD markup equivalence on both vendors, including
+  signed-in and staff pages) are therefore unverified.** The pieces are proved separately: the file is in
+  `.open-next/assets/`; the script and `--compare` pass their local-server tests, including a
+  `lucide-react` page against the same page through `Icon`; and every Lucide icon's geometry matches.
+- **`--sign-in` against real Better Auth is untested.** It follows `local-dev-playbook.md` (POST to
+  `/api/auth/sign-in/email` with `origin` and `x-forwarded-proto: http`, then the cookie), and the local
+  server test asserts those headers, but not a real session. The 30 second retry on 429 is unexercised.
+- **Client bundle shape.** `Icon` imports the whole `ICON_DATA` (about 33 KB raw), so any client component
+  that renders an `Icon` puts every icon body in its chunk. It will grow as P2 moves more client files; if
+  P2b nears the budget the fix is splitting the data by tier, not removing icons. **R37, corrected by
+  validation run 1 (fresh builds of both commits with the commands in `validation.md`):** BASE client
+  `.next/static/**/*.js` gzip sum **546,214** bytes over 124 files, Worker `gzip:` **5,014.91 KiB**; HEAD
+  **546,895** over 123 files (**+681**, budget 15,360) and **5,019.49 KiB** (**+4.58 KiB**, budget 100). The
+  baseline this Build first recorded (546,053 and 5,026.59 KiB) was off by 11.7 KiB on the Worker figure, and
+  the "-9.86 KiB" it produced was not real. **The cause of that 11.7 KiB gap is not determined.** It is not
+  run-to-run noise: two HEAD builds back to back agree to 0.04 KiB. The first baseline was built in the main
+  checkout before the lockfile was re-installed with `npm ci`; the fresh BASE was built in a clean worktree.
+  Compare a BASE and a HEAD built the same way, back to back, and do not reuse a stored baseline.
+- **`app/(admin)/staff/runbook/docs.ts` is generated and now holds this slice's plan text.** Run
+  `npm run kms:build-index` after the last doc edit, not before (the #232 shape).
+- **The licence text is the upstream `main` branch's `LICENSE` at build time** (Lucide's currently reads
+  2026), not necessarily the text at the pinned package version. `info.json` for Noto points at a
+  `svg/LICENSE` path that returned 404 on 2026-10-22; P4a must find the real file before it can add
+  `Apache-2.0.txt`.
+- **`tests/icon-generator.test.ts` briefly appends a byte to the real generated file** (then restores it
+  in a `finally`) to prove `--check` fails. Under heavy parallel load another worker importing that file in
+  that instant would still see valid TypeScript, so it cannot produce a spurious failure, but it is the
+  one test that writes to a tracked file.
+- **Registry tiers are a judgement.** Nothing enforces which of the 99 names are `functional`, `status`
+  or `decorative` beyond the Lucide-only rule for the first. Phase 3 depends on the `decorative` ones.
+- **Unknown at build time:** whether the real two-hue duotone rendering looks right inside the app (only
+  fixture markup and a static preview sheet exist), and whether `fill-current` on the favourite heart
+  visibly fills in a browser. The markup contract is tested (`fill="none"` on the root, no child override);
+  the pixels are not.
+
+## Validation run 1 (PR 1, Phase 1)
+
+Run on commit `8a0685d3`. **Not independent:** the same Sonnet 5.5 context that built the slice ran it,
+after no `/clear`; rows were checked against the files on disk, not against memory, but treat the result as
+a self-check and re-run after a real Clear if independence matters. P2a, P2b, P3 and P4a rows are not
+applicable to this PR. The result is **FAIL**: two findings below are real, and several rows are unverified.
+
+**Pre-flight, each alone, all exit 0:** `lint`, `format:check`, `icons:check`, `kms:validate`,
+`kms:check-generated`, `npx tsc --noEmit` (no output), `npm run build`. `npx vitest run --maxWorkers=4`:
+**306 files passed, 4540 tests passed, 3 skipped**; the known flake did not fire. The docs-site build
+(`kms:assemble:internal` then `next build --webpack` in `kms/site-internal`) exits 0.
+
+**Pass (confirmed by running the row's command, or reading the file it names):** R1, R2, R3, R4, R5, R6,
+R7, R8 (both files), R9, R10 (the three CLI cases and the by-hand bogus id), R11, R12, R13 (zero listed
+exceptions), R14, R15, R16 (type error confirmed on a temporary line, then reverted), R17, R18, R19, R20,
+R21 (type error confirmed, reverted), R23, R24, R25, R26 (pinned and installed both 1.2.122, zero parity
+exceptions), R27 (ISC and MIT texts byte-identical to upstream `main`; missing `ISC.txt` fails the build and
+names the file), R29, R30 (`tests/staff-nav-parity.test.ts` unchanged since BASE), R31 (re-derived from a real
+BASE worktree with `scripts/list-lucide-imports.ts`: 102 names, no diff), R37, R50 (git half), R52, R53, R54.
+
+**R37 numbers, fresh builds of both commits** (`npx opennextjs-cloudflare build`, then the two commands of
+`validation.md`): BASE client **546,214** bytes over 124 files, Worker `gzip:` **5,014.91 KiB**; HEAD client
+**546,895** over 123 files (**+681**, budget 15,360), Worker **5,019.49 KiB** (**+4.58 KiB**, budget 100).
+**The Build's own baseline was wrong:** it recorded 546,053 and 5,026.59 KiB and so reported the Worker as
+9.86 KiB smaller; the fresh BASE disagrees by 11.7 KiB, beyond the 2 KB tolerance, so the fresh run governs
+and the "shrank" claim (also in commit `8a0685d3`'s message) is incorrect. Both budgets are met either way.
+
+**FAIL 1: R22's third clause.** R22 requires that an existing client component (`DepartmentScroller`)
+renders `Icon` in its own test. **No test renders `DepartmentScroller`** (`grep -rl DepartmentScroller
+tests` is empty). The row points at `tests/department-illustrations.test.tsx`, a P4a file that does not exist,
+so this is also a spec defect: the row should name a P1 file. Fix: add a test that renders
+`DepartmentScroller` and asserts `svg[data-icon]`, and amend the row.
+
+**FAIL 2: R10 is not met as written, and the build notes did not say so.** R10 requires the real script, run
+as a child process, for each of: a missing id, a duotone icon without its layer, and unsafe markup. The first
+two are. **The unsafe-markup case goes through the library with a poisoned in-memory set, not through the
+process**, because the CLI reads real `node_modules` and offers no way to substitute a body. So the exit code
+for unsafe markup is untested at process level. Fix: give the CLI a way to read icon sets from a fixture
+directory and spawn it in that test.
+
+**Spec wording defects (not build defects):** **R55** says `kms:build-index` leaves `git status` unchanged,
+but `ARTIFACT_INDEX.md`'s footer embeds a timestamp and commit and always changes (`kms:check-generated`
+normalises it and passes); the row should require `kms:check-generated` exit 0. **R22's row** names a P4a
+file (above).
+
+**Cosmetic:** a missing licence text prints a stack trace (a plain `Error`, not `IconBuildError`); the message
+does name the file.
+
+**Unverified, with the reason (no `.env`, `.dev.vars` or `secrets/` in a cloud session, so no
+`npm run preview`):** **R28** (the licence file served on both hosts; it is present in `.open-next/assets/`),
+the live half of **R33** (`verify-icon-markup.ts --base http://localhost:8787`; its stdout shape, failures,
+sign-in headers and `--compare` are proved against a local server in `tests/verify-icon-markup.test.tsx`),
+**R34** and **R35** (BASE against HEAD markup on both vendors, signed in and staff pages: nothing was
+compared), and the HTML half of **R50**. **GitHub CI:** no run exists for this branch (the `gates` workflow
+runs on pull requests and no PR is open), so CI is not confirmed either way.
+
+**Call sites** (grep, since graft was unavailable): no remaining reference to the old `categoryIcon` outside
+historical specs; `nav-items.ts` has exactly two consumers, both migrated; `ViewSwitcher` still reads
+`view.icon` as a component, which is P2b work (R36).
+
+## Fix 1 (after validation run 1)
+
+Two findings were real and one row was wrong; none needed a redesign.
+
+- **R10, the code was wrong.** The unsafe-markup case ran through the library with an in-memory set, not
+  through the process, because the CLI could only read the real (safe) `node_modules` sets, so no test could
+  hand the real script a poisoned body. Reshaped rather than loosened: `scripts/build-icons.ts` now takes
+  `--sets-dir <dir>` (icon sets read from `<dir>/<set>/icons.json` and `info.json`), backed by
+  `loadersFromDirectory` in `scripts/lib/icon-build.ts`. `tests/icon-generator.test.ts` now spawns the real
+  script for the four unsafe bodies (script, foreignObject, `javascript:`, an `on*` handler), each exiting
+  non-zero with the name and id in stderr, plus the same fixture with a safe body exiting 0 so the rule is
+  proved to be what failed. R10's text and row now name `--sets-dir`. This was not in the Build's deviation
+  list and should have been.
+- **R22, both were wrong.** No test rendered `DepartmentScroller`; added
+  `tests/department-scroller.test.tsx` (jsdom), which renders the `"use client"` component and asserts its
+  `svg[data-icon]` names, that an unmapped slug gets the neutral `tag`, and that the tile keeps its
+  pre-migration classes (`h-7 w-7 text-primary`) and `aria-hidden`. The row had pointed at a P4a test file
+  that cannot exist in P1; it now names the new test.
+- **R55, the row was wrong.** `ARTIFACT_INDEX.md`'s footer embeds a build timestamp and commit, so "git
+  status unchanged" can never hold; the row and requirement now require `kms:check-generated` to exit 0,
+  which normalises the footer.
+- **Cosmetic:** a missing licence text now throws `IconLicenceError`, which the CLI prints as one line
+  instead of a stack trace (unit-tested).
+- **No observable behaviour changed** (the fixes are a CLI option, tests and docs), so there is no CHANGELOG
+  entry, and the bundle is unaffected by construction (scripts and tests are not bundled).
+
+## Validation run 2 (after Fix 1)
+
+Run on commit `f9351d19`, from the top. **Still not independent** (same Sonnet 5.5 context, no `/clear`).
+**Result: PASS for every P1 and "all" row that can run in this environment; the rows below remain unverified.**
+
+- **Pre-flight, each alone, exit 0:** `lint`, `format:check`, `icons:check`, `kms:validate`,
+  `kms:check-generated`, `npx tsc --noEmit` (no output), `npm run build`; docs-site build exits 0.
+  `npx vitest run --maxWorkers=4`: **307 files passed, 4548 tests passed, 3 skipped** (run 1: 306 and 4540; the
+  difference is the new `department-scroller` file and the four unsafe-markup process cases plus their
+  control).
+- **Rows re-run and passing:** R1 to R10 (R10 by hand both ways: a bogus id, and a poisoned body through
+  `--sets-dir`), R11 to R21 and R23 (named test files, in the full run), R16 and R21 type errors confirmed on
+  temporary lines and reverted, R22 (grep clean; `tests/department-scroller.test.tsx` renders the client
+  component and asserts its `svg[data-icon]`), R24, R25, R26 (pinned and installed both 1.2.122, zero parity
+  exceptions), R27 (licences byte-identical to upstream; a missing `ISC.txt` fails the build with one named
+  line and no stack trace), R29, R30 (staff-nav-parity test unchanged since BASE), R31 (re-derived from a real
+  BASE worktree: 102 names, no diff), R37, R50 (git half), R52, R53, R54, R55 (now `kms:check-generated`).
+- **R37, fresh:** BASE client **546,214**, Worker **5,014.91 KiB**; HEAD client **546,895** (**+681**, budget
+  15,360), Worker **5,019.45 KiB** (**+4.54 KiB**, budget 100).
+- **Unverified, unchanged from run 1 and for the same reason (no `.env`, `.dev.vars` or `secrets/`, so no
+  `npm run preview`):** R28 (licence file served on both hosts), the live half of R33, R34 and R35 (BASE
+  against HEAD markup on both vendors, signed in and staff), the HTML half of R50. **GitHub CI is not
+  confirmed:** no run exists for this branch because no pull request is open.
+
+## Validation run 3 (PR 2, Phase 2a)
+
+Run on commit `f1d5e259`. **Not independent:** the same Sonnet 5.5 context that specced and built Phase 2a ran
+it, with no `/clear` in between. Rows were checked against the files and command output, not against memory, but
+treat the result as a self-check. **Result: PASS for every P1, "all" and P2a row that can run in a cloud
+session; R34 and R35 and the other live rows are unverified.**
+
+- **Pre-flight, each alone, exit 0:** `lint`, `format:check`, `icons:check`, `kms:validate`,
+  `kms:check-generated`, `npx tsc --noEmit`, `npm run build`, `kms:assemble:internal` and the docs-site
+  `next build --webpack`. `npx vitest run --maxWorkers=4`: 307 files passed and 1 failed; 4558 tests passed, 1
+  failed, 3 skipped. The failure is the known flake `#983` (`tests/add-to-cart-feedback.test.tsx:93`, a
+  `disabled` assertion), which passes 3 of 3 when run alone (R54).
+- **Rows re-run and passing:** R1 to R31 (R10 by hand both ways, R13 as an independent probe over all 99
+  Lucide entries, R16 and R21 type errors confirmed on a probe and removed, R27 verbatim against upstream, R31
+  re-derived from a BASE worktree: 102 names, no diff), R52, R53, R54, R55 (`kms:check-generated`).
+  **R56:** the P2a diff since `c439d3b` touches nothing under `app/(admin)` or `components/staff` apart from the
+  generated `docs.ts`, no file outside those paths imports `lucide-react`, and the remaining 39 are exactly the 39 at
+  `c439d3b`. **R57:** none of the five files imports `lucide-react` or holds a component value, and each file's
+  `className` strings are an identical multiset against `c439d3b`; `CollectionNav` rendered for real emits
+  `layers, sparkles, star, package-open`. **R58 to R60:** 11 process tests pass; the real script exits 0 with
+  `checked 100 file(s), 39 not migrated, 9 allowed`; with the five-file allowlist it exits 1 on the four P1 files
+  (which independently confirms the nine-file amendment); on a scratch copy it fails on a changed `className`
+  and on an added `size`, naming file and line. **R61:** the playbook sentences exist; version 1.36.0.
+- **R37, fresh BASE and HEAD builds back to back:** client **546,054 to 520,704 bytes (-25,350)** against a
+  +15,360 budget; Worker `gzip:` **5,013.43 to 4,993.59 KiB (-19.84)** against +100. The shrinkage is still
+  unexplained.
+- **A validator's own mistake worth keeping:** the first attempt at R59's guard ("change one `className` in a
+  scratch copy") edited a file that has no such string, matched nothing, and the script correctly exited 0 on an
+  unchanged tree. That proved nothing; it was redone on `app/(storefront)/cart/page.tsx`. Check that the mutation
+  landed before reading the exit code.
+- **Not applicable to this PR:** R32, R36's ban half, R60's P2b clause, R62, R38 to R51.
+- **Unverified, with the reason (no `.env`, `.dev.vars` or `secrets/`, so no `npm run preview`; the egress
+  proxy refuses the staging hosts):** **R34 and R35** (BASE against HEAD markup, both vendors, storefront,
+  customer and staff lists) are `#1227`, **a merge gate**; the SriMart staff pair also needs the stale demo
+  account repaired (`#1226`). R28, the live half of R33 and the HTML half of R50 were proved for Phase 1 by
+  `#1226` and not re-run. **CI:** no run existed for `f1d5e259` at validation time (no PR was open).

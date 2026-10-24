@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Star, BadgeCheck, ExternalLink } from "lucide-react";
 import { CardStack } from "@/components/ui/CardStack";
 import type { PublicFeedback, FeedbackSummary } from "@/lib/repositories/customer-feedback";
 import type { ReviewLink } from "@/lib/repositories/vendor-review-links";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * The storefront's business-level social proof (P9.2, #818).
@@ -31,14 +31,14 @@ function Stars({ rating }: { rating: number }) {
   return (
     <div className="flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
       {[1, 2, 3, 4, 5].map((value) => (
-        <Star
+        <Icon
+          name="star"
           key={value}
           className={
             value <= rating
               ? "h-4 w-4 fill-amber-400 text-amber-400"
               : "h-4 w-4 text-primary-subtle"
           }
-          aria-hidden
         />
       ))}
     </div>
@@ -129,7 +129,7 @@ export function CustomerFeedbackCards({
                   <Stars rating={entry.rating} />
                   {entry.verifiedPurchase && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-action-tint px-2.5 py-0.5 text-xs font-semibold text-action">
-                      <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+                      <Icon name="badge-check" className="h-3.5 w-3.5" />
                       Verified customer
                     </span>
                   )}
@@ -189,7 +189,7 @@ export function ReviewLinkGroup({
               className="inline-flex items-center gap-1.5 rounded-lg border border-black/10 bg-white px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
             >
               {link.platform}
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+              <Icon name="external-link" className="h-3.5 w-3.5" />
               <span className="sr-only">(opens in a new tab)</span>
             </a>
           </li>

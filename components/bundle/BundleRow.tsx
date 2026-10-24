@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { BundleCard } from "./BundleCard";
 import { HorizontalScroller } from "@/components/layout/HorizontalScroller";
 import { hasAvailableItems } from "@/lib/bundle-pricing";
 import type { BundleWithItems } from "@/lib/repositories/bundles";
+import { Icon } from "@/components/icons/Icon";
 
 interface BundleRowProps {
   title: string;
@@ -48,7 +48,7 @@ export function BundleRow({ title, bundles, cdnBaseUrl, viewAllLink }: BundleRow
             className="flex items-center gap-1 text-sm font-semibold text-accent hover:text-accent-hover transition-colors"
           >
             View all
-            <ArrowRight className="w-4 h-4" />
+            <Icon name="arrow-right" className="w-4 h-4" />
           </Link>
         )}
       </div>

@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
-import { Star, BadgeCheck } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getCustomerFeedbackRepository } from "@/lib/customer-feedback-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { moderateFeedback, approveFeedbackBulk } from "@/features/admin/feedback";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Customer feedback moderation (P9.2, #818).
@@ -98,21 +98,21 @@ export default async function StaffFeedbackPage() {
                   <div className="flex items-center gap-2">
                     <span className="flex items-center gap-0.5" aria-label={`${entry.rating} of 5`}>
                       {[1, 2, 3, 4, 5].map((value) => (
-                        <Star
+                        <Icon
+                          name="star"
                           key={value}
                           className={
                             value <= entry.rating
                               ? "h-4 w-4 fill-amber-400 text-amber-400"
                               : "h-4 w-4 text-primary-subtle"
                           }
-                          aria-hidden
                         />
                       ))}
                     </span>
                     <span className="text-sm font-semibold text-primary">{entry.authorName}</span>
                     {entry.verifiedPurchase && (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-action">
-                        <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+                        <Icon name="badge-check" className="h-3.5 w-3.5" />
                         Verified customer
                       </span>
                     )}

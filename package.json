@@ -34,7 +34,9 @@
     "ref:generate": "prisma generate --schema prisma/reference/schema.prisma",
     "ref:migrate": "prisma migrate deploy --schema prisma/reference/schema.prisma",
     "ref:migrate:dev": "prisma migrate dev --schema prisma/reference/schema.prisma",
-    "ref:sync": "tsx scripts/sync-reference-data.ts"
+    "ref:sync": "tsx scripts/sync-reference-data.ts",
+    "icons:build": "tsx scripts/build-icons.ts",
+    "icons:check": "tsx scripts/build-icons.ts --check"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -53,6 +55,11 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260801.1",
+    "@e965/xlsx": "0.20.3",
+    "@iconify-json/lucide": "1.2.122",
+    "@iconify-json/noto": "1.2.9",
+    "@iconify-json/ph": "1.2.2",
+    "@iconify/utils": "3.1.7",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",

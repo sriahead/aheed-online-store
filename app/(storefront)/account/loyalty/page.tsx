@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeft, Sparkles } from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
 import { maxTierMultiplier, resolveTier } from "@/lib/loyalty";
@@ -16,6 +15,7 @@ import { getReferralStats } from "@/lib/referrals-service";
 import { buildReferralUrl } from "@/lib/referrals";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and this vendor's live loyalty rows — must render per-request.
 export const dynamic = "force-dynamic";
@@ -87,7 +87,7 @@ export default async function LoyaltyPage() {
         href="/account"
         className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary-muted hover:text-primary transition"
       >
-        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        <Icon name="chevron-left" className="h-4 w-4" />
         <span>Back to Your account</span>
       </Link>
 
@@ -126,7 +126,7 @@ export default async function LoyaltyPage() {
           </div>
 
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-action-tint text-action">
-            <Sparkles className="h-6 w-6" aria-hidden="true" />
+            <Icon name="sparkles" className="h-6 w-6" />
           </div>
         </div>
 

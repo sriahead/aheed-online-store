@@ -56,6 +56,7 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
     reviewCount: 12,
     inStock: true,
     stockQuantity: 20,
+    stockMode: "TRACKED",
     lowStockThreshold: 3,
     expectedRestockDay: null,
     tier: null,

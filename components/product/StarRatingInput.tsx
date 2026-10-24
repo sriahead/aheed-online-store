@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Star } from "lucide-react";
+import { Icon } from "@/components/icons/Icon";
 
 export interface StarRatingInputProps {
   name?: string;
@@ -107,13 +107,13 @@ export function StarRatingInput({
                   aria-label={`${star} ${star === 1 ? "star" : "stars"} - ${ratingLabels[star] ?? ""}`}
                   className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                 />
-                <Star
+                <Icon
+                  name="star"
                   className={`${starSizeClass} transition-colors ${
                     isFilled
                       ? "fill-amber-400 text-amber-400"
                       : "fill-transparent text-primary-subtle group-hover:text-amber-300"
                   }`}
-                  aria-hidden="true"
                 />
               </label>
             );

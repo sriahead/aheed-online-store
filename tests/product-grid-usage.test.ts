@@ -12,6 +12,7 @@ const LISTING_PAGES = [
   "app/(storefront)/categories/[slug]/page.tsx",
   "app/(storefront)/search/page.tsx",
   "app/(storefront)/bundles/page.tsx",
+  "app/(storefront)/whatsapp-offers/page.tsx",
 ];
 
 function tsxFiles(dir: string): string[] {

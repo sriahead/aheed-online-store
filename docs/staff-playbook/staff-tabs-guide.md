@@ -4,8 +4,8 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.13.0"
-updated: "2026-10-20"
+version: "2.14.0"
+updated: "2026-10-22"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
 tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback"]
@@ -65,6 +65,13 @@ scrolling** if you cannot see what you need — a large catalogue will not all b
 orders. You do not need to deduct picked items by hand, and doing so will take the count too low.
 Only correct a figure when you have physically checked it. Setting a quantity to zero still leaves
 the product listed as out of stock; switching it off removes it from the shop entirely.
+
+**Stock tracking and restricted products:** The quantity buttons appear only for products whose stock
+is **Tracked**. A product marked **Not tracked** or **Unknown — not for sale** shows that label
+instead, because its count means nothing; change how a product is tracked on its Catalogue page. A
+**restricted** product shows its restriction under the switch, and switching it on is refused with a
+message saying why. The switch goes back to Hidden. Restricted products are reviewed on the
+Catalogue page (see "Restricted products" there).
 
 **What happens after changes are saved:** The change is live for shoppers immediately — the
 storefront and the product's own page both refresh. There is no separate publish step and no undo,
@@ -349,10 +356,60 @@ up, generation is refused until 00:00 UTC, and the products it skipped stay in l
 run. Uploading a photo yourself is never affected.
 
 **A product that arrives switched off:** Some products are added in bulk with no stock and switched
-off, for example the Fish range. They appear in this list, but shoppers cannot see them. To put one
-on sale: check its price is what you will charge, add a photograph, set its quantity on **Live
-Inventory & Availability** (`/staff/inventory`), then tick **Visible in the shop** on its page here.
-Until you do, it stays hidden, so nothing is offered at a price you have not confirmed.
+off, for example the Fish range or a catalogue imported from a spreadsheet. They appear in this
+list, but shoppers cannot see them. To put one on sale:
+
+1. Check its price is what you will charge, and add a photograph.
+2. Choose its **Stock tracking** on its page here, and set a quantity if it is Tracked.
+3. Tick **Visible in the shop**.
+
+Until you do, it stays hidden, so nothing is offered at a price you have not confirmed. An imported
+product's stock starts as **Unknown — not for sale**, and stays unbuyable until someone chooses
+Tracked or Not tracked.
+
+**Stock tracking:** Every product has one of three settings, on its page under Price & stock.
+
+- **Tracked:** it sells while its stock count is above zero, and orders reduce the count.
+- **Not tracked:** it sells without any count, and orders leave the count alone. Use this when the
+  shop does not keep stock figures in this system.
+- **Unknown — not for sale:** shoppers see it as out of stock.
+
+Changing the setting never changes the stored count, so switching back to Tracked restores the last
+figure. The **Stock** filter above the list finds each group.
+
+**Restricted products:** A product can carry a restriction, shown as a red label in the list and in
+the **Restriction** section at the foot of its page. A restricted product is always hidden. The
+**Restriction** filter above the list finds them.
+
+- **Prohibited — cannot be sold** and **Age-restricted — cannot be sold online yet:** these cannot
+  be made available by anyone, on any page. The page explains why and offers no switch.
+- **Not deliverable** and **Needs review:** only a store admin can make these available. They tick
+  the confirmation that the product is legally sellable and can be fulfilled, and give a reason,
+  then press **Clear restriction and make available**. The product goes on sale immediately.
+  Staff accounts see the restriction but no control.
+- **Restricting a product:** a store admin can restrict a product, or make an existing restriction
+  stricter, from the same section. It hides the product immediately. A restriction can never be
+  made less strict there; the only way back is the confirmed clear above.
+- **History:** every restriction change is listed under **Restriction history** on the product's
+  page, with the time, who made it (or "Import"), where it was made and the reason given. Entries
+  cannot be edited or removed.
+
+**Changing many products at once:** Tick products in the list (or **Select all on this page**;
+choose 100 under **Per page** to work through a large catalogue faster), choose an action under
+**With selected**, and press **Preview**. The actions are:
+
+- **Make available**
+- **Hide**
+- **Mark stock as not tracked**
+
+The preview says how many will change, and **lists every restricted product by name**. Those that
+**will be skipped** are hard-blocked, or restricted products in a staff account. Those made
+available **only if you confirm** are a store admin's Not deliverable and Needs review products,
+which need the same confirmation and a reason as on a product's page. Press **Apply** to go ahead,
+or **Cancel**. Apply re-checks every product at that moment, so nothing a single change would refuse
+gets through in bulk. Afterwards a summary lists what was updated, what was skipped and why, and
+anything that failed because it changed after you selected it. Hiding or marking stock as not
+tracked never removes a restriction or makes a product visible.
 
 **What happens after changes are saved:** The change is live immediately — the storefront, the
 department listing and the product's own page all update. Existing orders are unaffected: they keep

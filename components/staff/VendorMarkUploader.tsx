@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { ImageUp } from "lucide-react";
 import { requestMarkUpload, attachVendorMark } from "@/features/admin/storefront";
 import {
   MARK_CONTENT_TYPE,
@@ -11,6 +10,7 @@ import {
   markEdgeFor,
   type MarkFileId,
 } from "@/lib/vendor-mark";
+import { Icon } from "@/components/icons/Icon";
 
 const TOO_SMALL = `This image is too small — use one at least ${MARK_MIN_SOURCE_EDGE_PX} pixels wide or tall.`;
 
@@ -190,7 +190,7 @@ export function VendorMarkUploader({
             onClick={upload}
             className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-bold text-black hover:bg-black/5 disabled:opacity-50"
           >
-            <ImageUp className="h-4 w-4" />
+            <Icon name="image-up" className="h-4 w-4" />
             {pending ? "Uploading…" : "Upload image"}
           </button>
         </div>

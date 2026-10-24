@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { Save } from "lucide-react";
 import { saveCampaign } from "@/features/admin/campaigns";
 import { initialCampaignFormState } from "@/lib/campaign-form";
 import { formatLocalInput } from "@/lib/local-datetime";
@@ -10,6 +9,7 @@ import { CampaignBannerUploader } from "@/components/staff/CampaignBannerUploade
 import type { CampaignRow } from "@/lib/repositories/campaigns";
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Department campaign edit form (P8.5e, #356) — modelled on
@@ -133,7 +133,7 @@ export function CampaignForm({
 
         <div className="flex items-center gap-3">
           <Button variant="primary" disabled={saving}>
-            <Save className="h-4 w-4" aria-hidden />
+            <Icon name="save" className="h-4 w-4" />
             {saving ? "Saving…" : campaign ? "Save changes" : "Create campaign"}
           </Button>
           <Link

@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { ProductCard } from "./ProductCard";
 import { HorizontalScroller } from "@/components/layout/HorizontalScroller";
 import type { ProductSummary } from "@/lib/repositories/products";
 import type { FavouriteState } from "@/lib/favourites";
+import { Icon } from "@/components/icons/Icon";
 
 interface ProductRowProps {
   title: string;
@@ -47,7 +47,7 @@ export function ProductRow({
             className="flex items-center gap-1 text-sm font-semibold text-accent hover:text-accent-hover transition-colors"
           >
             View all
-            <ArrowRight className="w-4 h-4" />
+            <Icon name="arrow-right" className="w-4 h-4" />
           </Link>
         )}
       </div>

@@ -70,8 +70,8 @@ describe("DepartmentHero", () => {
 
     // No <img> at all — every panel is icon-led.
     expect(container.querySelectorAll("img")).toHaveLength(0);
-    // lucide renders an <svg>; the icon slot is populated rather than empty.
-    expect(container.querySelectorAll("svg").length).toBeGreaterThan(0);
+    // The icon slot is populated rather than empty: `Icon` renders an <svg> carrying `data-icon`.
+    expect(container.querySelectorAll("svg[data-icon]").length).toBeGreaterThan(0);
   });
 
   it("renders an image instead of the icon when a key is supplied (R3)", () => {

@@ -1,20 +1,12 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import {
-  Bookmark,
-  ClipboardList,
-  Heart,
-  MessageSquareQuote,
-  Repeat,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
 import { getAuth } from "@/lib/auth";
 import { LogoutButton } from "@/features/auth/components/LogoutButton";
 import { getLoyaltyRepository } from "@/lib/loyalty-service";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +81,7 @@ export default async function AccountPage() {
           href="/account/orders"
           className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action transition block"
         >
-          <ClipboardList className="mb-3 h-6 w-6 text-action" aria-hidden="true" />
+          <Icon name="clipboard-list" className="mb-3 h-6 w-6 text-action" />
           <p className="font-semibold text-primary">Your orders</p>
           <p className="mt-1 text-sm text-primary-muted">
             Track active deliveries, view order receipts, and reorder past purchases.
@@ -101,7 +93,7 @@ export default async function AccountPage() {
           href="/account/lists"
           className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action transition block"
         >
-          <Bookmark className="mb-3 h-6 w-6 text-accent" aria-hidden="true" />
+          <Icon name="bookmark" className="mb-3 h-6 w-6 text-accent" />
           <p className="font-semibold text-primary">Your lists</p>
           {/* #1187 — was "Manage saved items, recurring shopping lists, and quick shopping", which
               collided by name with Favourites, Regulars and Quick Shop once all three existed.
@@ -117,7 +109,7 @@ export default async function AccountPage() {
           href="/account/favourites"
           className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action transition block"
         >
-          <Heart className="mb-3 h-6 w-6 text-action" aria-hidden="true" />
+          <Icon name="heart" className="mb-3 h-6 w-6 text-action" />
           <p className="font-semibold text-primary">Your favourites</p>
           <p className="mt-1 text-sm text-primary-muted">
             Everything you have tapped the heart on, ready to add to your basket again.
@@ -133,7 +125,7 @@ export default async function AccountPage() {
           href="/account/regulars"
           className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action transition block"
         >
-          <Repeat className="mb-3 h-6 w-6 text-accent" aria-hidden="true" />
+          <Icon name="repeat" className="mb-3 h-6 w-6 text-accent" />
           <p className="font-semibold text-primary">Your regulars</p>
           <p className="mt-1 text-sm text-primary-muted">
             The items you order most often, in one place.
@@ -146,7 +138,7 @@ export default async function AccountPage() {
             href="/account/loyalty"
             className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action transition block"
           >
-            <Sparkles className="mb-3 h-6 w-6 text-accent" aria-hidden="true" />
+            <Icon name="sparkles" className="mb-3 h-6 w-6 text-accent" />
             <div className="flex items-center justify-between gap-2">
               <p className="font-semibold text-primary">Loyalty & Rewards</p>
               {balancePoints !== null && balancePoints > 0 && (
@@ -168,7 +160,7 @@ export default async function AccountPage() {
           href="/feedback"
           className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action transition block"
         >
-          <MessageSquareQuote className="mb-3 h-6 w-6 text-accent" aria-hidden="true" />
+          <Icon name="message-square-quote" className="mb-3 h-6 w-6 text-accent" />
           <p className="font-semibold text-primary">Your feedback</p>
           <p className="mt-1 text-sm text-primary-muted">
             Share reviews and ratings about your store experience and deliveries.
@@ -180,7 +172,7 @@ export default async function AccountPage() {
           href="/account/data"
           className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action transition block"
         >
-          <ShieldCheck className="mb-3 h-6 w-6 text-action" aria-hidden="true" />
+          <Icon name="shield-check" className="mb-3 h-6 w-6 text-action" />
           <p className="font-semibold text-primary">Your data</p>
           <p className="mt-1 text-sm text-primary-muted">
             Download an export of your account activity, correct details, or request erasure.

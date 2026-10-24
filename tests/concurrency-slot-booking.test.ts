@@ -94,7 +94,7 @@ describe("Concurrency Slot Booking (R8)", () => {
           name: "Test Product",
           basePrice: 1000,
           isActive: true,
-          inventory: { create: { vendorId, quantity: 100 } },
+          inventory: { create: { vendorId, quantity: 100, stockMode: "TRACKED" } },
         },
       });
 

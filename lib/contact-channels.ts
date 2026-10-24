@@ -15,7 +15,8 @@
  * assistant (the one nearest the trigger).
  */
 
-export type ContactChannelKind = "facebook" | "instagram" | "whatsapp" | "assistant";
+export type ContactChannelKind =
+  "facebook" | "instagram" | "whatsapp-community" | "whatsapp" | "assistant";
 
 export interface ContactChannel {
   kind: ContactChannelKind;
@@ -29,11 +30,19 @@ export interface ContactChannelsInput {
   facebookUrl: string | null;
   instagramUrl: string | null;
   whatsappNumber: string | null;
+  whatsappCommunityUrl?: string | null;
   assistantAvailable: boolean;
 }
 
 export function contactChannels(input: ContactChannelsInput): ContactChannel[] {
-  const { vendorName, facebookUrl, instagramUrl, whatsappNumber, assistantAvailable } = input;
+  const {
+    vendorName,
+    facebookUrl,
+    instagramUrl,
+    whatsappNumber,
+    whatsappCommunityUrl,
+    assistantAvailable,
+  } = input;
   const channels: ContactChannel[] = [];
 
   if (facebookUrl) {
@@ -41,6 +50,13 @@ export function contactChannels(input: ContactChannelsInput): ContactChannel[] {
   }
   if (instagramUrl) {
     channels.push({ kind: "instagram", href: instagramUrl, label: `${vendorName} on Instagram` });
+  }
+  if (whatsappCommunityUrl) {
+    channels.push({
+      kind: "whatsapp-community",
+      href: whatsappCommunityUrl,
+      label: `Join ${vendorName} WhatsApp group`,
+    });
   }
   if (whatsappNumber && !assistantAvailable) {
     const message = `Hi ${vendorName}, I have a question about my order.`;
