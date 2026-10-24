@@ -5,8 +5,8 @@
  * the registry can both depend on it without pulling the component tree in.
  */
 
-/** Where an inline icon's artwork comes from. Illustrations are static files and are not a provider here. */
-export type IconProvider = "lucide" | "ph";
+/** Where an inline icon's artwork comes from. Department tile illustrations are static files in `public/illustrations/departments/`. */
+export type IconProvider = "lucide" | "ph" | "noto";
 
 /**
  * `functional` — controls and navigation; Lucide only (enforced below by the type and by a test).

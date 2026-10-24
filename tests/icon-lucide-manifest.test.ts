@@ -20,12 +20,32 @@ describe("lucide icons in use at BASE", () => {
 
   it.each(manifest.icons)("$export resolves to registry key $key", ({ key }) => {
     expect(ICON_REGISTRY).toHaveProperty([key]);
-    expect(ICON_REGISTRY[key as keyof typeof ICON_REGISTRY].provider).toBe("lucide");
+    const entry = ICON_REGISTRY[key as keyof typeof ICON_REGISTRY];
+    if (entry.tier === "functional" || key === "star") {
+      expect(entry.provider).toBe("lucide");
+    } else {
+      expect(entry.provider).toBe("noto");
+    }
   });
 
-  it("the registry holds no icon the manifest does not account for", () => {
+  it("the registry holds no icon the manifest does not account for, bar the Phase 3 and #1239 additions", () => {
     const accountedFor = new Set(manifest.icons.map((i) => i.key));
-    for (const key of Object.keys(ICON_REGISTRY))
+    const allowedAdditions = new Set([
+      "featured-star",
+      "heart-outline",
+      "rewards-bag",
+      "rewards-coins",
+      "rewards-discount",
+      "rewards-gift",
+      "rewards-invite",
+      "rewards-sparkles",
+      "trust-delivery",
+      "trust-payment",
+      "trust-updates",
+    ]);
+    for (const [key] of Object.entries(ICON_REGISTRY)) {
+      if (allowedAdditions.has(key)) continue;
       expect(accountedFor.has(key), `${key} is unused`).toBe(true);
+    }
   });
 });

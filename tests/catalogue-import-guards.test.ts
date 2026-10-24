@@ -49,7 +49,9 @@ describe("the spreadsheet package stays out of the Worker bundle (R7)", () => {
   );
 
   it("is imported by exactly one script file", () => {
-    const importers = walk("scripts").filter((f) => /["']@e965\/xlsx["']/.test(code(f)));
+    const importers = walk("scripts")
+      .filter((f) => /["']@e965\/xlsx["']/.test(code(f)))
+      .map((f) => f.replace(/\\/g, "/"));
     expect(importers).toEqual(["scripts/lib/read-spreadsheet.ts"]);
   });
 

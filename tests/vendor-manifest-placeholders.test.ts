@@ -193,6 +193,7 @@ describe("the real command line keeps stdout clean (R5)", () => {
       return spawnSync("npx", ["tsx", "scripts/provision-vendor.ts", path, ...args], {
         encoding: "utf8",
         env,
+        shell: process.platform === "win32",
       });
     } finally {
       rmSync(dir, { recursive: true, force: true });

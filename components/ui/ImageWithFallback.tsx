@@ -25,6 +25,7 @@ export function ImageWithFallback({
   width,
   height,
   loading,
+  decoding,
   fetchPriority,
   draggable,
   className,
@@ -36,6 +37,8 @@ export function ImageWithFallback({
   width?: number;
   height?: number;
   loading?: "eager" | "lazy";
+  /** #1223 R47 — the department illustrations decode off the main thread. */
+  decoding?: "async" | "sync" | "auto";
   fetchPriority?: "high" | "low" | "auto";
   draggable?: boolean;
   className?: string;
@@ -72,6 +75,7 @@ export function ImageWithFallback({
       width={width}
       height={height}
       loading={loading}
+      decoding={decoding}
       fetchPriority={fetchPriority}
       draggable={draggable}
       className={className}

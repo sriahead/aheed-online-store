@@ -20,6 +20,16 @@ R64 and R65 bound what PR B may change instead; (2) the P1 test of `DepartmentSc
 output (R22's third clause) and its pre-migration class assertions are superseded at the PR B head by requirements 44 and 45 (below). New requirements: 63 (Noto Emoji's licence text), 64 and 65 (what PR B may change), 66 (`design-system.md`).
 `plan.md`, "Phase 2b, 3 and 4a clubbing", has the reasons.
 
+**Third amendment of 2026-10-24 (before PR B is built; owner decision on `#1223`).** The footer link to
+`/third-party-icon-licenses.txt`, open since Phase 1 as "the owner's call", is wanted. New requirement R67 (tagged
+P4a, checked at the PR B head); R64's file list gains `components/layout/StorefrontFooter.tsx`. Nothing else
+changes except one found when Build read `tests/storefront-image-fallback.test.ts`: it permits a JSX `<img>` only inside
+`components/ui/ImageWithFallback.tsx`, which has no `decoding` prop, so R47 cannot be met without it. R64's file list
+therefore also gains `components/ui/ImageWithFallback.tsx` (one optional `decoding` prop, nothing else), and every
+illustration `<img>` of R44, R46 and R47 is rendered through `ImageWithFallback`, with the decorative `tag` `Icon` as
+its fallback, so a missing static file degrades to the neutral glyph and not to a broken-image icon (#655).
+`plan.md`'s exclusion and open-item text is updated to match.
+
 **Amendment of 2026-10-23 (before P2a is built).** R34, R35, R36 and R37 are rewritten and R56 to R62 are
 added, from what P1's validation and merge measured (issue `#1223`, the approved proposal comment, and
 `#1226`). Nothing tagged P1 changes. The reasons are in `plan.md`, "Phase 2 amendment". Definitions used
@@ -283,9 +293,12 @@ R63. [P4a] Noto Emoji's licence text. `scripts/icon-licences/Apache-2.0.txt` is 
     `LICENSE` is the SIL Open Font License for the fonts and is not used.
 R64. [P3, P4a] PR B is cut from the PR A merge and changes only what it names:
     `git merge-base --is-ancestor <PR A merge> <PR B head>` exits 0, and every path printed by
-    `git diff --name-only <PR A merge>..<PR B head>` is one of: the six files of the "Phase 3 surfaces" table
+    `git diff --name-only <staging tip>...<PR B head>` (three dots: PR B's own change against the `staging` tip it was last
+    synced with; written 2026-10-24 because `#1233` merged to `staging` while PR B was open, and the original two-dot
+    form against the PR A merge would have counted that unrelated slice's files) is one of: the six files of the "Phase 3 surfaces" table
     in `plan.md`; `components/layout/DepartmentScroller.tsx`, `components/layout/DepartmentHero.tsx`,
-    `components/layout/DepartmentGlyph.tsx`, `components/product/category-icon.ts`; anything under
+    `components/layout/DepartmentGlyph.tsx`, `components/product/category-icon.ts`,
+    `components/layout/StorefrontFooter.tsx` (R67), `components/ui/ImageWithFallback.tsx` (R47); anything under
     `components/icons/`, `public/illustrations/departments/`, `scripts/`, `tests/`, `docs/` or `specs/`;
     `public/third-party-icon-licenses.txt`, `package.json`, `package-lock.json`, `CHANGELOG.md`,
     `ARTIFACT_INDEX.md`, `app/(admin)/staff/runbook/docs.ts`. Any other path is a failure; a path that
@@ -304,6 +317,15 @@ R66. [P4a] `specs/design-system.md`'s `## Icons` section (from that heading to t
     inlined) and `public/third-party-icon-licenses.txt`. `specs/decisions/ADR-008-icon-system.md` is unchanged
     in status (`approved`) and still states each item of R1.
 
+R67. [P4a] The storefront footer links to the licence file. `components/layout/StorefrontFooter.tsx` renders an
+    `<a href="/third-party-icon-licenses.txt">` with the visible text `Icon credits`, on every vendor and whatever
+    the profile holds (it is platform attribution, not vendor copy, so the "a null hides" rule of #239 does not apply),
+    in the bottom-left block beside "Powered by" (not in the `Legal` nav, whose `lg:whitespace-nowrap` column cannot
+    take a fifth item). It carries the footer's `LINK` classes (so the 44 pixel tap height below `md` holds,
+    `tests/tap-targets.test.ts` stays green) and `target="_blank" rel="noopener noreferrer"`. `tests/storefront-footer.test.tsx`
+    asserts the `href`, the text and both attributes for a vendor with no optional data. On both vendors `GET /` contains
+    `href="/third-party-icon-licenses.txt"`, and that URL still returns 200 `text/plain` (R28).
+
 ## Colour (P3)
 
 R38. [P3] The icons of the table "Phase 3 surfaces" in `plan.md` are rendered through `Icon` with a
@@ -312,7 +334,10 @@ R38. [P3] The icons of the table "Phase 3 surfaces" in `plan.md` are rendered th
     its provider or tier (a decorative variant of an icon that is also used functionally elsewhere gets a
     new semantic name instead).
 R39. [P3] In the served HTML of `/` on both vendors, every `<svg>` whose `data-icon` is a decorative name
-    contains `--icon-secondary` and contains no colour literal matching `#[0-9a-fA-F]{3,8}\b`.
+    **whose provider is `ph`** (the nine Phase 3 names) contains `--icon-secondary`, and no `<svg>` whose `data-icon`
+    is a decorative name contains a colour literal matching `#[0-9a-fA-F]{3,8}\b`. (Corrected 2026-10-24 from the first
+    wording, which said "every decorative name": a decorative `lucide` icon such as `sparkles` or `truck` is a single
+    layer and has no secondary to carry, so the live run of `#1234` could only report it as a wording question.)
 R40. [P3] The `<html>` or root element's inline `style` on `/` carries a different `--color-accent` value
     on the Aheed host than on the SriMart host, and `git diff BASE..HEAD --stat -- lib/vendor-theme.ts
     design-system/tokens/tokens.css` prints nothing (no token and no `brandStyle()` change).

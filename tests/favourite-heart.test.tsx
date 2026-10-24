@@ -70,6 +70,22 @@ describe("FavouriteButton — the three states (R10)", () => {
       expect(favouriteControlLabel(state, NAME)).toContain(NAME);
     }
   });
+
+  it("renders heart-outline for off and signed-out, and heart for on (#1239)", () => {
+    const { unmount: u1 } = renderHeart("off");
+    expect(
+      screen.getByRole("button").querySelector('svg[data-icon="heart-outline"]'),
+    ).not.toBeNull();
+    u1();
+
+    const { unmount: u2 } = renderHeart("signed-out");
+    expect(screen.getByRole("link").querySelector('svg[data-icon="heart-outline"]')).not.toBeNull();
+    u2();
+
+    const { unmount: u3 } = renderHeart("on");
+    expect(screen.getByRole("button").querySelector('svg[data-icon="heart"]')).not.toBeNull();
+    u3();
+  });
 });
 
 describe("FavouriteButton — placement and tap size (R11, R16)", () => {

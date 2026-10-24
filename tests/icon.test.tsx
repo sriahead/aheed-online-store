@@ -98,7 +98,7 @@ describe("className, style and strokeWidth (R20)", () => {
   });
 
   it("passes strokeWidth to the root of an outline icon", () => {
-    const tag = rootTag(render(<Icon name="package" strokeWidth={1.25} />));
+    const tag = rootTag(render(<Icon name="search" strokeWidth={1.25} />));
     expect(attr(tag, "stroke-width")).toBe("1.25");
   });
 });
@@ -194,13 +194,23 @@ describe("Lucide icons keep lucide-react's root attributes (R13)", () => {
     }
   });
 
-  it("a root fill class can therefore take effect: heart and star keep fill=none on the root only", () => {
-    for (const name of ["heart", "star"] as const) {
-      const markup = render(<Icon name={name} className="fill-current" />);
+  it("a root fill class can therefore take effect: star keeps fill=none on the root only", () => {
+    const markup = render(<Icon name="star" className="fill-current" />);
+    const tag = rootTag(markup);
+    expect(attr(tag, "fill")).toBe("none");
+    expect(attr(tag, "class")).toBe("fill-current");
+    expect(descendantsWithOwnPaint(markup)).toBe(0);
+  });
+});
+
+describe("Noto Emoji icons render colourful multi-path SVG without clobbering root fill (#1239)", () => {
+  it("renders heart (red-heart) and heart-outline (white-heart) without root fill or stroke clobbering", () => {
+    for (const name of ["heart", "heart-outline"] as const) {
+      const markup = render(<Icon name={name} />);
       const tag = rootTag(markup);
-      expect(attr(tag, "fill")).toBe("none");
-      expect(attr(tag, "class")).toBe("fill-current");
-      expect(descendantsWithOwnPaint(markup)).toBe(0);
+      expect(attr(tag, "fill")).toBeUndefined();
+      expect(attr(tag, "stroke")).toBeUndefined();
+      expect(markup).toContain("<path");
     }
   });
 });

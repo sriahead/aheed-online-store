@@ -58,7 +58,7 @@ export function AvailableRewardsSection({
             isDark ? "bg-amber-400/20 text-amber-400" : "bg-action-tint text-action"
           }`}
         >
-          <Icon name="gift" className="h-4 w-4" />
+          <Icon name="rewards-gift" tone={isDark ? undefined : "action"} className="h-4 w-4" />
         </div>
         <div>
           <h3 className="text-sm font-semibold">Points milestones</h3>
