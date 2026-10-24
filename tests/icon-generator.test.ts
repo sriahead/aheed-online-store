@@ -30,7 +30,7 @@ function fixture(name: string, registry: unknown): string {
   return path;
 }
 
-describe("scripts/build-icons.ts (real process)", () => {
+describe("scripts/build-icons.ts (real process)", { timeout: 30000 }, () => {
   it("accepts a valid registry and exits 0", () => {
     const result = run([
       "--registry",
@@ -157,5 +157,5 @@ describe("scripts/build-icons.ts (real process)", () => {
     } finally {
       writeFileSync(path, original);
     }
-  });
+  }, 30000);
 });

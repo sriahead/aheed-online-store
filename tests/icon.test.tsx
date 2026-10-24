@@ -203,9 +203,9 @@ describe("Lucide icons keep lucide-react's root attributes (R13)", () => {
   });
 });
 
-describe("Noto Emoji icons render colourful multi-path SVG without clobbering root fill (#1239)", () => {
-  it("renders heart (red-heart) and heart-outline (white-heart) without root fill or stroke clobbering", () => {
-    for (const name of ["heart", "heart-outline"] as const) {
+describe("Noto Emoji icons render colourful multi-path SVG without clobbering root fill (#1239, #1242)", () => {
+  it("renders heart, heart-outline, and shopping-cart without root fill or stroke clobbering", () => {
+    for (const name of ["heart", "heart-outline", "shopping-cart"] as const) {
       const markup = render(<Icon name={name} />);
       const tag = rootTag(markup);
       expect(attr(tag, "fill")).toBeUndefined();

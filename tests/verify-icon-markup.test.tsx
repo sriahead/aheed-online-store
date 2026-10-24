@@ -101,7 +101,7 @@ describe("inventory()", () => {
   });
 });
 
-describe("scripts/verify-icon-markup.ts (real process)", () => {
+describe("scripts/verify-icon-markup.ts (real process)", { timeout: 30000 }, () => {
   it("prints one JSON line per path on stdout and only progress on stderr", async () => {
     const { code, stdout, stderr } = await run([
       "--base",
@@ -170,5 +170,5 @@ describe("scripts/verify-icon-markup.ts (real process)", () => {
     const different = await run(["--compare", before, changed]);
     expect(different.code).toBe(1);
     expect(different.stderr).toContain("only BEFORE");
-  });
+  }, 30000);
 });

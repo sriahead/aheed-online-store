@@ -102,6 +102,7 @@ export const ICON_REGISTRY = {
   "shield-alert": { tier: "status", provider: "noto", id: "warning" },
   "shield-check": { tier: "decorative", provider: "noto", id: "shield" },
   "shopping-bag": { tier: "decorative", provider: "noto", id: "shopping-bags" },
+  "shopping-cart": { tier: "decorative", provider: "noto", id: "shopping-cart" },
   "sliders-horizontal": { tier: "functional", provider: "lucide", id: "sliders-horizontal" },
   sparkles: { tier: "decorative", provider: "noto", id: "sparkles" },
   star: { tier: "decorative", provider: "lucide", id: "star" },
