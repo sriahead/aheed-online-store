@@ -32,7 +32,16 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("next/link", () => ({
-  default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
+  default: ({
+    href,
+    children,
+    prefetch: _prefetch,
+    ...rest
+  }: {
+    href: string;
+    children: React.ReactNode;
+    prefetch?: boolean;
+  }) => (
     <a href={href} {...rest}>
       {children}
     </a>
@@ -77,38 +86,32 @@ afterEach(() => {
   listTree.mockClear();
 });
 
-describe("Header Shopping List link (#1131 R25)", () => {
+describe("Header Shopping List link (#1131 R25, #1251)", () => {
   for (const isLanding of [true, false]) {
-    // #1142 — the link moved from the right-hand nav to beside the search bar, so it renders once
-    // per search bar (the inline slot from `xl` and the full-width row below it; CSS shows one).
-    it(`renders on ${isLanding ? "the landing page" : "other storefront pages"} with one accessible name`, async () => {
+    // #1251 — Quick Shop sits prominently inside Main Navigation beside Shop on all screen sizes.
+    it(`renders on ${isLanding ? "the landing page" : "other storefront pages"} inside Main Navigation`, async () => {
       render(await Header({ isLanding }));
+      const nav = screen.getByRole("navigation", { name: "Main Navigation" });
       const links = screen.getAllByRole("link", { name: "Quick Shop" });
-      expect(links).toHaveLength(2);
-      for (const link of links) {
-        // #1187 — was `/shop-your-list`. The button now opens the Quick Shop hub, and the paste
-        // page it used to open is one of that hub's four tiles, retitled "Smart Lists".
-        expect(link.getAttribute("href")).toBe("/quick-shop");
-        expect(link.getAttribute("aria-label")).toBe("Quick Shop");
-        // The visible text is contained in the accessible name.
-        expect(link.textContent?.trim().toLowerCase()).toBe("quick shop");
-      }
+      expect(links).toHaveLength(1);
+      const link = links[0];
+
+      expect(link.getAttribute("href")).toBe("/quick-shop");
+      expect(link.getAttribute("aria-label")).toBe("Quick Shop");
+      expect(link.textContent?.trim().toLowerCase()).toBe("quick shop");
+      expect(nav.contains(link)).toBe(true);
+      expect(link.closest("form")).toBeNull();
     });
 
-    it(`sits directly after each search bar, outside it and outside the main nav, on ${isLanding ? "the landing page" : "other storefront pages"} (#1142 R11)`, async () => {
+    it(`positions Quick Shop directly beside Shop in Main Navigation on ${isLanding ? "the landing page" : "other storefront pages"} (#1251)`, async () => {
       render(await Header({ isLanding }));
-      const forms = screen.getAllByRole("search");
-      expect(forms).toHaveLength(2);
-      for (const form of forms) {
-        const next = form.nextElementSibling;
-        expect(next?.tagName).toBe("A");
-        expect(next?.getAttribute("aria-label")).toBe("Quick Shop");
-      }
       const nav = screen.getByRole("navigation", { name: "Main Navigation" });
-      for (const link of screen.getAllByRole("link", { name: "Quick Shop" })) {
-        expect(nav.contains(link)).toBe(false);
-        expect(link.closest("form")).toBeNull();
-      }
+      const shopLink = screen.getByRole("link", { name: "Shop" });
+      const quickShopLink = screen.getByRole("link", { name: "Quick Shop" });
+
+      expect(nav.contains(shopLink)).toBe(true);
+      expect(nav.contains(quickShopLink)).toBe(true);
+      expect(shopLink.nextElementSibling).toBe(quickShopLink);
     });
   }
 
