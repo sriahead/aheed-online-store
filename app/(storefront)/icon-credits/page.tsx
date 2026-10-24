@@ -159,7 +159,7 @@ export default async function IconCreditsPage() {
             <strong>Powered by {platformName}</strong>.
           </p>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 pt-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
             {GENERATED_ICONS.map((item) => (
               <div
                 key={item.id}
@@ -207,7 +207,7 @@ export default async function IconCreditsPage() {
                   <p className="mt-2 text-xs text-primary-muted leading-relaxed">
                     <strong>Usage:</strong> {lib.usage}
                   </p>
-                  <p className="mt-2 text-[11px] text-primary-muted/90 italic leading-relaxed bg-surface-muted/60 p-2.5 rounded-lg border border-black/5">
+                  <p className="mt-2 text-[11px] text-primary-muted italic leading-relaxed bg-surface-muted/60 p-2.5 rounded-lg border border-black/5">
                     {lib.notice}
                   </p>
                 </div>
@@ -222,7 +222,7 @@ export default async function IconCreditsPage() {
                     <span>Source Repository</span>
                     <Icon name="external-link" className="h-3 w-3" />
                   </a>
-                  <span className="text-black/20">·</span>
+                  <span className="text-primary-muted">·</span>
                   <a
                     href={lib.licenseUrl}
                     target="_blank"
