@@ -47,12 +47,17 @@ const ALLOWED_URL_SCHEME = "https:";
 export const FACEBOOK_URL_FIELD = "facebookUrl";
 export const INSTAGRAM_URL_FIELD = "instagramUrl";
 export const WHATSAPP_NUMBER_FIELD = "whatsappNumber";
+export const WHATSAPP_COMMUNITY_URL_FIELD = "whatsappCommunityUrl";
+
+const WHATSAPP_INVITE_HOST = "chat.whatsapp.com";
+const WHATSAPP_INVITE_CODE = /^[A-Za-z0-9_-]{6,64}$/;
 
 /** What the repository is asked to write. `null` clears (and therefore hides) the element. */
 export interface SocialContactInput {
   facebookUrl: string | null;
   instagramUrl: string | null;
   whatsappNumber: string | null;
+  whatsappCommunityUrl: string | null;
 }
 
 /**
@@ -149,13 +154,75 @@ export function parseWhatsappNumber(raw: string, field: string): ParseResult<str
 }
 
 /**
- * All three at once. The first failing field wins, so the form points at one input at a time —
+ * #1233 — a WhatsApp group invite link (`https://chat.whatsapp.com/<invite-code>`), or `null` when
+ * blank. Checked against the exact `chat.whatsapp.com` host and a single non-empty invite code path
+ * segment so an arbitrary external URL or a bare `https://chat.whatsapp.com/` cannot be saved as a
+ * group invite link.
+ */
+export function parseWhatsappCommunityUrl(
+  raw: string,
+  field: string = WHATSAPP_COMMUNITY_URL_FIELD,
+): ParseResult<string | null> {
+  const trimmed = raw.trim();
+  if (trimmed === "") return { ok: true, value: null };
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return {
+      ok: false,
+      error: {
+        field,
+        message: "Enter a WhatsApp group invite link starting with https://chat.whatsapp.com/",
+      },
+    };
+  }
+
+  if (parsed.protocol !== ALLOWED_URL_SCHEME) {
+    return {
+      ok: false,
+      error: {
+        field,
+        message: "WhatsApp group invite links must start with https://chat.whatsapp.com/",
+      },
+    };
+  }
+
+  if (parsed.hostname.toLowerCase() !== WHATSAPP_INVITE_HOST) {
+    return {
+      ok: false,
+      error: {
+        field,
+        message:
+          "WhatsApp group invite links must use chat.whatsapp.com (e.g. https://chat.whatsapp.com/...).",
+      },
+    };
+  }
+
+  const code = parsed.pathname.replace(/^\/+|\/+$/g, "");
+  if (!WHATSAPP_INVITE_CODE.test(code)) {
+    return {
+      ok: false,
+      error: {
+        field,
+        message: "Include the group invite code after https://chat.whatsapp.com/",
+      },
+    };
+  }
+
+  return { ok: true, value: `https://${WHATSAPP_INVITE_HOST}/${code}` };
+}
+
+/**
+ * All four at once. The first failing field wins, so the form points at one input at a time —
  * same behaviour as `parseDeliveryRules`.
  */
 export function parseSocialContact(raw: {
   facebookUrl: string;
   instagramUrl: string;
   whatsappNumber: string;
+  whatsappCommunityUrl?: string;
 }): ParseResult<SocialContactInput> {
   const facebook = parseSocialUrl(raw.facebookUrl, FACEBOOK_URL_FIELD, "Facebook");
   if (!facebook.ok) return facebook;
@@ -166,12 +233,19 @@ export function parseSocialContact(raw: {
   const whatsapp = parseWhatsappNumber(raw.whatsappNumber, WHATSAPP_NUMBER_FIELD);
   if (!whatsapp.ok) return whatsapp;
 
+  const community = parseWhatsappCommunityUrl(
+    raw.whatsappCommunityUrl ?? "",
+    WHATSAPP_COMMUNITY_URL_FIELD,
+  );
+  if (!community.ok) return community;
+
   return {
     ok: true,
     value: {
       facebookUrl: facebook.value,
       instagramUrl: instagram.value,
       whatsappNumber: whatsapp.value,
+      whatsappCommunityUrl: community.value,
     },
   };
 }

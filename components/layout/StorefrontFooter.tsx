@@ -81,6 +81,7 @@ export function StorefrontFooter({
     facebookUrl: profile.facebookUrl,
     instagramUrl: profile.instagramUrl,
     whatsappNumber: profile.whatsappNumber,
+    whatsappCommunityUrl: profile.whatsappCommunityUrl,
     assistantAvailable,
   });
   // #1169 — the contact-channel buttons live in this column now, so it shows for them too: a store

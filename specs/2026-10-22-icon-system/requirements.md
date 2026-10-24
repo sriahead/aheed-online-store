@@ -293,7 +293,9 @@ R63. [P4a] Noto Emoji's licence text. `scripts/icon-licences/Apache-2.0.txt` is 
     `LICENSE` is the SIL Open Font License for the fonts and is not used.
 R64. [P3, P4a] PR B is cut from the PR A merge and changes only what it names:
     `git merge-base --is-ancestor <PR A merge> <PR B head>` exits 0, and every path printed by
-    `git diff --name-only <PR A merge>..<PR B head>` is one of: the six files of the "Phase 3 surfaces" table
+    `git diff --name-only <staging tip>...<PR B head>` (three dots: PR B's own change against the `staging` tip it was last
+    synced with; written 2026-10-24 because `#1233` merged to `staging` while PR B was open, and the original two-dot
+    form against the PR A merge would have counted that unrelated slice's files) is one of: the six files of the "Phase 3 surfaces" table
     in `plan.md`; `components/layout/DepartmentScroller.tsx`, `components/layout/DepartmentHero.tsx`,
     `components/layout/DepartmentGlyph.tsx`, `components/product/category-icon.ts`,
     `components/layout/StorefrontFooter.tsx` (R67), `components/ui/ImageWithFallback.tsx` (R47); anything under

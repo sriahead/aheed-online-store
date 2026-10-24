@@ -2,9 +2,11 @@ import { describe, it, expect } from "vitest";
 import {
   FACEBOOK_URL_FIELD,
   INSTAGRAM_URL_FIELD,
+  WHATSAPP_COMMUNITY_URL_FIELD,
   WHATSAPP_NUMBER_FIELD,
   parseSocialContact,
   parseSocialUrl,
+  parseWhatsappCommunityUrl,
   parseWhatsappNumber,
 } from "@/lib/social-contact-form";
 
@@ -116,12 +118,49 @@ describe("parseWhatsappNumber", () => {
   });
 });
 
+describe("parseWhatsappCommunityUrl (#1233)", () => {
+  it("accepts a chat.whatsapp.com group invite URL", () => {
+    expect(
+      parseWhatsappCommunityUrl(
+        "  https://chat.whatsapp.com/FTgLVoelRw7262i0OvAIzS  ",
+        WHATSAPP_COMMUNITY_URL_FIELD,
+      ),
+    ).toEqual({
+      ok: true,
+      value: "https://chat.whatsapp.com/FTgLVoelRw7262i0OvAIzS",
+    });
+  });
+
+  it("parses a blank value to null (#239 null-hides rule)", () => {
+    expect(parseWhatsappCommunityUrl("   ", WHATSAPP_COMMUNITY_URL_FIELD)).toEqual({
+      ok: true,
+      value: null,
+    });
+  });
+
+  it.each([
+    "http://chat.whatsapp.com/FTgLVoelRw7262i0OvAIzS",
+    "javascript:alert(1)",
+    "https://www.whatsapp.com/FTgLVoelRw7262i0OvAIzS",
+    "https://example.com/FTgLVoelRw7262i0OvAIzS",
+    "https://chat.whatsapp.com/",
+    "https://chat.whatsapp.com/ab",
+    "https://chat.whatsapp.com/a/b",
+    "not-a-url",
+  ])("rejects invalid community invite URL %s", (input) => {
+    const result = parseWhatsappCommunityUrl(input, WHATSAPP_COMMUNITY_URL_FIELD);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.field).toBe(WHATSAPP_COMMUNITY_URL_FIELD);
+  });
+});
+
 describe("parseSocialContact", () => {
-  it("returns all three values when every field is valid", () => {
+  it("returns all values when every field is valid", () => {
     const result = parseSocialContact({
       facebookUrl: "https://facebook.com/a",
       instagramUrl: "https://instagram.com/b",
       whatsappNumber: "447700900123",
+      whatsappCommunityUrl: "https://chat.whatsapp.com/FTgLVoelRw7262i0OvAIzS",
     });
     expect(result).toEqual({
       ok: true,
@@ -129,15 +168,26 @@ describe("parseSocialContact", () => {
         facebookUrl: "https://facebook.com/a",
         instagramUrl: "https://instagram.com/b",
         whatsappNumber: "447700900123",
+        whatsappCommunityUrl: "https://chat.whatsapp.com/FTgLVoelRw7262i0OvAIzS",
       },
     });
   });
 
-  it("returns all three as null when every field is blank", () => {
-    const result = parseSocialContact({ facebookUrl: "", instagramUrl: "", whatsappNumber: "" });
+  it("returns all four as null when every field is blank", () => {
+    const result = parseSocialContact({
+      facebookUrl: "",
+      instagramUrl: "",
+      whatsappNumber: "",
+      whatsappCommunityUrl: "",
+    });
     expect(result).toEqual({
       ok: true,
-      value: { facebookUrl: null, instagramUrl: null, whatsappNumber: null },
+      value: {
+        facebookUrl: null,
+        instagramUrl: null,
+        whatsappNumber: null,
+        whatsappCommunityUrl: null,
+      },
     });
   });
 
@@ -146,6 +196,7 @@ describe("parseSocialContact", () => {
       facebookUrl: "javascript:alert(1)",
       instagramUrl: "also-invalid",
       whatsappNumber: "+44",
+      whatsappCommunityUrl: "http://chat.whatsapp.com/bad",
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.field).toBe(FACEBOOK_URL_FIELD);
@@ -159,5 +210,16 @@ describe("parseSocialContact", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.field).toBe(WHATSAPP_NUMBER_FIELD);
+  });
+
+  it("rejects the whole submission when only the WhatsApp community URL is wrong", () => {
+    const result = parseSocialContact({
+      facebookUrl: "https://facebook.com/a",
+      instagramUrl: "",
+      whatsappNumber: "447700900123",
+      whatsappCommunityUrl: "https://example.com/group",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.field).toBe(WHATSAPP_COMMUNITY_URL_FIELD);
   });
 });
