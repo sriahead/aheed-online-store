@@ -6,7 +6,7 @@
    - R1: `CartDrawerShell` button title is `"My Cart"`, and inner SVG contains no `<title>` or `<desc>` tag that could override the button tooltip.
    - R2: `FloatingContact` button title is `"Contact & Follow Hub"`, and inner SVG contains no conflicting `<title>`.
    - R3: `/icon-credits` page renders all four icon library attributions (Lucide, Google Noto Emoji, Phosphor Icons, Simple Icons) with links to their licences.
-   - R4: `/icon-credits` page renders Generated Icons section stating `"Powered by {platformName}"` using configurable `PLATFORM_NAME`.
+   - R4: `/icon-credits` page renders Generated Icons section stating `"Powered by [Platform Name]"` using configurable `PLATFORM_NAME`.
    - R5: `StorefrontFooter` renders "Icon credits" link pointing to `/icon-credits`.
 
 2. Existing Test Suites:

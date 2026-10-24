@@ -15,6 +15,7 @@ every branch merges.
   - **Dedicated Icon Credits Page:** Authored `app/(storefront)/icon-credits/page.tsx` with clean, accessible attributions for all four third-party icon libraries (Lucide, Google Noto Emoji, Phosphor Icons, Simple Icons) with upstream links and SPDX notices.
   - **Configurable Generated Icons Attribution:** Added Generated Icons section on `/icon-credits` attributing custom 3D artwork with **“Powered by [Platform Name]”**, reading from `getPlatformBrandingEnv().PLATFORM_NAME` (configurable via `PLATFORM_NAME` in config/env).
   - **Storefront Footer Link:** Updated "Icon credits" in `components/layout/StorefrontFooter.tsx` to navigate directly to `/icon-credits`.
+  - **KMS MDX Prerender Safety:** Escaped platform name placeholder in slice specs to prevent Nextra/MDX JSX expression prerender errors during internal KMS deployment.
 
 - **UI and checkout improvements: My Cart tooltip, Contact Hub label, official payment logos, address layout, Click & Collect order details, animated Quick Shop** (issue `#1254`; `specs/2026-10-24-p1254-ui-checkout-improvements/`).
   - **Cart Tooltip:** Standardized trolley trigger button tooltip to `"My Cart"` in `components/cart/CartDrawerShell.tsx`.
