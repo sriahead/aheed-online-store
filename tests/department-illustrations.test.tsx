@@ -141,12 +141,11 @@ describe("DepartmentGlyph (R46)", () => {
     expect(container.querySelector("svg")).toBeNull();
   });
 
-  it("an unmapped slug renders the neutral glyph with the thin stroke", () => {
+  it("an unmapped slug renders the neutral glyph", () => {
     const { container } = render(<DepartmentGlyph slug="chargers" />);
     expect(container.querySelector("img")).toBeNull();
     const svg = container.querySelector("svg")!;
     expect(svg.getAttribute("data-icon")).toBe("tag");
-    expect(svg.getAttribute("stroke-width")).toBe("1.25");
   });
 
   it("is the one glyph DepartmentHero renders, in both of its places", () => {

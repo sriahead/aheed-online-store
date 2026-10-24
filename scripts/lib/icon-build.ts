@@ -26,9 +26,9 @@ interface SetInfo {
 }
 
 /** Which installed `@iconify-json/<set>` serves each provider. */
-export const PROVIDER_SET: Record<string, string> = { lucide: "lucide", ph: "ph" };
+export const PROVIDER_SET: Record<string, string> = { lucide: "lucide", ph: "ph", noto: "noto" };
 
-/** The set the department illustrations come from. It is not an inline-icon provider, so it is not in `PROVIDER_SET`. */
+/** The set the department illustrations come from (`@iconify-json/noto`). */
 export const ILLUSTRATION_SET = "noto";
 
 /** Where the generator writes, relative to the repository root. */
@@ -49,6 +49,8 @@ const LUCIDE_ROOT: Record<string, string> = {
   "stroke-width": "2",
 };
 const PH_ROOT: Record<string, string> = { fill: "currentColor" };
+/** Noto Emoji glyphs carry multi-colour fills on individual paths; nothing is hoisted onto `<svg>`. */
+const NOTO_ROOT: Record<string, string> = {};
 
 const UNSAFE_MARKUP = /<script|<foreignObject|javascript:|\son[a-z]+\s*=/i;
 const TAG_RE = /<([A-Za-z][\w-]*)((?:\s+[\w:-]+="[^"]*")*)(\s*\/?)>/g;
@@ -151,6 +153,19 @@ function hoistRootAttributes(
   return out;
 }
 
+/**
+ * Prefix every internal SVG `id` and `#id` reference (`url(#...)`, `href="#..."`, `xlink:href="#..."`)
+ * in a Noto Emoji body with `ni-<semanticName>-` so multiple inline `<svg>` icons on the same page
+ * never collide on `@iconify-json/noto`'s sequential `svgIDa` / `svgIDb` identifiers (#1239, R3).
+ */
+export function namespaceNotoSvgIds(body: string, name: string): string {
+  const prefix = `ni-${name}-`;
+  return body
+    .replace(/\bid="([^"]+)"/g, `id="${prefix}$1"`)
+    .replace(/url\(#([^)]+)\)/g, `url(#${prefix}$1)`)
+    .replace(/\b(xlink:href|href)="#([^"]+)"/g, `$1="#${prefix}$2"`);
+}
+
 /** Resolve one registry entry to render-ready data, or throw an `IconBuildError`. */
 export function resolveIcon(
   name: string,
@@ -187,8 +202,12 @@ export function resolveIcon(
     );
   }
 
-  const root = provider === "lucide" ? LUCIDE_ROOT : PH_ROOT;
+  const root = provider === "lucide" ? LUCIDE_ROOT : provider === "ph" ? PH_ROOT : NOTO_ROOT;
   let body = hoistRootAttributes(resolved.body, root, name, id);
+
+  if (provider === "noto") {
+    body = namespaceNotoSvgIds(body, name);
+  }
 
   if (provider === "ph" && id.endsWith("-duotone")) {
     if (!body.includes(DUOTONE_LAYER)) {
@@ -336,9 +355,9 @@ const NOTO_NOTE =
 export function buildLicences(registry: RegistryInput, options: BuildOptions = {}): string {
   const loadInfo = options.loadInfo ?? defaultLoadInfo;
   const licenceDir = options.licenceDir ?? join(process.cwd(), "scripts", "icon-licences");
-  const sets = [...new Set(Object.values(registry).map((e) => PROVIDER_SET[e.provider]))];
-  if (Object.keys(options.illustrations ?? {}).length > 0) sets.push(ILLUSTRATION_SET);
-  sets.sort();
+  const rawSets = Object.values(registry).map((e) => PROVIDER_SET[e.provider]);
+  if (Object.keys(options.illustrations ?? {}).length > 0) rawSets.push(ILLUSTRATION_SET);
+  const sets = [...new Set(rawSets)].sort();
   const seenSpdx = new Map<string, string>();
   const sections: string[] = [];
   for (const set of sets) {

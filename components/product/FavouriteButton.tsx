@@ -74,7 +74,7 @@ export function FavouriteButton({
         className={POSITION}
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-primary shadow-md backdrop-blur-xs">
-          <Icon name="heart" className="h-4 w-4" />
+          <Icon name="heart-outline" className="h-4 w-4" />
         </span>
       </Link>
     );
@@ -124,7 +124,7 @@ export function FavouriteButton({
           on ? "text-action" : "text-primary"
         } ${failed ? "ring-2 ring-danger" : ""}`}
       >
-        <Icon name="heart" className={`h-4 w-4 ${on ? "fill-current" : ""}`} />
+        <Icon name={on ? "heart" : "heart-outline"} className="h-4 w-4" />
       </span>
     </button>
   );

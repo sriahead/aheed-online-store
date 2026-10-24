@@ -4,10 +4,10 @@ title: "ADR-008 — Icon system: semantic registry, build-time Iconify data, thr
 audience: [dev, architect, design]
 type: adr
 status: approved
-version: "1.1.0"
-updated: 2026-10-23
+version: "1.2.0"
+updated: 2026-10-24
 visibility: internal
-summary: Icons are addressed by semantic name through a registry and rendered by one component from Iconify data bundled at build time. Lucide serves functional icons, Phosphor duotone decorative ones, Noto Emoji department illustrations as static files. Owner approved on 1223.
+summary: Icons are addressed by semantic name through a registry and rendered by one component from Iconify data bundled at build time. Lucide serves functional icons and rating stars, Noto Emoji serves colourful decorative and status icons and department illustrations. Extended in 1239.
 tags: [adr, icons, design-system, theming, multi-tenancy, csp]
 related: [adr-004-multi-tenancy, adr-003-storage, design-system, tech-stack, icon-system-plan]
 ---
@@ -52,17 +52,20 @@ navigation models carry names (strings). Replacing a library is a registry edit 
 | Tier | Use | Source | Colour |
 | --- | --- | --- | --- |
 | `functional` | controls and navigation (chevrons, close, plus, search) | Lucide only, enforced by type and test | `currentColor` |
-| `status` | alerts, success, info; never colour-only | Lucide or Phosphor | semantic tone |
-| `decorative` | trust strip, rewards, empty states; meaning is in adjacent text | Phosphor duotone, two hue | tone plus a second vendor token |
+| `status` | alerts, success, info; never colour-only | Noto Emoji (#1239; previously Lucide/Phosphor) | colourful multi-path SVG |
+| `decorative` | trust strip, rewards, features, nav, buttons, cards, empty states; rating `star` on Lucide | Noto Emoji (#1239; previously Phosphor/Lucide) | colourful multi-path SVG (namespaced internal IDs) |
 | illustration (static files) | department tiles | Noto Emoji | fixed art on a vendor-tinted tile |
 
 Illustrations are 2 to 12 KB each, so they are exported as static SVG files and rendered with `<img>`, not
 inlined into HTML or client bundles (`DepartmentScroller` and `DepartmentHero` are client components).
+Under #1239, inline decorative and status icons are rendered via `<Icon>` using build-time bundled Noto Emoji data
+with internal SVG ID namespacing (`id="ni-<name>-<id>"`), preventing DOM ID collisions.
 
 ## Decision 4 — Vendor theming reuses existing tokens; no new token
 
 `Icon` reads `--color-primary`, `--color-action`, `--color-accent`, `--color-danger`, which `brandStyle()`
-already emits per vendor and contrast-clamps. Phosphor duotone icons have one `opacity=".2"` layer; the
+already emits per vendor and contrast-clamps. Functional Lucide icons use `currentColor` and class styling,
+while Noto Emoji glyphs render full multi-colour artwork. Phosphor duotone icons have one `opacity=".2"` layer; the
 generator rewrites it to read `--icon-secondary` (default `currentColor`, opacity default `.2`), and `Icon`
 sets that variable to a second vendor token when a `tone` is given. No token is added and `brandStyle()` is
 unchanged, so the #251 failure cannot recur. Red is not used on new decorative surfaces.
@@ -71,9 +74,9 @@ unchanged, so the #251 failure cannot recur. Red is not used on new decorative s
 
 | Package | Licence | Role |
 | --- | --- | --- |
-| `@iconify-json/lucide` | ISC | functional tier and fallback |
-| `@iconify-json/ph` (Phosphor) | MIT | decorative tier |
-| `@iconify-json/noto` (Noto Emoji) | Apache-2.0 | department illustrations |
+| `@iconify-json/lucide` | ISC | functional tier, rating stars, and fallback |
+| `@iconify-json/ph` (Phosphor) | MIT | legacy decorative set |
+| `@iconify-json/noto` (Noto Emoji) | Apache-2.0 | decorative & status inline icons (#1239) and department illustrations |
 | `@iconify/utils` | MIT | generator helpers |
 
 All four are `devDependencies`, exact-pinned (the committed generated output depends on them), with the

@@ -66,7 +66,7 @@ function run(args: string[]): Promise<{ code: number; stdout: string; stderr: st
     execFile(
       "npx",
       ["tsx", "scripts/verify-icon-markup.ts", ...args],
-      { cwd: ROOT },
+      { cwd: ROOT, shell: process.platform === "win32" },
       (error, stdout, stderr) => {
         resolve({ code: error ? ((error as { code?: number }).code ?? 1) : 0, stdout, stderr });
       },

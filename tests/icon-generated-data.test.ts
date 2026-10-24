@@ -57,4 +57,29 @@ describe("generated icon data", () => {
       expect(data.plain.body).not.toContain("--icon-secondary");
     });
   });
+
+  describe("Noto Emoji generated data (#1239)", () => {
+    const notoEntries = Object.entries(ICON_REGISTRY).filter(([, e]) => e.provider === "noto");
+
+    it("every Noto Emoji entry has empty root attributes (no root fill/stroke clobbering)", () => {
+      expect(notoEntries.length).toBeGreaterThan(0);
+      for (const [name] of notoEntries) {
+        expect(ICON_DATA[name as keyof typeof ICON_DATA].root).toEqual({});
+      }
+    });
+
+    it("every internal SVG ID and reference in Noto Emoji bodies is namespaced with ni-<name>-", () => {
+      for (const [name] of notoEntries) {
+        const body = ICON_DATA[name as keyof typeof ICON_DATA].body;
+        // Should not have raw un-prefixed svgID
+        expect(body).not.toMatch(/\bid="svgID/);
+        expect(body).not.toMatch(/url\(#svgID/);
+        // If an id exists, it must start with ni-<name>-
+        const idMatches = [...body.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
+        for (const id of idMatches) {
+          expect(id).toMatch(new RegExp(`^ni-${name}-`));
+        }
+      }
+    });
+  });
 });
