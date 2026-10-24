@@ -157,7 +157,7 @@ describe("Navigation & Icon Improvements (#1251)", () => {
 
     const button = container.querySelector("button");
     expect(button).not.toBeNull();
-    expect(button?.getAttribute("title")).toContain("Contact & Support");
+    expect(button?.getAttribute("title")).toContain("Contact & Follow Hub");
 
     const svg = container.querySelector('svg[data-icon="users"]');
     expect(svg).not.toBeNull();
@@ -214,7 +214,7 @@ describe("Navigation & Icon Improvements (#1251)", () => {
       </CartDrawerShell>,
     );
     const cartButton = cartContainer.querySelector("button");
-    expect(cartButton?.getAttribute("title")).toBe("Shopping Basket (4 items) — View & Checkout");
+    expect(cartButton?.getAttribute("title")).toBe("My Cart");
     const cartSvg = cartContainer.querySelector('svg[data-icon="shopping-cart"]');
     expect(cartSvg?.getAttribute("width")).toBe("28");
 

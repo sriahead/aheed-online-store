@@ -31,7 +31,7 @@ describe("3D Icon Suite Expansion (#1248)", () => {
     expect(quickShop.category).toBe("commerce");
 
     const contactFollow = ICON_3D_DEFINITIONS["contact-follow"];
-    expect(contactFollow.name).toBe("3D Contact & Follow Hub");
+    expect(contactFollow.name).toBe("Contact & Follow Hub");
     expect(contactFollow.category).toBe("general");
   });
 
@@ -109,7 +109,7 @@ describe("3D Icon Suite Expansion (#1248)", () => {
 
     const svg = button?.querySelector("svg");
     expect(svg).not.toBeNull();
-    expect(svg?.querySelector("title")?.textContent).toBe("3D Contact & Follow Hub");
+    expect(svg?.querySelector("title")?.textContent).toBe("Contact & Follow Hub");
   });
 
   it("RewardsLauncher renders 3D rewards-coin icon when closed", () => {

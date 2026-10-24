@@ -381,7 +381,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   "contact-follow": {
     id: "contact-follow",
-    name: "3D Contact & Follow Hub",
+    name: "Contact & Follow Hub",
     category: "general",
     purpose: "Contact cluster, social channels, and customer support launcher",
     recommendedAnim: "pop",
