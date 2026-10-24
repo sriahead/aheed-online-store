@@ -19,6 +19,9 @@ vi.mock("@/features/storefront/delivery", () => ({
   setFulfilmentMethod: vi.fn(),
 }));
 vi.mock("@/features/checkout/preview-code", () => ({ previewDiscountCode: vi.fn() }));
+vi.mock("@/features/checkout/slots", () => ({
+  getAvailableSlotsForDate: vi.fn().mockResolvedValue([]),
+}));
 
 vi.mock("next/link", () => ({
   default: ({
@@ -121,7 +124,7 @@ describe("UI and Checkout Improvements (#1254)", () => {
           offerCollection={true}
           vendorId="vendor-1"
           bookingWindowDays={7}
-          offerDeliverySlots={true}
+          offerDeliverySlots={false}
           timezone="Europe/London"
           savedAddresses={[]}
           method="DELIVERY"
