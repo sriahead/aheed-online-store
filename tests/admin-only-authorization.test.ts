@@ -12,6 +12,9 @@ import {
   applyStorefrontTheme,
   saveStorefrontTheme,
   updateProductGridDensity,
+  requestWhatsappQrUpload,
+  attachWhatsappQr,
+  removeWhatsappQr,
 } from "@/features/admin/storefront";
 import {
   addDeliveryArea,
@@ -66,6 +69,19 @@ describe("Admin-only Server Actions", () => {
     const resGrid = await updateProductGridDensity({ error: null, saved: false }, gridForm);
     expect(resGrid.error).toMatch(/permission/i);
     expect(resGrid.saved).toBe(false);
+
+    // #1233 — WhatsApp community QR upload, attach, and remove actions are ADMIN-only.
+    const resQrReq = await requestWhatsappQrUpload(1024);
+    expect(resQrReq.ok).toBe(false);
+    if (!resQrReq.ok) expect(resQrReq.error).toMatch(/permission/i);
+
+    const resQrAttach = await attachWhatsappQr("vendors/vendor-1/whatsapp-qr-test.webp");
+    expect(resQrAttach.ok).toBe(false);
+    if (!resQrAttach.ok) expect(resQrAttach.error).toMatch(/permission/i);
+
+    const resQrRemove = await removeWhatsappQr();
+    expect(resQrRemove.ok).toBe(false);
+    if (!resQrRemove.ok) expect(resQrRemove.error).toMatch(/permission/i);
   });
 
   it("denies STAFF from executing Delivery Areas actions", async () => {
@@ -152,5 +168,17 @@ describe("Cross-vendor isolation on STAFF-delegated functionality (V3 / R5)", ()
 
     const synonymRes = await addSynonym({} as any, formData);
     expect(synonymRes.error).toMatch(/permission/i);
+  });
+
+  it("rejects cross-vendor storage keys in attachWhatsappQr even for an authenticated ADMIN (#1233)", async () => {
+    requireVendorRoleMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      vendorId: "vendor-a",
+      via: "ADMIN",
+    });
+
+    const res = await attachWhatsappQr("vendors/vendor-b/whatsapp-qr-12345.webp");
+    expect(res).toEqual({ ok: false, error: "Invalid upload key." });
   });
 });

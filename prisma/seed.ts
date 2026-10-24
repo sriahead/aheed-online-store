@@ -8,6 +8,10 @@ import { getStorage } from "@/lib/storage";
 import { assertNotDeployedDatabase } from "../scripts/lib/protected-hosts";
 import { AHEED_FOOTER_DEFAULTS, seedFooterDefaults } from "./seed-footer";
 import {
+  AHEED_WHATSAPP_COMMUNITY_DEFAULTS,
+  seedWhatsappCommunityDefaults,
+} from "./seed-whatsapp-community";
+import {
   seedFulfilmentSchedule,
   upsertVendorDomain,
   upsertVendorSatellites,
@@ -100,6 +104,15 @@ async function main() {
   await refreshProductImages(CATALOGUE);
   await upsertVendorSatellites(prisma, AHEED_VENDOR_ID, AHEED_SATELLITES);
   await seedFooterDefaults(prisma, AHEED_VENDOR_ID, AHEED_FOOTER_DEFAULTS);
+  await seedWhatsappCommunityDefaults(
+    prisma,
+    AHEED_VENDOR_ID,
+    AHEED_WHATSAPP_COMMUNITY_DEFAULTS,
+    async (key, body, contentType) => {
+      await getStorage().putObject(key, body, contentType);
+      putObjectCount += 1;
+    },
+  );
   // After the catalogue: bundles resolve their constituents by product slug.
   await seedBundles(AHEED_VENDOR_ID, AHEED_BUNDLES);
   await seedPriceTiers(AHEED_VENDOR_ID, AHEED_PRICE_TIERS);

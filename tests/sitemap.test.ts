@@ -31,7 +31,15 @@ vi.mock("@/lib/categories-service", () => ({
   getCategoryRepository: () => ({ listTree: () => mockCategories() }),
 }));
 
-const STATIC_PATHS = ["/", "/categories", "/bundles", "/help", "/privacy", "/terms"];
+const STATIC_PATHS = [
+  "/",
+  "/categories",
+  "/bundles",
+  "/whatsapp-offers",
+  "/help",
+  "/privacy",
+  "/terms",
+];
 
 async function run(): Promise<{ url: string }[]> {
   const sitemap = (await import("@/app/sitemap")).default;
@@ -66,9 +74,9 @@ describe("app/sitemap.ts (#955)", () => {
     expect(urls).toContain("https://aheed.example/products/item-b");
     expect(urls).toContain("https://aheed.example/categories/dept-one");
     expect(urls).toContain("https://aheed.example/categories/dept-two");
-    // One entry per record and no duplicates: 6 static + 2 categories + 2 products.
-    expect(urls).toHaveLength(10);
-    expect(new Set(urls).size).toBe(10);
+    // One entry per record and no duplicates: 7 static + 2 categories + 2 products.
+    expect(urls).toHaveLength(11);
+    expect(new Set(urls).size).toBe(11);
   });
 
   it("builds every URL on the host that asked, not a baked-in one (R12)", async () => {

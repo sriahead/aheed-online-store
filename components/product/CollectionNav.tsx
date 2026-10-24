@@ -30,6 +30,7 @@ import { Icon } from "@/components/icons/Icon";
 
 const COLLECTIONS = [
   { href: "/search", label: "All products", icon: "layers" },
+  { href: "/whatsapp-offers", label: "Offers & Deals", icon: "tag" },
   { href: "/search", label: "New Arrivals", icon: "sparkles" },
   { href: "/search?featured=1", label: "Featured Products", icon: "star" },
   { href: "/bundles", label: "Value Bundles", icon: "package-open" },

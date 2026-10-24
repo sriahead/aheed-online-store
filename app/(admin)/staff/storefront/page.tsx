@@ -55,6 +55,10 @@ export default async function StorefrontAdminPage() {
   // #1069 — the mark's 192px PNG, for the uploader's preview.
   const markKeys = branding.markStorageKey ? markFileKeys(branding.markStorageKey) : null;
   const markUrl = markKeys ? getStorage().publicUrl(markKeys.icon192) : null;
+  // #1233 — the WhatsApp community group QR code image URL, for the uploader's preview.
+  const whatsappQrUrl = config.whatsappCommunityQrKey
+    ? getStorage().publicUrl(config.whatsappCommunityQrKey)
+    : null;
 
   return (
     <PageContainer width="standard">
@@ -67,6 +71,7 @@ export default async function StorefrontAdminPage() {
         vendorThemes={vendorThemes}
         logoUrl={logoUrl}
         markUrl={markUrl}
+        whatsappQrUrl={whatsappQrUrl}
       />
 
       {/* #1055 — the storefront footer's contact, legal, hours and payment-badge settings. */}

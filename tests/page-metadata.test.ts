@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCategoryMetadata,
+  buildOffersMetadata,
   buildProductMetadata,
   truncateForDescription,
 } from "@/lib/page-metadata";
@@ -134,6 +135,39 @@ describe("buildCategoryMetadata (#996)", () => {
     for (const noun of ["grocery", "groceries", "electronics", "food"]) {
       expect(text).not.toContain(noun);
     }
+  });
+});
+
+describe("buildOffersMetadata (#1233)", () => {
+  const base = {
+    host: "aheed.example",
+    vendorName: "First Vendor",
+  };
+
+  it("titles the page Offers & Deals | <vendorName> (R12)", () => {
+    expect(buildOffersMetadata(base).title).toBe("Offers & Deals | First Vendor");
+  });
+
+  it("builds a bounded, vendor-neutral description (R12)", () => {
+    const result = buildOffersMetadata(base);
+
+    expect(result.description).toBe(
+      "Browse current offers, weekly deals, and special promotions at First Vendor.",
+    );
+    expect(result.description.length).toBeLessThanOrEqual(160);
+    for (const noun of ["grocery", "groceries", "electronics", "food"]) {
+      expect(result.description.toLowerCase()).not.toContain(noun);
+    }
+  });
+
+  it("emits an absolute canonical URL on the requesting host (R12)", () => {
+    expect(buildOffersMetadata(base).alternates.canonical).toBe(
+      "https://aheed.example/whatsapp-offers",
+    );
+    expect(
+      buildOffersMetadata({ host: "srimart.example", vendorName: "Second Vendor" }).alternates
+        .canonical,
+    ).toBe("https://srimart.example/whatsapp-offers");
   });
 });
 

@@ -74,6 +74,7 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(storefront)/categories/[slug]/page.tsx": { width: "wide", padY: "tight" },
   "app/(storefront)/search/page.tsx": { width: "wide", padY: "tight" },
   "app/(storefront)/bundles/page.tsx": { width: "wide", padY: "tight" },
+  "app/(storefront)/whatsapp-offers/page.tsx": { width: "wide", padY: "tight" },
   // --- storefront: standard
   "app/(storefront)/account/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/data/page.tsx": { width: "standard", padY: "default" },

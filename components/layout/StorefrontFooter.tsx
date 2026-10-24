@@ -241,6 +241,11 @@ export function StorefrontFooter({
           <Column title="Shop with us">
             <ul className="space-y-0.5">
               <li>
+                <Link href="/whatsapp-offers" className={LINK}>
+                  Offers &amp; deals
+                </Link>
+              </li>
+              <li>
                 <Link href="/help" className={LINK}>
                   Help guide
                 </Link>
