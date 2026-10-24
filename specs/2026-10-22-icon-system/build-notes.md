@@ -67,6 +67,12 @@ None.
 - **`npm run sdd:preclear` may skip the slice checks** (it inspects only spec files *added* on the branch); see
   the P2a note below. The checks were run by hand.
 
+### After merge (recorded for PR B's validator)
+
+PR A was squash-merged as **`1a85d26`** (PR #1232, `staging`, 2026-10-24); that is `<PR A merge>` for R64 and
+R65. The live gate `#1231` passed at `4dff9dae` (R34, R35, R37, see `docs/model-handoff.md`). PR B is cut from
+`staging` at or after `1a85d26`.
+
 ### Checks run in this context (not a validation)
 
 `npm run lint`, `npx tsc --noEmit`, `npm run icons:check` and `npm run build` exit 0; `format:check` failed on three
