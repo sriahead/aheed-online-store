@@ -166,9 +166,9 @@ unchanged. Changing a provider is an edit to one registry line followed by that 
 
 | Tier | Use | Source | Colour |
 | --- | --- | --- | --- |
-| `functional` | controls and navigation: chevrons, close, plus, search, check, trash | Lucide only (a compile error otherwise) | `currentColor` |
-| `status` | alerts and confirmations; never colour alone, the glyph shape differs too | Lucide or Phosphor | semantic tone |
-| `decorative` | the meaning is in adjacent text | Phosphor duotone for the two-hue glyphs (the landing trust strip, the Rewards panel); a decorative glyph that needs no second hue stays Lucide | tone, with a second vendor hue on a duotone icon |
+| `functional` | controls and navigation: chevrons, close, plus, search, check | Lucide only (a compile error otherwise) | `currentColor` |
+| `status` | alerts and confirmations; never colour alone, the glyph shape differs too | Noto Emoji (#1239; previously Lucide/Phosphor) | colourful multi-path SVG |
+| `decorative` | trust strip, rewards, features, nav, buttons, cards, empty states; rating `star` on Lucide | Noto Emoji (#1239; previously Phosphor duotone / Lucide) | colourful multi-path SVG with namespaced internal gradient IDs; rating `star` on Lucide (`fill="none"`) |
 
 A registry key is a generic noun (`trash`, `delivery`), never a provider id or a numeric suffix. An
 existing key never changes provider or tier: a decorative variant of an icon that is also used

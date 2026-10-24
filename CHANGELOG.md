@@ -8,6 +8,14 @@ every branch merges.
 
 ### Added
 
+- **Colourful Noto Emoji icons across storefront and admin surfaces** (issue `#1239`; `specs/2026-10-24-p1239-noto-emoji-icons/`, `specs/decisions/ADR-008-icon-system.md`).
+  - **79 decorative and status icons switched to Noto Emoji:** all feature, button, navigation, sidebar (`CollectionNav`), header (`Delivery` / `Click & Collect`, `Quick Shop`, `Shop`, `ViewSwitcher`), rewards (`RewardsLauncher`, `RewardsPanel`), trust strip, account (`AccountNav`), footer, status (`badge-check`, `circle-alert`, `circle-check`, `circle-x`, `shield-alert`, `triangle-alert`), and admin icons now render colourful Google Noto Emoji inline SVGs via `<Icon>`.
+  - **Compact functional UI chrome preserved on Lucide:** 30 functional navigation and control primitives (`chevron-*`, `arrow-*`, `x`, `plus`, `minus`, `check`, `loader-circle`, `search`, etc.) plus interactive 1-to-5 rating stars (`star`) remain on `provider: "lucide"` (`currentColor`).
+  - **Product card favourite heart:** `FavouriteButton.tsx` renders `heart-outline` (Noto `white-heart`) when unfavourited or signed-out, and `heart` (Noto `red-heart`) when favourited.
+  - **Header search button:** keeps the white outline `search` icon on the dark button for optimal contrast.
+  - **Internal SVG ID namespacing:** `scripts/lib/icon-build.ts` automatically namespaces internal SVG IDs and references (`id="ni-<name>-<id>"`, `url(#...)`, `href="#..."`, `xlink:href="#..."`) to prevent gradient and clipPath collisions across multiple inline icons.
+  - **Licence notice deduplication:** `buildLicences` deduplicates `@iconify-json/noto` (Apache-2.0) across registry and department illustrations in `public/third-party-icon-licenses.txt`.
+
 - **One icon component, one registry, build-time icon data: the foundation for colourful, vendor-themed icons** (issue `#1223`, Phase 1 of 5; `specs/2026-10-22-icon-system/`, `specs/decisions/ADR-008-icon-system.md`). No visual change in this phase.
   - **`components/icons/Icon.tsx`** renders any icon by semantic name from `components/icons/registry.ts`; components never import an icon library. Sizes are a token scale (12, 16, 20, 24, 32, 48), colour is a `tone` read from the per-vendor tokens `brandStyle()` already emits (no new token), and an icon is `aria-hidden` unless it has a `label`. Three tiers: `functional` (Lucide only, enforced by the type), `status`, `decorative`.
   - **Icon data is generated at build time** by `npm run icons:build` (`scripts/build-icons.ts`) from four exact-pinned `devDependencies` and committed; nothing is fetched at runtime, so the CSP is unchanged. `npm run icons:check` runs in `quality.yml` and fails on a stale file. The generator rejects unresolved ids, a duotone icon without its secondary layer, and any body containing script, `foreignObject`, `javascript:` or an `on*` handler. `public/third-party-icon-licenses.txt` carries the upstream licence text.

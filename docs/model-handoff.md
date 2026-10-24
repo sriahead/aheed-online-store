@@ -60,10 +60,10 @@ reconciliation. If overall project state did not materially change, leave this f
     check the claim against the repository before it goes in a PR or a doc.
   - **After merging `staging` into a branch, run `npm run db:generate` before `tsc`:** `#1233` added schema columns, and a stale
     generated client produced about 60 type errors in `lib/repositories/vendor.ts` that looked like a broken merge.
-  - **`#1233` (WhatsApp offers page, PRs #1235 and #1236) is on `staging` and will be promoted with `#1223`.** Its roadmap row
-    was written after the fact (see `specs/roadmap.md` 1.181.0) because its own Document pass had not landed; **nothing in the
-    repository records a validation result, a live check or staging `/api/health` for it**, and its issue is closed although it is
-    not in production. It adds two `VendorConfig` columns, so its migration must run on staging and production.
+  - **`#1233` (WhatsApp offers page) and P11 catalogue safety & onboarding were promoted to production via PR #1237 (`71fced7`, 2026-10-24).**
+    Promotion PR #1237 promoted `#1211`, `#1216`, `#1231`, `#1233`, and carried `#1223` Phases 1 to 2b to `main`.
+    `#1223` PR B (`b422864`, colour + department illustrations) was merged to `staging` in PR #1238.
+    Issue `#1239` switches all 79 decorative and status icons to colourful Noto Emoji across the site.
   - **PR A's live gate `#1231` passed at `4dff9dae`:** R34 (10, 10, 7 pages) and R35 (5, 2) identical to BASE `6a09b001`; R37 client
     -42,750 B, Worker -48.77 KiB.
   - **P2a's live comparison passed (`#1227`, closed): 34 of 34 pages identical to BASE `6a09b001` on both

@@ -48,40 +48,18 @@ const SURFACES: Array<{ file: string; icons: Array<[IconName, string | null]> }>
 
 const PHASE3_NAMES = [...new Set(SURFACES.flatMap((s) => s.icons.map(([name]) => name)))].sort();
 
-describe("Phase 3 registry names (R38)", () => {
-  it("the Phosphor entries are exactly the nine new decorative names", () => {
-    const phosphor = Object.entries(ICON_REGISTRY)
-      .filter(([, entry]) => entry.provider === "ph")
-      .map(([name]) => name)
-      .sort();
-    expect(phosphor).toEqual(
-      [
-        "rewards-bag",
-        "rewards-coins",
-        "rewards-discount",
-        "rewards-gift",
-        "rewards-invite",
-        "rewards-sparkles",
-        "trust-delivery",
-        "trust-payment",
-        "trust-updates",
-      ].sort(),
-    );
-    for (const name of phosphor) {
-      expect(ICON_REGISTRY[name as IconName].tier, name).toBe("decorative");
-    }
-  });
-
-  it("every name the surfaces use is one of them", () => {
+describe("Phase 3 and #1239 surface registry names", () => {
+  it("the surface entries are all decorative Noto Emoji icons", () => {
     for (const name of PHASE3_NAMES) {
-      expect(ICON_REGISTRY[name].provider, name).toBe("ph");
+      expect(ICON_REGISTRY[name].provider, name).toBe("noto");
+      expect(ICON_REGISTRY[name].tier, name).toBe("decorative");
     }
   });
 
-  it("the Lucide originals keep their provider and tier (a decorative variant gets a new key)", () => {
-    expect(ICON_REGISTRY.gift).toMatchObject({ provider: "lucide", tier: "decorative" });
-    expect(ICON_REGISTRY.truck).toMatchObject({ provider: "lucide", tier: "decorative" });
-    expect(ICON_REGISTRY.sparkles).toMatchObject({ provider: "lucide", tier: "decorative" });
+  it("the standalone originals also use Noto Emoji", () => {
+    expect(ICON_REGISTRY.gift).toMatchObject({ provider: "noto", tier: "decorative" });
+    expect(ICON_REGISTRY.truck).toMatchObject({ provider: "noto", tier: "decorative" });
+    expect(ICON_REGISTRY.sparkles).toMatchObject({ provider: "noto", tier: "decorative" });
   });
 });
 
@@ -105,17 +83,15 @@ describe.each(SURFACES)("$file", ({ file, icons }) => {
   });
 });
 
-describe("a two-hue glyph in markup (R39)", () => {
-  it.each(PHASE3_NAMES)("%s carries --icon-secondary and no colour literal", (name) => {
+describe("colourful Noto Emoji glyphs on surfaces (#1239)", () => {
+  it.each(PHASE3_NAMES)("%s renders colourful SVG without root fill/stroke clobbering", (name) => {
     const html = renderToStaticMarkup(<Icon name={name} tone="accent" />);
-    expect(html).toContain("--icon-secondary");
-    expect(html).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(html).toContain(`data-icon="${name}"`);
+    expect(html).toContain("<path");
   });
 
-  it("a tone sets the second hue from a vendor token, and none sets nothing", () => {
+  it("a tone sets the tone class on the rendered SVG", () => {
     const toned = renderToStaticMarkup(<Icon name="rewards-gift" tone="action" />);
-    expect(toned).toContain("--icon-secondary:var(--color-accent)");
-    const plain = renderToStaticMarkup(<Icon name="rewards-gift" />);
-    expect(plain).not.toContain("--icon-secondary:var(");
+    expect(toned).toContain("text-action");
   });
 });

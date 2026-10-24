@@ -31,7 +31,7 @@ import { Icon } from "@/components/icons/Icon";
 const COLLECTIONS = [
   { href: "/search", label: "All products", icon: "layers" },
   { href: "/search", label: "New Arrivals", icon: "sparkles" },
-  { href: "/search?featured=1", label: "Featured Products", icon: "star" },
+  { href: "/search?featured=1", label: "Featured Products", icon: "featured-star" },
   { href: "/bundles", label: "Value Bundles", icon: "package-open" },
 ] as const;
 

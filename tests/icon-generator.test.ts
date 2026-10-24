@@ -71,6 +71,25 @@ describe("scripts/build-icons.ts (real process)", () => {
     expect(result.stderr).toContain("bad");
   });
 
+  it("fails when a functional entry names a Noto icon (#1239)", () => {
+    const result = run([
+      "--registry",
+      fixture("tier-noto", { bad: { tier: "functional", provider: "noto", id: "red-apple" } }),
+    ]);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("bad");
+  });
+
+  it("namespaces internal SVG IDs and references for Noto Emoji (#1239)", async () => {
+    const { namespaceNotoSvgIds } = await import("../scripts/lib/icon-build");
+    const raw =
+      '<linearGradient id="svgIDa"><stop/></linearGradient><path fill="url(#svgIDa)" href="#svgIDb" xlink:href="#svgIDc"/>';
+    const namespaced = namespaceNotoSvgIds(raw, "sparkles");
+    expect(namespaced).toBe(
+      '<linearGradient id="ni-sparkles-svgIDa"><stop/></linearGradient><path fill="url(#ni-sparkles-svgIDa)" href="#ni-sparkles-svgIDb" xlink:href="#ni-sparkles-svgIDc"/>',
+    );
+  });
+
   describe("unsafe markup, through the real process (R10)", () => {
     /**
      * The real icon sets are safe, so the unsafe-markup rule can only be exercised by giving the real

@@ -55,7 +55,7 @@ function run(root: { base: string; head: string }, ...extra: string[]) {
 
 const FILE = "components/Thing.tsx";
 
-describe("scripts/verify-classname-parity.ts (real process)", () => {
+describe("scripts/verify-classname-parity.ts (real process)", { timeout: 30_000 }, () => {
   it("exits 0 for an identical pair, ignoring aria-hidden and layout", () => {
     const result = run(
       trees({

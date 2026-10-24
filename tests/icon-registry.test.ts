@@ -22,7 +22,7 @@ describe("icon registry", () => {
 
   it.each(entries)("%s has a valid shape", (_key, entry) => {
     expect(["functional", "status", "decorative"]).toContain(entry.tier);
-    expect(["lucide", "ph"]).toContain(entry.provider);
+    expect(["lucide", "ph", "noto"]).toContain(entry.provider);
     expect(entry.id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
   });
 
@@ -39,13 +39,21 @@ describe("icon registry", () => {
     }
   });
 
-  it("the type rejects a functional entry from Phosphor", () => {
-    // @ts-expect-error a functional entry must have provider "lucide"
-    const bad: import("@/components/icons/types").RegistryEntry = {
+  it("the type rejects a functional entry from Phosphor or Noto", () => {
+    // @ts-expect-error a functional entry must have provider "lucide", not "ph"
+    const badPh: import("@/components/icons/types").RegistryEntry = {
       tier: "functional",
       provider: "ph",
       id: "x",
     };
-    expect(bad.tier).toBe("functional");
+    expect(badPh.tier).toBe("functional");
+
+    // @ts-expect-error a functional entry must have provider "lucide", not "noto"
+    const badNoto: import("@/components/icons/types").RegistryEntry = {
+      tier: "functional",
+      provider: "noto",
+      id: "x",
+    };
+    expect(badNoto.tier).toBe("functional");
   });
 });
