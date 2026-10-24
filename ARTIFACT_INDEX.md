@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-23T21:16:25.169Z` · commit `2a1b98f9` · `257` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-24T02:36:54.335Z` · commit `1a85d26` · `258` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -250,6 +250,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Aheed Super Store test vendor — placeholder manifests, catalogue importer, onboarding runbook (plan)](specs/2026-10-22-aheedsuperstore-onboarding/plan.md) | spec | 1.0.0 | 2026-10-22 | draft | internal | Spec for #1216: manifests that carry marked owner-to-confirm placeholders and cannot yield a deploy route while any remain, a validate-before-write CSV/Excel importer (hidden, stock UNKNOWN), and the runbook, proven on a test vendor in the dev database. |
 | [Catalogue safety layer — restrictions, explicit stock states, bulk review, audit (plan)](specs/2026-10-22-catalogue-restrictions-stock-states/plan.md) | spec | 1.0.0 | 2026-10-22 | draft | internal | #1211, before #1201's import: product restrictions (hard block vs audited admin override, DB CHECK that restricted means hidden), explicit TRACKED/UNTRACKED/UNKNOWN stock states behind one purchasability function, bulk review on /staff/products, and an all-hidden import policy. |
 | [Colourful, vendor-themed, provider-agnostic icon system (plan)](specs/2026-10-22-icon-system/plan.md) | spec | 1.2.0 | 2026-10-23 | draft | internal | One Icon component over a semantic-name registry and build-time bundled Iconify data (Lucide functional, Phosphor duotone decorative, Noto department illustrations), themed per vendor from existing tokens. Phases 1 to 4a of issue 1223. |
+| [Offers & WhatsApp Promotions page (plan)](specs/2026-10-24-whatsapp-offers-page/plan.md) | spec | 1.0.0 | 2026-10-24 | approved | internal | Dedicated /whatsapp-offers storefront page (#1233) combining per-vendor WhatsApp community join banner + QR code on VendorConfig with genuine catalogue offers grouped by department, active bundles, live campaigns, and storefront navigation. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.43.0 | 2026-10-22 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
