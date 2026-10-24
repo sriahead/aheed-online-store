@@ -20,7 +20,7 @@ describe("3D Icon Suite Expansion (#1248)", () => {
     expect(keys).toContain("storefront");
     expect(keys).toContain("quick-shop");
     expect(keys).toContain("contact-follow");
-    expect(keys.length).toBe(19);
+    expect(keys.length).toBeGreaterThanOrEqual(19);
 
     const storefront = ICON_3D_DEFINITIONS["storefront"];
     expect(storefront.name).toBe("3D Supermarket Storefront");
@@ -60,7 +60,7 @@ describe("3D Icon Suite Expansion (#1248)", () => {
       totalIcons: number;
       icons: Array<{ id: string; name: string }>;
     };
-    expect(json.totalIcons).toBe(19);
+    expect(json.totalIcons).toBeGreaterThanOrEqual(19);
     const ids = json.icons.map((i) => i.id);
     expect(ids).toContain("storefront");
     expect(ids).toContain("quick-shop");

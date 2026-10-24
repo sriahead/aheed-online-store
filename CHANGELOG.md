@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Quick Shop mobile visibility, icon sizing, 3D user profile icon and navigation drill-down fixes** (issue `#1251`; `specs/2026-10-24-p1251-navigation-icon-fixes/`).
+  - **Quick Shop Main Navigation Placement:** Moved `ShoppingListLink` into `Main Navigation` directly alongside `Shop`, ensuring persistent, prominent visibility on mobile, tablet, and desktop viewports, while giving the mobile search bar full unobstructed row width.
+  - **Enlarged 3D Icons & Enhanced Tooltips:** Increased `FloatingContact` icon from 28px to 38px to properly fill the 48px floating button; increased header `Shop` and `Quick Shop` 3D icons from 20px to 24px; increased `CartDrawerShell` cart icon to 28px; increased `RewardsLauncher` coin icon to 24px. Enhanced `title` tooltips across all interactive navigation and floating triggers with descriptive copy.
+  - **3D User Profile Icon:** Added `user-profile` 3D icon to `lib/icons-3d/catalog.ts` (expanding catalog to 20 icons). Replaced the plain letter initial in `Header.tsx` with a dedicated 3D user-profile avatar icon for signed-in and guest users.
+  - **Reliable Drill-Down Navigation:** Added `prefetch={false}` on `Shop` and `Quick Shop` links to prevent Next.js App Router partial flight cache corruption when crossing route groups; added smooth scroll-to-top fallback when clicking active section.
+
 - **Expand 3D icon suite across Shop, Quick Shop, Contact and Follow, and Department navigation** (issue `#1248`; `specs/2026-10-24-p1248-3d-icons-expansion/`).
   - **3 New 3D Icons (`lib/icons-3d/catalog.ts`):** Added `storefront` (3D supermarket store with awning canopy), `quick-shop` (3D shopping bag with embossed list badge and dual metallic handles), and `contact-follow` (3D dual communication bubbles with friendly group silhouette). Catalog expanded from 16 to 19 icons.
   - **Header Shop & Quick Shop:** Upgraded the Shop navigation link in `components/layout/Header.tsx` to `<Icon3D name="storefront" size={20} />`, and the Quick Shop button in `components/layout/ShoppingListLink.tsx` to `<Icon3D name="quick-shop" size={20} />`.

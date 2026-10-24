@@ -102,7 +102,7 @@ export function RewardsLauncher({
           onClick={() => setOpen((prev) => !prev)}
           aria-expanded={open}
           aria-label={open ? "Close rewards panel" : "Open rewards and loyalty panel"}
-          title={open ? "Close rewards" : "Rewards"}
+          title={open ? "Close rewards panel" : "Rewards & Loyalty Points"}
           className={`flex items-center gap-2 rounded-full font-bold shadow-[0_8px_30px_rgb(0,0,0,0.25)] border border-white/20 transition-all duration-200 hover:scale-105 motion-reduce:hover:scale-100 ${
             open
               ? "h-12 w-12 justify-center bg-primary text-white hover:bg-primary/90"
@@ -113,7 +113,7 @@ export function RewardsLauncher({
             <Icon name="x" className="h-5 w-5" />
           ) : (
             <>
-              <Icon3D name="rewards-coin" size={20} className="-my-0.5" decorative />
+              <Icon3D name="rewards-coin" size={24} className="-my-0.5" decorative />
               <span className="hidden">
                 <Icon name="rewards-gift" />
               </span>

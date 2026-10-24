@@ -115,11 +115,16 @@ export function CartDrawerShell({
         type="button"
         onClick={() => setOpen(true)}
         aria-label={itemCount > 0 ? `Cart, ${itemCount} items` : "Cart, empty"}
+        title={
+          itemCount > 0
+            ? `Shopping Basket (${itemCount} ${itemCount === 1 ? "item" : "items"}) — View & Checkout`
+            : "Shopping Basket (empty)"
+        }
         aria-haspopup="dialog"
         aria-expanded={open}
         className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full bg-primary px-4 py-3 text-sm font-bold text-white shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-transform hover:scale-105 motion-reduce:hover:scale-100 hover:bg-primary/90 hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] sm:bottom-8 sm:right-8 group"
       >
-        <Icon3D name="cart-add" dataIcon="shopping-cart" size={24} className="-my-1" />
+        <Icon3D name="cart-add" dataIcon="shopping-cart" size={28} className="-my-1" />
         {itemCount > 0 && (
           <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-extrabold text-white shadow-sm">
             {itemCount}
