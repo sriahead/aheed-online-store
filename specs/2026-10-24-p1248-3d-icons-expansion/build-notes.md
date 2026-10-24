@@ -25,6 +25,15 @@ Issue `#1248`. Builds on `specs/2026-10-24-p1248-3d-icons-expansion/plan.md` and
    - 10 automated tests proving the new definitions, API manifest (19 icons), SVG delivery, header controls, floating contact button, rewards launcher, and department 3D rendering.
    - Full suite passes: 319 test files, 4,557 tests.
 
+## Decisions taken during the build
+
+1. **Decorative 3D Icons & Accessibility Safeguards:**
+   Added a `decorative` mode to `renderIconSvg` and `<Icon3D>`. When set to `true`, the SVG carries `aria-hidden="true"` and omits `<title>` and `<desc>` tags. This ensures that when 3D icons sit alongside visible button text (e.g., Quick Shop or Shop in the header), the accessible name remains clean and avoids redundant screen reader announcements.
+2. **Keyframe Performance & Zero-Junk Styles:**
+   Styles for floating/popping animations are omitted entirely when `animated={false}` or `animType="none"`, saving DOM payload and preventing inner SVG text leakage in test environments.
+3. **Graceful Fallback for Department Navigation:**
+   Department categories with corresponding 3D artwork (`fruit-veg`, `bakery`, etc.) render 3D icons, while categories without 3D definitions (`international`, `fish`, `sri-electronics`, etc.) gracefully render their static Noto illustrations, maintaining visual consistency across diverse vendor catalogs.
+
 ## Deviations from the spec
 
 None.
