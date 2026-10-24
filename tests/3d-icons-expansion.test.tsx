@@ -23,11 +23,11 @@ describe("3D Icon Suite Expansion (#1248)", () => {
     expect(keys.length).toBeGreaterThanOrEqual(19);
 
     const storefront = ICON_3D_DEFINITIONS["storefront"];
-    expect(storefront.name).toBe("3D Supermarket Storefront");
+    expect(storefront.name).toBe("Supermarket Storefront");
     expect(storefront.category).toBe("navigation");
 
     const quickShop = ICON_3D_DEFINITIONS["quick-shop"];
-    expect(quickShop.name).toBe("3D Quick Shop Bag");
+    expect(quickShop.name).toBe("Quick Shop");
     expect(quickShop.category).toBe("commerce");
 
     const contactFollow = ICON_3D_DEFINITIONS["contact-follow"];
@@ -170,6 +170,6 @@ describe("3D Icon Suite Expansion (#1248)", () => {
     const { container } = render(<DepartmentGlyph slug="halal-meat" use3D />);
     const svg = container.querySelector("svg");
     expect(svg).not.toBeNull();
-    expect(svg?.querySelector("title")?.textContent).toBe("3D Prime Halal Cut");
+    expect(svg?.querySelector("title")?.textContent).toBe("Prime Halal Cut");
   });
 });

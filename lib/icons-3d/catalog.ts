@@ -41,7 +41,7 @@ function buildDefs(sid: string, p: ResolvedPalette): string {
 export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
   "delivery-van": {
     id: "delivery-van",
-    name: "3D Delivery Van",
+    name: "Delivery Van",
     category: "commerce",
     purpose: "Local fast delivery across Milton Keynes and surrounding areas",
     recommendedAnim: "float",
@@ -86,7 +86,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   "postcode-search": {
     id: "postcode-search",
-    name: "3D Postcode Checker",
+    name: "Postcode Checker",
     category: "navigation",
     purpose: "Visual cue for postcode lookup, delivery radius, and store locator",
     recommendedAnim: "float",
@@ -105,11 +105,11 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   "cart-add": {
     id: "cart-add",
-    name: "3D Supermarket Trolley",
+    name: "My Cart",
     category: "commerce",
     purpose: "Supermarket trolley with 3D basket depth and add action highlight",
     recommendedAnim: "pop",
-    tags: ["cart", "trolley", "basket", "shop", "checkout", "add-to-cart"],
+    tags: ["cart", "my-cart", "trolley", "basket", "shop", "checkout", "add-to-cart"],
     render: (p, sid) =>
       buildDefs(sid, p) +
       `<g filter="url(#soft-${sid})">
@@ -127,7 +127,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   "secure-checkout": {
     id: "secure-checkout",
-    name: "3D Secure Checkout Shield",
+    name: "Secure Checkout Shield",
     category: "trust",
     purpose: "Stripe-backed encrypted payment and consumer trust badge",
     recommendedAnim: "float",
@@ -146,7 +146,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   "order-updates": {
     id: "order-updates",
-    name: "3D Notification Bell",
+    name: "Notification Bell",
     category: "trust",
     purpose: "Order progress, email notification, and dispatch tracking alert",
     recommendedAnim: "pop",
@@ -163,7 +163,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   "fruit-veg": {
     id: "fruit-veg",
-    name: "3D Crisp Farm Produce",
+    name: "Crisp Farm Produce",
     category: "departments",
     purpose: "Fresh fruit and vegetables department illustration",
     recommendedAnim: "float",
@@ -180,7 +180,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   "halal-meat": {
     id: "halal-meat",
-    name: "3D Prime Halal Cut",
+    name: "Prime Halal Cut",
     category: "departments",
     purpose: "Fresh butcher & halal meat department illustration",
     recommendedAnim: "pop",
@@ -197,7 +197,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   bakery: {
     id: "bakery",
-    name: "3D Golden Croissant",
+    name: "Golden Croissant",
     category: "departments",
     purpose: "Artisan bread and bakery department illustration",
     recommendedAnim: "float",
@@ -213,7 +213,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   "dairy-eggs": {
     id: "dairy-eggs",
-    name: "3D Dairy Milk & Egg",
+    name: "Dairy Milk & Egg",
     category: "departments",
     purpose: "Dairy, milk, cheese, and farm eggs department illustration",
     recommendedAnim: "float",
@@ -231,7 +231,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   beverages: {
     id: "beverages",
-    name: "3D Hot & Cold Beverages",
+    name: "Hot & Cold Beverages",
     category: "departments",
     purpose: "Tea, coffee, sodas, juices and refreshments illustration",
     recommendedAnim: "float",
@@ -247,7 +247,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   snacks: {
     id: "snacks",
-    name: "3D Choc-Chip Cookie",
+    name: "Choc-Chip Cookie",
     category: "departments",
     purpose: "Snacks, biscuits, crisps and sweet treats illustration",
     recommendedAnim: "pop",
@@ -266,7 +266,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   "frozen-foods": {
     id: "frozen-foods",
-    name: "3D Frost Snowflake",
+    name: "Frost Snowflake",
     category: "departments",
     purpose: "Frozen goods, ice creams, ready meals illustration",
     recommendedAnim: "float",
@@ -282,7 +282,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   household: {
     id: "household",
-    name: "3D Soap Pump Dispenser",
+    name: "Soap Pump Dispenser",
     category: "departments",
     purpose: "Household, cleaning and personal hygiene illustration",
     recommendedAnim: "float",
@@ -299,7 +299,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   "rewards-coin": {
     id: "rewards-coin",
-    name: "3D Gold Loyalty Coin",
+    name: "Gold Loyalty Coin",
     category: "rewards",
     purpose: "Customer reward points and loyalty tokens",
     recommendedAnim: "pop",
@@ -315,7 +315,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   "rewards-gift": {
     id: "rewards-gift",
-    name: "3D Wrapped Gift Box",
+    name: "Wrapped Gift Box",
     category: "rewards",
     purpose: "Promotional gift box with celebratory ribbon",
     recommendedAnim: "pop",
@@ -332,7 +332,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   storefront: {
     id: "storefront",
-    name: "3D Supermarket Storefront",
+    name: "Supermarket Storefront",
     category: "navigation",
     purpose: "Storefront and departments catalog navigation entry",
     recommendedAnim: "float",
@@ -357,7 +357,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   "quick-shop": {
     id: "quick-shop",
-    name: "3D Quick Shop Bag",
+    name: "Quick Shop",
     category: "commerce",
     purpose: "Quick shopping list hub and rapid multi-item ordering",
     recommendedAnim: "pop",
@@ -404,7 +404,7 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
 
   "user-profile": {
     id: "user-profile",
-    name: "3D User Profile",
+    name: "User Profile",
     category: "general",
     purpose: "Customer account, profile settings, and membership avatar",
     recommendedAnim: "pop",
