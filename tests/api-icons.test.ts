@@ -29,7 +29,7 @@ describe("3D Icon Core Engine", () => {
     expect(svg).toContain("<svg");
     expect(svg).toContain('viewBox="0 0 96 96"');
     expect(svg).toContain('role="img"');
-    expect(svg).toContain("<title>3D Delivery Van</title>");
+    expect(svg).toContain("<title>Delivery Van</title>");
     expect(svg).toContain("<desc>");
     expect(svg).toContain("prefers-reduced-motion: reduce");
     expect(svg).not.toContain("<script");

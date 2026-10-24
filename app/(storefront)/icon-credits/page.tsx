@@ -120,7 +120,7 @@ export default async function IconCreditsPage() {
   const platformName = PLATFORM_NAME || vendorName || "Aheed Platform";
 
   return (
-    <PageContainer width="standard" className="text-primary py-8 sm:py-12">
+    <PageContainer width="standard" className="text-primary">
       {/* Breadcrumb Navigation */}
       <nav aria-label="Breadcrumb" className="mb-6 text-xs text-primary-muted">
         <Link href="/" className="hover:underline">
