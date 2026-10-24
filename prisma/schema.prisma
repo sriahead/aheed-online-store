@@ -482,6 +482,13 @@ model VendorConfig {
   facebookUrl                 String? // full https profile URL
   instagramUrl                String? // full https profile URL
   whatsappNumber              String? // digits only, E.164 without the leading +, for wa.me
+  // #1233 — per-vendor WhatsApp community group invite URL and QR code object key for
+  // /whatsapp-offers. Same null-hides rule (#239): a vendor without a WhatsApp group shows
+  // neither the top community banner nor the bottom WhatsApp CTA on /whatsapp-offers.
+  // whatsappCommunityUrl is validated https://chat.whatsapp.com/<invite-code> on write;
+  // whatsappCommunityQrKey is a relative object-storage key (ADR-003).
+  whatsappCommunityUrl        String?
+  whatsappCommunityQrKey      String?
   // #1055 — storefront footer identity, same null rule as the social links above: a null HIDES
   // that footer element rather than falling back to a platform default (#239). Bracketed
   // placeholders such as "[YOUR EMAIL]" are legal values (approved defaults) and render as text;

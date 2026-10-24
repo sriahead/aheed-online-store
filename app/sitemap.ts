@@ -45,7 +45,15 @@ import { getCategoryRepository } from "@/lib/categories-service";
  * excluded because its content is a query parameter; `/shop-your-list` and `/feedback` are
  * defensible future additions and are left out of a first honest sitemap rather than guessed at.
  */
-const STATIC_PATHS = ["/", "/categories", "/bundles", "/help", "/privacy", "/terms"] as const;
+const STATIC_PATHS = [
+  "/",
+  "/categories",
+  "/bundles",
+  "/whatsapp-offers",
+  "/help",
+  "/privacy",
+  "/terms",
+] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Request-time: see the note above. Also what resolves the vendor, via getCurrentVendorIdOrNull.

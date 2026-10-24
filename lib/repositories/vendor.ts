@@ -80,6 +80,12 @@ export interface VendorProfile {
   instagramUrl: string | null;
   whatsappNumber: string | null;
   /**
+   * #1233 — per-vendor WhatsApp community group invite link and QR code object key for
+   * `/whatsapp-offers`. `null` hides the WhatsApp banner and bottom CTA (#239).
+   */
+  whatsappCommunityUrl: string | null;
+  whatsappCommunityQrKey: string | null;
+  /**
    * #905 — which label controls the staff product form offers (`lib/product-label-settings.ts`
    * turns these into `ProductLabelSettings`). They never gate the storefront. `false` for a vendor
    * with no config row, so an unseeded vendor is offered none rather than another vendor's set.
@@ -228,6 +234,8 @@ export async function fetchVendorProfile(
           facebookUrl: true,
           instagramUrl: true,
           whatsappNumber: true,
+          whatsappCommunityUrl: true,
+          whatsappCommunityQrKey: true,
           showHalalLabel: true,
           showFreshLabel: true,
           showOrganicLabel: true,
@@ -326,6 +334,8 @@ export async function fetchVendorProfile(
     facebookUrl: vendor?.config?.facebookUrl ?? null,
     instagramUrl: vendor?.config?.instagramUrl ?? null,
     whatsappNumber: vendor?.config?.whatsappNumber ?? null,
+    whatsappCommunityUrl: vendor?.config?.whatsappCommunityUrl ?? null,
+    whatsappCommunityQrKey: vendor?.config?.whatsappCommunityQrKey ?? null,
     showHalalLabel: vendor?.config?.showHalalLabel ?? false,
     showFreshLabel: vendor?.config?.showFreshLabel ?? false,
     showOrganicLabel: vendor?.config?.showOrganicLabel ?? false,
@@ -435,6 +445,21 @@ export async function updateVendorMarkKey(
 }
 
 /**
+ * #1233 — attach or clear a vendor's WhatsApp community group QR code object key on `VendorConfig`.
+ * A singular `update` with no nested writes, so it runs over the HTTP client (`getPrisma()`).
+ */
+export async function updateVendorWhatsappQrKey(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  whatsappCommunityQrKey: string | null,
+) {
+  return prisma.vendorConfig.update({
+    where: { vendorId },
+    data: { whatsappCommunityQrKey },
+  });
+}
+
+/**
  * The staff storefront form's payload (#411).
  *
  * The two config fields are `string | null` because `null` is meaningful here —
@@ -475,6 +500,7 @@ export interface VendorStorefrontConfigInput {
   facebookUrl?: string | null;
   instagramUrl?: string | null;
   whatsappNumber?: string | null;
+  whatsappCommunityUrl?: string | null;
   /**
    * #905 — the six product-label settings and the store description, owned by the
    * catalogue-settings form alone. Same optionality rule: every other form omits them, so saving
@@ -569,6 +595,7 @@ export async function updateVendorStorefrontConfig(
         facebookUrl: data.facebookUrl,
         instagramUrl: data.instagramUrl,
         whatsappNumber: data.whatsappNumber,
+        whatsappCommunityUrl: data.whatsappCommunityUrl,
         // #905 — same direct assignment: only the catalogue-settings form supplies these.
         showHalalLabel: data.showHalalLabel,
         showFreshLabel: data.showFreshLabel,

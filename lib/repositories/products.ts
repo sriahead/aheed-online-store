@@ -459,6 +459,16 @@ export interface ProductRepository {
    * in a single query. Keyed by category id.
    */
   categorySpotlights(categoryIds: readonly string[]): Promise<Map<string, CategorySpotlight>>;
+  /**
+   * #1233 — active products on offer (`originalPrice` markdown or active `priceTier`), carrying
+   * their `categoryId` so `/whatsapp-offers` can group them by top-level department in one query.
+   */
+  listOfferProducts(take: number): Promise<OfferProductWithCategory[]>;
+}
+
+export interface OfferProductWithCategory {
+  product: ProductSummary;
+  categoryId: string;
 }
 
 const productImageSelect = { storageKey: true, alt: true, isPrimary: true } as const;
@@ -859,6 +869,43 @@ export async function listActiveProductSlugs(
     select: { slug: true },
   });
   return rows.map((row) => row.slug);
+}
+
+/**
+ * #1233 — active products on offer (`originalPrice` not null or `priceTier` not null) in visible
+ * categories, alongside each product's `categoryId` so `/whatsapp-offers` can group them by the
+ * vendor's top-level departments in one query without altering `ProductSummary`'s shape.
+ */
+export async function listOfferProducts(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  take: number,
+): Promise<OfferProductWithCategory[]> {
+  const rows = await prisma.product.findMany({
+    where: {
+      vendorId,
+      isActive: true,
+      category: visibleCategoryWhere,
+      ...buildFilterWhere({ onOffer: true }),
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take,
+    select: {
+      ...productSummarySelect,
+      categoryId: true,
+    },
+  });
+
+  const tiers = await listActiveTiersForProducts(
+    prisma,
+    vendorId,
+    rows.map((r) => r.id),
+  );
+
+  return rows.map((row) => ({
+    product: toProductSummary(row, tiers.get(row.id) ?? null),
+    categoryId: row.categoryId,
+  }));
 }
 
 /**

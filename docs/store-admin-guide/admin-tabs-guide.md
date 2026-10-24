@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.18.0"
-updated: 2026-10-20
+version: "2.19.0"
+updated: 2026-10-24
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -104,7 +104,7 @@ footer shows.
 **What you can do:** Pick a ready-made colour theme, set all eight of your brand colours
 individually, upload your logo and your square mark, edit the homepage hero subtitle, the header banner's headline and notice, and
 the search box text shown in the header's search box, set your delivery fee, your free delivery threshold, your minimum delivery order and, if you offer Click & Collect, your collection minimum order, and enter your
-Facebook page address, your Instagram profile address and your WhatsApp number. In the **Product
+Facebook page address, your Instagram profile address, your WhatsApp number, your WhatsApp community group invite link, and your WhatsApp group QR code image. In the **Product
 labels & store description** form at the bottom of the page, choose which of the six product labels
 (Halal, Fresh, Organic, Vegetarian, Gluten free, HMC certification) your staff see on the product
 form, and write what your store sells. In the **Product grid layout** form below that, choose how
@@ -173,7 +173,14 @@ rule: it opens the help assistant while it is on, links straight to your WhatsAp
 and does not appear at all without a WhatsApp number.
 **Facebook page address** and **Instagram profile address** must both be full web addresses
 starting with `https://`. **WhatsApp number** is entered as digits only in international format —
-`447700900123`, not `+44 7700 900123`.
+`447700900123`, not `+44 7700 900123`. **WhatsApp community group link** must be a WhatsApp group
+invite link starting with `https://chat.whatsapp.com/` followed by the invite code; when set, your
+storefront's **Offers & Deals** page (`/whatsapp-offers`) shows a prominent **Join Our WhatsApp
+Group** banner at the top and a secondary join card at the bottom, and leaving it blank hides both
+cards so only your product offers appear. Below the social & contact form, **WhatsApp Group QR
+Code** lets you upload the official WhatsApp group QR code image (PNG, JPEG, or WebP) so desktop
+shoppers can scan to join from the banner on `/whatsapp-offers`, or press **Remove QR code** to
+clear it.
 **Product labels** decide what the product form offers your staff, nothing more. Switching a label
 off hides its tick box on the product form, but **every product keeps the value it already has** —
 saving a product afterwards does not clear it — and your storefront is unchanged: a label still
@@ -227,11 +234,14 @@ worth naming are entering `0` in the free
 delivery field when you meant to leave it blank, and setting a minimum order above what a typical
 basket comes to — that refuses shoppers at checkout rather than warning them earlier. Amounts are
 pounds and pence with at most two decimal places; anything else is refused with the field marked,
-and nothing is saved until every value is valid. For the social and contact fields, the three
+and nothing is saved until every value is valid. For the social and contact fields, the four
 mistakes worth naming are pasting a Facebook or Instagram address that starts with `http://`
-instead of `https://`, which is refused with the field marked; typing a WhatsApp number with a plus
+instead of `https://`, which is refused with the field marked; pasting a WhatsApp number or personal
+`wa.me` link into **WhatsApp community group link** instead of a `https://chat.whatsapp.com/...`
+group invite link, which is also refused; typing a WhatsApp number with a plus
 sign, spaces or dashes, which is also refused; and expecting a blank field to fall back to
-something — it does not, it removes the link. As with delivery, nothing in this form is saved until
+something — it does not, it removes the link (and clearing the WhatsApp community group link hides
+the WhatsApp banner on `/whatsapp-offers`, even if a QR code image is still uploaded). As with delivery, nothing in this form is saved until
 every value in it is valid.
 
 **What happens after changes are saved:** Applied across the shop immediately. An uploaded logo may
@@ -239,7 +249,8 @@ take a short time to appear everywhere because images are cached. New delivery r
 next basket calculated — a shopper already partway through checkout may still see the previous fee
 until their basket recalculates. Social and contact links appear inside the floating contact button
 on every storefront page as soon as they are saved; clearing a field removes that link from it just
-as quickly.
+as quickly. Saving or clearing the WhatsApp community group link or uploading/removing the WhatsApp
+group QR code updates your `/whatsapp-offers` page immediately.
 
 ### Marketing consent
 

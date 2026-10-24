@@ -99,3 +99,26 @@ export function buildCategoryMetadata({
     alternates: { canonical: `https://${host}/categories/${slug}` },
   };
 }
+
+/**
+ * Metadata for the storefront's dedicated Offers & WhatsApp Promotions page (`/whatsapp-offers`, #1233).
+ *
+ * `vendorName` is required (never defaulted — #729) and the description is vendor-neutral so any
+ * tenant on the platform gets an accurate `<title>`, `<meta name="description">`, and absolute
+ * canonical URL on its own host.
+ */
+export function buildOffersMetadata({
+  host,
+  vendorName,
+}: {
+  host: string;
+  vendorName: string;
+}): DetailPageMetadata {
+  return {
+    title: `Offers & Deals | ${vendorName}`,
+    description: truncateForDescription(
+      `Browse current offers, weekly deals, and special promotions at ${vendorName}.`,
+    ),
+    alternates: { canonical: `https://${host}/whatsapp-offers` },
+  };
+}

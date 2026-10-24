@@ -207,3 +207,43 @@ describe("fetchVendorProfile marketingConsentEnabled", () => {
     expect(profile.marketingConsentEnabled).toBe(false);
   });
 });
+
+/**
+ * #1233 — per-vendor WhatsApp community group invite URL and QR code object key.
+ * Both default to `null` when unset so a vendor without a WhatsApp group hides both elements (#239).
+ */
+describe("fetchVendorProfile whatsappCommunityUrl & whatsappCommunityQrKey (#1233)", () => {
+  it("returns the configured invite URL and QR key and selects both columns", async () => {
+    findUnique.mockResolvedValue({
+      name: "Aheed Food Centre",
+      branding: null,
+      config: {
+        whatsappCommunityUrl: "https://chat.whatsapp.com/FTgLVoelRw7262i0OvAIzS",
+        whatsappCommunityQrKey: "vendors/v1/whatsapp-qr.png",
+      },
+      deliveryAreas: [],
+      vendorExpressSchedules: [],
+    });
+
+    const profile = await fetchVendorProfile(prisma, "v1");
+    expect(profile.whatsappCommunityUrl).toBe("https://chat.whatsapp.com/FTgLVoelRw7262i0OvAIzS");
+    expect(profile.whatsappCommunityQrKey).toBe("vendors/v1/whatsapp-qr.png");
+    const select = findUnique.mock.calls[0][0].select.config.select;
+    expect(select.whatsappCommunityUrl).toBe(true);
+    expect(select.whatsappCommunityQrKey).toBe(true);
+  });
+
+  it("defaults both to null when there is no config row", async () => {
+    findUnique.mockResolvedValue({
+      name: "SriMart",
+      branding: null,
+      config: null,
+      deliveryAreas: [],
+      vendorExpressSchedules: [],
+    });
+
+    const profile = await fetchVendorProfile(prisma, "v1");
+    expect(profile.whatsappCommunityUrl).toBeNull();
+    expect(profile.whatsappCommunityQrKey).toBeNull();
+  });
+});

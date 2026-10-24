@@ -13,6 +13,7 @@ import {
   applyVendorTheme,
   updateVendorLogoKey,
   updateVendorMarkKey,
+  updateVendorWhatsappQrKey,
   replaceVendorFooterHours,
   saveVendorHoursOverride,
   deleteVendorHoursOverride,
@@ -119,6 +120,83 @@ export async function attachVendorLogo(key: string): Promise<ImageActionResult<v
   await updateVendorLogoKey(auth.vendorId, key);
 
   revalidatePath("/staff/storefront");
+  revalidatePath("/", "layout");
+  return { ok: true, value: undefined };
+}
+
+function buildVendorWhatsappQrKey(vendorId: string): string {
+  return `vendors/${vendorId}/whatsapp-qr-${crypto.randomUUID()}.webp`;
+}
+
+/**
+ * #1233 — presign a single WebP upload for the vendor's WhatsApp group QR code.
+ */
+export async function requestWhatsappQrUpload(
+  byteLength: number,
+): Promise<ImageActionResult<UploadTicket>> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  if (!Number.isInteger(byteLength) || byteLength <= 0 || byteLength > MAX_IMAGE_BYTES) {
+    return {
+      ok: false,
+      error: `Images must be under ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))} MB.`,
+    };
+  }
+
+  const key = buildVendorWhatsappQrKey(auth.vendorId);
+  const url = await getStorage().presignPut(key, IMAGE_CONTENT_TYPE, PRESIGN_TTL_SECONDS);
+
+  return { ok: true, value: { url, key } };
+}
+
+/**
+ * #1233 — verify and attach the uploaded WhatsApp group QR code key on `VendorConfig`.
+ */
+export async function attachWhatsappQr(key: string): Promise<ImageActionResult<void>> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  if (
+    typeof key !== "string" ||
+    !key.startsWith(`vendors/${auth.vendorId}/whatsapp-qr-`) ||
+    !key.endsWith(".webp")
+  ) {
+    return { ok: false, error: "Invalid upload key." };
+  }
+
+  const meta = await getStorage().headObject(key);
+  if (!meta) {
+    return { ok: false, error: "The uploaded file could not be verified." };
+  }
+  if (meta.contentType !== IMAGE_CONTENT_TYPE) {
+    await getStorage().deleteObject(key);
+    return { ok: false, error: "Images must be uploaded as WebP." };
+  }
+  if (meta.contentLength && meta.contentLength > MAX_IMAGE_BYTES) {
+    await getStorage().deleteObject(key);
+    return { ok: false, error: "The uploaded file exceeded the size limit." };
+  }
+
+  await updateVendorWhatsappQrKey(auth.vendorId, key);
+
+  revalidatePath("/staff/storefront");
+  revalidatePath("/whatsapp-offers");
+  revalidatePath("/", "layout");
+  return { ok: true, value: undefined };
+}
+
+/**
+ * #1233 — clear the vendor's WhatsApp group QR code key on `VendorConfig` (`null` hides the QR card).
+ */
+export async function removeWhatsappQr(): Promise<ImageActionResult<void>> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  await updateVendorWhatsappQrKey(auth.vendorId, null);
+
+  revalidatePath("/staff/storefront");
+  revalidatePath("/whatsapp-offers");
   revalidatePath("/", "layout");
   return { ok: true, value: undefined };
 }
@@ -383,6 +461,7 @@ export async function updateSocialContact(
     facebookUrl: String(formData.get("facebookUrl") ?? ""),
     instagramUrl: String(formData.get("instagramUrl") ?? ""),
     whatsappNumber: String(formData.get("whatsappNumber") ?? ""),
+    whatsappCommunityUrl: String(formData.get("whatsappCommunityUrl") ?? ""),
   });
 
   if (!parsed.ok) {
@@ -392,6 +471,7 @@ export async function updateSocialContact(
   await updateVendorStorefrontConfig(auth.vendorId, parsed.value);
 
   revalidatePath("/staff/storefront");
+  revalidatePath("/whatsapp-offers");
   revalidatePath("/", "layout");
   return { error: null, field: null, saved: true };
 }
