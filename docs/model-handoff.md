@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.142.0"
+version: "1.143.0"
 updated: 2026-10-24
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -60,8 +60,10 @@ reconciliation. If overall project state did not materially change, leave this f
     check the claim against the repository before it goes in a PR or a doc.
   - **After merging `staging` into a branch, run `npm run db:generate` before `tsc`:** `#1233` added schema columns, and a stale
     generated client produced about 60 type errors in `lib/repositories/vendor.ts` that looked like a broken merge.
-  - **`sdd:audit` reports one gap that is not this slice's:** `specs/2026-10-24-whatsapp-offers-page/` (`#1233`) has no roadmap
-    row. Its Document pass has not landed; whoever owns it writes the row.
+  - **`#1233` (WhatsApp offers page, PRs #1235 and #1236) is on `staging` and will be promoted with `#1223`.** Its roadmap row
+    was written after the fact (see `specs/roadmap.md` 1.181.0) because its own Document pass had not landed; **nothing in the
+    repository records a validation result, a live check or staging `/api/health` for it**, and its issue is closed although it is
+    not in production. It adds two `VendorConfig` columns, so its migration must run on staging and production.
   - **PR A's live gate `#1231` passed at `4dff9dae`:** R34 (10, 10, 7 pages) and R35 (5, 2) identical to BASE `6a09b001`; R37 client
     -42,750 B, Worker -48.77 KiB.
   - **P2a's live comparison passed (`#1227`, closed): 34 of 34 pages identical to BASE `6a09b001` on both
