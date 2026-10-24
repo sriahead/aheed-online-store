@@ -1,16 +1,129 @@
 # Colourful, vendor-themed, provider-agnostic icon system (build notes)
 
-**This file covers three PRs, newest first.** The **Phase 2b build (PR A)** section directly below is the one
-under validation now (branch `feature/icon-system-p2b`, requirements tagged **P2b** and **all**). The **Phase 2a
-build (PR 2)** section after it was merged to `staging` as `87b17928` (PR #1229), and everything after that, from
-"What changed and why", is the **Phase 1 build (PR 1)**, merged as `c439d3b` (PR #1225); both are kept for history.
-The spec covers PR A (P2b) and PR B (P3 and P4a, unbuilt). A validator of PR A treats P3 and P4a rows as not
-applicable.
+**This file covers four PRs, newest first.** The **Phase 3 and 4a build (PR B)** section directly below is the one
+under validation now (branch `feature/icon-system-pb`, cut from `staging` at `1a85d26`; requirements tagged **P3**,
+**P4a** and **all**, plus R63 to R67). Then **Phase 2b (PR A)**, merged as `1a85d26` (PR #1232); **Phase 2a**, merged as
+`87b17928` (PR #1229); and everything after those, from "What changed and why", is the **Phase 1 build (PR 1)**, merged as
+`c439d3b` (PR #1225). All earlier sections are kept for history. A validator of PR B treats R34, R35 and R56 to R60 as not
+applicable (R64 and R65 replace them there).
 
 Built in the main checkout on `feature/icon-system` (no sub-agent worktree), on Sonnet 5.5; `CLAUDE.md`
 assigns Build to Opus 5 and the owner started the stage without switching. Two spec-correction commits
 precede the implementation commit, each explained in its own message: `97273997` (R37's Worker metric)
 and `fe360784` (the icon count and R11, R26 to R28, R31, R33 to R36).
+
+## Phase 3 and 4a build (PR B)
+
+Built on `feature/icon-system-pb`, cut from `origin/staging` at `1a85d26` (PR A merged) with the PR A documentation
+commit `1ddb56c4`, on **Sonnet 5.5** (`CLAUDE.md` assigns Build to Opus 5; the owner started the stage without switching).
+Commits: `1ddb56c4` (PR A's documentation), `9a220042` (the build), then this stage's commit. **The owner decided on
+2026-10-24 that the footer link to the licence file is wanted** (it had been open since Phase 1), which became R67.
+
+### What changed and why (Phases 3 and 4a)
+
+- **Phase 3, colour.** Nine new decorative Phosphor duotone registry names (`trust-delivery`, `trust-payment`,
+  `trust-updates`, `rewards-gift`, `rewards-sparkles`, `rewards-coins`, `rewards-invite`, `rewards-discount`,
+  `rewards-bag`); no existing key changed provider or tier. Used on exactly the plan's surfaces: the landing trust strip
+  (three tiles) and the five Rewards files. Each light-surface glyph keeps the colour it had, now as `tone`
+  (`primary`/`accent`/`danger` on the trust tiles, `action`/`accent` in the accordions). No token and no `brandStyle()`
+  change: `Icon` already reads the four vendor tokens.
+- **Phase 4a, illustrations.** `components/icons/illustrations.ts` maps the 16 slugs to Noto Emoji ids and exposes
+  `departmentIllustration(slug)`. `scripts/lib/icon-build.ts` gained `buildIllustrations` and the generator writes
+  `public/illustrations/departments/<slug>.svg` (16 files, 70,416 bytes, each with explicit `width`/`height` as well as
+  `viewBox`). It applies R10's unsafe-markup rule and R43's size limits. `icons:check` now also flags a file in that
+  directory that the map does not name (`build-icons.ts` also deletes it on a normal run).
+- **Licence (R63).** `scripts/icon-licences/Apache-2.0.txt` is byte-identical to apache.org (11,358 bytes, compared with
+  `cmp`); the Noto Emoji section of `public/third-party-icon-licenses.txt` carries it and a note recording the 404, the
+  README quote and that no illustration is a flag. The generator emits it, so `icons:check` covers it.
+- **Components.** `DepartmentScroller` shows the illustration (`h-12 w-12` in the unchanged `h-16 w-16` tile), alternates
+  `bg-action-tint`/`bg-accent-tint` by index, loads the first six eagerly and the rest lazily. New
+  `components/layout/DepartmentGlyph.tsx` is the hero's corner glyph, used in both places `DepartmentHero` showed it.
+  `ImageWithFallback` gained an optional `decoding` prop. `StorefrontFooter` gained the "Icon credits" link (R67).
+- **Tests.** New: `tests/department-illustrations.test.tsx` (R42 to R47, R49), `tests/icon-tone-contrast.test.ts` (R41,
+  three palettes), `tests/icon-phase3-surfaces.test.tsx` (R38, R39 unit half). Updated: `department-scroller`,
+  `department-hero`, `storefront-footer`, `icon-lucide-manifest`.
+- **Docs.** `specs/design-system.md` 1.25.0 `## Icons` (R66: tier table, new "Department illustrations" subsection, the
+  dark-surface rule, the footer link). ADR-008 was already corrected in the previous stage and is unchanged. `CHANGELOG.md`.
+
+### Decisions taken during the build (Phases 3 and 4a)
+
+- **Dark surfaces keep their amber class and take no tone.** The Rewards launcher and panel, and each accordion's `isDark`
+  variant, are `text-amber-300`/`-400` on a dark primary. A tone would swap that for `text-accent` and a second hue chosen
+  against light surfaces, which R41 does not contrast-check against the dark primary. So `tone={isDark ? undefined : "action"}`
+  and the amber class stays; a duotone icon with no tone renders as Phosphor drew it (one colour, faint second layer).
+  This reads the plan's "Tone today kept" as "keep today's colour", because the plan's table does not map one-to-one onto
+  the code (it lists `Coins` as `accent` where the code uses `action`, and orders the Redeem tones differently).
+- **Decorative key names are by surface, not by glyph** (`trust-*`, `rewards-*`), so a second use of `gift` elsewhere keeps
+  its Lucide key (R38). The nine Lucide originals (`truck`, `credit-card`, `bell-ring`, `gift`, `sparkles`, `coins`,
+  `user-plus`, `percent`, `shopping-bag`) stay in the registry and some are now unused; R62's no-pruning rule is read as
+  still holding.
+- **The footer link sits in the bottom-left block beside "Powered by"**, not in the `Legal` nav (that column is
+  `lg:whitespace-nowrap` at a quarter width and cannot take a fifth item). It is a plain `<a>` (the target is a file, not a
+  route), `target="_blank" rel="noopener noreferrer"`, with the footer's `LINK` class for the 44 px tap height, and it is
+  never hidden by a null profile field (platform attribution, not vendor copy).
+- **`DepartmentGlyph` falls back through `categoryIconName`,** which is unchanged: every slug it maps is also an illustrated
+  slug, so it returns `tag` for any slug that has no illustration, and returns the old icon (`apple`, `croissant` ...) only if
+  an illustration file fails to load. `components/product/category-icon.ts` is therefore untouched, and its R29 test still holds.
+- **The hero loads its first panel's illustration eagerly and the rest lazily;** R47 only fixes the strip's rule.
+- **`ImageWithFallback` is the only `<img>`.** `tests/storefront-image-fallback.test.ts` allows a JSX `<img>` nowhere else, so
+  the illustrations go through it, with the glyph as `fallback`.
+- **Explicit `width`/`height` on every generated SVG.** `ImageWithFallback` reads a finished load with `naturalWidth` 0 as a
+  failure. Headless Chromium reports 150 for a viewBox-only SVG, so this would have worked there, but Firefox and Safari were not
+  testable here and have reported 0 for viewBox-only SVGs, which would have swapped every illustration for its fallback. The
+  attributes cost 400 bytes in total and remove the question.
+- **R49's scan skips `registry.ts` for the slug and Noto-id words.** The Phase 1 registry already holds Lucide semantic
+  names that coincide with Noto ids (`cookie`, `croissant`, `apple`, `milk`, `beef`, `coffee`); they are icon names, not
+  department art. Vendor names are still scanned in every file but `illustrations.ts`.
+- **`tests/icon-lucide-manifest.test.ts` was loosened,** not deleted: a registry key outside the BASE manifest must now be
+  provider `ph`, and the exact nine are pinned in `icon-phase3-surfaces.test.tsx`.
+- **The DepartmentHero and DepartmentScroller P1 assertions were replaced, not weakened:** `department-scroller.test.tsx`
+  keeps the unmapped branch (`tag`, `h-7 w-7 text-primary`, `aria-hidden`) and `department-hero.test.tsx` now asserts the
+  illustration `src` per panel (and `tag` for an unmapped slug) where it asserted "no `<img>`". The superseded assertions are
+  the ones the spec names (R22's third clause, R44, R45).
+
+### Deviations from the spec (Phases 3 and 4a)
+
+1. **R64's file list gained two files, found by running the real tests.** `components/layout/StorefrontFooter.tsx` (R67, the
+   owner's decision) and `components/ui/ImageWithFallback.tsx` (R47: `decoding` has no other route to an `<img>`). Both are
+   written into `requirements.md` ("Third amendment of 2026-10-24"), R64, `plan.md` and `validation.md` before any code.
+2. **R67 is new** (the footer link), with a `validation.md` row.
+3. **The generated SVGs carry `width` and `height` as well as `viewBox`.** R43 asks only that each contains a `viewBox`, which
+   still holds; this adds attributes the spec did not name, for the reason above.
+4. **R39 and R40, R50, R51, R65 and R37 are not decided here** (they need a running server or a BASE build); see the
+   known-shaky list and `#1234`.
+
+### Known-shaky areas (Phases 3 and 4a)
+
+- **Nothing about the rendered pages has been seen.** No screenshot was taken and no server was run. `#1234` is the merge gate:
+  R51, R65, the page halves of R39/R40/R50/R67, R28, R37 and the owner's screenshots.
+- **The "second hue" is only as visible as the vendor's palette.** The pairs are `primary`+`accent`, `action`+`accent`,
+  `accent`+`action`, `danger`+`accent`; on the dark Rewards surfaces there is no second hue at all (see Decisions). Whether the
+  trust strip looks good on both vendors is an owner judgment the unit tests cannot make.
+- **Illustration look.** Noto Emoji on a pale tint is glossy and consistent but unchecked on the dark hero panels, where the
+  corner glyph used to be a white outline (`text-white/85`). A coloured emoji on a coloured panel is the most likely thing to
+  look wrong.
+- **`ImageWithFallback` and SVG.** Fixed by the explicit dimensions, but only Chromium was run. If any browser still reports
+  `naturalWidth` 0, the symptom is every illustration silently replaced by its fallback glyph (and the pre-hydration
+  `complete && naturalWidth === 0` check is the code path). A validator in a real browser should confirm an `<img>` is on
+  screen, not the glyph.
+- **`DepartmentHero`'s first-panel `loading="eager"`** was my choice; no test asserts it for the hero.
+- **The one-byte tamper and the extra-file cases of R48 were run by hand** (stale and extra file both exit 1, naming the file);
+  neither is in `tests/icon-generator.test.ts`.
+- **The client bundle number (504,807 B) is from this machine's single build** and is not an R37 figure; R37 needs a fresh BASE
+  and HEAD pair back to back.
+- **`sdd:preclear` skips its slice checks** for a branch that only touches an existing slice folder (see the P2a note below);
+  the four-file, heading and CHANGELOG checks were run by hand.
+
+### Checks run in this context (not a validation)
+
+`npm run lint`, `npx tsc --noEmit`, `npm run format:check`, `npm run icons:check`, `npm run kms:validate`,
+`npm run kms:check-generated` (after the commit) and `npm run build` exit 0. `npx vitest run --maxWorkers=4`: first run **311 files, 4629 passed, 1 failed** (`tests/icon-lucide-manifest.test.ts`, fixed
+above); after that fix and the SVG-dimension change the whole suite was re-run: **312 files, 4630 passed, 3 skipped**.
+`kms:assemble:internal` and the `kms/site-internal` Next build exit 0. The R64
+command printed no offender, and `git diff 1a85d26 --stat -- lib/vendor-theme.ts design-system/tokens/tokens.css
+next.config.mjs` is empty.
+
+---
 
 ## Phase 2b build (PR A)
 

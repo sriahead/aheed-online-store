@@ -298,7 +298,9 @@ export function buildIllustrations(
       );
     }
     const viewBox = `${resolved.left ?? 0} ${resolved.top ?? 0} ${resolved.width ?? 128} ${resolved.height ?? 128}`;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">${resolved.body}</svg>\n`;
+    // Explicit width and height as well as the viewBox: `ImageWithFallback` reads a finished load with
+    // naturalWidth 0 as a failure, and a viewBox-only SVG can report 0 in some browsers.
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${resolved.width ?? 128}" height="${resolved.height ?? 128}" viewBox="${viewBox}">${resolved.body}</svg>\n`;
     const bytes = Buffer.byteLength(svg);
     if (bytes > MAX_ILLUSTRATION_BYTES) {
       throw new IconBuildError(

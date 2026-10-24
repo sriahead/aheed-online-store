@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.140.0"
+version: "1.141.0"
 updated: 2026-10-24
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,18 +39,18 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-24, `#1223` icon system: Phases 1, 2a and 2b are MERGED TO `staging`, NOT PROMOTED.** PR #1225
-  (`c439d3b`), PR #1229 (`87b1792`) and PR #1232 (`1a85d26`, **PR A**); `deploy-staging` succeeded for all
-  three. Spec `specs/2026-10-22-icon-system/`, decision `specs/decisions/ADR-008-icon-system.md`, roadmap rows in
-  `specs/roadmap.md` 1.179.0. **No file outside `components/icons/` imports an icon library any more**
-  (`tests/icon-imports.test.ts`, no allowlist). **Next is PR B: Phases 3 (colour) and 4a (department
-  illustrations) together** (R38 to R51, R63 to R66), on `feature/icon-system-pb`, cut from `staging` with this
-  documentation; it is the PR that should say `Closes #1223` (A, 2a and P1 used `Refs`). PR B changes markup on
-  purpose, so R34, R35 and R56 to R60 do not apply to it: it is bounded by R64 (an enumerated file list) and R65
-  (staff lists identical to PR A's merge, `1a85d26`, via a second worktree). `#1224` (AI-generated per-vendor
-  illustrations) is a later slice gated on an experiment. Owner answers still open: whether a footer link to
-  `/third-party-icon-licenses.txt` is wanted, and a lawyer's eye on Noto Emoji's licence (R63: its `info.json`
-  licence URL returns 404).
+- **2026-10-24, `#1223` icon system: Phases 1, 2a and 2b are MERGED TO `staging`, NOT PROMOTED; PR B (Phases 3 and 4a) is
+  BUILT, NOT VALIDATED AND NOT IN A PR.** PR #1225 (`c439d3b`), PR #1229 (`87b1792`) and PR #1232 (`1a85d26`, PR A);
+  `deploy-staging` succeeded for all three. Spec `specs/2026-10-22-icon-system/`, decision
+  `specs/decisions/ADR-008-icon-system.md`, roadmap rows in `specs/roadmap.md` 1.179.0. **PR B** is on
+  `feature/icon-system-pb` (build commit `9a220042`, then the build-notes commit), cut from `staging` at `1a85d26`; it is the PR
+  that should say `Closes #1223` (the earlier ones used `Refs`). It changes markup on purpose, so R34, R35 and R56 to R60 do not
+  apply to it; it is bounded by R64 (an enumerated file list) and R65 (staff lists identical to a build at `1a85d26`). **The
+  owner decided on 2026-10-24 that the footer "Icon credits" link is wanted** (R67), and R64 also gained
+  `components/ui/ImageWithFallback.tsx`. Live gate: **`#1234`** (R51, R65, page halves of R39/R40/R50/R67, R28, R37, owner
+  screenshots); a cloud session cannot run it. `#1224` (AI-generated per-vendor illustrations) is a later slice gated on an
+  experiment. Owner answer still open: a lawyer's eye on Noto Emoji's licence (R63: its `info.json` licence URL returns 404, the
+  canonical Apache 2.0 text is used).
   - **PR A's live gate `#1231` passed on the owner's machine at `4dff9dae`:** R34 (10, 10, 7 pages) and R35 (5, 2)
     identical to BASE `6a09b001`; R37 client -42,750 B, Worker -48.77 KiB. PR A's validation was not independent
     (the building Sonnet 5.5 context ran it). **Not read by any session:** staging `/api/health` at `1a85d26`
