@@ -101,7 +101,11 @@ export default async function OrderConfirmationPage({
         totalPence={order.totalPence}
       />
 
-      <OrderAddressCard address={order.address} />
+      <OrderAddressCard
+        address={order.address}
+        fulfilmentMethod={order.fulfilmentMethod}
+        orderNumber={order.orderNumber}
+      />
 
       <Link
         href={order.status === "CANCELLED" ? "/cart" : "/categories"}

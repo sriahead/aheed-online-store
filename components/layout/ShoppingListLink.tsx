@@ -25,7 +25,13 @@ export function ShoppingListLink({ className = "" }: { className?: string }) {
       className={`flex min-h-tap min-w-tap shrink-0 justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10 ${className}`}
       title="Quick Shop — Favourites, regulars, lists and bundles"
     >
-      <Icon3D name="quick-shop" size={24} className="-my-0.5" animated={false} decorative />
+      <Icon3D
+        name="quick-shop"
+        size={24}
+        className="-my-0.5 animate-icon-pop"
+        animated={false}
+        decorative
+      />
       <span className="hidden sm:inline whitespace-nowrap">Quick Shop</span>
     </Link>
   );
