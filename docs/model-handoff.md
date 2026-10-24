@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.143.0"
+version: "1.144.0"
 updated: 2026-10-24
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,31 +39,19 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-24, `#1223` icon system: ALL FIVE PHASES' BUILD SCOPE IS MERGED TO `staging`, NOT PROMOTED.** PR #1225 (`c439d3b`),
-  #1229 (`87b1792`), #1232 (`1a85d26`, PR A) and **#1238 (`b422864`, PR B: colour, 16 department illustrations, the footer "Icon
-  credits" link)**; `deploy-staging` succeeded for each. Spec `specs/2026-10-22-icon-system/`, decision
-  `specs/decisions/ADR-008-icon-system.md`, roadmap rows in `specs/roadmap.md` 1.180.0. **Promotion to `main` is the owner's
-  call and is its own `staging` into `main` PR** (merge commit, `--merge`): its body must carry `closes #1223` on its own line, since
-  no earlier PR used a closing keyword (`staging` is not the default branch) and `#1223` stays open until then. It will also carry
-  `#1233` (the WhatsApp offers page, merged to `staging` meanwhile). Phase 5 (removing `lucide-react`) is out of scope; the parity test
-  needs the package. `#1224` (AI-generated per-vendor illustrations) is a later slice gated on an experiment.
-  - **Owner items still open:** (1) **read staging `/api/health` at `b422864`** (no cloud session can: its proxy refuses the staging
-    hosts) and look at `/` and `/categories` on staging for both vendors, because PR B's live gate `#1234` passed at `25fb59f3`,
-    *before* `#1233`'s footer and `/categories` changes were merged in, so the combined markup was not seen live; (2) a lawyer's eye
-    on Noto Emoji's licence (R63: the set's own licence URL returns 404, the canonical Apache 2.0 text is used); (3) close `#1231` and
-    `#1234`, and move `#1223` to In Review on the board (a cloud session has no GraphQL).
-  - **PR B's live gate `#1234` passed on the owner's machine at `25fb59f3`:** R65, R50, R51, R40, R67/R28 and R37 (client -41,074 B,
-    Worker -41.47 KiB). PR B's validation was not independent (the building Sonnet 5.5 context ran it). Findings: R39 said "every
-    decorative name" but only the nine Phosphor names carry `--icon-secondary` (spec corrected), and a Windows-only test bug
-    (`path.split("/")`, fixed). **A local session's long prose report described files and values that do not exist in this repo**
-    (`StorefrontTrustStrip.tsx`, other slugs, a 40 px tile); only its measured output was used. When a local session reports on code,
-    check the claim against the repository before it goes in a PR or a doc.
-  - **After merging `staging` into a branch, run `npm run db:generate` before `tsc`:** `#1233` added schema columns, and a stale
-    generated client produced about 60 type errors in `lib/repositories/vendor.ts` that looked like a broken merge.
+- **2026-10-24, `#1223` icon system (all phases) & `#1239` colourful Noto Emoji icons: PROMOTED TO PRODUCTION (`main`, `bf4984a`).**
+  Promotion PR #1241 ("Promote colourful Noto Emoji icon system to production (#1223, #1239)", merge `bf4984a`, `staging -> main`, 2026-10-24)
+  promoted PR #1238 (`b422864`, `#1223` Phases 3 and 4a) and PR #1240 (`e703735`, `#1239`).
+  `deploy-production` (run `40090911053`) and `deploy-docs-internal` (run `40090910992`) completed **success**.
+  Production `/api/health` on both vendor endpoints (`aheedfoodcentre.nocaped.com` and `srimart.nocaped.com`) serves `bf4984a` with
+  `db.ok: true`, `reference.reachable: true`, two `sources` and `drift: false`.
+  Both issues `#1223` and `#1239` closed and moved to `Done` in Project #2.
+  - **Noto Emoji icon system (#1239, ADR-008 v1.2.0):** 79 decorative and status icons in `ICON_REGISTRY` use colourful Google Noto Emoji
+    (`@iconify-json/noto`, Apache-2.0). Automatic internal SVG ID namespacing (`id="ni-<semanticName>-<id>"`, `url(#...)`, `href="#..."`, `xlink:href="#..."`)
+    in `scripts/lib/icon-build.ts` eliminates DOM ID collisions across inline SVGs. Compact functional UI controls (`chevron-*`, `arrow-*`, `x`, `plus`, `minus`,
+    `check`, `loader-circle`, `search`, etc.) and the 1-to-5 rating `star` stay on Lucide (`currentColor`). Product card `FavouriteButton` renders
+    `heart-outline` when unfavourited/signed-out and `heart` when favourited. Header search button retains the white outline `search` on dark background for contrast.
   - **`#1233` (WhatsApp offers page) and P11 catalogue safety & onboarding were promoted to production via PR #1237 (`71fced7`, 2026-10-24).**
-    Promotion PR #1237 promoted `#1211`, `#1216`, `#1231`, `#1233`, and carried `#1223` Phases 1 to 2b to `main`.
-    `#1223` PR B (`b422864`, colour + department illustrations) was merged to `staging` in PR #1238.
-    Issue `#1239` switches all 79 decorative and status icons to colourful Noto Emoji across the site.
   - **PR A's live gate `#1231` passed at `4dff9dae`:** R34 (10, 10, 7 pages) and R35 (5, 2) identical to BASE `6a09b001`; R37 client
     -42,750 B, Worker -48.77 KiB.
   - **P2a's live comparison passed (`#1227`, closed): 34 of 34 pages identical to BASE `6a09b001` on both
