@@ -33,6 +33,31 @@ export const DEPARTMENT_ILLUSTRATIONS = {
 
 export type IllustratedDepartment = keyof typeof DEPARTMENT_ILLUSTRATIONS;
 
+/**
+ * 3D Department icons (#1245, #1248): slug -> 3D icon definition id.
+ * Maps department slugs to matching modern 3D vector icons in `lib/icons-3d/catalog.ts`.
+ */
+export const DEPARTMENT_3D_ICONS = {
+  "fruit-veg": "fruit-veg",
+  bakery: "bakery",
+  "dairy-eggs": "dairy-eggs",
+  "halal-meat": "halal-meat",
+  groceries: "cart-add",
+  beverages: "beverages",
+  snacks: "snacks",
+  "frozen-foods": "frozen-foods",
+  household: "household",
+} as const;
+
+export type Department3DIcon = (typeof DEPARTMENT_3D_ICONS)[keyof typeof DEPARTMENT_3D_ICONS];
+
+/** Returns the matching 3D icon name for a department slug, or null when none is mapped. */
+export function department3DIcon(slug: string): Department3DIcon | null {
+  return Object.hasOwn(DEPARTMENT_3D_ICONS, slug)
+    ? DEPARTMENT_3D_ICONS[slug as keyof typeof DEPARTMENT_3D_ICONS]
+    : null;
+}
+
 /** Public path of a department's illustration, or `null` when the slug has none. */
 export function departmentIllustration(slug: string): string | null {
   return Object.hasOwn(DEPARTMENT_ILLUSTRATIONS, slug)

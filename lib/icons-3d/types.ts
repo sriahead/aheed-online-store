@@ -37,6 +37,7 @@ export interface RenderOptions {
   size?: number;
   label?: string;
   dataIcon?: string;
+  decorative?: boolean;
 }
 
 export const ApiIconQuerySchema = z.object({

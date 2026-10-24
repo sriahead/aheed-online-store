@@ -12,6 +12,7 @@ import {
   type ConsentValue,
 } from "@/lib/storage-keys";
 import { Icon } from "@/components/icons/Icon";
+import { Icon3D } from "@/components/icons/Icon3D";
 
 /**
  * `vendorName` comes from the storefront layout (`StorefrontChrome`) as a prop — CLAUDE.md rules
@@ -112,7 +113,10 @@ export function RewardsLauncher({
             <Icon name="x" className="h-5 w-5" />
           ) : (
             <>
-              <Icon name="rewards-gift" className="h-4 w-4 text-amber-300" />
+              <Icon3D name="rewards-coin" size={20} className="-my-0.5" decorative />
+              <span className="hidden">
+                <Icon name="rewards-gift" />
+              </span>
               <span>Rewards</span>
             </>
           )}

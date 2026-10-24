@@ -16,6 +16,7 @@ export interface Icon3DProps {
   className?: string;
   style?: CSSProperties;
   dataIcon?: string;
+  decorative?: boolean;
 }
 
 /**
@@ -35,6 +36,7 @@ export function Icon3D({
   className = "",
   style,
   dataIcon,
+  decorative,
 }: Icon3DProps) {
   const definition = ICON_3D_DEFINITIONS[name];
   if (!definition) return null;
@@ -48,6 +50,7 @@ export function Icon3D({
     label: label ?? definition.name,
     idPrefix: `ui-${name}`,
     dataIcon,
+    decorative,
   });
 
   if (!rendered) return null;

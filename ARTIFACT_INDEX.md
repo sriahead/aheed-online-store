@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-24T14:31:06.839Z` · commit `74d0f54` · `262` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-24T15:40:27.649Z` · commit `f68e6ef` · `263` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -254,6 +254,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Colourful Noto Emoji icons across storefront and admin surfaces (plan)](specs/2026-10-24-p1239-noto-emoji-icons/plan.md) | spec | 1.0.0 | 2026-10-24 | draft | internal | Switch all 79 decorative and status icons in ICON_REGISTRY to colourful Noto Emoji SVGs with per-icon gradient ID namespacing, keeping 31 functional UI controls and rating stars on Lucide. Issue 1239. |
 | [Trolley icon for checkout and group icon for contact cluster (plan)](specs/2026-10-24-p1242-trolley-group-icons/plan.md) | spec | 1.0.0 | 2026-10-24 | draft | internal | Update floating checkout button to supermarket trolley (shopping-cart) and floating contact launcher to community group (users). Issue 1242. |
 | [Production-ready 3D Icon Studio API and modern 3D icon suite integration (plan)](specs/2026-10-24-p1245-3d-icon-system/plan.md) | spec | 1.0.0 | 2026-10-24 | draft | internal | Upgrade 3D Icon Studio into a production-ready API and generate modern 3D-styled icons across the website. Issue 1245. |
+| [Expand 3D icon suite across Shop, Quick Shop, Contact and Follow, and Department navigation (plan)](specs/2026-10-24-p1248-3d-icons-expansion/plan.md) | spec | 1.0.0 | 2026-10-24 | draft | internal | Expand 3D icon system (#1245) to cover header Shop, Quick Shop, floating Contact and Follow, and department categories. Issue 1248. |
 | [Offers & WhatsApp Promotions page (plan)](specs/2026-10-24-whatsapp-offers-page/plan.md) | spec | 1.0.0 | 2026-10-24 | approved | internal | Dedicated /whatsapp-offers storefront page (#1233) combining per-vendor WhatsApp community join banner + QR code on VendorConfig with genuine catalogue offers grouped by department, active bundles, live campaigns, and storefront navigation. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.43.0 | 2026-10-22 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { categoryIconName } from "@/components/product/category-icon";
 import { Icon } from "@/components/icons/Icon";
-import { departmentIllustration } from "@/components/icons/illustrations";
+import { Icon3D } from "@/components/icons/Icon3D";
+import { departmentIllustration, department3DIcon } from "@/components/icons/illustrations";
 import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { HorizontalScroller } from "@/components/layout/HorizontalScroller";
 import type { CategorySummary } from "@/lib/repositories/categories";
@@ -29,9 +30,11 @@ const EAGER_ILLUSTRATIONS = 6;
 export function DepartmentScroller({
   categories,
   activeSlug = null,
+  use3D = false,
 }: {
   categories: CategorySummary[];
   activeSlug?: string | null;
+  use3D?: boolean;
 }) {
   return (
     <HorizontalScroller
@@ -42,6 +45,7 @@ export function DepartmentScroller({
     >
       {categories.map((category, index) => {
         const isActive = category.slug === activeSlug;
+        const icon3D = use3D ? department3DIcon(category.slug) : null;
         const illustration = departmentIllustration(category.slug);
         const glyph = (
           <Icon name={categoryIconName(category.slug)} className="h-7 w-7 text-primary" />
@@ -60,7 +64,14 @@ export function DepartmentScroller({
                 isActive ? "ring-2 ring-action/60" : ""
               }`}
             >
-              {illustration ? (
+              {icon3D ? (
+                <Icon3D
+                  name={icon3D}
+                  size={46}
+                  className="transition duration-300 group-hover:scale-105 motion-reduce:group-hover:scale-100"
+                  decorative
+                />
+              ) : illustration ? (
                 <ImageWithFallback
                   src={illustration}
                   alt=""

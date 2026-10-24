@@ -329,4 +329,76 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
         <path d="M48 28c-6-8-14-6-12 0 4 6 12 0 12 0Zm0 0c6-8 14-6 12 0-4 6-12 0-12 0Z" fill="url(#gold-${sid})" stroke="#b45309" stroke-width="1.5"/>
       </g>`,
   },
+
+  storefront: {
+    id: "storefront",
+    name: "3D Supermarket Storefront",
+    category: "navigation",
+    purpose: "Storefront and departments catalog navigation entry",
+    recommendedAnim: "float",
+    tags: ["shop", "store", "storefront", "market", "groceries", "aisles"],
+    render: (p, sid) =>
+      buildDefs(sid, p) +
+      `<g filter="url(#soft-${sid})">
+        <rect x="18" y="32" width="60" height="46" rx="4" fill="url(#metal-${sid})" stroke="${p.outline}" stroke-width="1.5"/>
+        <rect x="22" y="36" width="52" height="40" rx="3" fill="#ffffff"/>
+        <path d="M14 32 L82 32 L78 46 L18 46 Z" fill="url(#body-${sid})" stroke="${p.accentDark}" stroke-width="1.5"/>
+        <path d="M22 32 L30 32 L28 46 L20 46 Z M38 32 L46 32 L44 46 L36 46 Z M54 32 L62 32 L60 46 L52 46 Z M70 32 L78 32 L76 46 L68 46 Z" fill="#ffffff" opacity="0.9"/>
+        <path d="M18 46 q4 5 8 0 q4 5 8 0 q4 5 8 0 q4 5 8 0 q4 5 8 0 q4 5 8 0 q4 5 8 0" fill="url(#body-${sid})" stroke="${p.accentDark}" stroke-width="1"/>
+        <rect x="30" y="20" width="36" height="12" rx="2" fill="url(#gold-${sid})" stroke="#b45309" stroke-width="1.2"/>
+        <rect x="34" y="24" width="28" height="4" rx="1" fill="#ffffff"/>
+        <rect x="34" y="48" width="28" height="28" rx="2" fill="url(#glass-${sid})" stroke="#64748b" stroke-width="1.5"/>
+        <line x1="48" y1="48" x2="48" y2="76" stroke="#64748b" stroke-width="1.5"/>
+        <circle cx="45" cy="62" r="1.8" fill="url(#gold-${sid})"/>
+        <circle cx="51" cy="62" r="1.8" fill="url(#gold-${sid})"/>
+        <path d="M37 52 L45 52 L39 68 L35 68 Z" fill="#ffffff" opacity="0.45"/>
+      </g>`,
+  },
+
+  "quick-shop": {
+    id: "quick-shop",
+    name: "3D Quick Shop Bag",
+    category: "commerce",
+    purpose: "Quick shopping list hub and rapid multi-item ordering",
+    recommendedAnim: "pop",
+    tags: ["quick-shop", "bag", "list", "smart-lists", "shopping", "lightning"],
+    render: (p, sid) =>
+      buildDefs(sid, p) +
+      `<g filter="url(#soft-${sid})">
+        <path d="M36 34 C36 17 60 17 60 34" fill="none" stroke="url(#metal-${sid})" stroke-width="4.5" stroke-linecap="round"/>
+        <path d="M36 34 C36 19 60 19 60 34" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+        <path d="M25 34 L71 34 L67 76 L29 76 Z" fill="url(#body-${sid})" stroke="${p.accentDark}" stroke-width="1.8"/>
+        <path d="M29 34 L67 34" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+        <rect x="36" y="44" width="24" height="26" rx="3" fill="#ffffff" stroke="${p.outline}" stroke-width="1.2"/>
+        <rect x="42" y="40" width="12" height="5" rx="1.5" fill="url(#metal-${sid})" stroke="${p.outline}" stroke-width="1"/>
+        <line x1="40" y1="50" x2="56" y2="50" stroke="${p.accent}" stroke-width="2" stroke-linecap="round"/>
+        <line x1="40" y1="56" x2="54" y2="56" stroke="${p.accent}" stroke-width="2" stroke-linecap="round"/>
+        <line x1="40" y1="62" x2="50" y2="62" stroke="${p.accent}" stroke-width="2" stroke-linecap="round"/>
+        <path d="m24 44 2.5-5 2.5 5 5 2.5-5 2.5-2.5 5-2.5-5-5-2.5Z" fill="url(#gold-${sid})" stroke="#b45309" stroke-width="0.8"/>
+        <path d="m70 54 2-3.5 2 3.5 3.5 2-3.5 2-2 3.5-2-3.5-3.5-2Z" fill="url(#gold-${sid})" stroke="#b45309" stroke-width="0.8"/>
+      </g>`,
+  },
+
+  "contact-follow": {
+    id: "contact-follow",
+    name: "3D Contact & Follow Hub",
+    category: "general",
+    purpose: "Contact cluster, social channels, and customer support launcher",
+    recommendedAnim: "pop",
+    tags: ["contact", "follow", "chat", "support", "community", "social"],
+    render: (p, sid) =>
+      buildDefs(sid, p) +
+      `<g filter="url(#soft-${sid})">
+        <circle cx="58" cy="38" r="20" fill="url(#gold-${sid})" stroke="#b45309" stroke-width="1.5"/>
+        <path d="M68 50 L75 58 L62 54 Z" fill="url(#gold-${sid})" stroke="#b45309" stroke-width="1.2"/>
+        <circle cx="58" cy="38" r="14" fill="#ffffff" opacity="0.35"/>
+        <circle cx="52" cy="38" r="2.2" fill="#78350f"/>
+        <circle cx="58" cy="38" r="2.2" fill="#78350f"/>
+        <circle cx="64" cy="38" r="2.2" fill="#78350f"/>
+        <circle cx="40" cy="52" r="24" fill="url(#body-${sid})" stroke="${p.accentDark}" stroke-width="1.8"/>
+        <path d="M26 68 L18 78 L34 72 Z" fill="url(#body-${sid})" stroke="${p.accentDark}" stroke-width="1.5"/>
+        <circle cx="40" cy="44" r="7" fill="#ffffff"/>
+        <path d="M27 64 c0-7 6-11 13-11 s13 4 13 11 Z" fill="#ffffff"/>
+      </g>`,
+  },
 };

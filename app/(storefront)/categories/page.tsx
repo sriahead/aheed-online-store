@@ -61,7 +61,7 @@ export default async function CategoriesPage() {
     <PageContainer width="wide" padY="tight" className="space-y-8">
       <section className="bg-white rounded-2xl border border-black/10 p-5 shadow-sm">
         <h1 className="mb-4 text-xl font-bold text-primary">Shop by department</h1>
-        <DepartmentScroller categories={categories} />
+        <DepartmentScroller categories={categories} use3D />
       </section>
 
       <WhatsappCommunityBanner
