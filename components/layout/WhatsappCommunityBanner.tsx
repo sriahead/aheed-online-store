@@ -13,6 +13,9 @@ export interface WhatsappCommunityBannerProps {
  * Per-vendor WhatsApp community promotions banner (#1233).
  *
  * Rendered on `/categories` (when the shopper clicks "Shop") and `/whatsapp-offers`.
+ * Uses semantic brand tokens (`bg-primary`, `bg-action`, `hover:bg-action-hover`,
+ * `text-primary`, `text-primary-muted`) so it automatically follows the vendor's
+ * active theme (`brandStyle()`).
  * Follows the #239 null-hides rule: when `whatsappCommunityUrl` is null, nothing renders.
  */
 export function WhatsappCommunityBanner({
@@ -28,11 +31,13 @@ export function WhatsappCommunityBanner({
   return (
     <section
       aria-labelledby="whatsapp-promo-heading"
-      className="overflow-hidden rounded-3xl border border-emerald-900/15 bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-900 p-6 text-white shadow-lg sm:p-8"
+      className="relative overflow-hidden rounded-3xl border border-black/10 bg-primary p-6 text-white shadow-xl sm:p-8"
     >
-      <div className="flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-center">
+      <div className="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
+
+      <div className="relative z-10 flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-center">
         <div className="max-w-2xl space-y-4">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-emerald-100">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/20 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-sm">
             <Icon name="sparkles" className="h-3.5 w-3.5 text-amber-300" />
             <span>WhatsApp Community</span>
           </div>
@@ -44,7 +49,7 @@ export function WhatsappCommunityBanner({
             Stay Updated with Our Latest Offers!
           </HeadingTag>
 
-          <p className="text-sm leading-relaxed text-emerald-50/90 sm:text-base">
+          <p className="text-sm leading-relaxed text-white/80 sm:text-base">
             Join the {vendorName} WhatsApp group to discover special promotions, exclusive deals,
             fresh arrivals, and exciting savings on your favourite products.
           </p>
@@ -54,14 +59,14 @@ export function WhatsappCommunityBanner({
               href={whatsappCommunityUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-tap items-center justify-center gap-2.5 rounded-2xl bg-[#25D366] px-6 py-3.5 text-base font-extrabold text-emerald-950 shadow-md transition hover:bg-[#20bd5a]"
+              className="inline-flex min-h-tap items-center justify-center gap-2.5 rounded-2xl bg-action px-6 py-3.5 text-base font-extrabold text-white shadow-md transition hover:bg-action-hover"
             >
               <WhatsappGlyph className="h-5 w-5" />
               <span>Join Our WhatsApp Group</span>
               <Icon name="external-link" className="h-4 w-4 opacity-80" />
             </a>
 
-            <p className="text-xs font-medium text-emerald-100/90">Free to join. Leave anytime.</p>
+            <p className="text-xs font-medium text-white/80">Free to join. Leave anytime.</p>
           </div>
         </div>
 

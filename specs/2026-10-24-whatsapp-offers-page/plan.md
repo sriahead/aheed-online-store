@@ -29,7 +29,7 @@ Instead, `VendorConfig` (`prisma/schema.prisma`) gains two nullable columns:
 
 Following the `#239` null-hides rule:
 
-- When `profile.whatsappCommunityUrl` is non-null, `<WhatsappCommunityBanner>` (`components/layout/WhatsappCommunityBanner.tsx`) renders the WhatsApp community banner (heading `"Stay Updated with Our Latest Offers!"`, vendor-neutral supporting copy naming `profile.name`, green `"Join Our WhatsApp Group"` button with the WhatsApp SVG icon, `"Free to join. Leave anytime."` reassurance, and the QR code card when `profile.whatsappCommunityQrKey` is also set) on both `/categories` (when clicking `"Shop"`) and `/whatsapp-offers`.
+- When `profile.whatsappCommunityUrl` is non-null, `<WhatsappCommunityBanner>` (`components/layout/WhatsappCommunityBanner.tsx`) renders the WhatsApp community banner using the vendor's semantic theme tokens (`bg-primary`, `bg-action`, `hover:bg-action-hover`, `text-primary`, `text-primary-muted` — heading `"Stay Updated with Our Latest Offers!"`, vendor-neutral supporting copy naming `profile.name`, `"Join Our WhatsApp Group"` button with the WhatsApp SVG icon, `"Free to join. Leave anytime."` reassurance, and the QR code card when `profile.whatsappCommunityQrKey` is also set) on both `/categories` (when clicking `"Shop"`) and `/whatsapp-offers`.
 - When `profile.whatsappCommunityUrl` is `null` (for example on SriMart), the WhatsApp community banner is omitted (`#239`).
 
 ### 2. Genuine offers grouped by the vendor's real departments

@@ -170,7 +170,7 @@ export function WhatsappOffersView({
                       href={whatsappCommunityUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex min-h-tap items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-5 py-2.5 text-sm font-bold text-emerald-950 shadow-sm transition hover:bg-[#20bd5a]"
+                      className="inline-flex min-h-tap items-center justify-center gap-2 rounded-2xl bg-action px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-action-hover"
                     >
                       <WhatsappGlyph className="h-4 w-4" />
                       <span>Join Our WhatsApp Group</span>
@@ -224,7 +224,7 @@ export function WhatsappOffersView({
                             <div className="mt-4 pt-2">
                               <Link
                                 href={href}
-                                className="inline-flex min-h-tap items-center gap-1.5 rounded-xl bg-action px-4 py-2 text-xs font-bold text-white transition hover:bg-action/90 lg:min-h-0"
+                                className="inline-flex min-h-tap items-center gap-1.5 rounded-xl bg-action px-4 py-2 text-xs font-bold text-white transition hover:bg-action-hover lg:min-h-0"
                               >
                                 <span>Shop Now</span>
                                 <Icon name="arrow-right" className="h-3.5 w-3.5" />
