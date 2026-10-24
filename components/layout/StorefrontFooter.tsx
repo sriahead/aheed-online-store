@@ -287,6 +287,17 @@ export function StorefrontFooter({
               ))}
             </p>
             {platformName && <p>Powered by {platformName}</p>}
+            {/* #1223 R67 — attribution for the icon sets, a static file the generator writes. Platform
+                attribution rather than vendor copy, so unlike the elements above it is never hidden
+                (#239 is about vendor fields). A plain anchor: the target is a file, not a route. */}
+            <a
+              href="/third-party-icon-licenses.txt"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={LINK}
+            >
+              Icon credits
+            </a>
           </div>
 
           <nav

@@ -4,12 +4,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 
 /**
- * Proves R22's third clause (#1223): a CLIENT component (`DepartmentScroller` is `"use client"`) renders
- * `Icon`. `Icon` itself is a plain function, so the same markup comes out on both sides of the boundary;
- * this is the test that shows it from inside a client component.
- *
- * Also the behaviour-preservation check for this file's own migration: the tile keeps the classes it had
- * when it rendered `lucide-react` directly (`h-7 w-7 text-primary`), and the icon stays `aria-hidden`.
+ * #1223. A CLIENT component (`DepartmentScroller` is `"use client"`) renders `Icon` for a department that
+ * has no illustration. Phase 4a (R44, R45) supersedes the Phase 1 assertions that every tile carried an
+ * inline `svg` at `h-7 w-7`: a department with an illustration now shows a static `<img>`; the full
+ * behaviour is in `tests/department-illustrations.test.tsx`. What stays here is the unmapped branch.
  */
 
 afterEach(cleanup);
@@ -19,27 +17,21 @@ const CATEGORIES = [
   { id: "2", slug: "chargers", name: "Chargers" },
 ];
 
-describe("DepartmentScroller renders Icon from a client component (R22)", () => {
-  it("renders one svg per department, named by categoryIconName", () => {
-    const { container } = render(<DepartmentScroller categories={CATEGORIES} />);
-    const icons = [...container.querySelectorAll("svg[data-icon]")].filter((svg) =>
-      svg.closest("a[href^='/categories/']"),
-    );
-    expect(icons.map((svg) => svg.getAttribute("data-icon"))).toEqual(["apple", "tag"]);
-  });
-
-  it("an unmapped slug gets the neutral tag glyph, not a grocery icon (#729)", () => {
+describe("DepartmentScroller renders Icon from a client component (R22, R44)", () => {
+  it("renders the neutral tag glyph for a department with no illustration, not a grocery icon (#729)", () => {
     const { container } = render(<DepartmentScroller categories={[CATEGORIES[1]]} />);
-    expect(
-      container.querySelector("a[href='/categories/chargers'] svg")?.getAttribute("data-icon"),
-    ).toBe("tag");
-  });
-
-  it("keeps the classes it had before the migration, and stays aria-hidden", () => {
-    const { container } = render(<DepartmentScroller categories={[CATEGORIES[0]]} />);
-    const svg = container.querySelector("a[href='/categories/fruit-veg'] svg")!;
+    const svg = container.querySelector("a[href='/categories/chargers'] svg")!;
+    expect(svg.getAttribute("data-icon")).toBe("tag");
     expect(svg.getAttribute("class")).toBe("h-7 w-7 text-primary");
     expect(svg.getAttribute("aria-hidden")).toBe("true");
     expect(svg.getAttribute("width")).toBe("24");
+  });
+
+  it("renders one tile per department, each either an illustration or an svg", () => {
+    const { container } = render(<DepartmentScroller categories={CATEGORIES} />);
+    const tiles = [...container.querySelectorAll("a[href^='/categories/']")];
+    expect(tiles).toHaveLength(2);
+    expect(tiles[0].querySelector("img")).not.toBeNull();
+    expect(tiles[1].querySelector("svg[data-icon]")).not.toBeNull();
   });
 });

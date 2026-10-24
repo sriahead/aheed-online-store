@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
-import { categoryIconName } from "@/components/product/category-icon";
 import { formatPrice } from "@/components/product/format-price";
 import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { composePublicUrl } from "@/lib/storage";
 import { Icon } from "@/components/icons/Icon";
+import { DepartmentGlyph } from "@/components/layout/DepartmentGlyph";
 
 /**
  * P8.5b (#346) — the homepage's department hero.
@@ -21,9 +21,9 @@ import { Icon } from "@/components/icons/Icon";
  *
  * IMAGE-OPTIONAL BY DESIGN. `Category` has no image field, and #279 records
  * that no vendor artwork exists at all — so a photographic hero could not ship
- * today. Each panel falls back to `categoryIconName()`'s existing slug-to-icon
- * mapping, which already handles unknown slugs. `imageKey` is accepted now so
- * that adding `Category.imageKey` later needs no change to this component.
+ * today. Each panel shows `DepartmentGlyph` (#1223): the department's static
+ * illustration, or a neutral glyph for a slug without one. `imageKey` is accepted
+ * now so that adding `Category.imageKey` later needs no change to this component.
  *
  * ACCESSIBILITY (WCAG SC 2.2.2) IS CARRIED FROM PromoCarousel, NOT FROM THE
  * PROTOTYPE. `docs/ui-ref-revised/src/components/FlipBookHero.tsx` auto-advances
@@ -165,7 +165,6 @@ export function DepartmentHero({
         style={{ transform: `translateX(-${current * 100}%)` }}
       >
         {departments.map((department, index) => {
-          const iconName = categoryIconName(department.slug);
           const imageUrl =
             department.imageKey && cdnBaseUrl
               ? composePublicUrl(cdnBaseUrl, department.imageKey)
@@ -301,18 +300,16 @@ export function DepartmentHero({
                         height={160}
                         className="h-32 w-32 rounded-2xl object-cover md:h-40 md:w-40"
                         fallback={
-                          <Icon
-                            name={iconName}
-                            className="h-24 w-24 text-white/85 md:h-32 md:w-32"
-                            strokeWidth={1.25}
+                          <DepartmentGlyph
+                            slug={department.slug}
+                            loading={index === 0 ? "eager" : "lazy"}
                           />
                         }
                       />
                     ) : (
-                      <Icon
-                        name={iconName}
-                        className="h-24 w-24 text-white/85 md:h-32 md:w-32"
-                        strokeWidth={1.25}
+                      <DepartmentGlyph
+                        slug={department.slug}
+                        loading={index === 0 ? "eager" : "lazy"}
                       />
                     )}
                   </div>

@@ -112,7 +112,7 @@ export function RewardsLauncher({
             <Icon name="x" className="h-5 w-5" />
           ) : (
             <>
-              <Icon name="gift" className="h-4 w-4 text-amber-300" />
+              <Icon name="rewards-gift" className="h-4 w-4 text-amber-300" />
               <span>Rewards</span>
             </>
           )}

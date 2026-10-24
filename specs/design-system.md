@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.24.0"
-updated: 2026-10-20
+version: "1.25.0"
+updated: 2026-10-24
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -168,12 +168,28 @@ unchanged. Changing a provider is an edit to one registry line followed by that 
 | --- | --- | --- | --- |
 | `functional` | controls and navigation: chevrons, close, plus, search, check, trash | Lucide only (a compile error otherwise) | `currentColor` |
 | `status` | alerts and confirmations; never colour alone, the glyph shape differs too | Lucide or Phosphor | semantic tone |
-| `decorative` | the meaning is in adjacent text | Lucide today; Phosphor duotone from Phase 3 | tone, with a second vendor hue on a duotone icon |
+| `decorative` | the meaning is in adjacent text | Phosphor duotone for the two-hue glyphs (the landing trust strip, the Rewards panel); a decorative glyph that needs no second hue stays Lucide | tone, with a second vendor hue on a duotone icon |
 
 A registry key is a generic noun (`trash`, `delivery`), never a provider id or a numeric suffix. An
 existing key never changes provider or tier: a decorative variant of an icon that is also used
-functionally gets a **new** name. Department illustrations (Noto Emoji, served as static files rather
-than inlined) are **Phase 4a of #1223 and not yet shipped**.
+functionally gets a **new** name (`gift` stays Lucide; the Rewards two-hue gift is `rewards-gift`). On a
+dark surface (the Rewards launcher and panel) a duotone glyph keeps its amber class and takes no tone, since
+the vendor tokens are contrast-clamped against light surfaces only.
+
+### Department illustrations
+
+Each department with art shows a **Noto Emoji** illustration (Apache-2.0), mapped slug by slug in
+`components/icons/illustrations.ts` (16 slugs, grocery and electronics; nothing else is mapped). They are
+**static files**, `public/illustrations/departments/<slug>.svg`, written by `npm run icons:build` and shown
+with `<img>` through `ImageWithFallback`, **not inlined**: `DepartmentScroller` and `DepartmentHero` are
+client components, so inlined art would ship in the client bundle. A slug with no illustration renders the
+neutral decorative `tag` glyph, never a picture of food on a non-grocery vendor (#729). The strip keeps its
+64 pixel tile with a 48 pixel illustration, tinted `action-tint` and `accent-tint` alternately by position;
+the hero corner uses `DepartmentGlyph` (96 pixels, 128 from `md`). Per-vendor and generated art is `#1224`.
+
+Licences for every set in use, and the Noto Emoji note (its upstream licence URL returns 404, so the
+canonical Apache 2.0 text is used), are in `public/third-party-icon-licenses.txt`, linked from the storefront
+footer as "Icon credits".
 
 ### Size scale
 

@@ -15,7 +15,9 @@ import type { RegistryEntry } from "./types";
  * migrating a file is a mechanical edit and changes no pixel. Tiers are a judgement made once here:
  * controls and navigation are `functional` (Lucide only, by type), alerts and confirmations are
  * `status`, and illustrative glyphs are `decorative`. Phase 3 adds NEW decorative names for the surfaces
- * it colours; an existing key never changes provider or tier (R38).
+ * it colours (the Phosphor duotone block at the end); an existing key never changes provider or tier (R38).
+ * A glyph that is decorative on one surface and functional or monochrome on another (`gift`, `truck`) keeps
+ * its Lucide key for the other uses and gets its own two-hue key here.
  */
 export const ICON_REGISTRY = {
   apple: { tier: "decorative", provider: "lucide", id: "apple" },
@@ -117,6 +119,18 @@ export const ICON_REGISTRY = {
   "user-x": { tier: "decorative", provider: "lucide", id: "user-x" },
   users: { tier: "decorative", provider: "lucide", id: "users" },
   x: { tier: "functional", provider: "lucide", id: "x" },
+
+  // Phase 3 (#1223, R38): two-hue glyphs for the landing trust strip and the Rewards panel. Phosphor duotone;
+  // the second hue comes from `Icon`'s `tone`, so a vendor's palette reaches them with no new token.
+  "rewards-bag": { tier: "decorative", provider: "ph", id: "shopping-bag-duotone" },
+  "rewards-coins": { tier: "decorative", provider: "ph", id: "coins-duotone" },
+  "rewards-discount": { tier: "decorative", provider: "ph", id: "percent-duotone" },
+  "rewards-gift": { tier: "decorative", provider: "ph", id: "gift-duotone" },
+  "rewards-invite": { tier: "decorative", provider: "ph", id: "user-plus-duotone" },
+  "rewards-sparkles": { tier: "decorative", provider: "ph", id: "sparkle-duotone" },
+  "trust-delivery": { tier: "decorative", provider: "ph", id: "truck-duotone" },
+  "trust-payment": { tier: "decorative", provider: "ph", id: "credit-card-duotone" },
+  "trust-updates": { tier: "decorative", provider: "ph", id: "bell-ringing-duotone" },
 } as const satisfies Record<string, RegistryEntry>;
 
 export type IconName = keyof typeof ICON_REGISTRY;

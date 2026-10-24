@@ -28,9 +28,17 @@ interface SetInfo {
 /** Which installed `@iconify-json/<set>` serves each provider. */
 export const PROVIDER_SET: Record<string, string> = { lucide: "lucide", ph: "ph" };
 
+/** The set the department illustrations come from. It is not an inline-icon provider, so it is not in `PROVIDER_SET`. */
+export const ILLUSTRATION_SET = "noto";
+
 /** Where the generator writes, relative to the repository root. */
 export const ICON_DATA_PATH = "components/icons/generated/icon-data.ts";
 export const LICENCES_PATH = "public/third-party-icon-licenses.txt";
+export const ILLUSTRATIONS_DIR = "public/illustrations/departments";
+
+/** R43: each illustration at most 16 KiB and the 16 together at most 96 KiB. */
+export const MAX_ILLUSTRATION_BYTES = 16_384;
+export const MAX_ILLUSTRATIONS_TOTAL_BYTES = 98_304;
 
 /** Attributes `lucide-react` puts on the root `<svg>`; Iconify's Lucide data repeats them on every child. */
 const LUCIDE_ROOT: Record<string, string> = {
@@ -95,6 +103,8 @@ export interface BuildOptions {
   loadInfo?: (set: string) => SetInfo;
   /** Directory holding one `<SPDX>.txt` per licence (verbatim upstream LICENSE). */
   licenceDir?: string;
+  /** Department slug -> Noto Emoji id (`components/icons/illustrations.ts`). Omitted or empty means none are generated. */
+  illustrations?: Record<string, string>;
 }
 
 const require_ = createRequire(import.meta.url);
@@ -252,11 +262,81 @@ export function renderIconDataModule(data: Record<string, IconData>): string {
   ].join("\n");
 }
 
+/**
+ * One standalone SVG per department slug, from the Noto Emoji set. Same safety rule as an inline icon
+ * (R10) and the size limits of R43; an id that does not resolve names the slug and the id.
+ */
+export function buildIllustrations(
+  illustrations: Record<string, string>,
+  options: BuildOptions = {},
+): Map<string, string> {
+  const loadSet = options.loadSet ?? defaultLoadSet;
+  const files = new Map<string, string>();
+  if (Object.keys(illustrations).length === 0) return files;
+  const set = loadSet(ILLUSTRATION_SET);
+  let total = 0;
+  for (const slug of Object.keys(illustrations).sort()) {
+    const id = illustrations[slug];
+    const resolved = getIconData(set as never, id) as {
+      body: string;
+      width?: number;
+      height?: number;
+      left?: number;
+      top?: number;
+    } | null;
+    if (!resolved)
+      throw new IconBuildError(
+        slug,
+        id,
+        `no such illustration in the "${ILLUSTRATION_SET}" set (aliases included)`,
+      );
+    if (UNSAFE_MARKUP.test(resolved.body)) {
+      throw new IconBuildError(
+        slug,
+        id,
+        "the body contains markup that must never be served (script, foreignObject, javascript:, or an on* handler)",
+      );
+    }
+    const viewBox = `${resolved.left ?? 0} ${resolved.top ?? 0} ${resolved.width ?? 128} ${resolved.height ?? 128}`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">${resolved.body}</svg>\n`;
+    const bytes = Buffer.byteLength(svg);
+    if (bytes > MAX_ILLUSTRATION_BYTES) {
+      throw new IconBuildError(
+        slug,
+        id,
+        `${bytes} bytes exceeds the ${MAX_ILLUSTRATION_BYTES} byte limit for one illustration`,
+      );
+    }
+    total += bytes;
+    files.set(`${ILLUSTRATIONS_DIR}/${slug}.svg`, svg);
+  }
+  if (total > MAX_ILLUSTRATIONS_TOTAL_BYTES) {
+    throw new IconBuildError(
+      "illustrations",
+      `${files.size} files`,
+      `${total} bytes together exceeds the ${MAX_ILLUSTRATIONS_TOTAL_BYTES} byte limit`,
+    );
+  }
+  return files;
+}
+
+/**
+ * R63: Noto Emoji's own licence URL (the `info.json` one) returns 404, so its section carries the canonical
+ * Apache 2.0 text plus this record of why. Written once here so `icons:check` covers it.
+ */
+const NOTO_NOTE =
+  "Note: the licence URL above (https://github.com/googlefonts/noto-emoji/blob/main/svg/LICENSE) returned HTTP 404 on 2026-10-23. " +
+  'The project README states "Tools and most image resources are under the Apache license, version 2.0", ' +
+  "so the canonical Apache License 2.0 text (https://www.apache.org/licenses/LICENSE-2.0.txt) is reproduced above. " +
+  "None of the department illustrations on this site is a region flag, the exception the README names.";
+
 /** The notice file: one section per set the registry actually uses, upstream LICENSE text verbatim. */
 export function buildLicences(registry: RegistryInput, options: BuildOptions = {}): string {
   const loadInfo = options.loadInfo ?? defaultLoadInfo;
   const licenceDir = options.licenceDir ?? join(process.cwd(), "scripts", "icon-licences");
-  const sets = [...new Set(Object.values(registry).map((e) => PROVIDER_SET[e.provider]))].sort();
+  const sets = [...new Set(Object.values(registry).map((e) => PROVIDER_SET[e.provider]))];
+  if (Object.keys(options.illustrations ?? {}).length > 0) sets.push(ILLUSTRATION_SET);
+  sets.sort();
   const seenSpdx = new Map<string, string>();
   const sections: string[] = [];
   for (const set of sets) {
@@ -288,6 +368,7 @@ export function buildLicences(registry: RegistryInput, options: BuildOptions = {
         `Licence URL:  ${info.license?.url ?? "unknown"}`,
         "-".repeat(78),
         text.trimEnd(),
+        ...(set === ILLUSTRATION_SET ? ["", NOTO_NOTE] : []),
         "",
       ].join("\n"),
     );
@@ -310,5 +391,8 @@ export function buildArtefacts(
   const files = new Map<string, string>();
   files.set(ICON_DATA_PATH, renderIconDataModule(buildIconData(registry, options)));
   files.set(LICENCES_PATH, buildLicences(registry, options));
+  for (const [path, svg] of buildIllustrations(options.illustrations ?? {}, options)) {
+    files.set(path, svg);
+  }
   return files;
 }

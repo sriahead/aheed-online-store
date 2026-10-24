@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-24T02:01:21.348Z` · commit `1a85d26d` · `257` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-24T02:18:06.295Z` · commit `1ddb56c4` · `257` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -259,7 +259,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [ADR-006 — Store locations (multi-branch shape)](specs/decisions/ADR-006-store-locations.md) | adr | 1.1.0 | 2026-09-24 | approved | internal | If a vendor ever trades from more than one physical site, a location is a child of Vendor and never a second tenancy axis — vendorId stays the sole mandatory repository filter. Rules the shape so |
 | [ADR-007 — Storefront scope, restricted products and explicit stock states](specs/decisions/ADR-007-storefront-scope-restrictions-stock-states.md) | adr | 1.0.0 | 2026-10-22 | approved | internal | Owner rulings of 2026-10-22 on |
 | [ADR-008 — Icon system: semantic registry, build-time Iconify data, three tiers](specs/decisions/ADR-008-icon-system.md) | adr | 1.1.0 | 2026-10-23 | approved | internal | Icons are addressed by semantic name through a registry and rendered by one component from Iconify data bundled at build time. Lucide serves functional icons, Phosphor duotone decorative ones, Noto Emoji department illustrations as static files. Owner approved on 1223. |
-| [Design System](specs/design-system.md) | doc | 1.24.0 | 2026-10-20 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases. |
+| [Design System](specs/design-system.md) | doc | 1.25.0 | 2026-10-24 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases. |
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
 | [Roadmap](specs/roadmap.md) | doc | 1.179.0 | 2026-10-24 | approved | internal | Master backlog and phase sequencing (M0, P0-P11, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, vendor onboarding P11. |
 | [SDD Workflow](specs/sdd-workflow.md) | doc | 2.51.0 | 2026-10-23 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands. |
