@@ -8,6 +8,14 @@ every branch merges.
 
 ### Added
 
+- **Expand 3D icon suite across Shop, Quick Shop, Contact and Follow, and Department navigation** (issue `#1248`; `specs/2026-10-24-p1248-3d-icons-expansion/`).
+  - **3 New 3D Icons (`lib/icons-3d/catalog.ts`):** Added `storefront` (3D supermarket store with awning canopy), `quick-shop` (3D shopping bag with embossed list badge and dual metallic handles), and `contact-follow` (3D dual communication bubbles with friendly group silhouette). Catalog expanded from 16 to 19 icons.
+  - **Header Shop & Quick Shop:** Upgraded the Shop navigation link in `components/layout/Header.tsx` to `<Icon3D name="storefront" size={20} />`, and the Quick Shop button in `components/layout/ShoppingListLink.tsx` to `<Icon3D name="quick-shop" size={20} />`.
+  - **Floating Contact & Follow Button:** Upgraded the floating contact trigger in `components/layout/FloatingContact.tsx` to `<Icon3D name="contact-follow" size={28} dataIcon="users" />`.
+  - **Department Categories Navigation:** Mapped grocery departments (`fruit-veg`, `bakery`, `dairy-eggs`, `halal-meat`, `groceries`, `beverages`, `snacks`, `frozen-foods`, `household`) now render modern 3D vector icons across `components/layout/DepartmentScroller.tsx` and `components/layout/DepartmentHero.tsx`.
+  - **Rewards Launcher:** Upgraded floating rewards button in `components/rewards/RewardsLauncher.tsx` to `<Icon3D name="rewards-coin" size={20} />`.
+  - **Accessibility & Render Optimization:** Added `decorative` support to `<Icon3D>` and `renderIconSvg` to omit inner `<title>`/`<desc>` tags and output `aria-hidden="true"` when placed alongside visible button copy; keyframe CSS is now omitted when animations are disabled.
+
 - **Production-ready 3D Icon Studio API and modern 3D icon suite integration** (issue `#1245`; `specs/2026-10-24-p1245-3d-icon-system/`).
   - **3D Icon Core Engine & Catalog (`lib/icons-3d/`):** Implemented high-performance, theme-adaptive vector 3D icon compiler with layered gradients, ambient drop shadows, specular depth highlights, and keyframe animations with strict `prefers-reduced-motion` silencing.
   - **Production API Endpoints (`app/api/icons/`):** Added `GET /api/icons` (JSON catalog manifest) and `GET /api/icons/[id]` (standalone SVG delivery with Zod validation, `X-Content-Type-Options: nosniff`, and Cloudflare edge caching headers).

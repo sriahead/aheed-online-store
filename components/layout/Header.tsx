@@ -24,6 +24,7 @@ import { ShoppingListLink } from "./ShoppingListLink";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { ViewSwitcher } from "./ViewSwitcher";
 import { Icon } from "@/components/icons/Icon";
+import { Icon3D } from "@/components/icons/Icon3D";
 
 /**
  * Storefront header — a Server Component (no "use client"), so it reads the
@@ -285,7 +286,13 @@ export async function Header({
                 className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
                 title="Browse all departments"
               >
-                <Icon name="store" className="w-4 h-4 text-primary" />
+                <Icon3D
+                  name="storefront"
+                  size={20}
+                  className="-my-0.5"
+                  animated={false}
+                  decorative
+                />
                 <span className="hidden sm:inline">Shop</span>
               </Link>
             )}

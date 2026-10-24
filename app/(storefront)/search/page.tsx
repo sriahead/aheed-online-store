@@ -228,6 +228,7 @@ export default async function SearchPage({
         activeSlug={
           selectedCategory ? (selectedCategory.parent?.slug ?? selectedCategory.slug) : null
         }
+        use3D
       />
 
       {/* #1173 — applies a collapse chosen earlier in this tab before the sidebar paints. */}

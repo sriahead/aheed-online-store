@@ -175,7 +175,7 @@ export default async function CategoryPage({
     <PageContainer width="wide" padY="tight">
       {/* Departments: horizontal strip on top (arrow-scrolled). Highlights
           the DEPARTMENT even when viewing one of its subcategories. */}
-      <DepartmentScroller categories={allCategories} activeSlug={scrollerActiveSlug} />
+      <DepartmentScroller categories={allCategories} activeSlug={scrollerActiveSlug} use3D />
 
       {/* #1173 — applies a collapse chosen earlier in this tab before the sidebar paints. */}
       <script dangerouslySetInnerHTML={{ __html: FILTERS_COLLAPSED_SCRIPT }} />
