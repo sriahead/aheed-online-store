@@ -54,6 +54,7 @@ export function ContactChannelIcon({ kind }: { kind: ContactChannelKind }) {
     case "instagram":
       return <InstagramGlyph />;
     case "whatsapp":
+    case "whatsapp-community":
       return <WhatsappGlyph />;
     case "assistant":
       return <Icon name="circle-question-mark" className="h-5 w-5" />;

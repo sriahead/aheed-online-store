@@ -34,12 +34,11 @@ R11. `app/(storefront)/whatsapp-offers/page.tsx` exists, declares `export const 
 
 R12. `lib/page-metadata.ts` exports `buildOffersMetadata({ host, vendorName })` returning `{ title: "Offers & Deals | <vendorName>", description: "Browse current offers, weekly deals, and special promotions at <vendorName>.", alternates: { canonical: "https://<host>/whatsapp-offers" } }`, and `app/(storefront)/whatsapp-offers/page.tsx`'s `generateMetadata()` uses it (degrading to `{}` when no vendor profile resolves or on error).
 
-R13. When `profile.whatsappCommunityUrl` is non-null, `/whatsapp-offers` renders:
-     a. A top WhatsApp promotions banner with heading `"Stay Updated with Our Latest Offers!"`, supporting text `"Join the <profile.name> WhatsApp group to discover special promotions, exclusive deals, fresh arrivals, and exciting savings on your favourite products."`, a green button (`bg-[#25D366]`) labelled `"Join Our WhatsApp Group"` linking to `profile.whatsappCommunityUrl` (`target="_blank" rel="noopener noreferrer"`) with the WhatsApp SVG icon (`WhatsappGlyph`), and the reassurance text `"Free to join. Leave anytime."`.
-     b. When `profile.whatsappCommunityQrKey` is also non-null and `CDN_BASE_URL` is configured, a QR code `<img>` whose `src` is `composePublicUrl(CDN_BASE_URL, profile.whatsappCommunityQrKey)` and whose `alt` is `"Scan to join the <profile.name> WhatsApp group"`.
-     c. A secondary WhatsApp call-to-action card near the bottom of the page linking to `profile.whatsappCommunityUrl`.
+R13. When `profile.whatsappCommunityUrl` is non-null, `<WhatsappCommunityBanner>` (`components/layout/WhatsappCommunityBanner.tsx`) renders on both `/categories` (the Shop page) and `/whatsapp-offers` using the vendor's semantic theme tokens (`bg-primary`, `bg-action`, `hover:bg-action-hover`, `text-primary`, `text-primary-muted`) with:
+     a. A WhatsApp promotions banner with heading `"Stay Updated with Our Latest Offers!"`, supporting text `"Join the <profile.name> WhatsApp group to discover special promotions, exclusive deals, fresh arrivals, and exciting savings on your favourite products."`, a button (`bg-action hover:bg-action-hover`) labelled `"Join Our WhatsApp Group"` linking to `profile.whatsappCommunityUrl` (`target="_blank" rel="noopener noreferrer"`) with the WhatsApp SVG icon (`WhatsappGlyph`), and the reassurance text `"Free to join. Leave anytime."`.
+     b. When `profile.whatsappCommunityQrKey` is also non-null and `CDN_BASE_URL` is configured, a QR code `<ImageWithFallback>` whose `src` is `composePublicUrl(CDN_BASE_URL, profile.whatsappCommunityQrKey)` and whose `alt` is `"Scan to join the <profile.name> WhatsApp group"`.
 
-R14. When `profile.whatsappCommunityUrl` is `null` (such as on SriMart), `/whatsapp-offers` renders neither the top WhatsApp banner nor the bottom WhatsApp call-to-action card (`#239`), and no link to `chat.whatsapp.com` appears in the rendered HTML.
+R14. When `profile.whatsappCommunityUrl` is `null` (such as on SriMart), `<WhatsappCommunityBanner>` renders nothing (`#239`), and no link to `chat.whatsapp.com` appears in the rendered HTML.
 
 R15. Below the top banner (or at the top of the main column when `whatsappCommunityUrl` is `null`), `/whatsapp-offers` renders a section with `<h2>Latest Offers &amp; Deals</h2>` containing:
      a. Any live `DepartmentCampaign` rows (`isCampaignLive(campaign, now)`), showing the campaign `headline`, optional `subtitle`, formatted validity dates (`startsAt` / `endsAt`) when present on the row, and a `"Shop Now"` link to `campaign.linkUrl ?? /categories/<department.slug>`.
@@ -47,9 +46,9 @@ R15. Below the top banner (or at the top of the main column when `whatsappCommun
      c. Each department group from `groupOfferProductsByDepartment` rendered with its department `<h3>` heading, a `"Shop Now"` link to `/categories/<department.slug>`, and `<ProductGrid as="ul" density={gridDensity}>` of `<ProductCard>` items. `tests/product-grid-usage.test.ts` includes `"app/(storefront)/whatsapp-offers/page.tsx"` in `LISTING_PAGES`.
      d. When the vendor has zero offer products, zero renderable bundles, and zero live campaigns, a friendly empty state message with a link to `/categories` (and a `"Join Our WhatsApp Group"` button when `profile.whatsappCommunityUrl` is non-null).
 
-## Navigation, sitemap & guards
+## Contact channels, sitemap & guards
 
-R16. `components/layout/Header.tsx` renders a `next/link` to `"/whatsapp-offers"` with `<Icon name="tag" />` and `<span className="hidden sm:inline">Offers</span>`. `components/product/CollectionNav.tsx` includes `{ href: "/whatsapp-offers", label: "Offers & Deals", icon: "tag" }` in `COLLECTIONS`. `components/layout/StorefrontFooter.tsx` includes a `next/link` to `"/whatsapp-offers"` labelled `"Offers & deals"` in the `"Shop with us"` column.
+R16. `lib/contact-channels.ts` accepts optional `whatsappCommunityUrl?: string | null` and emits `{ kind: "whatsapp-community", href: whatsappCommunityUrl, label: "Join <vendorName> WhatsApp group" }` (rendered with `WhatsappGlyph` in `components/layout/contact-channel-icons.tsx`) in both `FloatingContact` (`StorefrontChrome.tsx`) and `FooterContactChannels` (`StorefrontFooter.tsx` under `"Visit & contact us"`), even when `assistantAvailable` is `true`. No separate `"Offers"` link is rendered in `Header.tsx`, `CollectionNav.tsx`, or `StorefrontFooter.tsx`'s `"Shop with us"` column.
 
 R17. `app/sitemap.ts`'s `STATIC_PATHS` includes `"/whatsapp-offers"`, and `tests/sitemap.test.ts` passes.
 

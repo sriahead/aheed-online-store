@@ -280,25 +280,14 @@ export async function Header({
               route, landing included — and since #1131 so does the Quick Shop
               link, which #1142 moved beside the search bar. */}
             {!isPortal && (
-              <>
-                <Link
-                  href="/categories"
-                  className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
-                  title="Browse all departments"
-                >
-                  <Icon name="store" className="w-4 h-4 text-primary" />
-                  <span className="hidden sm:inline">Shop</span>
-                </Link>
-                <Link
-                  href="/whatsapp-offers"
-                  aria-label="Offers"
-                  className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
-                  title="Offers & Deals"
-                >
-                  <Icon name="tag" className="w-4 h-4 text-primary" />
-                  <span className="hidden sm:inline">Offers</span>
-                </Link>
-              </>
+              <Link
+                href="/categories"
+                className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
+                title="Browse all departments"
+              >
+                <Icon name="store" className="w-4 h-4 text-primary" />
+                <span className="hidden sm:inline">Shop</span>
+              </Link>
             )}
 
             {/* Account / Sign In & Sign Out Controls */}

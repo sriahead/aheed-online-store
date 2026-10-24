@@ -33,6 +33,25 @@ describe("contactChannels (#1060 R9)", () => {
     ]);
   });
 
+  it("includes the WhatsApp community group link even when the help assistant is available (#1233)", () => {
+    expect(
+      contactChannels({
+        ...ALL,
+        whatsappCommunityUrl: "https://chat.whatsapp.com/FTgLVoelRw7262i0OvAIzS",
+        assistantAvailable: true,
+      }),
+    ).toEqual([
+      { kind: "facebook", href: "https://facebook.com/test", label: `${VENDOR} on Facebook` },
+      { kind: "instagram", href: "https://instagram.com/test", label: `${VENDOR} on Instagram` },
+      {
+        kind: "whatsapp-community",
+        href: "https://chat.whatsapp.com/FTgLVoelRw7262i0OvAIzS",
+        label: `Join ${VENDOR} WhatsApp group`,
+      },
+      { kind: "assistant", href: null, label: "Open help assistant" },
+    ]);
+  });
+
   it("omits each channel whose value is unset", () => {
     expect(contactChannels({ ...ALL, facebookUrl: null }).map((c) => c.kind)).toEqual([
       "instagram",
