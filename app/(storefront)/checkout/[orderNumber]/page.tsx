@@ -104,7 +104,9 @@ export default async function OrderConfirmationPage({
       <OrderAddressCard
         address={order.address}
         fulfilmentMethod={order.fulfilmentMethod}
-        orderNumber={order.orderNumber}
+        customerEmail={
+          order.customerEmail ?? (session?.user as { email?: string } | undefined)?.email
+        }
       />
 
       <Link

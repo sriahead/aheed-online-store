@@ -142,7 +142,7 @@ describe("UI and Checkout Improvements (#1254)", () => {
     expect(line2Index).toBeLessThan(line1Index);
   });
 
-  it("R5: Click & Collect order details card displays customer details and order reference without store address as delivery", () => {
+  it("R5: Click & Collect order details card displays customer details and email without store address as delivery (#1261)", () => {
     const testAddress: OrderAddress = {
       recipientName: "Fatima Khan",
       phone: "07424242422",
@@ -158,6 +158,7 @@ describe("UI and Checkout Improvements (#1254)", () => {
       <OrderAddressCard
         address={testAddress}
         fulfilmentMethod="COLLECTION"
+        customerEmail="fatima@example.com"
         orderNumber="ORD-2026-999"
       />,
     );
@@ -165,7 +166,9 @@ describe("UI and Checkout Improvements (#1254)", () => {
     expect(collectContainer.textContent).toContain("Click & Collect");
     expect(collectContainer.textContent).toContain("Customer Collection");
     expect(collectContainer.textContent).toContain("Fatima Khan");
-    expect(collectContainer.textContent).toContain("ORD-2026-999");
+    expect(collectContainer.textContent).toContain("fatima@example.com");
+    expect(collectContainer.textContent).not.toContain("Order Reference");
+    expect(collectContainer.textContent).not.toContain("ORD-2026-999");
     expect(collectContainer.textContent).toContain("07424242422");
     expect(collectContainer.textContent).toContain("Picking up at 3pm");
     expect(collectContainer.textContent).not.toContain("Delivering to");
@@ -176,6 +179,7 @@ describe("UI and Checkout Improvements (#1254)", () => {
       <OrderAddressCard
         address={testAddress}
         fulfilmentMethod="DELIVERY"
+        customerEmail="fatima@example.com"
         orderNumber="ORD-2026-999"
       />,
     );

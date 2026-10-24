@@ -781,6 +781,8 @@ export interface OrderSummary {
    * coming would promise what a guest order never delivers.
    */
   hasAccount: boolean;
+  /** #1261 — the customer/buyer's email address (guest email or user email), or null. */
+  customerEmail: string | null;
   deliveryFeePence: number;
   totalPence: number;
   items: {
@@ -1043,6 +1045,8 @@ export async function findOrderForViewer(
       deliveryFeePence: true,
       totalPence: true,
       userId: true,
+      guestEmail: true,
+      user: { select: { email: true } },
       items: {
         select: {
           productId: true,
@@ -1101,12 +1105,15 @@ export async function findOrderForViewer(
     confirmationToken: _token,
     discountUse,
     loyaltyEntries,
+    guestEmail,
+    user,
     ...summary
   } = order;
   return {
     ...summary,
     ...toProvenance({ discountUse, loyaltyEntries }),
     hasAccount: ownerId !== null,
+    customerEmail: guestEmail ?? user?.email ?? null,
   };
 }
 
@@ -1159,6 +1166,7 @@ export async function findOrderForUser(
       discountPence: true,
       deliveryFeePence: true,
       totalPence: true,
+      user: { select: { email: true } },
       items: {
         select: {
           productId: true,
@@ -1188,12 +1196,13 @@ export async function findOrderForUser(
   });
   if (!order) return null;
 
-  const { statusEvents, discountUse, loyaltyEntries, ...summary } = order;
+  const { statusEvents, discountUse, loyaltyEntries, user, ...summary } = order;
   return {
     ...summary,
     ...toProvenance({ discountUse, loyaltyEntries }),
     // `userId` is in this method's WHERE, so a row here is always a member's.
     hasAccount: true,
+    customerEmail: user?.email ?? null,
     timeline: buildTimeline(statusEvents),
   };
 }
@@ -1285,11 +1294,13 @@ export async function findOrderForStaff(
   if (!order) return null;
 
   const { statusEvents, guestEmail, user, userId, discountUse, loyaltyEntries, ...summary } = order;
+  const buyerEmail = guestEmail ?? user?.email ?? null;
   return {
     ...summary,
     ...toProvenance({ discountUse, loyaltyEntries }),
     hasAccount: userId !== null,
-    buyerEmail: guestEmail ?? user?.email ?? null,
+    customerEmail: buyerEmail,
+    buyerEmail,
     timeline: buildStaffTimeline(
       statusEvents.map((event) => ({
         status: event.status,
