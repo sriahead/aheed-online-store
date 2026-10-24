@@ -8,8 +8,8 @@ import { getOrderRepository } from "@/lib/orders-service";
 import { getDiscountRepository } from "@/lib/discounts-service";
 import { getCatalogueHealthForVendor, getLoyaltyLiabilityForVendor } from "@/lib/reports-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
-import { TrendingUp, ShoppingBag, Banknote, Package, Sparkles, TicketPercent } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 export const dynamic = "force-dynamic";
 
@@ -45,19 +45,19 @@ export default async function ReportsPage() {
   return (
     <PageContainer width="wide">
       <div className="flex items-center gap-2 mb-6">
-        <TrendingUp className="h-6 w-6 text-primary" aria-hidden />
+        <Icon name="trending-up" className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-semibold text-primary">Store reports</h1>
       </div>
 
       <section>
         <div className="mb-4 flex items-center gap-2">
-          <Banknote className="h-5 w-5 text-accent" aria-hidden />
+          <Icon name="banknote" className="h-5 w-5 text-accent" />
           <h2 className="text-lg font-semibold text-primary">Sales</h2>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4 text-primary-muted">
-              <Banknote className="h-4 w-4" />
+              <Icon name="banknote" className="h-4 w-4" />
               <h3 className="text-sm font-semibold uppercase tracking-wider">Total Revenue</h3>
             </div>
             <p className="text-4xl font-bold text-primary">{formatMoney(totalRevenuePence)}</p>
@@ -73,7 +73,7 @@ export default async function ReportsPage() {
             className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm transition-colors hover:border-primary/30 hover:bg-surface-muted"
           >
             <div className="flex items-center gap-2 mb-4 text-primary-muted">
-              <ShoppingBag className="h-4 w-4" />
+              <Icon name="shopping-bag" className="h-4 w-4" />
               <h3 className="text-sm font-semibold uppercase tracking-wider">Total Orders</h3>
             </div>
             <p className="text-4xl font-bold text-primary">{totalOrders}</p>
@@ -82,7 +82,7 @@ export default async function ReportsPage() {
 
           <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4 text-primary-muted">
-              <TrendingUp className="h-4 w-4" />
+              <Icon name="trending-up" className="h-4 w-4" />
               <h3 className="text-sm font-semibold uppercase tracking-wider">Avg Basket Value</h3>
             </div>
             <p className="text-4xl font-bold text-primary">{formatMoney(avgBasketPence)}</p>
@@ -138,7 +138,7 @@ export default async function ReportsPage() {
 
       <section className="mt-10">
         <div className="mb-4 flex items-center gap-2">
-          <Package className="h-5 w-5 text-accent" aria-hidden />
+          <Icon name="package" className="h-5 w-5 text-accent" />
           <h2 className="text-lg font-semibold text-primary">Catalogue &amp; stock health</h2>
         </div>
         <div className="grid gap-4 sm:grid-cols-4">
@@ -163,7 +163,7 @@ export default async function ReportsPage() {
 
       <section className="mt-10">
         <div className="mb-4 flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-accent" aria-hidden />
+          <Icon name="sparkles" className="h-5 w-5 text-accent" />
           <h2 className="text-lg font-semibold text-primary">Loyalty liability</h2>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -190,7 +190,7 @@ export default async function ReportsPage() {
 
       <section className="mt-10">
         <div className="mb-4 flex items-center gap-2">
-          <TicketPercent className="h-5 w-5 text-accent" aria-hidden />
+          <Icon name="ticket-percent" className="h-5 w-5 text-accent" />
           <h2 className="text-lg font-semibold text-primary">Discount codes</h2>
         </div>
         {discountCodes.length === 0 ? (

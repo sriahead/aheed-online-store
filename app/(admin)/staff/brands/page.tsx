@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Tag } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getBrandRepository } from "@/lib/brands-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { AddBrandForm, BrandRowForms } from "@/components/staff/BrandManager";
 import { Card } from "@/components/ui/Card";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and this vendor's brands — must render per-request.
 export const dynamic = "force-dynamic";
@@ -40,7 +40,7 @@ export default async function StaffBrandsPage() {
   return (
     <PageContainer width="wide">
       <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-primary">
-        <Tag className="h-5 w-5" aria-hidden="true" />
+        <Icon name="tag" className="h-5 w-5" />
         Brands
       </h1>
       <p className="mb-6 text-sm text-primary-muted">

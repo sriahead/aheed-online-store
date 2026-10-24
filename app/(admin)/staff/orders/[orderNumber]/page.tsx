@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
 import { getPaymentReconciliationService } from "@/lib/payment-reconciliation-service";
@@ -14,6 +13,7 @@ import { StaffOrderTimeline } from "@/components/staff/StaffOrderTimeline";
 import { advanceStatus } from "@/features/orders/advance-status";
 import { cancelOrderStaff } from "@/features/orders/cancel-order-staff";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and one of this vendor's orders — must render per-request.
 export const dynamic = "force-dynamic";
@@ -59,7 +59,7 @@ export default async function StaffOrderDetailPage({
         href="/staff/orders"
         className="mb-4 inline-flex items-center gap-1 text-sm text-primary-muted hover:text-primary"
       >
-        <ChevronLeft className="h-4 w-4" aria-hidden />
+        <Icon name="chevron-left" className="h-4 w-4" />
         All orders
       </Link>
 

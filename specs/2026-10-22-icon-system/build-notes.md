@@ -1,16 +1,81 @@
 # Colourful, vendor-themed, provider-agnostic icon system (build notes)
 
-**This file covers two PRs.** The **Phase 2a build (PR 2)** section directly below is the one under
-validation now (branch `feature/icon-system-p2a`, spec amendment `d924a593`, requirements tagged **P2a** and
-**all**, plus the amended **R34 to R37** and **R56 to R62**). Everything after it, from "What changed and
-why", is the **Phase 1 build (PR 1)**, already merged to `staging` as `c439d3b` (PR #1225) and kept for its
-history. The spec covers five PRs (`plan.md`, "Scope"); P2b, P3 and P4a are not built. A validator of PR 2
-treats P2b, P3 and P4a rows as not applicable.
+**This file covers three PRs, newest first.** The **Phase 2b build (PR A)** section directly below is the one
+under validation now (branch `feature/icon-system-p2b`, requirements tagged **P2b** and **all**). The **Phase 2a
+build (PR 2)** section after it was merged to `staging` as `87b17928` (PR #1229), and everything after that, from
+"What changed and why", is the **Phase 1 build (PR 1)**, merged as `c439d3b` (PR #1225); both are kept for history.
+The spec covers PR A (P2b) and PR B (P3 and P4a, unbuilt). A validator of PR A treats P3 and P4a rows as not
+applicable.
 
 Built in the main checkout on `feature/icon-system` (no sub-agent worktree), on Sonnet 5.5; `CLAUDE.md`
 assigns Build to Opus 5 and the owner started the stage without switching. Two spec-correction commits
 precede the implementation commit, each explained in its own message: `97273997` (R37's Worker metric)
 and `fe360784` (the icon count and R11, R26 to R28, R31, R33 to R36).
+
+## Phase 2b build (PR A)
+
+**This section is the one under validation now:** branch `feature/icon-system-p2b`, commit `2a1b98f9`, cut from
+`staging` at `87b17928` (P2a merged, PR #1229). Requirements tagged **P2b** and **all**, plus R34 to R37 and R56
+to R62 at the PR A head. P3 and P4a (PR B) are unbuilt and not applicable. Built on **Sonnet 5.5** in the cloud
+checkout; `CLAUDE.md` assigns Build to Opus 5 and the owner started the stage without switching.
+
+### What changed and why (Phase 2b)
+
+- **39 files migrated from `lucide-react` to `Icon`** (every remaining importer, all under `app/(admin)` and
+  `components/staff`), all by `scripts/codemod-lucide-to-icon.ts`: the dry run converted all 39 and refused none,
+  so there was no hand edit. Diff +127 -128 before Prettier. `className` carried over verbatim; no `size`, `tone`
+  or `label`.
+- **`tests/icon-imports.test.ts`** (R32): TypeScript AST over `app`, `components`, `features`, `lib`, excluding
+  `components/icons/` by path. Flags `import`, `export ... from` and dynamic `import()` of `lucide-react`,
+  `lucide-react/*` or any `@iconify*` specifier. No allowlist. Three tests: the real tree, an in-memory file that
+  violates in six forms, and an in-memory clean file (prose and comments are not violations).
+- **`CLAUDE.md`** icon bullet (R62): "being migrated" and "do not add new ones" removed; now says the ban is
+  enforced by that test.
+- **`CHANGELOG.md`** Phase 2b entry under `[Unreleased]` (Gate 4).
+
+### Decisions taken during the build (Phase 2b)
+
+- **No `generated` skip in the test's directory walk,** unlike `scripts/list-lucide-imports.ts`: nothing under
+  the four roots outside `components/icons/` is generated TypeScript that imports an icon library, and a skip
+  would be a hole. `app/(admin)/staff/runbook/docs.ts` mentions `lucide-react` only in prose, which is why the
+  test is AST-based (a text grep lists it).
+- **`format:check` found three files** (`feedback/page.tsx`, `InventoryTable.tsx`, the new test); fixed with
+  `prettier --write`. The codemod leaves some import lines Prettier would reflow.
+- **The BASE worktree `../icon-base` already existed** at `6a09b001` from P2a and was reused; it has no
+  `node_modules`, which the parity script does not need.
+- **Committed and pushed at the stop hook's request,** before this notes commit.
+
+### Deviations from the spec (Phase 2b)
+
+None.
+
+### Known-shaky areas (Phase 2b)
+
+- **R34, R35 and R37 have not been run.** They need the owner's machine (`.dev.vars`, preview servers); tracked
+  as **`#1231`** (merge gate, same shape as closed `#1227`). The SriMart staff pair also needs the stale
+  `demo-srimart-admin` password repaired (`#1226`, `#1230`). Until `#1231` passes, "no visual change" for the
+  admin and staff pages is proved by source only (R60's script), not by rendered markup.
+- **No file in this PR is on the parity allowlist,** so the script covers all 39 pairs; but it proves source, not
+  pixels, and cannot see a CSS or parent change. An admin icon used as a component value would have been
+  refused by the codemod; none was.
+- **R60's P2b clause was run once:** `verify-classname-parity.ts --base-root ../icon-base --head-root .` with the
+  nine `--allow` paths and `--require-migrated` printed `checked 100 file(s), 0 not migrated, 9 allowed`. I read
+  the output line but did not capture the script's own exit code (the pipeline's `$?` was `tail`'s). A validator
+  should rerun and check the exit code.
+- **Several admin pages put icons in server components** (`app/(admin)/staff/*/page.tsx`); `Icon` has no client
+  directive so this is fine, but only a rendered check (`#1231`) shows it.
+- **`npm run sdd:preclear` may skip the slice checks** (it inspects only spec files *added* on the branch); see
+  the P2a note below. The checks were run by hand.
+
+### Checks run in this context (not a validation)
+
+`npm run lint`, `npx tsc --noEmit`, `npm run icons:check` and `npm run build` exit 0; `format:check` failed on three
+files, which were then fixed with Prettier (not re-run as a whole afterwards). `npx vitest run --maxWorkers=4`:
+**309 files, 4562 tests passed, 3 skipped** (P2a ended at 308 and 4559; the difference is
+`tests/icon-imports.test.ts`, 3 tests). `grep` for a `lucide-react` import outside `components/icons/` prints nothing.
+`kms:*` were not run for the code commit; this stage runs them.
+
+---
 
 ## Phase 2a build (PR 2)
 

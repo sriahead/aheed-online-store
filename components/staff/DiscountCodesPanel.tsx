@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { Plus, Ban } from "lucide-react";
 import {
   createDiscountCode,
   deactivateDiscountCode,
@@ -9,6 +8,7 @@ import {
 } from "@/features/admin/discount-codes";
 import type { CodeListRow } from "@/lib/repositories/discounts";
 import { inputClass, labelClass } from "@/lib/form-classes";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Discount codes panel (P5b, #145) — create, list and deactivate, on the
@@ -95,7 +95,7 @@ export function DiscountCodesPanel({ codes }: { codes: CodeListRow[] }) {
                       type="submit"
                       className="flex shrink-0 items-center gap-1.5 rounded-xl border border-black/15 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-surface-muted active:scale-95 motion-reduce:active:scale-100"
                     >
-                      <Ban className="h-3.5 w-3.5" aria-hidden />
+                      <Icon name="ban" className="h-3.5 w-3.5" />
                       Deactivate
                     </button>
                   </form>
@@ -222,7 +222,7 @@ export function DiscountCodesPanel({ codes }: { codes: CodeListRow[] }) {
           disabled={creating}
           className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Plus className="h-4 w-4" aria-hidden />
+          <Icon name="plus" className="h-4 w-4" />
           {creating ? "Creating…" : "Create code"}
         </button>
       </form>

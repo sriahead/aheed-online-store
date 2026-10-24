@@ -57,6 +57,12 @@ every branch merges.
 
 ### Changed
 
+- **Admin and staff moved onto the `Icon` component, Phase 2b of 5: no file outside `components/icons/` imports an icon library any more** (issue `#1223`; `specs/2026-10-22-icon-system/`, PR A of the clubbed Phases 2b, 3 and 4a). No visual change, no schema change, no migration, no CSP, token or `brandStyle()` change.
+  - **The remaining 39 files** under `app/(admin)` and `components/staff` were migrated with `scripts/codemod-lucide-to-icon.ts` (+127 -128, no refusals): each icon's `className` is carried over verbatim and no `size`, `tone` or `label` prop is set. No registry key was added, removed or changed.
+  - **`tests/icon-imports.test.ts`** (R32) fails on any `lucide-react` or `@iconify*` import, re-export or dynamic `import()` under `app`, `components`, `features` or `lib` other than `components/icons/`. TypeScript AST, no allowlist, and it proves it can fail on an in-memory violating file.
+  - **`CLAUDE.md`** no longer says files "are being migrated"; it says the ban is enforced by that test (R62).
+  - **Not in this PR:** colour (Phase 3) and department illustrations (Phase 4a) ship together as PR B, cut from `staging` after this merges. `lucide-react` stays in `dependencies` (R26 needs it).
+
 - **Storefront moved onto the `Icon` component, Phase 2a of 5** (issue `#1223`; `specs/2026-10-22-icon-system/`). No visual change, no schema change, no migration, no CSP, token or `brandStyle()` change.
   - **60 files** outside `app/(admin)` and `components/staff` no longer import `lucide-react`: 55 by `scripts/codemod-lucide-to-icon.ts`, 5 by hand (`quick-shop`, `AccountNav`, `ViewSwitcher`, `CollectionNav`, `AddToCartButton`), where an icon was a component passed as a value and is now an `IconName`. Every icon's `className` is carried over verbatim and no `size` prop is set. The 39 admin and staff files are Phase 2b.
   - **`scripts/verify-classname-parity.ts`** pairs each BASE Lucide element with a HEAD `Icon` element by TypeScript AST and fails on a changed `className`, a dropped or added prop, or a `size`/`tone`/`label`/spread; it runs without a server, so a cloud validation can check it. Its skip list is nine files (the five above plus four Phase 1 files whose icon was already a value), each proved live instead (`tests/verify-classname-parity.test.ts` spawns the real script).

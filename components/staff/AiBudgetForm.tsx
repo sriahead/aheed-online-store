@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { Save } from "lucide-react";
 import { saveAiBudget } from "@/features/admin/ai-budget";
 import { initialAiBudgetFormState, MAX_AI_DAILY_BUDGET_NEURONS } from "@/lib/ai-budget-form";
 import { buttonClass, inputClass, labelClass } from "@/lib/form-classes";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * #1029 — the platform admin's control for this store's daily Workers AI budget. Rendered only for
@@ -51,7 +51,7 @@ export function AiBudgetForm({ budgetNeurons }: { budgetNeurons: number }) {
         </p>
       </div>
       <button type="submit" disabled={saving} className={buttonClass}>
-        <Save className="h-4 w-4" aria-hidden />
+        <Icon name="save" className="h-4 w-4" />
         {saving ? "Saving…" : "Save budget"}
       </button>
     </form>

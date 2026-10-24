@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Package, Plus, Search } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { listProductsForAdmin } from "@/lib/products-service";
 import { listCategoriesForAdmin } from "@/lib/categories-service";
@@ -22,6 +21,7 @@ import { formatPrice } from "@/components/product/format-price";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { BackfillImagesButton } from "@/components/staff/BackfillImagesButton";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and this vendor's live catalogue — must render per-request.
 export const dynamic = "force-dynamic";
@@ -112,7 +112,7 @@ export default async function StaffProductsPage({
             href="/staff/products/new"
             className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
           >
-            <Plus className="h-4 w-4" aria-hidden />
+            <Icon name="plus" className="h-4 w-4" />
             New product
           </Link>
         </div>
@@ -228,7 +228,7 @@ export default async function StaffProductsPage({
           type="submit"
           className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-bold text-white"
         >
-          <Search className="h-4 w-4" aria-hidden />
+          <Icon name="search" className="h-4 w-4" />
           Apply
         </button>
       </form>
@@ -237,7 +237,7 @@ export default async function StaffProductsPage({
 
       {items.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <Package className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+          <Icon name="package" className="mx-auto mb-3 h-8 w-8 text-primary-subtle" />
           <p className="text-sm text-primary-muted">
             {isFiltered
               ? "No products match this view. Clear the filters to see the whole catalogue."

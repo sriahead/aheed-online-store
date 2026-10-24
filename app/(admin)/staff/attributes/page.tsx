@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { SlidersHorizontal } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { listAttributesForVendor } from "@/lib/attributes-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { AddAttributeForm, AttributeCard } from "@/components/staff/AttributeManager";
 import { Card } from "@/components/ui/Card";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and this vendor's filters — must render per-request.
 export const dynamic = "force-dynamic";
@@ -39,7 +39,7 @@ export default async function StaffAttributesPage() {
   return (
     <PageContainer width="wide">
       <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-primary">
-        <SlidersHorizontal className="h-5 w-5" aria-hidden="true" />
+        <Icon name="sliders-horizontal" className="h-5 w-5" />
         Product filters
       </h1>
       <p className="mb-6 text-sm text-primary-muted">

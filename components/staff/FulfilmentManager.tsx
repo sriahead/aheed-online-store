@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { CalendarClock, Plus, Timer, Trash2, Truck } from "lucide-react";
 import {
   addExpressWindow,
   addFulfilmentSlot,
@@ -25,6 +24,7 @@ import type {
 } from "@/lib/repositories/fulfilment-slots";
 import { inputClass, labelClass } from "@/lib/form-classes";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Fulfilment-scheduling admin forms (P10, #750).
@@ -257,7 +257,7 @@ export function AddFulfilmentSlotForm({ offerCollection }: { offerCollection: bo
 
       <div className="sm:col-span-6">
         <Button disabled={pending}>
-          <Plus className="h-4 w-4" aria-hidden="true" />
+          <Icon name="plus" className="h-4 w-4" />
           {pending ? "Adding…" : "Add slot"}
         </Button>
         <Feedback state={state} />
@@ -281,9 +281,9 @@ export function FulfilmentSlotRowForm({ slot }: { slot: FulfilmentSlotRow }) {
       <div className="flex items-center justify-between gap-4">
         <span className="inline-flex items-center gap-2 text-primary">
           {slot.method === "DELIVERY" ? (
-            <Truck className="h-4 w-4 text-primary-subtle" aria-hidden="true" />
+            <Icon name="truck" className="h-4 w-4 text-primary-subtle" />
           ) : (
-            <CalendarClock className="h-4 w-4 text-primary-subtle" aria-hidden="true" />
+            <Icon name="calendar-clock" className="h-4 w-4 text-primary-subtle" />
           )}
           <span className="font-semibold">{label}</span>
           <span className="text-sm text-primary-muted">
@@ -299,7 +299,7 @@ export function FulfilmentSlotRowForm({ slot }: { slot: FulfilmentSlotRow }) {
             aria-label={`Remove ${slot.method === "DELIVERY" ? "delivery" : "collection"} slot ${label}`}
             className="inline-flex items-center gap-2 rounded-full border border-black/15 px-3 py-1.5 text-sm font-semibold text-primary transition-colors hover:border-danger hover:text-danger disabled:opacity-60"
           >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            <Icon name="trash" className="h-4 w-4" />
             {pending ? "Removing…" : "Remove"}
           </button>
         </form>
@@ -340,7 +340,7 @@ export function AddExpressWindowForm() {
 
       <div className="sm:col-span-4">
         <Button disabled={pending}>
-          <Plus className="h-4 w-4" aria-hidden="true" />
+          <Icon name="plus" className="h-4 w-4" />
           {pending ? "Adding…" : "Add window"}
         </Button>
         <Feedback state={state} />
@@ -358,7 +358,7 @@ export function ExpressWindowRowForm({ expressWindow }: { expressWindow: Express
     <li className="flex flex-col gap-2 border-b border-black/5 py-3 last:border-b-0">
       <div className="flex items-center justify-between gap-4">
         <span className="inline-flex items-center gap-2 font-semibold text-primary">
-          <Timer className="h-4 w-4 text-primary-subtle" aria-hidden="true" />
+          <Icon name="timer" className="h-4 w-4 text-primary-subtle" />
           {label}
         </span>
         <form action={action}>
@@ -369,7 +369,7 @@ export function ExpressWindowRowForm({ expressWindow }: { expressWindow: Express
             aria-label={`Remove express window ${label}`}
             className="inline-flex items-center gap-2 rounded-full border border-black/15 px-3 py-1.5 text-sm font-semibold text-primary transition-colors hover:border-danger hover:text-danger disabled:opacity-60"
           >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            <Icon name="trash" className="h-4 w-4" />
             {pending ? "Removing…" : "Remove"}
           </button>
         </form>

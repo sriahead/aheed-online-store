@@ -4,7 +4,7 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.36.0"
+version: "1.37.0"
 updated: 2026-10-23
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, KMS coverage vs gitignore, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, vendor hosts, and what a session can and cannot drive when proving a payment path.
@@ -937,8 +937,15 @@ PW=$(grep -h '^DEMO_ACCOUNT_PASSWORD=' .dev.vars | head -1 | sed 's/^DEMO_ACCOUN
 **And `add` never resets an existing account's password.** It calls `signUp` only when the user is
 absent; for one that already exists it updates role, `emailVerified` and name and nothing else. The
 `[reconciled]` it prints therefore tells you the roster is correct and tells you **nothing** about
-which password is stored — re-running it cannot fix a password mismatch. Remove and re-add the
-account if you need the password reset. **Seen at `#1226` (2026-10-23):** `demo-srimart-admin@example.com`
+which password is stored — re-running it cannot fix a password mismatch. **Do not "remove and re-add"
+to reset one account:** `remove` is a `deleteMany` over the whole five-account roster and cascades, so on
+dev it also deletes `demo-customer`'s orders, lists and favourites, which the account pages render.
+Reset the one `Account` row's `password` instead (a singular `account.update` by id, hashing with
+`better-auth/crypto`'s `hashPassword`, then `verifyPassword` to confirm), after checking the database host
+is the dev one. That is how it was repaired at `#1226`; the tool fix is `#1230`. **This has now happened
+three times** (staging at `#912`, dev at `#1013`, dev at `#1226`): after any change to
+`DEMO_ACCOUNT_PASSWORD`, set `.dev.vars` and `.env` to the same value and confirm each account with a live
+sign-in. **Seen at `#1226` (2026-10-23):** `demo-srimart-admin@example.com`
 returned 401 because its dev-database hash dated from 2026-08-17, before `DEMO_ACCOUNT_PASSWORD` took its
 current value, and a re-run of `scripts/demo-accounts.ts add` on 2026-10-21 left it untouched (`add` never resets an
 existing password). A validation that needs that sign-in

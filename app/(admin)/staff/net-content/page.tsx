@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Ruler } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getEnv } from "@/lib/config";
 import { composePublicUrl } from "@/lib/storage";
@@ -18,6 +17,7 @@ import {
   type NetContentReviewRowData,
 } from "@/components/staff/NetContentReviewRow";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and this vendor's suggestions — must render per-request.
 export const dynamic = "force-dynamic";
@@ -110,7 +110,7 @@ export default async function StaffNetContentPage() {
         </h2>
         {rows.length === 0 ? (
           <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-            <Ruler className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+            <Icon name="ruler" className="mx-auto mb-3 h-8 w-8 text-primary-subtle" />
             <p className="text-sm text-primary-muted">
               No suggestions waiting. New ones appear here when a store admin asks the AI.
             </p>

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ClipboardList, Search } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
 import { ORDER_STATUSES, formatOrderDate, nextStatus, orderStatusLabel } from "@/lib/order-status";
@@ -18,6 +17,7 @@ import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { advanceStatus } from "@/features/orders/advance-status";
 import { advanceStatusBulk } from "@/features/orders/advance-status-bulk";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and this vendor's live orders — must render per-request.
 export const dynamic = "force-dynamic";
@@ -120,14 +120,14 @@ export default async function StaffOrdersPage({
           type="submit"
           className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-bold text-white"
         >
-          <Search className="h-4 w-4" aria-hidden />
+          <Icon name="search" className="h-4 w-4" />
           Apply
         </button>
       </form>
 
       {items.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <ClipboardList className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+          <Icon name="clipboard-list" className="mx-auto mb-3 h-8 w-8 text-primary-subtle" />
           <p className="text-sm text-primary-muted">No orders match this view.</p>
         </div>
       ) : (

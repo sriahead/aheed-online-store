@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Package, Plus } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { listBundlesForVendor } from "@/lib/bundles-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and this vendor's bundles — must render per-request.
 export const dynamic = "force-dynamic";
@@ -43,7 +43,7 @@ export default async function StaffBundlesPage() {
           href="/staff/bundles/new"
           className="flex items-center gap-1.5 rounded-xl bg-action px-3 py-2 text-xs font-bold text-white"
         >
-          <Plus className="h-4 w-4" aria-hidden />
+          <Icon name="plus" className="h-4 w-4" />
           New bundle
         </Link>
       </div>
@@ -54,7 +54,7 @@ export default async function StaffBundlesPage() {
 
       {bundles.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <Package className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+          <Icon name="package" className="mx-auto mb-3 h-8 w-8 text-primary-subtle" />
           <p className="text-sm text-primary-muted">
             No bundles yet. Create one to merchandise a set of products together.
           </p>

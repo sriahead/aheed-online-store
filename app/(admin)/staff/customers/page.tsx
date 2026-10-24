@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Users, UserX } from "lucide-react";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { listCustomersForVendor } from "@/lib/customers-service";
 import { formatPrice } from "@/components/product/format-price";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { Card } from "@/components/ui/Card";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Icon } from "@/components/icons/Icon";
 
 // Reads the session and this vendor's live order history — must render per-request.
 export const dynamic = "force-dynamic";
@@ -67,7 +67,7 @@ export default async function StaffCustomersPage({
 
       {items.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <Users className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+          <Icon name="users" className="mx-auto mb-3 h-8 w-8 text-primary-subtle" />
           <p className="text-sm text-primary-muted">
             No customers yet. They appear here once an order has been paid for.
           </p>
@@ -93,7 +93,7 @@ export default async function StaffCustomersPage({
                     )}
                     {customer.kind === "ERASED" && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-muted">
-                        <UserX className="h-3 w-3" aria-hidden />
+                        <Icon name="user-x" className="h-3 w-3" />
                         Erased
                       </span>
                     )}

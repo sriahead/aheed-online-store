@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, FolderTree } from "lucide-react";
+import { Icon } from "@/components/icons/Icon";
 
 type CategoryItem = {
   id: string;
@@ -20,7 +20,7 @@ export function CategoryListClient({ categories }: { categories: CategoryItem[] 
   if (categories.length === 0) {
     return (
       <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-        <FolderTree className="mx-auto mb-3 h-8 w-8 text-primary-subtle" aria-hidden />
+        <Icon name="folder-tree" className="mx-auto mb-3 h-8 w-8 text-primary-subtle" />
         <p className="text-sm text-primary-muted">
           No categories yet. Create one before adding products.
         </p>
@@ -92,9 +92,9 @@ export function CategoryListClient({ categories }: { categories: CategoryItem[] 
                       aria-expanded={!isCollapsed}
                     >
                       {isCollapsed ? (
-                        <ChevronRight className="h-5 w-5" aria-hidden />
+                        <Icon name="chevron-right" className="h-5 w-5" />
                       ) : (
-                        <ChevronDown className="h-5 w-5" aria-hidden />
+                        <Icon name="chevron-down" className="h-5 w-5" />
                       )}
                     </button>
                   )}

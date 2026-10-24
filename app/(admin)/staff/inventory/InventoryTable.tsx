@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, Minus, Plus, Search } from "lucide-react";
 import { updateInventoryAction } from "./actions";
 import { composePublicUrl } from "@/lib/storage";
 import { RESTRICTION_LABELS, STOCK_MODE_LABELS } from "@/lib/product-restriction";
 import type { StaffInventoryRow } from "@/lib/repositories/products";
+import { Icon } from "@/components/icons/Icon";
 
 export function InventoryTable({
   initialItems,
@@ -36,7 +36,10 @@ export function InventoryTable({
     <div className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden mt-6">
       <div className="p-4 border-b border-black/10">
         <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/60" />
+          <Icon
+            name="search"
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/60"
+          />
           <input
             type="text"
             placeholder="Filter inventory by name..."
@@ -153,7 +156,7 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
               disabled={isUpdating || optimisticQuantity <= 0}
               className="flex h-6 w-6 items-center justify-center rounded-2xl bg-black/5 hover:bg-black/10 disabled:opacity-50"
             >
-              <Minus className="h-3 w-3" />
+              <Icon name="minus" className="h-3 w-3" />
             </button>
             <span className="w-6 text-center font-bold">{optimisticQuantity}</span>
             <button
@@ -161,7 +164,7 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
               disabled={isUpdating}
               className="flex h-6 w-6 items-center justify-center rounded-2xl bg-black/5 hover:bg-black/10 disabled:opacity-50"
             >
-              <Plus className="h-3 w-3" />
+              <Icon name="plus" className="h-3 w-3" />
             </button>
           </div>
         )}
@@ -178,12 +181,12 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
         >
           {optimisticActive ? (
             <>
-              <Eye className="h-3.5 w-3.5" />
+              <Icon name="eye" className="h-3.5 w-3.5" />
               In Stock
             </>
           ) : (
             <>
-              <EyeOff className="h-3.5 w-3.5" />
+              <Icon name="eye-off" className="h-3.5 w-3.5" />
               Hidden
             </>
           )}

@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { Save } from "lucide-react";
 import { saveProduct } from "@/features/admin/catalogue";
 import { initialCatalogueState, toCategoryOptionGroups } from "@/lib/catalogue-form";
 import { ProductImageUploader } from "@/components/staff/ProductImageUploader";
@@ -19,6 +18,7 @@ import type { ProductLabelSettings } from "@/lib/product-label-settings";
 import type { AttributeDefinition } from "@/lib/repositories/attributes";
 import { STOCK_MODES } from "@/lib/cart-rules";
 import { RESTRICTION_LABELS, STOCK_MODE_LABELS } from "@/lib/product-restriction";
+import { Icon } from "@/components/icons/Icon";
 
 /**
  * Product create/edit form (P6b1, #159).
@@ -648,7 +648,7 @@ export function ProductForm({
             disabled={saving}
             className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Save className="h-4 w-4" aria-hidden />
+            <Icon name="save" className="h-4 w-4" />
             {saving ? "Saving…" : isNew ? "Create product" : "Save changes"}
           </button>
           <Link
