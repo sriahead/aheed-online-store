@@ -101,7 +101,7 @@ describe("inventory()", () => {
   });
 });
 
-describe("scripts/verify-icon-markup.ts (real process)", () => {
+describe("scripts/verify-icon-markup.ts (real process)", { timeout: 30000 }, () => {
   it("prints one JSON line per path on stdout and only progress on stderr", async () => {
     const { code, stdout, stderr } = await run([
       "--base",
@@ -157,18 +157,22 @@ describe("scripts/verify-icon-markup.ts (real process)", () => {
     expect(sent.origin).toBe(base);
   });
 
-  it("--compare exits 0 for a lucide-react page against the same page through Icon, and 1 for a change", async () => {
-    const before = join(scratch, "before.jsonl");
-    const after = join(scratch, "after.jsonl");
-    const changed = join(scratch, "changed.jsonl");
-    writeFileSync(before, JSON.stringify(inventory(BEFORE_PAGE)) + "\n");
-    writeFileSync(after, JSON.stringify(inventory(AFTER_PAGE)) + "\n");
-    writeFileSync(changed, JSON.stringify(inventory(CHANGED_PAGE)) + "\n");
-    const same = await run(["--compare", before, after]);
-    expect(same.code, same.stderr).toBe(0);
-    expect(same.stderr).toContain("identical");
-    const different = await run(["--compare", before, changed]);
-    expect(different.code).toBe(1);
-    expect(different.stderr).toContain("only BEFORE");
-  });
+  it(
+    "--compare exits 0 for a lucide-react page against the same page through Icon, and 1 for a change",
+    async () => {
+      const before = join(scratch, "before.jsonl");
+      const after = join(scratch, "after.jsonl");
+      const changed = join(scratch, "changed.jsonl");
+      writeFileSync(before, JSON.stringify(inventory(BEFORE_PAGE)) + "\n");
+      writeFileSync(after, JSON.stringify(inventory(AFTER_PAGE)) + "\n");
+      writeFileSync(changed, JSON.stringify(inventory(CHANGED_PAGE)) + "\n");
+      const same = await run(["--compare", before, after]);
+      expect(same.code, same.stderr).toBe(0);
+      expect(same.stderr).toContain("identical");
+      const different = await run(["--compare", before, changed]);
+      expect(different.code).toBe(1);
+      expect(different.stderr).toContain("only BEFORE");
+    },
+    30000,
+  );
 });

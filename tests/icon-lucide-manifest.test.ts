@@ -28,7 +28,7 @@ describe("lucide icons in use at BASE", () => {
     }
   });
 
-  it("the registry holds no icon the manifest does not account for, bar the Phase 3 and #1239 additions", () => {
+  it("the registry holds no icon the manifest does not account for, bar Phase 3, #1239 and #1242 additions", () => {
     const accountedFor = new Set(manifest.icons.map((i) => i.key));
     const allowedAdditions = new Set([
       "featured-star",
@@ -39,6 +39,7 @@ describe("lucide icons in use at BASE", () => {
       "rewards-gift",
       "rewards-invite",
       "rewards-sparkles",
+      "shopping-cart",
       "trust-delivery",
       "trust-payment",
       "trust-updates",
