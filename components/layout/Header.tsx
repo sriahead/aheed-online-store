@@ -268,53 +268,66 @@ export async function Header({
                 placeholder={searchPlaceholder}
                 className="min-w-0 flex-1"
               />
-              <ShoppingListLink />
             </div>
           )}
 
           {/* Action Controls & Navigation */}
           <nav aria-label="Main Navigation" className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {/* #496 — the landing page's header had no path at all to the
-              catalogue: "Shop List" was deliberately hidden there (P8.5f), and
-              the only other route in was the hero's rotating per-department
-              "Shop {Department}" button. This stays visible on every non-portal
-              route, landing included — and since #1131 so does the Quick Shop
-              link, which #1142 moved beside the search bar. */}
             {!isPortal && (
-              <Link
-                href="/categories"
-                className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
-                title="Browse all departments"
-              >
-                <Icon3D
-                  name="storefront"
-                  size={20}
-                  className="-my-0.5"
-                  animated={false}
-                  decorative
-                />
-                <span className="hidden sm:inline">Shop</span>
-              </Link>
+              <>
+                <Link
+                  href="/categories"
+                  prefetch={false}
+                  className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-2 sm:px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
+                  title="Shop — Browse all departments and categories"
+                >
+                  <Icon3D
+                    name="storefront"
+                    size={24}
+                    className="-my-0.5"
+                    animated={false}
+                    decorative
+                  />
+                  <span className="hidden sm:inline">Shop</span>
+                </Link>
+                <ShoppingListLink />
+              </>
             )}
 
             {/* Account / Sign In & Sign Out Controls */}
             {user ? (
               <Link
                 href="/account"
+                prefetch={false}
+                title={`My Account (${firstName || "Profile"})`}
                 className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 p-1 pr-3 rounded-xl border border-black/10 transition-colors text-xs font-bold text-black/80 hover:text-primary"
               >
-                <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
-                  {firstName?.charAt(0) ?? <Icon name="user" className="h-3.5 w-3.5" />}
-                </div>
+                <Icon3D
+                  name="user-profile"
+                  dataIcon="user"
+                  size={24}
+                  className="-my-0.5"
+                  animated={false}
+                  decorative
+                />
                 <span className="hidden sm:inline">{firstName}</span>
               </Link>
             ) : (
               <Link
                 href="/login"
+                prefetch={false}
+                title="Sign in to your account"
                 className="flex min-h-tap min-w-tap justify-center lg:min-h-0 lg:min-w-0 items-center gap-1.5 bg-surface-muted hover:bg-black/5 text-black/80 px-3 py-2 rounded-xl text-xs font-bold transition border border-black/10"
               >
-                {/* #1173 — the account symbol, matching the round signed-in avatar. */}
-                <Icon name="circle-user-round" className="w-4 h-4 text-primary" />
+                {/* #1173, #1251 — 3D user-profile symbol replacing Lucide/letter avatar */}
+                <Icon3D
+                  name="user-profile"
+                  dataIcon="circle-user-round"
+                  size={24}
+                  className="-my-0.5"
+                  animated={false}
+                  decorative
+                />
                 <span className="hidden sm:inline">Sign In</span>
               </Link>
             )}
@@ -353,8 +366,8 @@ export async function Header({
         {/* Mobile search row — stays pinned with the logo/nav row (#960). #979: pb-1.5, not pb-3.
             The search input grew 6px to the 44px `tap` size below `lg`, and this row gives those
             6px back so the product grid does not move. #1131: shown up to `xl` (was `sm`), because
-            the department search bar no longer fits inline below `xl`. #1142: the Quick Shop
-            link sits beside the bar here too, in the same row, so it adds no height. */}
+            the department search bar no longer fits inline below `xl`. #1251: Quick Shop sits in
+            Main Navigation beside Shop on all screen sizes, giving the search bar the full row. */}
         {!isPortal && (
           <div className="mx-auto flex max-w-7xl items-stretch gap-2 px-4 pb-1.5 xl:hidden">
             <DepartmentSearchBar
@@ -362,7 +375,6 @@ export async function Header({
               placeholder={searchPlaceholder}
               className="min-w-0 flex-1"
             />
-            <ShoppingListLink />
           </div>
         )}
       </header>

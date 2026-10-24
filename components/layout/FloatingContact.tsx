@@ -145,13 +145,17 @@ function FloatingContactPanel(props: FloatingContactProps) {
           aria-expanded={open}
           aria-controls={PANEL_ID}
           aria-label={open ? "Hide contact links" : `Contact and follow ${vendorName}`}
-          title={open ? "Hide contact links" : `Contact and follow ${vendorName}`}
+          title={
+            open
+              ? "Close contact options"
+              : `Contact & Support — WhatsApp, Social & Help (${vendorName})`
+          }
           className="flex h-12 w-12 items-center justify-center rounded-full bg-action text-white shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-transform hover:scale-105 motion-reduce:hover:scale-100 hover:bg-action-hover"
         >
           {open ? (
             <Icon name="x" className="h-5 w-5" />
           ) : (
-            <Icon3D name="contact-follow" dataIcon="users" size={28} className="-my-1" />
+            <Icon3D name="contact-follow" dataIcon="users" size={38} className="-my-0.5" />
           )}
         </button>
       </div>

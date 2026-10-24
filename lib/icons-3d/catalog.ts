@@ -401,4 +401,24 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
         <path d="M27 64 c0-7 6-11 13-11 s13 4 13 11 Z" fill="#ffffff"/>
       </g>`,
   },
+
+  "user-profile": {
+    id: "user-profile",
+    name: "3D User Profile",
+    category: "general",
+    purpose: "Customer account, profile settings, and membership avatar",
+    recommendedAnim: "pop",
+    tags: ["user", "profile", "account", "avatar", "person", "member"],
+    render: (p, sid) =>
+      buildDefs(sid, p) +
+      `<g filter="url(#soft-${sid})">
+        <circle cx="48" cy="48" r="34" fill="url(#body-${sid})" stroke="${p.accentDark}" stroke-width="2"/>
+        <circle cx="48" cy="48" r="30" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.4"/>
+        <circle cx="48" cy="38" r="13" fill="#ffffff" stroke="${p.accentDark}" stroke-width="1.2"/>
+        <circle cx="45" cy="34" r="3.5" fill="#ffffff" opacity="0.6"/>
+        <path d="M25 72 C25 56 35 52 48 52 C61 52 71 56 71 72 Z" fill="#ffffff" stroke="${p.accentDark}" stroke-width="1.2"/>
+        <circle cx="68" cy="28" r="7" fill="url(#gold-${sid})" stroke="#b45309" stroke-width="1"/>
+        <path d="m68 23 1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z" fill="#ffffff"/>
+      </g>`,
+  },
 };
