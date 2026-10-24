@@ -118,7 +118,7 @@ export default async function StaffOrderDetailPage({
       <OrderAddressCard
         address={order.address}
         fulfilmentMethod={order.fulfilmentMethod}
-        orderNumber={order.orderNumber}
+        customerEmail={order.buyerEmail}
       />
 
       {/* P9.2 (#696) — staff cancellation of a PAID order.

@@ -19,10 +19,12 @@ export interface OrderAddress {
 export function OrderAddressCard({
   address,
   fulfilmentMethod = "DELIVERY",
+  customerEmail,
   orderNumber,
 }: {
   address: OrderAddress;
   fulfilmentMethod?: "DELIVERY" | "COLLECTION";
+  customerEmail?: string | null;
   orderNumber?: string;
 }) {
   if (fulfilmentMethod === "COLLECTION") {
@@ -43,12 +45,12 @@ export function OrderAddressCard({
             </span>
             <span className="font-semibold text-primary">{address.recipientName}</span>
           </div>
-          {orderNumber && (
+          {customerEmail && (
             <div>
               <span className="block text-xs font-semibold uppercase tracking-wider text-primary-muted">
-                Order Reference
+                Email
               </span>
-              <span className="font-mono font-bold text-primary">{orderNumber}</span>
+              <span className="text-primary">{customerEmail}</span>
             </div>
           )}
           <div>

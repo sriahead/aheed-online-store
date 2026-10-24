@@ -123,7 +123,7 @@ export default async function AccountOrderPage({
       <OrderAddressCard
         address={order.address}
         fulfilmentMethod={order.fulfilmentMethod}
-        orderNumber={order.orderNumber}
+        customerEmail={order.customerEmail ?? (session.user as { email?: string })?.email}
       />
     </PageContainer>
   );

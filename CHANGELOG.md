@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **Click & Collect order details: replace order reference with customer email** (issue #1261; specs/2026-10-24-p1261-click-collect-email/).
+  - **Click & Collect Order Details:** Replaced redundant Order Reference on Click & Collect card with customer Email in components/orders/OrderAddressCard.tsx.
+  - **Multi-View Email Propagation:** Wired customer email across staff order view (pp/(admin)/staff/orders/[orderNumber]/page.tsx), account order history (pp/(storefront)/account/orders/[orderNumber]/page.tsx), and confirmation views (pp/(storefront)/checkout/[orderNumber]/page.tsx).
+  - **Repository & Summary Model:** Added customerEmail resolution to OrderSummary in lib/repositories/orders.ts (indOrderForViewer, indOrderForUser, and indOrderForStaff).
+
 - **Icon credits page, generated icon attribution, and cart tooltip cleanup** (issue `#1257`; `specs/2026-10-24-p1257-icon-credits-cart-tooltip/`).
   - **Cart Hover Tooltip Purity:** Suppressed inner SVG `<title>` in `components/cart/CartDrawerShell.tsx` via `decorative={true}` on the trigger and drawer header icons, ensuring only `"My Cart"` displays on browser hover.
   - **Clean Catalog Names:** Renamed `cart-add` in `lib/icons-3d/catalog.ts` to `"My Cart"` and stripped redundant `"3D "` prefixes from all icon catalog names.

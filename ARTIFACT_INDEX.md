@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-24T20:05:52.821Z` · commit `a6ffdc7` · `266` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-24T21:34:28.348Z` · commit `09be06d` · `267` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -292,6 +292,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Phase 7a Implementation & Execution Plan](specs/2026-08-13-p7a-compliance-hardening/plan.md) | doc | 1.0.0 | 2026-08-13 | approved | internal | Step-by-step implementation plan for Phase 7a operational closure, UK compliance, security headers, and user-experience gaps. |
 | [KMS Strategy — Target Design and Governance Standard](specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md) | spec | 2.1.1 | 2026-09-22 | review | internal | The target architecture, documentation standard and governance model for the platform Knowledge Management System — audiences, taxonomy, metadata, source-of-truth, deployment documentation, runbooks, CI governance and SDD integration, with current-state facts separated from design intent. |
 | [KMS Pilot: Orders, Fulfilment & Payment Exceptions (plan)](specs/2026-09-22-kms-pilot-orders-fulfilment/plan.md) | spec | 1.1.0 | 2026-09-22 | draft | internal | Pilot for the revised KMS restructuring focusing on consolidating orders, fulfilment, and payment exceptions into a thematic, current-knowledge model. |
+| [Plan — Click & Collect order details: replace order reference with customer email (#1261)](specs/2026-10-24-p1261-click-collect-email/plan.md) | spec | 1.0.0 | 2026-10-24 | approved | internal | Replace the redundant order reference on the Click & Collect details card with the customer's email address, as the order reference is already prominently shown at the top of order pages. Issue 1261. |
 
 ## Track 3 — Customer / Help Centre (`customer-help`)  ·  audience: customer
 
