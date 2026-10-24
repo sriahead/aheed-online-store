@@ -332,7 +332,10 @@ R38. [P3] The icons of the table "Phase 3 surfaces" in `plan.md` are rendered th
     its provider or tier (a decorative variant of an icon that is also used functionally elsewhere gets a
     new semantic name instead).
 R39. [P3] In the served HTML of `/` on both vendors, every `<svg>` whose `data-icon` is a decorative name
-    contains `--icon-secondary` and contains no colour literal matching `#[0-9a-fA-F]{3,8}\b`.
+    **whose provider is `ph`** (the nine Phase 3 names) contains `--icon-secondary`, and no `<svg>` whose `data-icon`
+    is a decorative name contains a colour literal matching `#[0-9a-fA-F]{3,8}\b`. (Corrected 2026-10-24 from the first
+    wording, which said "every decorative name": a decorative `lucide` icon such as `sparkles` or `truck` is a single
+    layer and has no secondary to carry, so the live run of `#1234` could only report it as a wording question.)
 R40. [P3] The `<html>` or root element's inline `style` on `/` carries a different `--color-accent` value
     on the Aheed host than on the SriMart host, and `git diff BASE..HEAD --stat -- lib/vendor-theme.ts
     design-system/tokens/tokens.css` prints nothing (no token and no `brandStyle()` change).

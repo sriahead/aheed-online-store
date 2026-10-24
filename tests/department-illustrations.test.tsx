@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEPARTMENT_ILLUSTRATIONS, departmentIllustration } from "@/components/icons/illustrations";
 import { DepartmentGlyph } from "@/components/layout/DepartmentGlyph";
@@ -171,7 +171,7 @@ describe("components/icons names no vendor and no department outside illustratio
   it("holds", () => {
     const offenders: string[] = [];
     for (const path of sourceFiles(join(ROOT, "components/icons"))) {
-      const name = path.split("/").pop()!;
+      const name = basename(path);
       const text = readFileSync(path, "utf8");
       for (const vendor of vendors) {
         // illustrations.ts is the one file that names the slugs, including the SriMart ones.

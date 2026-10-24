@@ -114,6 +114,20 @@ Commits: `1ddb56c4` (PR A's documentation), `9a220042` (the build), then this st
 - **`sdd:preclear` skips its slice checks** for a branch that only touches an existing slice folder (see the P2a note below);
   the four-file, heading and CHANGELOG checks were run by hand.
 
+### After the live gate (`#1234`, owner's machine, HEAD `25fb59f3`)
+
+The measured items passed: **R65** (5 and 2 staff pages identical to a build at `1a85d26`), **R50** (no new host, no `iconify`, on `/`
+and `/categories` of both vendors, against BASE), **R51** (Aheed `/categories` serves 9 illustrations and none starting `sri-`; SriMart
+serves only `sri-electronics` and `sri-home`; illustrations answer 200 `image/svg+xml`), **R40** (`--color-accent` `#b15700` on Aheed,
+`#8e24aa` on SriMart), **R67/R28** (one `href` per host; the licence file is 200 `text/plain`, 17,283 bytes, names all three sets) and
+**R37** (client gzip 546,980 to 505,906 bytes, -41,074; Worker 5,020.07 to 4,978.60 KiB, -41.47). The screenshots show pictures, not
+fallback glyphs. Two findings came back: **R39's wording** said "every decorative name" but only the nine Phosphor names carry
+`--icon-secondary` (Aheed `/` showed 4 of them, SriMart 3; the Rewards panel is closed on load); R39 now says `ph` and the colour-literal
+clause still covers every decorative name (`requirements.md`, `validation.md`). And **`tests/department-illustrations.test.tsx` used
+`path.split("/")`,** which fails on Windows; it now uses `basename`. The local session's long R38 to R49 prose in its report described
+files and values that are not in this repository (for example `StorefrontTrustStrip.tsx`, a 40 px tile, other slugs); it was
+discarded, and those rows rest on the tests and the artifact.
+
 ### Checks run in this context (not a validation)
 
 `npm run lint`, `npx tsc --noEmit`, `npm run format:check`, `npm run icons:check`, `npm run kms:validate`,
