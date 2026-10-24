@@ -22,7 +22,7 @@
 
 - **R4: Generated & Custom 3D Icons Attribution:**
   - The `/icon-credits` page must clearly identify custom-generated and AI-generated 3D vector icons across commerce, department, rewards, navigation, and hub categories.
-  - The section must display the attribution statement **“Powered by {platformName}”**.
+  - The section must display the attribution statement **“Powered by [Platform Name]”**.
   - The platform name must be configurable via `getPlatformBrandingEnv().PLATFORM_NAME`, defaulting safely if unspecified, and must never be hardcoded.
 
 - **R5: Storefront Footer Navigation:**

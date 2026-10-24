@@ -13,7 +13,7 @@
    - Created `app/(storefront)/icon-credits/page.tsx` within `<PageContainer width="standard">`.
    - Formatted third-party open-source libraries (Lucide Icons, Google Noto Emoji, Phosphor Icons, Simple Icons) with their respective licences (ISC, Apache-2.0, MIT, CC0-1.0), author credits, usage summaries, and direct repository/licence links.
    - Provided link to the raw plaintext notice file `/third-party-icon-licenses.txt`.
-   - Authored the Generated & Custom 3D Icons section and prominently declared **“Powered by {platformName}”**, reading `platformName` dynamically from `getPlatformBrandingEnv().PLATFORM_NAME` (with fallback to the active vendor's name or "Aheed Platform").
+   - Authored the Generated & Custom 3D Icons section and prominently declared **“Powered by [Platform Name]”**, reading `platformName` dynamically from `getPlatformBrandingEnv().PLATFORM_NAME` (with fallback to the active vendor's name or "Aheed Platform").
 
 3. **Footer Link Update:**
    - Updated `components/layout/StorefrontFooter.tsx` so "Icon credits" links to `/icon-credits`.

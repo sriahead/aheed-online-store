@@ -35,7 +35,7 @@ Issue `#1257`, following user request on 2026-10-24.
    - Clear sections for:
      - Third-Party Icon Libraries: Lucide (ISC), Google Noto Emoji (Apache 2.0), Phosphor Icons (MIT), Simple Icons (CC0 1.0).
      - Generated & Custom 3D Icons: Delivery Van, Halal Certification Medallion, Postcode Search, My Cart Trolley, Secure Checkout Shield, Notifications, Department Icons, Loyalty & Rewards, Storefront, Quick Shop, Contact Hub, and User Profile.
-     - Generated icons attribution stating **“Powered by {platformName}”**, reading from `getPlatformBrandingEnv().PLATFORM_NAME` (with fallback to vendor name / platform default).
+     - Generated icons attribution stating **“Powered by [Platform Name]”**, reading from `getPlatformBrandingEnv().PLATFORM_NAME` (with fallback to vendor name / platform default).
      - Link to view raw notice file `/third-party-icon-licenses.txt`.
 
 3. **Footer Integration (`components/layout/StorefrontFooter.tsx`):**
