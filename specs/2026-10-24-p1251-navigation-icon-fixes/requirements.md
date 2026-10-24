@@ -1,17 +1,4 @@
----
-id: p1251-navigation-icon-fixes-requirements
-title: "Fix Quick Shop mobile visibility, icon sizes, user profile icon and navigation drill-down (requirements)"
-audience: [dev]
-type: spec
-status: draft
-version: "1.0.0"
-updated: 2026-10-24
-visibility: internal
-summary: Requirements for Issue 1251 covering Quick Shop visibility, icon sizing, user profile icon, and navigation reliability.
-tags: [navigation, quick-shop, 3d-icons, storefront, header, mobile-ux, accessibility]
----
-
-# Requirements: Issue #1251
+# Fix Quick Shop mobile visibility, icon sizes, user profile icon and navigation drill-down (requirements)
 
 ## R1: Quick Shop Visibility & Positioning Across Viewports
 - Quick Shop must be visible and easily tappable on mobile (<640px), tablet (640px-1024px), and desktop (>=1024px).

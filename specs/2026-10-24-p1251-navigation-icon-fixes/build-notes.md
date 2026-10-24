@@ -1,17 +1,4 @@
----
-id: p1251-navigation-icon-fixes-build-notes
-title: "Fix Quick Shop mobile visibility, icon sizes, user profile icon and navigation drill-down (build notes)"
-audience: [dev]
-type: spec
-status: draft
-version: "1.0.0"
-updated: 2026-10-24
-visibility: internal
-summary: Build notes for Issue 1251.
-tags: [navigation, quick-shop, 3d-icons, storefront, header, mobile-ux, accessibility]
----
-
-# Build Notes: Issue #1251
+# Fix Quick Shop mobile visibility, icon sizes, user profile icon and navigation drill-down (build notes)
 
 ## Overview
 Built and validated fixes for the four user-reported storefront issues on Issue `#1251`:

@@ -1,17 +1,4 @@
----
-id: p1251-navigation-icon-fixes-validation
-title: "Fix Quick Shop mobile visibility, icon sizes, user profile icon and navigation drill-down (validation)"
-audience: [dev]
-type: spec
-status: draft
-version: "1.0.0"
-updated: 2026-10-24
-visibility: internal
-summary: Verification criteria for Issue 1251.
-tags: [navigation, quick-shop, 3d-icons, storefront, header, mobile-ux, accessibility]
----
-
-# Validation: Issue #1251
+# Fix Quick Shop mobile visibility, icon sizes, user profile icon and navigation drill-down (validation)
 
 ## Criteria
 
