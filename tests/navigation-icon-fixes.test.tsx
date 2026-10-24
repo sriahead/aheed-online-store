@@ -97,7 +97,7 @@ describe("Navigation & Icon Improvements (#1251)", () => {
     expect(keys.length).toBe(20);
 
     const userProfile = ICON_3D_DEFINITIONS["user-profile"];
-    expect(userProfile.name).toBe("3D User Profile");
+    expect(userProfile.name).toBe("User Profile");
     expect(userProfile.category).toBe("general");
     expect(userProfile.tags).toContain("profile");
     expect(userProfile.tags).toContain("avatar");
