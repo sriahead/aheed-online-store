@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Integrate Client Help & Documentation Centre into existing KMS** (issue `#1272`).
+  - **Comprehensive Client Help Centre:** Added 9 core documentation guides under `docs/client-help-centre/` covering Getting Started, Roles & Permissions, Features & Settings, Products & Catalogue, Integrations, Tutorials & FAQs, Troubleshooting & Escalation, and Glossary & Release Notes.
+  - **Documented End-to-End User Journey Maps:** Authored verified visual flowcharts (Mermaid), step-by-step guides, prerequisites, alternative error paths, and onboarding checklists for all 4 roles: Platform Admin, Vendor Admin, Staff, and Customer.
+  - **In-App Search & Deep Linking in `/staff/runbook`:** Enhanced `RunbookClient` with instant real-time article search and query param deep linking (`initialDocId`, `initialQuery`), allowing staff and admins to jump directly to specific guides.
+  - **Contextual Help Links:** Added contextual guidance buttons on `/staff/products/import` (bulk import guide), `/staff/onboarding` (onboarding checklist guide), and `/staff/delivery-areas` (delivery rules guide).
+  - **KMS Multi-Track Assembly & Navigation:** Updated `kms/site-internal` content hub with structured categories, assembled 279 documents, and verified full-text search indexing with Pagefind (282 pages indexed).
+
 - **Platform Admin role and platform-wide management suite** (issue `#1269`; `specs/2026-10-25-platform-admin-role-and-management/`).
   - **Platform Admin Server-Side Role Enforcement:** Added `requirePlatformAdmin()` to `lib/auth-rbac.ts` ensuring strict `session.user.role === "ADMIN"` checking. Guaranteed that store-level admins holding `VendorMembership(role: "ADMIN")` with `User.role === "CUSTOMER"` are refused on all platform-wide management operations with HTTP 403 Forbidden (`<PanelRefusal title="Platform admin only" />`).
   - **Dedicated Platform Navigation:** Added dedicated "Platform" menu to `components/staff/PanelNav.tsx` and platform navigation section to `/staff` hub (`app/(admin)/staff/page.tsx`), visible exclusively to platform administrators.

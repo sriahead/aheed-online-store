@@ -105,6 +105,14 @@ export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDash
                 {report.vendorSlug}
               </code>
             </p>
+            <div className="pt-1">
+              <Link
+                href="/staff/runbook?doc=getting-started-onboarding"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-action hover:underline"
+              >
+                View Store Onboarding &amp; Launch Readiness Guide →
+              </Link>
+            </div>
           </div>
 
           <div className="flex flex-col items-start gap-4 lg:items-end">
