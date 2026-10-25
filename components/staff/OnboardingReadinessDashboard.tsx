@@ -7,6 +7,7 @@ import type {
   ReadinessCategory,
   ReadinessSetting,
   SettingStatus,
+  SettingOwner,
 } from "@/lib/vendor-readiness-service";
 
 interface OnboardingReadinessDashboardProps {
@@ -15,6 +16,7 @@ interface OnboardingReadinessDashboardProps {
 
 export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDashboardProps) {
   const [filter, setFilter] = useState<"ALL" | "MISSING" | "CONFIGURED" | "PLANNED">("ALL");
+  const [roleFilter, setRoleFilter] = useState<"ALL" | SettingOwner>("ALL");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const getStatusBadge = (status: SettingStatus) => {
@@ -73,6 +75,7 @@ export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDash
   };
 
   const filterItem = (item: ReadinessSetting) => {
+    if (roleFilter !== "ALL" && item.owner !== roleFilter) return false;
     if (filter === "ALL") return true;
     if (filter === "MISSING") return item.status === "MISSING";
     if (filter === "CONFIGURED") return item.status === "CONFIGURED";
@@ -104,13 +107,23 @@ export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDash
             </p>
           </div>
 
-          <div className="flex flex-col items-start gap-2 lg:items-end">
-            <div className="text-right">
+          <div className="flex flex-col items-start gap-4 lg:items-end">
+            <div className="text-left lg:text-right">
               <div className="text-3xl font-black text-slate-900">{report.overallCompletion}%</div>
               <div className="text-xs font-medium text-slate-500">
                 {report.configuredRequiredSettings} of {report.totalRequiredSettings} required items
                 complete
               </div>
+            </div>
+
+            {/* Responsibility Breakdown */}
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 font-semibold text-blue-800 border border-blue-200">
+                Store Operator: {report.vendorConfiguredCount} / {report.vendorRequiredCount}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 px-2.5 py-1 font-semibold text-purple-800 border border-purple-200">
+                Platform Admin: {report.platformConfiguredCount} / {report.platformRequiredCount}
+              </span>
             </div>
           </div>
         </div>
@@ -138,48 +151,86 @@ export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDash
         </div>
 
         {/* Filter Navigation */}
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-6">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilter("ALL")}
-              className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition ${
-                filter === "ALL"
-                  ? "bg-slate-900 text-white shadow-sm"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              }`}
-            >
-              All Checklist Items
-            </button>
-            <button
-              onClick={() => setFilter("MISSING")}
-              className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition ${
-                filter === "MISSING"
-                  ? "bg-rose-700 text-white shadow-sm"
-                  : "bg-rose-50 text-rose-700 hover:bg-rose-100"
-              }`}
-            >
-              Action Required (Missing)
-            </button>
-            <button
-              onClick={() => setFilter("CONFIGURED")}
-              className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition ${
-                filter === "CONFIGURED"
-                  ? "bg-emerald-700 text-white shadow-sm"
-                  : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-              }`}
-            >
-              Configured
-            </button>
-            <button
-              onClick={() => setFilter("PLANNED")}
-              className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition ${
-                filter === "PLANNED"
-                  ? "bg-sky-700 text-white shadow-sm"
-                  : "bg-sky-50 text-sky-700 hover:bg-sky-100"
-              }`}
-            >
-              Planned / External
-            </button>
+        <div className="mt-8 space-y-4 border-t border-slate-100 pt-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            {/* Status Filter */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setFilter("ALL")}
+                className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition ${
+                  filter === "ALL"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                All Items
+              </button>
+              <button
+                onClick={() => setFilter("MISSING")}
+                className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition ${
+                  filter === "MISSING"
+                    ? "bg-rose-700 text-white shadow-sm"
+                    : "bg-rose-50 text-rose-700 hover:bg-rose-100"
+                }`}
+              >
+                Action Required (Missing)
+              </button>
+              <button
+                onClick={() => setFilter("CONFIGURED")}
+                className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition ${
+                  filter === "CONFIGURED"
+                    ? "bg-emerald-700 text-white shadow-sm"
+                    : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                }`}
+              >
+                Configured
+              </button>
+              <button
+                onClick={() => setFilter("PLANNED")}
+                className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition ${
+                  filter === "PLANNED"
+                    ? "bg-sky-700 text-white shadow-sm"
+                    : "bg-sky-50 text-sky-700 hover:bg-sky-100"
+                }`}
+              >
+                Planned / External
+              </button>
+            </div>
+
+            {/* Role / Ownership Filter */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-500 mr-1">Owner:</span>
+              <button
+                onClick={() => setRoleFilter("ALL")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                  roleFilter === "ALL"
+                    ? "bg-slate-800 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                All Roles
+              </button>
+              <button
+                onClick={() => setRoleFilter("VENDOR_OPERATOR")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                  roleFilter === "VENDOR_OPERATOR"
+                    ? "bg-blue-600 text-white"
+                    : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                }`}
+              >
+                Store Operator
+              </button>
+              <button
+                onClick={() => setRoleFilter("PLATFORM_ADMIN")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                  roleFilter === "PLATFORM_ADMIN"
+                    ? "bg-purple-600 text-white"
+                    : "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                }`}
+              >
+                Platform Admin
+              </button>
+            </div>
           </div>
 
           <div className="text-xs text-slate-400">
@@ -198,30 +249,54 @@ export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDash
               onClick={() => setActiveCategory(isSelected ? null : cat.id)}
               className={`flex flex-col justify-between rounded-xl border p-4 text-left transition ${
                 isSelected
-                  ? "border-slate-900 bg-slate-50 ring-2 ring-slate-900"
-                  : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
+                  ? "border-slate-900 bg-slate-900 text-white shadow-md"
+                  : "border-black/10 bg-white hover:border-slate-300 hover:shadow-sm"
               }`}
             >
               <div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <div
+                  className={`text-xs font-bold uppercase tracking-wide ${
+                    isSelected ? "text-slate-300" : "text-slate-500"
+                  }`}
+                >
                   Category
                 </div>
-                <div className="mt-1 font-bold text-slate-900">{cat.name}</div>
-              </div>
-              <div className="mt-4">
-                <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="font-medium text-slate-600">
-                    {cat.configuredRequired}/{cat.totalRequired} required
-                  </span>
-                  <span className="font-bold text-slate-900">{cat.completionPercentage}%</span>
+                <div
+                  className={`mt-1 text-sm font-bold ${
+                    isSelected ? "text-white" : "text-slate-900"
+                  }`}
+                >
+                  {cat.name}
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+              </div>
+
+              <div className="mt-4 flex items-end justify-between">
+                <div>
+                  <div
+                    className={`text-2xl font-black ${
+                      isSelected ? "text-white" : "text-slate-900"
+                    }`}
+                  >
+                    {cat.completionPercentage}%
+                  </div>
+                  <div
+                    className={`text-[11px] ${isSelected ? "text-slate-300" : "text-slate-500"}`}
+                  >
+                    {cat.configuredRequired}/{cat.totalRequired} required
+                  </div>
+                </div>
+
+                <div
+                  className={`h-2 w-16 overflow-hidden rounded-full ${
+                    isSelected ? "bg-slate-800" : "bg-slate-100"
+                  }`}
+                >
                   <div
                     className={`h-full ${
                       cat.completionPercentage === 100
-                        ? "bg-emerald-600"
-                        : cat.completionPercentage >= 50
-                          ? "bg-amber-500"
+                        ? "bg-emerald-500"
+                        : cat.completionPercentage >= 60
+                          ? "bg-amber-400"
                           : "bg-rose-500"
                     }`}
                     style={{ width: `${cat.completionPercentage}%` }}
@@ -233,7 +308,7 @@ export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDash
         })}
       </div>
 
-      {/* Categorised Checklist Sections */}
+      {/* Detailed Checklist Tables */}
       <div className="space-y-6">
         {report.categories
           .filter((cat) => !activeCategory || cat.id === activeCategory)
@@ -281,6 +356,15 @@ export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDash
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm font-bold text-slate-900">{item.name}</span>
                           {getStatusBadge(item.status)}
+                          {item.owner === "PLATFORM_ADMIN" ? (
+                            <span className="rounded bg-purple-50 px-1.5 py-0.5 text-[10px] font-bold text-purple-700 uppercase border border-purple-200">
+                              Platform Admin
+                            </span>
+                          ) : (
+                            <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 uppercase border border-blue-200">
+                              Store Operator
+                            </span>
+                          )}
                           {item.required && !item.isPlanned && (
                             <span className="rounded bg-rose-50 px-1.5 py-0.2 text-[10px] font-bold text-rose-700 uppercase">
                               Required

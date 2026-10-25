@@ -8,6 +8,19 @@ every branch merges.
 
 ### Added
 
+- **Platform Admin role and platform-wide management suite** (issue `#1269`; `specs/2026-10-25-platform-admin-role-and-management/`).
+  - **Platform Admin Server-Side Role Enforcement:** Added `requirePlatformAdmin()` to `lib/auth-rbac.ts` ensuring strict `session.user.role === "ADMIN"` checking. Guaranteed that store-level admins holding `VendorMembership(role: "ADMIN")` with `User.role === "CUSTOMER"` are refused on all platform-wide management operations with HTTP 403 Forbidden (`<PanelRefusal title="Platform admin only" />`).
+  - **Dedicated Platform Navigation:** Added dedicated "Platform" menu to `components/staff/PanelNav.tsx` and platform navigation section to `/staff` hub (`app/(admin)/staff/page.tsx`), visible exclusively to platform administrators.
+  - **Multi-Tenant Platform Management Suite:** Built 5 dedicated platform administration pages under `app/(admin)/staff/platform/...`:
+    - `/staff/platform/vendors`: Central multi-vendor directory showing operational status, primary domain, catalogue counts, and team sizes across all tenants.
+    - `/staff/platform/domains`: Multi-tenant domain and route registry with canonical flags and store associations.
+    - `/staff/platform/onboarding`: Executive launch readiness roll-up across all platform tenants.
+    - `/staff/platform/settings`: Technical architecture overview covering edge runtime, database connection pooling, Better Auth federation, and external integration dependencies.
+    - `/staff/platform/health`: Real-time database latency diagnostics and error logging summary.
+  - **Storefront Configuration Dashboard Role Alignment:** Updated `lib/vendor-readiness-service.ts` and `components/staff/OnboardingReadinessDashboard.tsx` to explicitly tag every configurable setting with its responsible role (`VENDOR_OPERATOR` vs `PLATFORM_ADMIN`), added broken-down completion counters, and introduced role filter tabs.
+  - **Pure Repository Architecture:** Implemented `lib/repositories/platform-admin.ts` with explicit client injection and zero request context imports, adhering strictly to repository purity and transaction safety invariants.
+  - **Operator Documentation & Container Parity:** Documented all 5 new platform routes with the standard 7-part format in `docs/platform-admin-guide/platform-admin-guide.md`, passing `tests/operator-doc-coverage.test.ts` and `tests/page-container.test.ts`.
+
 - **Storefront Configuration Dashboard and Vendor Onboarding Readiness** (issue `#1267`; `specs/2026-10-25-storefront-configuration-dashboard/`).
   - **Onboarding Readiness Dashboard:** Added staff panel dashboard `/staff/onboarding` under Store Setup (`tier: "admin"`) benchmarking store configuration against the canonical reference `https://aheedfoodcentre.nocaped.com/`.
   - **Categorized Configuration Audit:** Evaluates 8 distinct areas: Profile & Identity, Storefront Branding, Delivery & Fulfillment, Operating & Order Hours, Catalogue & Inventory, Payment Methods & Badges, Customer Communication & Social, and Infrastructure & Compliance.

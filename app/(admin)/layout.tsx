@@ -22,6 +22,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const auth = await requireVendorRole("STAFF", "ADMIN");
   const canSeeOrders = auth.ok;
   const canSeeAdmin = auth.ok && (auth.via === "platform-admin" || auth.via === "ADMIN");
+  const isPlatformAdmin = auth.ok && auth.via === "platform-admin";
 
   // Read tier preference from cookie. If a STAFF user hacks their cookie to 'admin',
   // it's harmless because the actual pages still enforce requireVendorRole("ADMIN").
@@ -42,7 +43,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       className="min-h-screen bg-surface-muted flex flex-col"
     >
       <Header isPortal={true} />
-      <PanelNav canSeeOrders={canSeeOrders} currentTier={currentTier} />
+      <PanelNav
+        canSeeOrders={canSeeOrders}
+        currentTier={currentTier}
+        isPlatformAdmin={isPlatformAdmin}
+      />
       <div className="flex-1">{children}</div>
     </div>
   );

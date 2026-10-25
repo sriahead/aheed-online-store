@@ -53,6 +53,11 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(admin)/staff/bundles/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/feedback/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/team/page.tsx": { width: "wide", padY: "default" },
+  "app/(admin)/staff/platform/vendors/page.tsx": { width: "wide", padY: "default" },
+  "app/(admin)/staff/platform/domains/page.tsx": { width: "wide", padY: "default" },
+  "app/(admin)/staff/platform/onboarding/page.tsx": { width: "wide", padY: "default" },
+  "app/(admin)/staff/platform/settings/page.tsx": { width: "wide", padY: "default" },
+  "app/(admin)/staff/platform/health/page.tsx": { width: "wide", padY: "default" },
   // --- admin: standard
   "app/(admin)/staff/faqs/page.tsx": { width: "standard", padY: "default" },
   "app/(admin)/staff/discounts/page.tsx": { width: "standard", padY: "default" },

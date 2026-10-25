@@ -203,4 +203,31 @@ describe("Storefront Onboarding Readiness Evaluation (Issue #1267)", () => {
       expect(item.editHref).toMatch(/^\/staff\//);
     }
   });
+
+  it("segregates configuration responsibility between store operator and platform admin (#1269)", () => {
+    const report = evaluateVendorReadinessData(makeReferenceVendorData(), "a4ed-reference");
+    const allItems = report.categories.flatMap((c) => c.items);
+
+    // Every item has an explicit owner
+    for (const item of allItems) {
+      expect(["VENDOR_OPERATOR", "PLATFORM_ADMIN"]).toContain(item.owner);
+    }
+
+    const platformItems = allItems.filter((i) => i.owner === "PLATFORM_ADMIN");
+    expect(platformItems.length).toBeGreaterThanOrEqual(4);
+    const platformIds = platformItems.map((i) => i.id);
+    expect(platformIds).toContain("domain_routing");
+    expect(platformIds).toContain("ai_neuron_allowance");
+    expect(platformIds).toContain("outgoing_email_service");
+    expect(platformIds).toContain("live_stripe_keys");
+
+    // Report provides broken-down counts
+    expect(report.vendorRequiredCount).toBeGreaterThan(0);
+    expect(report.vendorConfiguredCount).toBe(report.vendorRequiredCount);
+    expect(report.platformRequiredCount).toBeGreaterThan(0);
+    expect(report.platformConfiguredCount).toBe(report.platformRequiredCount);
+    expect(report.vendorRequiredCount + report.platformRequiredCount).toBe(
+      report.totalRequiredSettings,
+    );
+  });
 });

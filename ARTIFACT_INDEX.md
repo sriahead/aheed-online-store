@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-25T17:54:42.440Z` · commit `fc65707` · `270` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-25T19:19:16.696Z` · commit `aeeebc9` · `271` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -260,6 +260,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Plan — Icon credits page, generated icon attribution, and cart tooltip cleanup (#1257)](specs/2026-10-24-p1257-icon-credits-cart-tooltip/plan.md) | spec | 1.0.0 | 2026-10-24 | approved | internal | Clean up cart tooltip to strictly 'My Cart', create dedicated simple icon credits page with all third-party licences, and attribute generated 3D icons as 'Powered by [Platform Name]' via configurable config. Issue 1257. |
 | [Offers & WhatsApp Promotions page (plan)](specs/2026-10-24-whatsapp-offers-page/plan.md) | spec | 1.0.0 | 2026-10-24 | approved | internal | Dedicated /whatsapp-offers storefront page (#1233) combining per-vendor WhatsApp community join banner + QR code on VendorConfig with genuine catalogue offers grouped by department, active bundles, live campaigns, and storefront navigation. |
 | [Provision Aheed Superstore test vendor on staging (plan)](specs/2026-10-25-aheedsuperstore-staging-onboarding/plan.md) | spec | 1.0.0 | 2026-10-25 | draft | internal | Plan for issue #1265: provision Aheed Superstore test vendor on staging (aheedsuperstore-staging.nocaped.com) with Cloudflare route, isolated tenant configuration, staff admin access, and empty initial catalogue. |
+| [Platform Admin role and platform-wide management suite (plan)](specs/2026-10-25-platform-admin-role-and-management/plan.md) | spec | 1.0.0 | 2026-10-25 | approved | internal | Implement a dedicated Platform Admin role, canonical requirePlatformAdmin() server-side gate, dedicated platform administration navigation and dashboard suite, cross-vendor security enforcement, and storefront configuration dashboard role alignment. |
 | [Storefront Configuration Dashboard and Vendor Onboarding Readiness (plan)](specs/2026-10-25-storefront-configuration-dashboard/plan.md) | spec | 1.0.0 | 2026-10-25 | draft | internal | Plan for issue #1267: in-app Storefront Configuration Dashboard at /staff/onboarding and categorized onboarding audit benchmarked against aheedfoodcentre.nocaped.com, featuring live completion tracking, validation rules, deep links, and readiness status. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.43.0 | 2026-10-22 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |

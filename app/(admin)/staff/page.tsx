@@ -7,6 +7,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { visibleGroups, type StaffNavTier } from "@/components/staff/nav-items";
+import { PLATFORM_NAV_ITEMS } from "@/components/staff/platform-nav-items";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Icon } from "@/components/icons/Icon";
 
@@ -96,36 +97,62 @@ export default async function StaffHomePage() {
         </section>
       ))}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {/*
-         * Platform admins only, and checked against `auth.via` directly rather than reusing
-         * `isAdmin` above — that flag is true for a VENDOR admin too, whereas
-         * /staff/errors refuses anyone whose `auth.via !== "platform-admin"` because a stack trace
-         * can reveal internal paths a vendor-scoped account has no reason to see (#508). Reusing
-         * `isAdmin` would render a link that every store admin could see and none of them could
-         * open.
-         *
-         * This is also why the card is here and not in `components/staff/PanelNav.tsx`: that nav is
-         * vendor-scoped chrome and its `currentTier` prop has no way to express "platform admin".
-         * `tests/staff-nav-parity.test.ts` excludes this route from its parity set for the same
-         * reason.
-         *
-         * Deliberately NOT gated on the `admin-tier` cookie: that cookie simulates what a STAFF
-         * member of this vendor sees, and this page is not a vendor page at all.
-         */}
-        {auth.via === "platform-admin" && (
-          <Link
-            href="/staff/errors"
-            className="rounded-2xl border border-black/10 bg-white p-5 hover:border-action"
-          >
-            <Icon name="bug" className="mb-3 h-6 w-6 text-danger" />
-            <p className="font-semibold text-primary">Error events</p>
-            <p className="mt-1 text-sm text-primary-muted">
-              Recent server-side errors across the platform. Platform admins only.
-            </p>
-          </Link>
-        )}
-      </div>
+      {/*
+       * Platform admins only, and checked against `auth.via` directly rather than reusing
+       * `isAdmin` above — that flag is true for a VENDOR admin too, whereas
+       * platform administration refuses anyone whose `auth.via !== "platform-admin"` because a stack trace
+       * and platform settings reveal internal paths a vendor-scoped account has no reason to see (#508).
+       */}
+      {auth.via === "platform-admin" && (
+        <section className="mt-12 rounded-2xl border border-purple-200 bg-purple-50/40 p-6 sm:p-8">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <Icon name="shield-check" className="h-5 w-5 text-purple-700" />
+                <h2 className="text-base font-bold text-purple-900 sm:text-lg">
+                  Platform Administration
+                </h2>
+              </div>
+              <p className="mt-1 text-xs text-purple-700/80">
+                Cross-vendor operator controls and system health. Visible to global platform admins
+                only.
+              </p>
+            </div>
+            <span className="rounded-full bg-purple-200/80 px-2.5 py-0.5 text-xs font-bold text-purple-900">
+              Platform Admin
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {PLATFORM_NAV_ITEMS.map((item) => {
+              if (item.href === "/staff/errors") {
+                return (
+                  <Link
+                    key={item.href}
+                    href="/staff/errors"
+                    className="rounded-xl border border-purple-200/80 bg-white p-5 shadow-sm hover:border-purple-600 hover:shadow transition"
+                  >
+                    <Icon name={item.icon} className="mb-3 h-6 w-6 text-purple-700" />
+                    <p className="font-bold text-slate-900">{item.label}</p>
+                    <p className="mt-1 text-xs text-slate-600 leading-normal">{item.description}</p>
+                  </Link>
+                );
+              }
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-xl border border-purple-200/80 bg-white p-5 shadow-sm hover:border-purple-600 hover:shadow transition"
+                >
+                  <Icon name={item.icon} className="mb-3 h-6 w-6 text-purple-700" />
+                  <p className="font-bold text-slate-900">{item.label}</p>
+                  <p className="mt-1 text-xs text-slate-600 leading-normal">{item.description}</p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </PageContainer>
   );
 }

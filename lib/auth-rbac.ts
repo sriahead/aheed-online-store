@@ -73,3 +73,34 @@ export async function requireVendorRole(...allowed: VendorRole[]): Promise<Vendo
   }
   return { ok: false, status: 403, reason: "forbidden" };
 }
+
+export type PlatformAdminRbacResult =
+  | { ok: true; user: { id: string; email: string; name: string; role: "ADMIN" } }
+  | { ok: false; status: 401 | 403; reason: "unauthenticated" | "forbidden" };
+
+/**
+ * Gate a route handler / Server Action strictly to global Platform Admins.
+ * Only a user with `User.role === "ADMIN"` is permitted. A store admin (who holds
+ * only a `VendorMembership` for a vendor) is refused with 403.
+ */
+export async function requirePlatformAdmin(): Promise<PlatformAdminRbacResult> {
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
+  if (!session?.user) {
+    return { ok: false, status: 401, reason: "unauthenticated" };
+  }
+
+  const role = ((session.user as { role?: Role }).role ?? "CUSTOMER") as Role;
+  if (role !== "ADMIN") {
+    return { ok: false, status: 403, reason: "forbidden" };
+  }
+
+  return {
+    ok: true,
+    user: {
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      role: "ADMIN",
+    },
+  };
+}
