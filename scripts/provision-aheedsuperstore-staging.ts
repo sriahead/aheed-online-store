@@ -28,11 +28,20 @@ function hostOf(connectionString: string): string {
   }
 }
 
+export const KNOWN_PRODUCTION_HOST = "ep-young-glitter-zadlkttm.c-2.eu-west-2.aws.neon.tech";
+
 export function assertNotProduction(targetHost: string): void {
+  const normTarget = targetHost.toLowerCase().replace(/-pooler\./, ".");
+  if (normTarget === KNOWN_PRODUCTION_HOST) {
+    throw new Error(
+      `REFUSING TO RUN: Target database host "${targetHost}" matches production DIRECT_URL/DATABASE_URL.`,
+    );
+  }
+
   try {
     const prodVars = parseEnvFile("secrets/production.vars");
     for (const key of ["DIRECT_URL", "DATABASE_URL"]) {
-      if (prodVars[key] && hostOf(prodVars[key]) === targetHost) {
+      if (prodVars[key] && hostOf(prodVars[key]) === normTarget) {
         throw new Error(
           `REFUSING TO RUN: Target database host "${targetHost}" matches production DIRECT_URL/DATABASE_URL.`,
         );
@@ -41,7 +50,7 @@ export function assertNotProduction(targetHost: string): void {
   } catch (err: unknown) {
     if (err instanceof Error && err.message.startsWith("REFUSING TO RUN")) throw err;
     // If secrets/production.vars doesn't exist, check hostname heuristic
-    if (targetHost.includes("prod") || targetHost.includes("production")) {
+    if (normTarget.includes("prod") || normTarget.includes("production")) {
       throw new Error(
         `REFUSING TO RUN: Target database host "${targetHost}" appears to be a production database.`,
       );
