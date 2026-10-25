@@ -1,7 +1,7 @@
 {
   "producedBy": "npx tsx scripts/list-lucide-imports.ts --root <checkout of BASE>  (the export names; `key` is the registry key chosen for each)",
   "base": "a8d4762397ae517793655fc6fc758cd085b7c2e1 (BASE as defined in specs/2026-10-22-icon-system/requirements.md: the parent of the spec commit c8fd46a)",
-  "count": 103,
+  "count": 102,
   "icons": [
     {
       "export": "AlertCircle",
@@ -382,10 +382,6 @@
     {
       "export": "Truck",
       "key": "truck"
-    },
-    {
-      "export": "Upload",
-      "key": "upload"
     },
     {
       "export": "User",
