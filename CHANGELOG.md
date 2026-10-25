@@ -8,6 +8,14 @@ every branch merges.
 
 ### Added
 
+- **Storefront Configuration Dashboard and Vendor Onboarding Readiness** (issue `#1267`; `specs/2026-10-25-storefront-configuration-dashboard/`).
+  - **Onboarding Readiness Dashboard:** Added staff panel dashboard `/staff/onboarding` under Store Setup (`tier: "admin"`) benchmarking store configuration against the canonical reference `https://aheedfoodcentre.nocaped.com/`.
+  - **Categorized Configuration Audit:** Evaluates 8 distinct areas: Profile & Identity, Storefront Branding, Delivery & Fulfillment, Operating & Order Hours, Catalogue & Inventory, Payment Methods & Badges, Customer Communication & Social, and Infrastructure & Compliance.
+  - **Actionable Tracking & Deep Links:** Computes overall completion percentage, launch readiness status (`LAUNCH_READY`, `NEEDS_ATTENTION`, `IN_PROGRESS`), item-level status badges (`CONFIGURED`, `ACTION_REQUIRED`, `PLANNED`), and deep navigation links directly to corresponding staff configuration pages.
+  - **Pure Repository & Service Separation:** Structured data extraction in `lib/repositories/vendor-readiness.ts` with injected Prisma client and zero request context imports, evaluated via pure engine in `lib/vendor-readiness-service.ts`.
+  - **Planned Features Segregation:** Distinguishes implemented in-app settings from planned/external roadmap items (#1217 Cloudflare Email, #113 Live Stripe Keys, External DNS), preventing planned platform tasks from blocking vendor-level readiness scoring.
+  - **Operator Documentation & Container Parity:** Authored full 7-section operator documentation in `docs/store-admin-guide/admin-tabs-guide.md` and registered layout in `tests/page-container.test.ts`.
+
 - **Provision Aheed Superstore test vendor on staging** (issue `#1265`; `specs/2026-10-25-aheedsuperstore-staging-onboarding/`).
   - **Staging Custom Domain Route:** Added `[[env.staging.routes]]` with `pattern = "aheedsuperstore-staging.nocaped.com"` and `custom_domain = true` in `wrangler.toml` for automatic TLS certificate generation under the `nocaped.com` Cloudflare zone.
   - **Vendor Manifest & Tenancy:** Created `prisma/manifests/aheedsuperstore.json` specifying vendor identity (`aheedsuperstore`), AA-compliant branding colors, delivery areas, and host mapping.
