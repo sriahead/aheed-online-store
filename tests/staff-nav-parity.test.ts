@@ -59,6 +59,10 @@ function routesOnDisk(): Set<string> {
     if (!EXCLUDED.has(route)) routes.add(route);
   }
 
+  if (existsSync(join(STAFF_ROUTES_DIR, "products", "import", "page.tsx"))) {
+    routes.add("/staff/products/import");
+  }
+
   return routes;
 }
 
@@ -98,7 +102,7 @@ describe("the nav module is well formed (R1, R4)", () => {
 
   it("gives every item the fields both surfaces render", () => {
     for (const item of allItems) {
-      expect(item.href, "an item has no href").toMatch(/^\/staff\/[a-z-]+$/);
+      expect(item.href, "an item has no href").toMatch(/^\/staff\/[a-z/-]+$/);
       expect(item.label.length, `${item.href} has no label`).toBeGreaterThan(0);
       expect(item.description.length, `${item.href} has no description`).toBeGreaterThan(0);
       expect(item.icon, `${item.href} has no icon`).toBeTruthy();

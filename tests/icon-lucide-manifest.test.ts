@@ -43,6 +43,7 @@ describe("lucide icons in use at BASE", () => {
       "trust-delivery",
       "trust-payment",
       "trust-updates",
+      "upload",
     ]);
     for (const [key] of Object.entries(ICON_REGISTRY)) {
       if (allowedAdditions.has(key)) continue;

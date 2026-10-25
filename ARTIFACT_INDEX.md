@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-24T21:34:28.348Z` · commit `09be06d` · `267` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-25T00:19:36.877Z` · commit `af9d6a1` · `268` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -293,6 +293,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [KMS Strategy — Target Design and Governance Standard](specs/2026-09-22-kms-pilot-orders-fulfilment/kms-strategy-evaluation.md) | spec | 2.1.1 | 2026-09-22 | review | internal | The target architecture, documentation standard and governance model for the platform Knowledge Management System — audiences, taxonomy, metadata, source-of-truth, deployment documentation, runbooks, CI governance and SDD integration, with current-state facts separated from design intent. |
 | [KMS Pilot: Orders, Fulfilment & Payment Exceptions (plan)](specs/2026-09-22-kms-pilot-orders-fulfilment/plan.md) | spec | 1.1.0 | 2026-09-22 | draft | internal | Pilot for the revised KMS restructuring focusing on consolidating orders, fulfilment, and payment exceptions into a thematic, current-knowledge model. |
 | [Plan — Click & Collect order details: replace order reference with customer email (#1261)](specs/2026-10-24-p1261-click-collect-email/plan.md) | spec | 1.0.0 | 2026-10-24 | approved | internal | Replace the redundant order reference on the Click & Collect details card with the customer's email address, as the order reference is already prominently shown at the top of order pages. Issue 1261. |
+| [Staff Panel Stock File Upload & Catalogue Import (plan)](specs/2026-10-25-staff-catalogue-import/plan.md) | spec | 1.0.0 | 2026-10-25 | draft | internal | Spec for staff panel stock file upload at /staff/products/import: two-phase validate/preview and apply workflow, browser/streaming grid parsing keeping @e965/xlsx out of worker bundle, ADR-007 hidden & UNKNOWN stock invariants, and audit logging. |
 
 ## Track 3 — Customer / Help Centre (`customer-help`)  ·  audience: customer
 

@@ -110,6 +110,14 @@ export const STAFF_NAV_GROUPS: readonly StaffNavGroup[] = [
         tone: "accent",
       },
       {
+        href: "/staff/products/import",
+        label: "Import stock file",
+        description: "Upload stock sheets to preview and import products and categories.",
+        icon: "upload",
+        tier: "admin",
+        tone: "action",
+      },
+      {
         href: "/staff/inventory",
         label: "Live Inventory & Availability",
         description: "Quickly adjust stock levels and toggle product availability.",

@@ -51,11 +51,16 @@ const REQUIRED_PARTS = [
 
 /** Every immediate subdirectory of app/(admin)/staff that is a real route. */
 function discoverStaffRoutes(): string[] {
-  return readdirSync(STAFF_ROUTES_DIR, { withFileTypes: true })
+  const routes = readdirSync(STAFF_ROUTES_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
-    .filter((name) => existsSync(join(STAFF_ROUTES_DIR, name, "page.tsx")))
-    .sort();
+    .filter((name) => existsSync(join(STAFF_ROUTES_DIR, name, "page.tsx")));
+
+  if (existsSync(join(STAFF_ROUTES_DIR, "products", "import", "page.tsx"))) {
+    routes.push("products/import");
+  }
+
+  return routes.sort();
 }
 
 /**
@@ -106,7 +111,7 @@ function collectSections(): DocumentedSection[] {
         if (current) sections.push({ route: current.route, guide, body: current.lines.join("\n") });
         current = null;
 
-        const route = line.match(/`\/staff\/([a-z-]+)`/);
+        const route = line.match(/`\/staff\/([a-z/-]+)`/);
         if (route) current = { route: route[1], lines: [] };
         continue;
       }

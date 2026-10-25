@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Staff Panel Stock File Upload & Catalogue Import** (`specs/2026-10-25-staff-catalogue-import/`).
+  - **Staff Import Page & Action:** Created `/staff/products/import` under Catalogue with `tier: "admin"`, wrapped in `<PageContainer width="standard">` and gated on `requireVendorRole("ADMIN")`.
+  - **In-Memory Two-Phase Workflow:** Implemented `validateStockFileAction` and `applyStockFileAction` providing full preview of candidate additions, existing record preservation, duplicate rejection reporting, and ADR-007 classifications before explicit commit.
+  - **Worker Bundle Protection:** Kept `@e965/xlsx` strictly out of the Worker bundle (`app/`, `features/`, `components/`, `lib/`), parsing CSV via pure streaming parser and Excel in the browser before action submission.
+  - **ADR-007 Default Policy & Stock Safety:** Enforces automatic restriction categorization (`TOBACCO`/`ALCOHOL` $\rightarrow$ `AGE_RESTRICTED`, `INSTANT LOTTERY` $\rightarrow$ `PROHIBITED`, `PHONE CARDS`/`NEWS`/`E-PAY`/`STAMPS` $\rightarrow$ `NOT_DELIVERABLE`, `DEFAULT` department $\rightarrow$ `NEEDS_REVIEW`). Creates all new products as hidden (`isActive: false`) with stock `UNKNOWN` and quantity 0.
+  - **Session Isolation & 10,000 Row Limit:** Derives `vendorId` exclusively from verified session, rejecting client-supplied vendor IDs, and aborts payloads $> 10,000$ rows before execution.
+
 - **Click & Collect order details: replace order reference with customer email** (issue #1261; specs/2026-10-24-p1261-click-collect-email/).
   - **Click & Collect Order Details:** Replaced redundant Order Reference on Click & Collect card with customer Email in components/orders/OrderAddressCard.tsx.
   - **Multi-View Email Propagation:** Wired customer email across staff order view (pp/(admin)/staff/orders/[orderNumber]/page.tsx), account order history (pp/(storefront)/account/orders/[orderNumber]/page.tsx), and confirmation views (pp/(storefront)/checkout/[orderNumber]/page.tsx).
