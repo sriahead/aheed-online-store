@@ -251,6 +251,14 @@ export const STAFF_NAV_GROUPS: readonly StaffNavGroup[] = [
     label: "Store setup",
     items: [
       {
+        href: "/staff/onboarding",
+        label: "Onboarding Readiness",
+        description: "Audit storefront configuration, track onboarding completeness, and check live launch readiness.",
+        icon: "clipboard-list",
+        tier: "admin",
+        tone: "action",
+      },
+      {
         href: "/staff/storefront",
         label: "Storefront",
         description: "This store’s branding, logo and shopfront configuration.",

@@ -629,5 +629,23 @@ twice is safe and will not double-charge or double-confirm anything.
 
 
 
+## Onboarding Readiness — `/staff/onboarding`
+
+**Purpose:** Comprehensive audit dashboard tracking all required storefront configuration, benchmarked against `https://aheedfoodcentre.nocaped.com/`, with completion percentage and launch readiness status.
+
+**Who can access:** Store admins only
+
+**What you can do:** Audit store configuration across 8 key operational domains, track completion progress toward launch readiness, review validation rules for missing fields, and deep-link directly to administrative screens to configure outstanding items.
+
+**Typical workflow:** When onboarding a new vendor or reviewing store configuration before public launch, open this dashboard. Check the overall completion percentage and readiness status (`LAUNCH_READY`, `NEEDS_ATTENTION`, `IN_PROGRESS`). Filter by "Action Required (Missing)" to identify unconfigured essential settings. Click "Configure →" beside any item to navigate directly to its configuration tab. Revisit the dashboard to verify 100% completion before marketing the store.
+
+**Important fields and filters:** Filters allow viewing All Items, Action Required (Missing), Configured, or Planned/External. Audited categories cover Storefront Identity & Chrome, Visual Theme & Brand Primitives, Storefront Copy & Badges, Fulfilment & Delivery, Footer Location & Legal Compliance, Customer Communication, Catalogue & ADR-007 Inventory Safeguards, and Platform Infrastructure.
+
+**Common mistakes and limitations:** This dashboard is a read-only audit and benchmarking view; it displays live data and direct links to editing forms, but does not edit records directly. Planned features (such as Cloudflare Email Sending #1217, live Stripe keys #113, and external apex DNS) are clearly marked and do not block in-app configuration.
+
+**What happens after changes are saved:** After configuring settings on their respective tabs (such as Storefront, Delivery areas, Fulfilment, or Team & Access), returning to the Onboarding Readiness dashboard automatically recalculates the completion percentage and updates the readiness status in real time.
+
+
+
 
 
