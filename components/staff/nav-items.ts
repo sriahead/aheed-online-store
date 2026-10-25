@@ -110,6 +110,14 @@ export const STAFF_NAV_GROUPS: readonly StaffNavGroup[] = [
         tone: "accent",
       },
       {
+        href: "/staff/products/import",
+        label: "Import stock file",
+        description: "Upload stock sheets to preview and import products and categories.",
+        icon: "upload",
+        tier: "admin",
+        tone: "action",
+      },
+      {
         href: "/staff/inventory",
         label: "Live Inventory & Availability",
         description: "Quickly adjust stock levels and toggle product availability.",
@@ -242,6 +250,15 @@ export const STAFF_NAV_GROUPS: readonly StaffNavGroup[] = [
     id: "store-setup",
     label: "Store setup",
     items: [
+      {
+        href: "/staff/onboarding",
+        label: "Onboarding Readiness",
+        description:
+          "Audit storefront configuration, track onboarding completeness, and check live launch readiness.",
+        icon: "clipboard-list",
+        tier: "admin",
+        tone: "action",
+      },
       {
         href: "/staff/storefront",
         label: "Storefront",

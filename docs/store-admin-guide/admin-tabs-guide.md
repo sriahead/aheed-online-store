@@ -611,4 +611,41 @@ twice is safe and will not double-charge or double-confirm anything.
 
 
 
+## Import stock file — `/staff/products/import`
+
+**Purpose:** Bulk import product lines, departments, and initial prices from client stock spreadsheets (`.csv`, `.xlsx`, `.xls`) without manual per-item data entry.
+
+**Who can access:** Store admins only
+
+**What you can do:** Upload stock files up to 10,000 rows. View an in-memory preview of candidate additions, categories, matching existing records, duplicate rejects, and ADR-007 restriction classifications before any database write. Confirm and commit verified changes.
+
+**Typical workflow:** Select or drop a `.csv`, `.xlsx`, or `.xls` stock sheet. Inspect the preview metrics and rejection table to ensure columns and rows mapped correctly. Once satisfied, click "Confirm & Apply Changes". Review the execution receipt, then navigate to `/staff/products` to review and publish lines.
+
+**Important fields and filters:** The file must include columns for item code/PLU, description/name, retail price, and department. Sub-department and VAT rate columns are optional. Payloads exceeding 10,000 rows are refused.
+
+**Common mistakes and limitations:** Imported stock quantities and negative EPOS till numbers are never imported as live inventory. All imported products are created hidden (`isActive: false`) with stock mode `UNKNOWN` and quantity 0. You must manually publish products and set tracked stock. Re-importing existing products will never overwrite existing prices, manual descriptions, or unhide inactive products; it will only tighten restrictions.
+
+**What happens after changes are saved:** Products and categories are created inside per-department interactive transactions. Restrictions are logged to the immutable `ProductRestrictionAuditLog`. New products appear immediately in the `/staff/products` admin catalogue list under the Hidden filter, ready for staff review and activation.
+
+
+
+## Onboarding Readiness — `/staff/onboarding`
+
+**Purpose:** Comprehensive audit dashboard tracking all required storefront configuration, benchmarked against `https://aheedfoodcentre.nocaped.com/`, with completion percentage and launch readiness status.
+
+**Who can access:** Store admins only
+
+**What you can do:** Audit store configuration across 8 key operational domains, track completion progress toward launch readiness, review validation rules for missing fields, and deep-link directly to administrative screens to configure outstanding items.
+
+**Typical workflow:** When onboarding a new vendor or reviewing store configuration before public launch, open this dashboard. Check the overall completion percentage and readiness status (`LAUNCH_READY`, `NEEDS_ATTENTION`, `IN_PROGRESS`). Filter by "Action Required (Missing)" to identify unconfigured essential settings. Click "Configure →" beside any item to navigate directly to its configuration tab. Revisit the dashboard to verify 100% completion before marketing the store.
+
+**Important fields and filters:** Filters allow viewing All Items, Action Required (Missing), Configured, or Planned/External. Audited categories cover Storefront Identity & Chrome, Visual Theme & Brand Primitives, Storefront Copy & Badges, Fulfilment & Delivery, Footer Location & Legal Compliance, Customer Communication, Catalogue & ADR-007 Inventory Safeguards, and Platform Infrastructure.
+
+**Common mistakes and limitations:** This dashboard is a read-only audit and benchmarking view; it displays live data and direct links to editing forms, but does not edit records directly. Planned features (such as Cloudflare Email Sending #1217, live Stripe keys #113, and external apex DNS) are clearly marked and do not block in-app configuration.
+
+**What happens after changes are saved:** After configuring settings on their respective tabs (such as Storefront, Delivery areas, Fulfilment, or Team & Access), returning to the Onboarding Readiness dashboard automatically recalculates the completion percentage and updates the readiness status in real time.
+
+
+
+
 

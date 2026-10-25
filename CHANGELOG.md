@@ -8,6 +8,41 @@ every branch merges.
 
 ### Added
 
+- **Platform Admin role and platform-wide management suite** (issue `#1269`; `specs/2026-10-25-platform-admin-role-and-management/`).
+  - **Platform Admin Server-Side Role Enforcement:** Added `requirePlatformAdmin()` to `lib/auth-rbac.ts` ensuring strict `session.user.role === "ADMIN"` checking. Guaranteed that store-level admins holding `VendorMembership(role: "ADMIN")` with `User.role === "CUSTOMER"` are refused on all platform-wide management operations with HTTP 403 Forbidden (`<PanelRefusal title="Platform admin only" />`).
+  - **Dedicated Platform Navigation:** Added dedicated "Platform" menu to `components/staff/PanelNav.tsx` and platform navigation section to `/staff` hub (`app/(admin)/staff/page.tsx`), visible exclusively to platform administrators.
+  - **Multi-Tenant Platform Management Suite:** Built 5 dedicated platform administration pages under `app/(admin)/staff/platform/...`:
+    - `/staff/platform/vendors`: Central multi-vendor directory showing operational status, primary domain, catalogue counts, and team sizes across all tenants.
+    - `/staff/platform/domains`: Multi-tenant domain and route registry with canonical flags and store associations.
+    - `/staff/platform/onboarding`: Executive launch readiness roll-up across all platform tenants.
+    - `/staff/platform/settings`: Technical architecture overview covering edge runtime, database connection pooling, Better Auth federation, and external integration dependencies.
+    - `/staff/platform/health`: Real-time database latency diagnostics and error logging summary.
+  - **Storefront Configuration Dashboard Role Alignment:** Updated `lib/vendor-readiness-service.ts` and `components/staff/OnboardingReadinessDashboard.tsx` to explicitly tag every configurable setting with its responsible role (`VENDOR_OPERATOR` vs `PLATFORM_ADMIN`), added broken-down completion counters, and introduced role filter tabs.
+  - **Pure Repository Architecture:** Implemented `lib/repositories/platform-admin.ts` with explicit client injection and zero request context imports, adhering strictly to repository purity and transaction safety invariants.
+  - **Operator Documentation & Container Parity:** Documented all 5 new platform routes with the standard 7-part format in `docs/platform-admin-guide/platform-admin-guide.md`, passing `tests/operator-doc-coverage.test.ts` and `tests/page-container.test.ts`.
+
+- **Storefront Configuration Dashboard and Vendor Onboarding Readiness** (issue `#1267`; `specs/2026-10-25-storefront-configuration-dashboard/`).
+  - **Onboarding Readiness Dashboard:** Added staff panel dashboard `/staff/onboarding` under Store Setup (`tier: "admin"`) benchmarking store configuration against the canonical reference `https://aheedfoodcentre.nocaped.com/`.
+  - **Categorized Configuration Audit:** Evaluates 8 distinct areas: Profile & Identity, Storefront Branding, Delivery & Fulfillment, Operating & Order Hours, Catalogue & Inventory, Payment Methods & Badges, Customer Communication & Social, and Infrastructure & Compliance.
+  - **Actionable Tracking & Deep Links:** Computes overall completion percentage, launch readiness status (`LAUNCH_READY`, `NEEDS_ATTENTION`, `IN_PROGRESS`), item-level status badges (`CONFIGURED`, `ACTION_REQUIRED`, `PLANNED`), and deep navigation links directly to corresponding staff configuration pages.
+  - **Pure Repository & Service Separation:** Structured data extraction in `lib/repositories/vendor-readiness.ts` with injected Prisma client and zero request context imports, evaluated via pure engine in `lib/vendor-readiness-service.ts`.
+  - **Planned Features Segregation:** Distinguishes implemented in-app settings from planned/external roadmap items (#1217 Cloudflare Email, #113 Live Stripe Keys, External DNS), preventing planned platform tasks from blocking vendor-level readiness scoring.
+  - **Operator Documentation & Container Parity:** Authored full 7-section operator documentation in `docs/store-admin-guide/admin-tabs-guide.md` and registered layout in `tests/page-container.test.ts`.
+
+- **Provision Aheed Superstore test vendor on staging** (issue `#1265`; `specs/2026-10-25-aheedsuperstore-staging-onboarding/`).
+  - **Staging Custom Domain Route:** Added `[[env.staging.routes]]` with `pattern = "aheedsuperstore-staging.nocaped.com"` and `custom_domain = true` in `wrangler.toml` for automatic TLS certificate generation under the `nocaped.com` Cloudflare zone.
+  - **Vendor Manifest & Tenancy:** Created `prisma/manifests/aheedsuperstore.json` specifying vendor identity (`aheedsuperstore`), AA-compliant branding colors, delivery areas, and host mapping.
+  - **Staging Provisioning Script:** Authored `scripts/provision-aheedsuperstore-staging.ts` with strict production refusal guards (`assertNotProduction`), idempotently provisioning `Vendor`, `VendorBranding`, `VendorConfig`, `VendorDeliveryArea`, and `VendorDomain`.
+  - **Empty Initial Catalogue Invariant:** Asserts 0 `Product` and 0 `Category` rows upon provisioning, ensuring a clean slate for storefront testing.
+  - **Staff Admin Setup:** Automatically associates admin accounts with `aheedsuperstore` for direct testing of `/staff/products/import`.
+
+- **Staff Panel Stock File Upload & Catalogue Import** (`specs/2026-10-25-staff-catalogue-import/`).
+  - **Staff Import Page & Action:** Created `/staff/products/import` under Catalogue with `tier: "admin"`, wrapped in `<PageContainer width="standard">` and gated on `requireVendorRole("ADMIN")`.
+  - **In-Memory Two-Phase Workflow:** Implemented `validateStockFileAction` and `applyStockFileAction` providing full preview of candidate additions, existing record preservation, duplicate rejection reporting, and ADR-007 classifications before explicit commit.
+  - **Worker Bundle Protection:** Kept `@e965/xlsx` strictly out of the Worker bundle (`app/`, `features/`, `components/`, `lib/`), parsing CSV via pure streaming parser and Excel in the browser before action submission.
+  - **ADR-007 Default Policy & Stock Safety:** Enforces automatic restriction categorization (`TOBACCO`/`ALCOHOL` $\rightarrow$ `AGE_RESTRICTED`, `INSTANT LOTTERY` $\rightarrow$ `PROHIBITED`, `PHONE CARDS`/`NEWS`/`E-PAY`/`STAMPS` $\rightarrow$ `NOT_DELIVERABLE`, `DEFAULT` department $\rightarrow$ `NEEDS_REVIEW`). Creates all new products as hidden (`isActive: false`) with stock `UNKNOWN` and quantity 0.
+  - **Session Isolation & 10,000 Row Limit:** Derives `vendorId` exclusively from verified session, rejecting client-supplied vendor IDs, and aborts payloads $> 10,000$ rows before execution.
+
 - **Click & Collect order details: replace order reference with customer email** (issue #1261; specs/2026-10-24-p1261-click-collect-email/).
   - **Click & Collect Order Details:** Replaced redundant Order Reference on Click & Collect card with customer Email in components/orders/OrderAddressCard.tsx.
   - **Multi-View Email Propagation:** Wired customer email across staff order view (pp/(admin)/staff/orders/[orderNumber]/page.tsx), account order history (pp/(storefront)/account/orders/[orderNumber]/page.tsx), and confirmation views (pp/(storefront)/checkout/[orderNumber]/page.tsx).

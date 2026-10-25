@@ -52,6 +52,11 @@ custom_domain = true
 pattern = "srimart-staging.nocaped.com"
 custom_domain = true
 
+# P11 (#1265) — Aheed Superstore test vendor (3rd vendor), resolved by host (VendorDomain).
+[[env.staging.routes]]
+pattern = "aheedsuperstore-staging.nocaped.com"
+custom_domain = true
+
 [[env.staging.r2_buckets]]
 binding = "IMAGES"
 bucket_name = "aheed-images-staging"

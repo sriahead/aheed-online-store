@@ -5,11 +5,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { visibleGroups, type StaffNavGroup, type StaffNavTier } from "./nav-items";
+import { PLATFORM_NAV_ITEMS } from "./platform-nav-items";
 import { Icon } from "@/components/icons/Icon";
 
 export interface PanelNavProps {
   canSeeOrders: boolean;
   currentTier: StaffNavTier;
+  isPlatformAdmin?: boolean;
 }
 
 /** Exact match for the overview, prefix match elsewhere so /staff/orders/123 stays active. */
@@ -31,7 +33,7 @@ function isRouteActive(href: string, pathname: string): boolean {
  * it keeps the full destination set readable from a single `curl` of any panel page, so "no route
  * became unreachable" is checkable without driving a browser (spec R6).
  */
-export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
+export function PanelNav({ canSeeOrders, currentTier, isPlatformAdmin }: PanelNavProps) {
   const pathname = usePathname();
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -187,6 +189,68 @@ export function PanelNav({ canSeeOrders, currentTier }: PanelNavProps) {
             </div>
           );
         })}
+
+        {isPlatformAdmin && (
+          <div className="relative">
+            <button
+              type="button"
+              ref={(node) => {
+                triggerRefs.current["platform"] = node;
+              }}
+              aria-expanded={openGroup === "platform"}
+              aria-controls="panel-nav-platform"
+              onClick={() => setOpenGroup(openGroup === "platform" ? null : "platform")}
+              className={`inline-flex items-center gap-1.5 border-b-2 px-1 pb-3 pt-4 text-sm font-bold transition-colors ${
+                PLATFORM_NAV_ITEMS.some((item) => isRouteActive(item.href, pathname)) ||
+                openGroup === "platform"
+                  ? "border-purple-600 text-purple-700 font-extrabold"
+                  : "border-transparent text-purple-600/80 hover:border-purple-300 hover:text-purple-900"
+              }`}
+            >
+              <Icon name="shield-check" className="h-4 w-4 text-purple-600" />
+              Platform
+              <Icon
+                name="chevron-down"
+                className={`h-4 w-4 transition-transform ${openGroup === "platform" ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            <div
+              id="panel-nav-platform"
+              hidden={openGroup !== "platform"}
+              className="absolute left-0 top-full z-20 mt-1 w-max max-w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-black/10 bg-white py-2 shadow-lg"
+            >
+              <ul>
+                {PLATFORM_NAV_ITEMS.map((item) => {
+                  const active = isRouteActive(item.href, pathname);
+
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                        className={`flex items-start gap-2.5 px-4 py-2 text-sm transition-colors hover:bg-black/5 ${
+                          active ? "font-bold text-purple-700 bg-purple-50" : "text-black/70"
+                        }`}
+                      >
+                        <Icon
+                          name={item.icon}
+                          className="mt-0.5 h-4 w-4 shrink-0 text-purple-600"
+                        />
+                        <div>
+                          <div className="font-semibold text-slate-900">{item.label}</div>
+                          <div className="text-[11px] text-slate-500 leading-tight">
+                            {item.description}
+                          </div>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   );
