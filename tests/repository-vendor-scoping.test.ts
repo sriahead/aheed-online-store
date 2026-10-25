@@ -104,6 +104,18 @@ const ALLOWED = new Map<string, string>([
     "ai-usage.ts:sumPlatformMilliNeuronsSince",
     "Platform-wide by definition (#1028): on the Workers Free plan every vendor draws on ONE shared daily neuron allowance, so 'has the platform used it up?' has no vendor in it. Returns a single summed integer — never rows, never another vendor's figures. Callers: lib/ai-meter.ts's Free-plan check and the staff AI page's shared-allowance line.",
   ],
+  [
+    "platform-admin.ts:listPlatformVendors",
+    "Platform-admin-wide directory (#1269): queries all Vendor rows and cross-tenant product counts for the platform administration suite (/staff/platform/vendors). Gated strictly on requirePlatformAdmin() server-side.",
+  ],
+  [
+    "platform-admin.ts:listPlatformDomains",
+    "Platform-admin-wide domain registry (#1269): lists all registered hostnames across all vendors for multi-tenant routing management (/staff/platform/domains). Gated strictly on requirePlatformAdmin() server-side.",
+  ],
+  [
+    "platform-admin.ts:getPlatformOverviewMetrics",
+    "Platform-admin-wide metrics (#1269): aggregates platform-wide tenant counts, catalogue totals, and active users for platform administration overview (/staff/platform/settings). Gated strictly on requirePlatformAdmin() server-side.",
+  ],
 ]);
 
 /** A parameter that carries a tenant id, whatever it is called. */
