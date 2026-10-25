@@ -6,6 +6,7 @@ import {
 
 export type SettingStatus = "CONFIGURED" | "MISSING" | "OPTIONAL" | "PLANNED";
 export type LaunchReadinessStatus = "LAUNCH_READY" | "NEEDS_ATTENTION" | "IN_PROGRESS";
+export type SettingOwner = "VENDOR_OPERATOR" | "PLATFORM_ADMIN";
 
 export interface ReadinessSetting {
   id: string;
@@ -18,7 +19,10 @@ export interface ReadinessSetting {
   validationRule: string;
   editHref: string | null;
   isPlanned: boolean;
+  owner: SettingOwner;
 }
+
+type RawSetting = Omit<ReadinessSetting, "owner">;
 
 export interface ReadinessCategory {
   id: string;
@@ -38,9 +42,30 @@ export interface VendorReadinessReport {
   overallCompletion: number;
   totalRequiredSettings: number;
   configuredRequiredSettings: number;
+  vendorRequiredCount: number;
+  vendorConfiguredCount: number;
+  platformRequiredCount: number;
+  platformConfiguredCount: number;
   readinessStatus: LaunchReadinessStatus;
   categories: ReadinessCategory[];
   evaluatedAt: string;
+}
+
+const PLATFORM_ADMIN_SETTING_IDS = new Set([
+  "domain_routing",
+  "ai_neuron_allowance",
+  "outgoing_email_service",
+  "live_stripe_keys",
+  "external_apex_dns",
+]);
+
+function attachOwner(item: Omit<ReadinessSetting, "owner">): ReadinessSetting {
+  const isPlatform = PLATFORM_ADMIN_SETTING_IDS.has(item.id);
+  return {
+    ...item,
+    owner: isPlatform ? "PLATFORM_ADMIN" : "VENDOR_OPERATOR",
+    editHref: item.id === "domain_routing" ? "/staff/platform/domains" : item.editHref,
+  };
 }
 
 function hexColorValid(c: string | undefined): boolean {
@@ -60,7 +85,7 @@ export function evaluateVendorReadinessData(
   const paymentBadges = data.paymentBadges;
 
   // 1. Storefront Identity & Chrome
-  const identityItems: ReadinessSetting[] = [
+  const identityItems: RawSetting[] = [
     {
       id: "store_name",
       name: "Store Display Name",
@@ -171,7 +196,7 @@ export function evaluateVendorReadinessData(
     hexColorValid(branding?.brandOrangeTint) &&
     hexColorValid(branding?.brandRedTint);
 
-  const themeItems: ReadinessSetting[] = [
+  const themeItems: RawSetting[] = [
     {
       id: "brand_colors",
       name: "8 Brand Hex Primitives",
@@ -219,7 +244,7 @@ export function evaluateVendorReadinessData(
     config?.showGlutenFreeLabel ||
     config?.showHmcCertification;
 
-  const copyItems: ReadinessSetting[] = [
+  const copyItems: RawSetting[] = [
     {
       id: "hero_subtitle",
       name: "Hero Supporting Copy",
@@ -273,7 +298,7 @@ export function evaluateVendorReadinessData(
 
   // 4. Fulfilment & Delivery
   const hasDeliveryAreas = deliveryAreas.length > 0;
-  const deliveryItems: ReadinessSetting[] = [
+  const deliveryItems: RawSetting[] = [
     {
       id: "delivery_fee",
       name: "Standard Delivery Fee",
@@ -382,7 +407,7 @@ export function evaluateVendorReadinessData(
   const hasHours = weeklyHours.length > 0;
   const hasBadges = paymentBadges.length > 0;
 
-  const footerItems: ReadinessSetting[] = [
+  const footerItems: RawSetting[] = [
     {
       id: "physical_address",
       name: "Store Physical Address",
@@ -492,7 +517,7 @@ export function evaluateVendorReadinessData(
   ];
 
   // 6. Customer Engagement & Communication
-  const commItems: ReadinessSetting[] = [
+  const commItems: RawSetting[] = [
     {
       id: "whatsapp_number",
       name: "WhatsApp Support Number",
@@ -563,7 +588,7 @@ export function evaluateVendorReadinessData(
   const hasProducts = data.productCount > 0;
   const hasCategories = data.categoryCount > 0;
 
-  const catalogueItems: ReadinessSetting[] = [
+  const catalogueItems: RawSetting[] = [
     {
       id: "stock_file_upload",
       name: "Stock File Importer",
@@ -620,7 +645,7 @@ export function evaluateVendorReadinessData(
   const hasDomain = Boolean(data.domain?.host);
   const hasStaff = data.staffCount > 0;
 
-  const infraItems: ReadinessSetting[] = [
+  const infraItems: RawSetting[] = [
     {
       id: "domain_routing",
       name: "Host Domain Mapping",
@@ -702,9 +727,10 @@ export function evaluateVendorReadinessData(
     id: string,
     name: string,
     description: string,
-    items: ReadinessSetting[],
+    items: Array<Omit<ReadinessSetting, "owner">>,
   ): ReadinessCategory {
-    const requiredItems = items.filter((i) => i.required && !i.isPlanned);
+    const mappedItems = items.map(attachOwner);
+    const requiredItems = mappedItems.filter((i) => i.required && !i.isPlanned);
     const configuredRequired = requiredItems.filter((i) => i.status === "CONFIGURED").length;
     const completionPercentage =
       requiredItems.length > 0
@@ -715,7 +741,7 @@ export function evaluateVendorReadinessData(
       id,
       name,
       description,
-      items,
+      items: mappedItems,
       totalRequired: requiredItems.length,
       configuredRequired,
       completionPercentage,
@@ -787,6 +813,12 @@ export function evaluateVendorReadinessData(
     readinessStatus = "NEEDS_ATTENTION";
   }
 
+  const allRequired = categories.flatMap((c) => c.items).filter((i) => i.required && !i.isPlanned);
+  const vendorRequired = allRequired.filter((i) => i.owner === "VENDOR_OPERATOR");
+  const platformRequired = allRequired.filter((i) => i.owner === "PLATFORM_ADMIN");
+  const vendorConfiguredCount = vendorRequired.filter((i) => i.status === "CONFIGURED").length;
+  const platformConfiguredCount = platformRequired.filter((i) => i.status === "CONFIGURED").length;
+
   return {
     vendorId,
     vendorName: vendor?.name || "Unconfigured Vendor",
@@ -795,6 +827,10 @@ export function evaluateVendorReadinessData(
     overallCompletion,
     totalRequiredSettings,
     configuredRequiredSettings,
+    vendorRequiredCount: vendorRequired.length,
+    vendorConfiguredCount,
+    platformRequiredCount: platformRequired.length,
+    platformConfiguredCount,
     readinessStatus,
     categories,
     evaluatedAt: new Date().toISOString(),
