@@ -78,7 +78,12 @@ export interface RawVendorOnboardingData {
   deliveryAreas: { prefix: string }[];
   fulfilmentSlotsCount: number;
   expressScheduleCount: number;
-  weeklyHours: { dayOfWeek: number; openTime: string | null; closeTime: string | null; closed: boolean }[];
+  weeklyHours: {
+    dayOfWeek: number;
+    openTime: string | null;
+    closeTime: string | null;
+    closed: boolean;
+  }[];
   paymentBadges: { method: string }[];
   reviewLinksCount: number;
   domain: { host: string; isCanonical: boolean } | null;

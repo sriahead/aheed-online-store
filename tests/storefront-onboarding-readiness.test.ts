@@ -59,7 +59,8 @@ function makeReferenceVendorData(): RawVendorOnboardingData {
       searchPlaceholder: "Search halal lamb, basmati, lentils…",
       bannerHeadline: null,
       bannerNote: "100% Certified HMC Halal Fresh Meat Cut Daily",
-      heroSubtitle: "Delivering fresh groceries straight to your door with our own dedicated delivery team.",
+      heroSubtitle:
+        "Delivering fresh groceries straight to your door with our own dedicated delivery team.",
       storeDescription: "South Asian groceries, halal meat and fresh produce.",
       facebookUrl: "https://facebook.com/aheed",
       instagramUrl: "https://instagram.com/aheed",

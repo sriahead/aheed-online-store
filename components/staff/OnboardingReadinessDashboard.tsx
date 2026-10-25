@@ -108,7 +108,8 @@ export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDash
             <div className="text-right">
               <div className="text-3xl font-black text-slate-900">{report.overallCompletion}%</div>
               <div className="text-xs font-medium text-slate-500">
-                {report.configuredRequiredSettings} of {report.totalRequiredSettings} required items complete
+                {report.configuredRequiredSettings} of {report.totalRequiredSettings} required items
+                complete
               </div>
             </div>
           </div>
@@ -130,7 +131,9 @@ export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDash
           </div>
           <p className="text-xs text-slate-500">
             Benchmarked against canonical operational profile:{" "}
-            <span className="font-semibold text-slate-700">https://aheedfoodcentre.nocaped.com/</span>
+            <span className="font-semibold text-slate-700">
+              https://aheedfoodcentre.nocaped.com/
+            </span>
           </p>
         </div>
 

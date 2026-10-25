@@ -78,7 +78,8 @@ export function evaluateVendorReadinessData(
       name: "Storefront Tagline",
       category: "Storefront Identity & Chrome",
       currentValue: branding?.tagline || null,
-      referenceValue: "Fresh halal meat, produce & cultural groceries — delivered across Milton Keynes",
+      referenceValue:
+        "Fresh halal meat, produce & cultural groceries — delivered across Milton Keynes",
       status: branding?.tagline?.trim() ? "CONFIGURED" : "MISSING",
       required: true,
       validationRule: "Descriptive brand proposition (max 150 chars)",
@@ -224,7 +225,8 @@ export function evaluateVendorReadinessData(
       name: "Hero Supporting Copy",
       category: "Storefront Copy & Badges",
       currentValue: config?.heroSubtitle || null,
-      referenceValue: "Delivering fresh groceries straight to your door with our own dedicated delivery team.",
+      referenceValue:
+        "Delivering fresh groceries straight to your door with our own dedicated delivery team.",
       status: config?.heroSubtitle?.trim() ? "CONFIGURED" : "OPTIONAL",
       required: false,
       validationRule: "Homepage hero narrative text",
@@ -301,7 +303,8 @@ export function evaluateVendorReadinessData(
       name: "Free Delivery Spend Threshold",
       category: "Fulfilment & Delivery",
       currentValue:
-        config?.freeDeliveryThresholdPence !== null && config?.freeDeliveryThresholdPence !== undefined
+        config?.freeDeliveryThresholdPence !== null &&
+        config?.freeDeliveryThresholdPence !== undefined
           ? `£${(config.freeDeliveryThresholdPence / 100).toFixed(2)}`
           : "Not offered",
       referenceValue: "£30.00",
@@ -330,7 +333,10 @@ export function evaluateVendorReadinessData(
       name: "Delivery Postcode Areas",
       category: "Fulfilment & Delivery",
       currentValue: hasDeliveryAreas
-        ? `${deliveryAreas.length} area(s): ${deliveryAreas.map((a) => a.prefix).slice(0, 5).join(", ")}${deliveryAreas.length > 5 ? "..." : ""}`
+        ? `${deliveryAreas.length} area(s): ${deliveryAreas
+            .map((a) => a.prefix)
+            .slice(0, 5)
+            .join(", ")}${deliveryAreas.length > 5 ? "..." : ""}`
         : null,
       referenceValue: "MK (Milton Keynes outward prefixes)",
       status: hasDeliveryAreas ? "CONFIGURED" : "MISSING",
@@ -343,7 +349,10 @@ export function evaluateVendorReadinessData(
       id: "fulfilment_slots",
       name: "Scheduled Delivery Windows",
       category: "Fulfilment & Delivery",
-      currentValue: data.fulfilmentSlotsCount > 0 ? `${data.fulfilmentSlotsCount} active slots` : "None configured",
+      currentValue:
+        data.fulfilmentSlotsCount > 0
+          ? `${data.fulfilmentSlotsCount} active slots`
+          : "None configured",
       referenceValue: "Configured daily time windows",
       status: data.fulfilmentSlotsCount > 0 ? "CONFIGURED" : "OPTIONAL",
       required: false,
@@ -355,7 +364,10 @@ export function evaluateVendorReadinessData(
       id: "express_schedule",
       name: "Express Collection Hours",
       category: "Fulfilment & Delivery",
-      currentValue: data.expressScheduleCount > 0 ? `${data.expressScheduleCount} active schedules` : "None configured",
+      currentValue:
+        data.expressScheduleCount > 0
+          ? `${data.expressScheduleCount} active schedules`
+          : "None configured",
       referenceValue: "Configured daily collection hours",
       status: data.expressScheduleCount > 0 ? "CONFIGURED" : "OPTIONAL",
       required: false,
@@ -403,7 +415,10 @@ export function evaluateVendorReadinessData(
       category: "Footer, Location & Legal Compliance",
       currentValue: config?.contactEmail || null,
       referenceValue: "orders@aheedfoodcentre.nocaped.com",
-      status: config?.contactEmail?.trim() && !config.contactEmail.includes("[") ? "CONFIGURED" : "MISSING",
+      status:
+        config?.contactEmail?.trim() && !config.contactEmail.includes("[")
+          ? "CONFIGURED"
+          : "MISSING",
       required: true,
       validationRule: "Valid contact email (no placeholder brackets)",
       editHref: "/staff/storefront",
@@ -413,9 +428,13 @@ export function evaluateVendorReadinessData(
       id: "company_number",
       name: "Company Registration Number",
       category: "Footer, Location & Legal Compliance",
-      currentValue: config?.companyNumber && !config.companyNumber.includes("[") ? config.companyNumber : "Unset",
+      currentValue:
+        config?.companyNumber && !config.companyNumber.includes("[")
+          ? config.companyNumber
+          : "Unset",
       referenceValue: "Companies House 8-digit code",
-      status: config?.companyNumber && !config.companyNumber.includes("[") ? "CONFIGURED" : "OPTIONAL",
+      status:
+        config?.companyNumber && !config.companyNumber.includes("[") ? "CONFIGURED" : "OPTIONAL",
       required: false,
       validationRule: "Required by UK law if operating as Limited Company / LLP",
       editHref: "/staff/storefront",
@@ -425,7 +444,8 @@ export function evaluateVendorReadinessData(
       id: "vat_number",
       name: "VAT Registration Number",
       category: "Footer, Location & Legal Compliance",
-      currentValue: config?.vatNumber && !config.vatNumber.includes("[") ? config.vatNumber : "Unset",
+      currentValue:
+        config?.vatNumber && !config.vatNumber.includes("[") ? config.vatNumber : "Unset",
       referenceValue: "HMRC VAT registration number",
       status: config?.vatNumber && !config.vatNumber.includes("[") ? "CONFIGURED" : "OPTIONAL",
       required: false,
@@ -490,7 +510,9 @@ export function evaluateVendorReadinessData(
       name: "WhatsApp Community Link & QR",
       category: "Customer Communication & Community",
       currentValue:
-        config?.whatsappCommunityUrl && config?.whatsappCommunityQrKey ? "Active (Invite URL & QR)" : "Not active",
+        config?.whatsappCommunityUrl && config?.whatsappCommunityQrKey
+          ? "Active (Invite URL & QR)"
+          : "Not active",
       referenceValue: "Invite URL + uploaded QR key",
       status: config?.whatsappCommunityUrl ? "CONFIGURED" : "OPTIONAL",
       required: false,
@@ -526,7 +548,8 @@ export function evaluateVendorReadinessData(
       id: "review_links",
       name: "Customer Review Platforms",
       category: "Customer Communication & Community",
-      currentValue: data.reviewLinksCount > 0 ? `${data.reviewLinksCount} platform(s)` : "None added",
+      currentValue:
+        data.reviewLinksCount > 0 ? `${data.reviewLinksCount} platform(s)` : "None added",
       referenceValue: "Google / Trustpilot verified links",
       status: data.reviewLinksCount > 0 ? "CONFIGURED" : "OPTIONAL",
       required: false,
@@ -626,7 +649,9 @@ export function evaluateVendorReadinessData(
       id: "ai_neuron_allowance",
       name: "Daily AI Neuron Allowance",
       category: "Platform Infrastructure & Governance",
-      currentValue: config?.aiDailyNeuronBudget ? `${config.aiDailyNeuronBudget} neurons/day` : "3000 neurons/day",
+      currentValue: config?.aiDailyNeuronBudget
+        ? `${config.aiDailyNeuronBudget} neurons/day`
+        : "3000 neurons/day",
       referenceValue: "3000 neurons/day",
       status: "CONFIGURED",
       required: true,
@@ -673,11 +698,18 @@ export function evaluateVendorReadinessData(
   ];
 
   // Helper to compile categories
-  function compileCategory(id: string, name: string, description: string, items: ReadinessSetting[]): ReadinessCategory {
+  function compileCategory(
+    id: string,
+    name: string,
+    description: string,
+    items: ReadinessSetting[],
+  ): ReadinessCategory {
     const requiredItems = items.filter((i) => i.required && !i.isPlanned);
     const configuredRequired = requiredItems.filter((i) => i.status === "CONFIGURED").length;
     const completionPercentage =
-      requiredItems.length > 0 ? Math.round((configuredRequired / requiredItems.length) * 100) : 100;
+      requiredItems.length > 0
+        ? Math.round((configuredRequired / requiredItems.length) * 100)
+        : 100;
 
     return {
       id,
@@ -744,7 +776,9 @@ export function evaluateVendorReadinessData(
   const totalRequiredSettings = categories.reduce((sum, c) => sum + c.totalRequired, 0);
   const configuredRequiredSettings = categories.reduce((sum, c) => sum + c.configuredRequired, 0);
   const overallCompletion =
-    totalRequiredSettings > 0 ? Math.round((configuredRequiredSettings / totalRequiredSettings) * 100) : 100;
+    totalRequiredSettings > 0
+      ? Math.round((configuredRequiredSettings / totalRequiredSettings) * 100)
+      : 100;
 
   let readinessStatus: LaunchReadinessStatus = "IN_PROGRESS";
   if (overallCompletion === 100) {

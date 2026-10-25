@@ -253,7 +253,8 @@ export const STAFF_NAV_GROUPS: readonly StaffNavGroup[] = [
       {
         href: "/staff/onboarding",
         label: "Onboarding Readiness",
-        description: "Audit storefront configuration, track onboarding completeness, and check live launch readiness.",
+        description:
+          "Audit storefront configuration, track onboarding completeness, and check live launch readiness.",
         icon: "clipboard-list",
         tier: "admin",
         tone: "action",
