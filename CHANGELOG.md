@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Provision Aheed Superstore test vendor on staging** (issue `#1265`; `specs/2026-10-25-aheedsuperstore-staging-onboarding/`).
+  - **Staging Custom Domain Route:** Added `[[env.staging.routes]]` with `pattern = "aheedsuperstore-staging.nocaped.com"` and `custom_domain = true` in `wrangler.toml` for automatic TLS certificate generation under the `nocaped.com` Cloudflare zone.
+  - **Vendor Manifest & Tenancy:** Created `prisma/manifests/aheedsuperstore.json` specifying vendor identity (`aheedsuperstore`), AA-compliant branding colors, delivery areas, and host mapping.
+  - **Staging Provisioning Script:** Authored `scripts/provision-aheedsuperstore-staging.ts` with strict production refusal guards (`assertNotProduction`), idempotently provisioning `Vendor`, `VendorBranding`, `VendorConfig`, `VendorDeliveryArea`, and `VendorDomain`.
+  - **Empty Initial Catalogue Invariant:** Asserts 0 `Product` and 0 `Category` rows upon provisioning, ensuring a clean slate for storefront testing.
+  - **Staff Admin Setup:** Automatically associates admin accounts with `aheedsuperstore` for direct testing of `/staff/products/import`.
+
 - **Staff Panel Stock File Upload & Catalogue Import** (`specs/2026-10-25-staff-catalogue-import/`).
   - **Staff Import Page & Action:** Created `/staff/products/import` under Catalogue with `tier: "admin"`, wrapped in `<PageContainer width="standard">` and gated on `requireVendorRole("ADMIN")`.
   - **In-Memory Two-Phase Workflow:** Implemented `validateStockFileAction` and `applyStockFileAction` providing full preview of candidate additions, existing record preservation, duplicate rejection reporting, and ADR-007 classifications before explicit commit.
