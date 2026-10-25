@@ -611,4 +611,23 @@ twice is safe and will not double-charge or double-confirm anything.
 
 
 
+## Import stock file — `/staff/products/import`
+
+**Purpose:** Bulk import product lines, departments, and initial prices from client stock spreadsheets (`.csv`, `.xlsx`, `.xls`) without manual per-item data entry.
+
+**Who can access:** Store admins only
+
+**What you can do:** Upload stock files up to 10,000 rows. View an in-memory preview of candidate additions, categories, matching existing records, duplicate rejects, and ADR-007 restriction classifications before any database write. Confirm and commit verified changes.
+
+**Typical workflow:** Select or drop a `.csv`, `.xlsx`, or `.xls` stock sheet. Inspect the preview metrics and rejection table to ensure columns and rows mapped correctly. Once satisfied, click "Confirm & Apply Changes". Review the execution receipt, then navigate to `/staff/products` to review and publish lines.
+
+**Important fields and filters:** The file must include columns for item code/PLU, description/name, retail price, and department. Sub-department and VAT rate columns are optional. Payloads exceeding 10,000 rows are refused.
+
+**Common mistakes and limitations:** Imported stock quantities and negative EPOS till numbers are never imported as live inventory. All imported products are created hidden (`isActive: false`) with stock mode `UNKNOWN` and quantity 0. You must manually publish products and set tracked stock. Re-importing existing products will never overwrite existing prices, manual descriptions, or unhide inactive products; it will only tighten restrictions.
+
+**What happens after changes are saved:** Products and categories are created inside per-department interactive transactions. Restrictions are logged to the immutable `ProductRestrictionAuditLog`. New products appear immediately in the `/staff/products` admin catalogue list under the Hidden filter, ready for staff review and activation.
+
+
+
+
 

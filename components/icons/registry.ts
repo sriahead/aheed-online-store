@@ -114,6 +114,7 @@ export const ICON_REGISTRY = {
   "trending-up": { tier: "decorative", provider: "noto", id: "chart-increasing" },
   "triangle-alert": { tier: "status", provider: "noto", id: "warning" },
   truck: { tier: "decorative", provider: "noto", id: "delivery-truck" },
+  upload: { tier: "functional", provider: "lucide", id: "upload" },
   user: { tier: "decorative", provider: "noto", id: "bust-in-silhouette" },
   "user-check": { tier: "decorative", provider: "noto", id: "bust-in-silhouette" },
   "user-plus": { tier: "decorative", provider: "noto", id: "busts-in-silhouette" },
