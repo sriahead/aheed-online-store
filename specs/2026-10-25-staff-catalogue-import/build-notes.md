@@ -46,3 +46,8 @@
 ## Deviations from the spec
 
 None. All 16 requirements and criteria in `requirements.md` and `validation.md` were implemented and verified.
+
+## Known-shaky areas
+
+None. All 16 requirements and criteria in `requirements.md` and `validation.md` pass cleanly across unit, integration, parity, and coverage guards.
+
