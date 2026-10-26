@@ -15,6 +15,12 @@ every branch merges.
 
 ### Added
 
+- **Realistic 3D rendered icon suite, high-resolution asset delivery for Icon3D, and visual standards documentation** (issue `#1280`; `specs/2026-10-26-realistic-3d-icons/`).
+  - **Photorealistic Commercial 3D Rendered Suite:** Extracted and generated 12 commercial 3D rendered icons with studio lighting, clay-smooth tactile surfaces, and true alpha transparency: `storefront`, `quick-shop`, `user-profile`, `rewards-gift`, `rewards-coin`, `cart-add`, `delivery-van`, `halal-certified`, `secure-checkout`, `order-updates`, `postcode-search`, and `contact-follow`.
+  - **Dual-Format Asset Optimization:** Saved 24 lightweight WebP and PNG assets under `public/images/icons-3d/` (512x512 canvas, 432x432 safe zone, <65KB per asset).
+  - **Enhanced `<Icon3D>` Component:** Added `ICON_3D_IMAGE_ASSETS` registry and `renderAs?: 'auto' | 'image' | 'svg'` prop with instant zero-layout-shift procedural SVG fallback for SSR and test parity.
+  - **Client Help Centre Visual Standards:** Authored `docs/client-help-centre/icon-and-visual-asset-standards.md` establishing 3D asset dimensions, alpha cutouts, prompt engineering formulas, and merchant onboarding guidelines.
+
 - **Realistic product photography for categories, Category.imageKey schema, and dynamic image URLs** (issue `#1278`; `specs/2026-10-26-category-realistic-photography/`).
   - **Schema & Migration:** Hand-authored migration `prisma/migrations/20261026150000_category_image_key/migration.sql` adding `imageKey TEXT` to "Category" with backfill for all existing seeded categories, updated `prisma/schema.prisma`, and regenerated WASM client.
   - **15 Commercial Studio Photographic Assets:** Created 512x512 high-resolution, lightweight commercial studio product photographs under `public/images/categories/<slug>.jpg` matching UK supermarket retail standards (Tesco reference model) across Fresh Food, Bakery, Dairy & Eggs, Halal Meat, Food Cupboard, Drinks, Treats & Snacks, Household, Frozen Food, International, Health & Beauty, Baby & Kids, Pet Supplies, SriMart Electronics, and Home.
