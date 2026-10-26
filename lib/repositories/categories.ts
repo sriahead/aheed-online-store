@@ -265,6 +265,7 @@ export interface AdminCategoryRow {
   parentName: string | null;
   sortOrder: number;
   isActive: boolean;
+  imageKey?: string | null;
   productCount: number;
 }
 
@@ -368,6 +369,7 @@ export async function listCategoriesForAdmin(
       parentId: true,
       sortOrder: true,
       isActive: true,
+      imageKey: true,
       parent: { select: { name: true } },
       _count: { select: { products: true } },
     },
@@ -382,6 +384,7 @@ export async function listCategoriesForAdmin(
       parentName: row.parent?.name ?? null,
       sortOrder: row.sortOrder,
       isActive: row.isActive,
+      imageKey: row.imageKey,
       productCount: row._count.products,
     })),
   );

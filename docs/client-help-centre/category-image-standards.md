@@ -29,7 +29,7 @@ Every category photograph uploaded to the platform or provisioned during client 
 | **Aspect Ratio** | **1:1 (Square)** | Guarantees consistent alignment in scrollers, grids, and mobile navigation cards. |
 | **Dimensions** | **512 × 512 pixels** (Minimum: 256 × 256 px) | Crisp high-DPI retina sharpness without excessive bandwidth payload. |
 | **File Format** | **WebP** or **High-Quality JPEG (.jpg)** | Optimal compression and sub-100ms loading speed. |
-| **File Size Limit** | **Maximum 80 KB** (Target: 25–45 KB) | Preserves Core Web Vitals (Largest Contentful Paint < 2.5s). |
+| **File Size Limit** | **Maximum 80 KB** (Target: 25–45 KB) | Preserves Core Web Vitals (Largest Contentful Paint under 2.5s). |
 | **Background** | **Pure Seamless White (`#FFFFFF`) or Transparent** | Seamless blend into category cards, active theme tints, and navigation strips. |
 | **Subject Framing** | **80% container fill, centered with natural contact shadow** | Prevents claustrophobic edge-clipping while highlighting the product clearly. |
 
@@ -57,16 +57,36 @@ Categories must depict authentic, high-quality representative products that inst
 
 ---
 
-## 3. How to Configure Category Photography
+## 3. How to Configure & Generate Category Imagery
 
-### For Store Administrators (`/staff/categories`)
+### One-Click AI Image Generation (`/staff/categories/[id]`)
 
-1. Navigate to **Catalogue &rarr; Categories** in the Staff Panel.
-2. Click on the category you wish to configure (e.g., *Fruit & Veg* or *Bakery*).
-3. Under the **Photograph storage key** field, enter the relative object storage key:
+Store administrators can generate retail-grade category imagery on demand using the integrated Workers AI engine:
+
+1. Navigate to **Catalogue &rarr; Categories** and select any existing category.
+2. In the **Category Imagery & Icon** manager:
+   - Select your desired visual style:
+     - **Studio Product Photography:** Authentic, clean commercial grocery food photography (Tesco style).
+     - **Commercial 3D Rendered Icon:** Isometric 3D tactile rendered icon with soft studio lighting.
+   - Click **Auto-generate image**.
+3. The platform generates the image via Cloudflare Workers AI (`@cf/black-forest-labs/flux-1-schnell`), uploads the asset directly to object storage, and updates the category record.
+4. The preview updates instantly, and the relative key is automatically populated in the form field.
+
+### Bulk Backfill Missing Category Images (`/staff/categories`)
+
+When onboarding a new store catalogue or adding multiple categories at once:
+1. Navigate to the main **Categories** list (`/staff/categories`).
+2. Above the category table, view the **Auto-fill Missing Images** control showing the count of categories without imagery.
+3. Choose the style preset (*Studio Product Photography* or *Commercial 3D Rendered Icon*).
+4. Click **Auto-generate missing images**. The system processes missing categories in batches of 5, displaying live progress and remaining counts.
+
+### Manual Storage Key Configuration
+
+Store operators may also specify custom photography assets:
+1. Under the **Photograph storage key** field, enter the relative object storage key:
    - Example: `categories/fruit-veg.jpg`
-4. Click **Save changes**. The storefront department strip and navigation will immediately reflect the updated photograph.
-5. If left blank, the platform automatically falls back to the canonical photography asset `/images/categories/[slug].jpg`.
+2. Click **Save changes**. The storefront department strip and navigation will immediately reflect the updated photograph.
+3. If left blank, the platform automatically falls back to the canonical photography asset `/images/categories/[slug].jpg`.
 
 ### For Technical Onboarding (Platform Administrators)
 
