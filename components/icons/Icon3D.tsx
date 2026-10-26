@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { ICON_3D_DEFINITIONS } from "@/lib/icons-3d/catalog";
 import { renderIconSvg } from "@/lib/icons-3d/render";
 import type { ThemeMode } from "@/lib/icons-3d/types";
+import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 
 export type Icon3DName = keyof typeof ICON_3D_DEFINITIONS;
 
@@ -85,8 +86,8 @@ export const ICON_3D_IMAGE_ASSETS: Partial<Record<Icon3DName, { png: string; web
  * 3D Icon Component — delivers theme-aware, realistic commercial 3D icons.
  *
  * When a photorealistic 3D rendered asset exists for the requested name,
- * it renders high-resolution WebP/PNG imagery with instant zero-layout-shift
- * vector fallback.
+ * it renders high-resolution WebP/PNG imagery through ImageWithFallback
+ * with instant zero-layout-shift vector fallback.
  */
 export function Icon3D({
   name,
@@ -128,45 +129,43 @@ export function Icon3D({
         className={`inline-flex shrink-0 items-center justify-center relative ${className}`}
         style={{ width: size, height: size, ...style }}
         data-icon={dataIcon ?? name}
+        aria-hidden={decorative ? "true" : undefined}
       >
-        <picture className="block w-full h-full">
-          <source type="image/webp" srcSet={imageAsset.webp} />
-          <img
-            src={imageAsset.png}
-            alt={decorative ? "" : (label ?? definition.name)}
-            aria-hidden={decorative ? "true" : undefined}
-            width={size}
-            height={size}
-            loading="eager"
-            decoding="async"
-            className="w-full h-full object-contain pointer-events-none select-none"
-          />
-        </picture>
+        <ImageWithFallback
+          src={imageAsset.png}
+          sources={[{ media: "(min-width: 0px)", srcSet: imageAsset.webp }]}
+          alt={decorative ? "" : (label ?? definition.name)}
+          width={size}
+          height={size}
+          loading="eager"
+          decoding="async"
+          className="w-full h-full object-contain pointer-events-none select-none"
+          fallback={null}
+        />
       </span>
     );
   }
 
-  // Auto mode with realistic image asset: render picture with semantic/fallback vector
+  // Auto mode with realistic image asset: render ImageWithFallback with semantic/fallback vector
   if (renderAs === "auto" && imageAsset) {
     return (
       <span
         className={`inline-flex shrink-0 items-center justify-center relative ${className}`}
         style={{ width: size, height: size, ...style }}
         data-icon={dataIcon ?? name}
+        aria-hidden={decorative ? "true" : undefined}
       >
-        <picture className="relative z-10 block w-full h-full">
-          <source type="image/webp" srcSet={imageAsset.webp} />
-          <img
-            src={imageAsset.png}
-            alt={decorative ? "" : (label ?? definition.name)}
-            aria-hidden={decorative ? "true" : undefined}
-            width={size}
-            height={size}
-            loading="eager"
-            decoding="async"
-            className="w-full h-full object-contain pointer-events-none select-none"
-          />
-        </picture>
+        <ImageWithFallback
+          src={imageAsset.png}
+          sources={[{ media: "(min-width: 0px)", srcSet: imageAsset.webp }]}
+          alt={decorative ? "" : (label ?? definition.name)}
+          width={size}
+          height={size}
+          loading="eager"
+          decoding="async"
+          className="w-full h-full object-contain pointer-events-none select-none relative z-10"
+          fallback={null}
+        />
         {/* Zero-layout-shift fallback & semantic vector artwork */}
         <span
           className="sr-only"

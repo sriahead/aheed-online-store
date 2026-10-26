@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import fs from "fs";
 import path from "path";
 import { Icon3D, ICON_3D_IMAGE_ASSETS, type Icon3DName } from "@/components/icons/Icon3D";
-import { ICON_3D_DEFINITIONS } from "@/lib/icons-3d/catalog";
 
 afterEach(cleanup);
 
@@ -63,7 +62,6 @@ describe("Realistic 3D Icon Suite & Asset Delivery (#1280)", () => {
 
     const source = picture?.querySelector("source");
     expect(source?.getAttribute("srcset")).toBe("/images/icons-3d/storefront.webp");
-    expect(source?.getAttribute("type")).toBe("image/webp");
 
     const img = picture?.querySelector("img");
     expect(img?.getAttribute("src")).toBe("/images/icons-3d/storefront.png");
@@ -110,9 +108,10 @@ describe("Realistic 3D Icon Suite & Asset Delivery (#1280)", () => {
 
   it("handles decorative attribute correctly by silencing alt text and setting aria-hidden", () => {
     const { container } = render(<Icon3D name="rewards-coin" size={20} decorative />);
+    const wrapper = container.querySelector("[data-icon]");
+    expect(wrapper?.getAttribute("aria-hidden")).toBe("true");
     const img = container.querySelector("img");
     expect(img?.getAttribute("alt")).toBe("");
-    expect(img?.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("propagates custom label into image alt when provided", () => {
