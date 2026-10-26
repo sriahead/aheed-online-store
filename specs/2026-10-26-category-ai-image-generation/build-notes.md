@@ -3,7 +3,7 @@
 Tracking Issue: [#1283](https://github.com/sriahead/aheed-online-store/issues/1283)
 Branch: `feature/category-ai-image-generation`
 
-## What Changed and Why
+## What changed and why
 
 1. **`lib/category-image.ts` (Pure Module)**
    - Defines `buildCategoryImageKey(vendorId, slug, contentType)` returning deterministic relative keys `categories/{vendorId}/{slug}-{random}{ext}`.
@@ -45,3 +45,17 @@ Branch: `feature/category-ai-image-generation`
    - Created `tests/category-image-generation.test.ts` (11 tests, all passing).
    - Updated `docs/client-help-centre/category-image-standards.md` with instructions for one-click generation and bulk backfill.
    - Rebuilt and validated KMS index.
+
+## Decisions taken during the build
+
+- **Metered under `PRODUCT_IMAGE` allowance:** The existing `AiFeature` enum in Postgres schema carries `"PRODUCT_IMAGE"`. Both product images and category icons share the exact same Workers AI model (`@cf/black-forest-labs/flux-1-schnell`) and resource footprint. Metering under `"PRODUCT_IMAGE"` avoids an unnecessary database migration and DDL risk while honoring daily quotas.
+- **Client-side sync in `CategoryForm`:** `CategoryImageManager` invokes `onImageKeyChange` upon successful generation to update the form's `imageKey` field in-memory, ensuring that subsequent form saves preserve the newly generated asset key.
+- **Batch size of 5 for backfill:** Capped at 5 categories per invocation to guarantee responsiveness and prevent isolate worker timeout or gateway 504s during sequential AI generation calls.
+
+## Deviations from the spec
+
+None. All 10 requirements (R1–R10) outlined in `specs/2026-10-26-category-ai-image-generation/requirements.md` were implemented as specified.
+
+## Known-shaky areas
+
+- Workers AI generation latency can vary between 2s and 5s per image depending on Cloudflare node load. The UI provides clear spinner states and disable-guards during in-flight generation.
