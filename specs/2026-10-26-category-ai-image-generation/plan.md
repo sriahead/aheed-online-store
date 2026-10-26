@@ -1,3 +1,16 @@
+---
+id: category-ai-image-generation-plan
+title: "AI Image Generation for Category Icons & Departments (plan)"
+audience: [dev]
+type: spec
+status: approved
+version: "1.0.0"
+updated: 2026-10-26
+visibility: internal
+summary: Bring full parity to category icons and photography by adding one-click AI generation and bulk backfill powered by Cloudflare Workers AI and R2 storage.
+tags: [spec, categories, ai-generation, catalogue, images, workers-ai]
+---
+
 # Engineering Plan: AI Image Generation for Category Icons & Departments
 
 **Tracking issue:** `#1283`  
