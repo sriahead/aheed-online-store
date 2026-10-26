@@ -1,13 +1,13 @@
 ---
 id: gap-register-audit
 title: Master Application Gap Register
-audience: [dev, admin]
+audience: [dev, product]
 type: doc
 status: approved
 version: "2.6.0"
 updated: 2026-08-19
 visibility: internal
-summary: The single master gap register for the application — every GAP-ID in the repo, its severity, its current status and the artifact that proves it, reconciled against the code rather than against itself.
+summary: The single master gap register for the application â€” every GAP-ID in the repo, its severity, its current status and the artifact that proves it, reconciled against the code rather than against itself.
 tags: [gap-register, audit, orient, master]
 related: [gap-register, self-review-report, p6-5-residual-validation-plan, catalogue-debt-bucket-plan]
 ---
@@ -23,7 +23,7 @@ second table using the same ID space; it now keeps its P6.5 narrative and points
 
 | GAP-ID | Category | Title | Severity | Root Cause | Status |
 |---|---|---|---|---|---|
-| GAP-001 | Security / Tenancy | IPv6 loopback host truncation in `lib/tenant.ts` | **P1** | `.split(":")[0]` truncated bracketed IPv6 literal hosts (`[::1]:8787` → `[`). | Fixed |
+| GAP-001 | Security / Tenancy | IPv6 loopback host truncation in `lib/tenant.ts` | **P1** | `.split(":")[0]` truncated bracketed IPv6 literal hosts (`[::1]:8787` â†’ `[`). | Fixed |
 | GAP-002 | Security / Auth | Local preview sign-in origin mismatch (#176) | **P1** | Port stripped from the Host header and `wrangler dev`'s default `x-forwarded-proto` trusted over loopback HTTP. | Fixed |
 | GAP-003 | Frontend / UI | Unstyled fallback 404 page | **P2** | No `app/not-found.tsx` existed. | Fixed |
 | GAP-004 | KMS Docs | `ARTIFACT_INDEX.md` staleness | **P3** | Index not rebuilt after front-matter edits. | Fixed |
@@ -33,26 +33,26 @@ second table using the same ID space; it now keeps its P6.5 narrative and points
 | GAP-008 | User Journey / Auth | Guest Order Status Lookup (#123) | **P2** | Guest shoppers could not track an order without an account. Shipped in P7a, then found insecure and corrected in PR #204. | Fixed |
 | GAP-009 | UI Reference Parity | Slide-Over Cart Drawer vs Dedicated Cart Page | **P2** | Reference mockup uses a slide-over drawer; storefront used only a `/cart` page. Drawer shipped in P7a alongside the page. | Fixed |
 | GAP-010 | Feature / Admin | Staff Bulk Order Status Transitions (#162) | **P2** | Staff order dashboard advanced one order at a time. Built in PR #204. | Fixed |
-| GAP-011 | Feature / Search | Dedicated Database Trigram Index for Search (#163, #169) | **P2** | Global product search uses token matching; `pg_trgm` fuzzy search index deferred until catalogue size demands a raw SQL query. **The blocking question is answered as of P7d (#218):** the deferral rested partly on whether hand-authored DDL in a migration violates the "no raw SQL" rule. It does not — the rule governs application code; migration DDL is permitted, hand-authored DDL as a deliberate, commented exception. **`specs/architecture.md` §3.1 is the authoritative statement of that ruling and of the exception's scope** (it previously deferred to `CLAUDE.md`, which deferred back — a circular reference resolved in #786). Notably this was **never actually undecided** — §3.1 has said exactly this since the schema was written, and names `pg_trgm` as acceptable via portable migrations — but it was absent from `CLAUDE.md`, the file read at decision time, so the gap stayed blocked behind an answer that already existed one document over. Now deferred **purely on volume**. P7d also measured the cost it is deferring: at 118 orders the staff-order `contains` scan ran 16.4 ms p50 **with** a search term versus 16.4 ms **without** — no measurable penalty to remove yet (`docs/nfr-baseline.md`). | Deferred |
+| GAP-011 | Feature / Search | Dedicated Database Trigram Index for Search (#163, #169) | **P2** | Global product search uses token matching; `pg_trgm` fuzzy search index deferred until catalogue size demands a raw SQL query. **The blocking question is answered as of P7d (#218):** the deferral rested partly on whether hand-authored DDL in a migration violates the "no raw SQL" rule. It does not â€” the rule governs application code; migration DDL is permitted, hand-authored DDL as a deliberate, commented exception. **`specs/architecture.md` Â§3.1 is the authoritative statement of that ruling and of the exception's scope** (it previously deferred to `CLAUDE.md`, which deferred back â€” a circular reference resolved in #786). Notably this was **never actually undecided** â€” Â§3.1 has said exactly this since the schema was written, and names `pg_trgm` as acceptable via portable migrations â€” but it was absent from `CLAUDE.md`, the file read at decision time, so the gap stayed blocked behind an answer that already existed one document over. Now deferred **purely on volume**. P7d also measured the cost it is deferring: at 118 orders the staff-order `contains` scan ran 16.4 ms p50 **with** a search term versus 16.4 ms **without** â€” no measurable penalty to remove yet (`docs/nfr-baseline.md`). | Deferred |
 | GAP-012 | User Journey / Cart | Reorder Past Order in One Click (#124) | **P3** | Order history had no one-click reorder. Built as `features/orders/reorder-items.ts` and wired into the order detail page. | Fixed |
 | GAP-013 | UI Reference Parity | Homepage Featured Products Rail (#45) | **P3** | Reference mockup includes a featured-products rail. Now driven by a real `Product.isFeatured` flag; the rail also turned out to render nothing at all until the 2026-08-17 audit (#211) found and fixed the underlying `search("")` misuse. | Fixed |
-| GAP-014 | Feature / Admin | Admin Multi-Image Product Management (#173) | **P3** | `ProductImage` supports many rows per product; the admin can now add, remove, reorder and set the primary image — the real gap (no code path ever created a second row) was bigger than "remove and reorder", fixed in #211. | Fixed |
-| GAP-015 | Feature / Admin | Superseded Image Storage Cleanup (#174) | **P3** | Replacing or removing a product photo now deletes the superseded object from storage (`StorageService.deleteObject`, #211). Abandoned uploads (no `ProductImage` row ever written) are still not cleaned up — #174 stays open for that narrower remainder. | Fixed (partial) |
-| GAP-016 | Frontend / Security | Homepage hero image blocked by the app's own CSP | **P2** | `app/(storefront)/page.tsx` rendered a hardcoded `images.unsplash.com` stock photo — the only external image URL in the codebase — while P7a's `Content-Security-Policy` (`next.config.mjs`) allows `img-src 'self' data: https://*.nocaped.com`. It had been failing its CSP check in production since PR #206 promoted the CSP on 2026-08-17, and independently violated P6.6's own R6 (no hardcoded global assets) by rendering identically for every vendor. Element removed under #231; a real per-vendor hero image needs a `VendorConfig` field and a migration — **#233**. | Fixed |
-| GAP-017 | Feature / Storefront | Header wishlist link was never built (#232) | **P3** | `specs/2026-08-13-p6.6-p0-ui-overhaul/requirements.md` R1 requires a wishlist link in the storefront header. The string `wishlist` appears nowhere in `app/`, `components/`, `features/` or `lib/` — only in P6.6's own spec files. The same shape as GAP-010: a requirement recorded as delivered against code that never implemented it, found only when #231 rewrote P6.6's exit gate so it could be walked. P6.6's requirement deliberately retains the obligation rather than being edited to match the code. | Deferred |
-| GAP-018 | UI / Multi-tenancy | Hardcoded Aheed copy renders for every vendor (#239) | **P2** | `components/layout/Header.tsx` and `app/(storefront)/page.tsx` hardcode "100% Certified HMC Halal Fresh Meat Cut Daily", "100% Certified Halal Meat", "Free Delivery Over £30" and "Local Grocery & Self-Delivery". Verified live on `srimart-staging.nocaped.com`, an electronics store in Reading, which therefore advertises certified halal meat. Direct violation of P6.6's R12; the delivery-threshold badge also contradicts `VendorConfig.freeDeliveryThresholdPence`, which the cart drawer reads correctly. | Deferred |
-| GAP-019 | Reporting / Correctness | Staff reports count cancelled and unpaid orders as revenue (#238) | **P2** | `getFinancialsForStaff` aggregates every `Order` row for the vendor with no status filter, so `CANCELLED` and `PENDING_PAYMENT` orders are counted as revenue. Measured on staging: £1,162.64 of a £3,003.49 headline figure (39%) never collected, 62 of 110 "orders" cancelled or unpaid. P6.6c's original requirement was satisfiable by a query that answers the wrong question. | Deferred |
-| GAP-020 | Operations / Caching | Admin financial report served stale from cache (#237) | **P2** | `/staff/reports` returned 109 orders / £2,982.02 on a plain reload while `?cachebust=` and the database both returned 110 / £3,003.49, despite `export const dynamic = "force-dynamic"`. An authenticated, role-gated, tenant-scoped page is being cached in front of the Worker; the cache-key question is the first thing to rule out. | Open |
+| GAP-014 | Feature / Admin | Admin Multi-Image Product Management (#173) | **P3** | `ProductImage` supports many rows per product; the admin can now add, remove, reorder and set the primary image â€” the real gap (no code path ever created a second row) was bigger than "remove and reorder", fixed in #211. | Fixed |
+| GAP-015 | Feature / Admin | Superseded Image Storage Cleanup (#174) | **P3** | Replacing or removing a product photo now deletes the superseded object from storage (`StorageService.deleteObject`, #211). Abandoned uploads (no `ProductImage` row ever written) are still not cleaned up â€” #174 stays open for that narrower remainder. | Fixed (partial) |
+| GAP-016 | Frontend / Security | Homepage hero image blocked by the app's own CSP | **P2** | `app/(storefront)/page.tsx` rendered a hardcoded `images.unsplash.com` stock photo â€” the only external image URL in the codebase â€” while P7a's `Content-Security-Policy` (`next.config.mjs`) allows `img-src 'self' data: https://*.nocaped.com`. It had been failing its CSP check in production since PR #206 promoted the CSP on 2026-08-17, and independently violated P6.6's own R6 (no hardcoded global assets) by rendering identically for every vendor. Element removed under #231; a real per-vendor hero image needs a `VendorConfig` field and a migration â€” **#233**. | Fixed |
+| GAP-017 | Feature / Storefront | Header wishlist link was never built (#232) | **P3** | `specs/2026-08-13-p6.6-p0-ui-overhaul/requirements.md` R1 requires a wishlist link in the storefront header. The string `wishlist` appears nowhere in `app/`, `components/`, `features/` or `lib/` â€” only in P6.6's own spec files. The same shape as GAP-010: a requirement recorded as delivered against code that never implemented it, found only when #231 rewrote P6.6's exit gate so it could be walked. P6.6's requirement deliberately retains the obligation rather than being edited to match the code. | Deferred |
+| GAP-018 | UI / Multi-tenancy | Hardcoded Aheed copy renders for every vendor (#239) | **P2** | `components/layout/Header.tsx` and `app/(storefront)/page.tsx` hardcode "100% Certified HMC Halal Fresh Meat Cut Daily", "100% Certified Halal Meat", "Free Delivery Over Â£30" and "Local Grocery & Self-Delivery". Verified live on `srimart-staging.nocaped.com`, an electronics store in Reading, which therefore advertises certified halal meat. Direct violation of P6.6's R12; the delivery-threshold badge also contradicts `VendorConfig.freeDeliveryThresholdPence`, which the cart drawer reads correctly. | Deferred |
+| GAP-019 | Reporting / Correctness | Staff reports count cancelled and unpaid orders as revenue (#238) | **P2** | `getFinancialsForStaff` aggregates every `Order` row for the vendor with no status filter, so `CANCELLED` and `PENDING_PAYMENT` orders are counted as revenue. Measured on staging: Â£1,162.64 of a Â£3,003.49 headline figure (39%) never collected, 62 of 110 "orders" cancelled or unpaid. P6.6c's original requirement was satisfiable by a query that answers the wrong question. | Deferred |
+| GAP-020 | Operations / Caching | Admin financial report served stale from cache (#237) | **P2** | `/staff/reports` returned 109 orders / Â£2,982.02 on a plain reload while `?cachebust=` and the database both returned 110 / Â£3,003.49, despite `export const dynamic = "force-dynamic"`. An authenticated, role-gated, tenant-scoped page is being cached in front of the Worker; the cache-key question is the first thing to rule out. | Open |
 | GAP-021 | User Journey / Cart | Payment-provider failure destroys the cart (#234) | **P2** | On a failed Stripe session the order is correctly cancelled and stock released, but the cart is not restored, while the UI says "please try again". Verified during #103's deliberate failure window: cart of 17 items gone, `/cart` empty, `/checkout` 307'd away. The compensating logic is careful about stock and money and does not extend to the cart. | Deferred |
 | GAP-022 | Operations / Infra | CDN hotlink protection blocks all images under local preview (#235) | **P3** | The image CDN 403s any request refered from `http://localhost:8787` while returning 200 for a deployed origin, so no CDN image renders under `npm run preview`. Not CSP (zero violations logged) and not an app defect. Invalidates a whole class of local UI validation; pairs with the R2 bucket CORS gap that makes browser-direct upload equally untestable locally. | Open |
 | GAP-023 | Performance / Workers | Rapid sequential cart mutations still reach a failure ceiling (#236) | **P3** | 19 sequential add-to-cart mutations at ~1.1s intervals succeeded; 20 produced "This page couldn't load" and a wedged renderer, recovering automatically within a minute. #187's switch to `PrismaNeonHttp` clearly raised the ceiling rather than removing it. Filed because it was measured, not because it is known to affect real users; needs #218's observability to attribute cause. | Deferred |
 | GAP-024 | Frontend / Consistency | `/staff/runbook` refusal rendered a blank shell, not `PanelRefusal` | **P3** | `app/(admin)/staff/runbook/page.tsx`'s `requireVendorRole` refusal branch was `return null`, unlike all 8 other `/staff/*` pages' `<PanelRefusal>`. A signed-in `demo-customer@example.com` got `200` with the admin shell and no content, no "Staff only" message. `validation.md`'s own R9 row had flagged this exact case as never exercised; `/validate` fired it and found the gap. Fixed at `/fix` (#231) to match the established pattern. | Fixed |
-| GAP-025 | Performance / Storefront | Storefront LCP ~12s against a 2.5s target (#243) | **P1** | First-ever LCP measurement (P7d, #218): 11,700 / 12,482 / 12,633 ms across three Lighthouse runs on the default mobile slow-4G profile, against `specs/mission.md`'s `LCP < 2.5s` Gate-3 criterion. Cause is a single asset — `vendors/…/logo.png` is **1,926,055 bytes, 83% of total page weight**, rendered into a 40 px-tall box by `Header.tsx`'s `h-10 w-auto`, on every storefront page. It is `docs/logo.png` from this repo uploaded unresized (byte-identical). No resizing layer exists to mitigate it: Cloudflare Image Transformations return 404 on this zone in all three URL forms, which is also why #46 was decided as "keep `<img>`". API latency meets its own target comfortably (worst warm p95 138.92 ms vs 400 ms), so this is byte weight alone. Remediation is an account/plan decision plus asset ops, not repo code. | Open |
-| GAP-026 | Operations / Infra | Production vendor logo object missing — broken image on every page (#244) | **P1** | `VendorBranding.logoStorageKey` is populated in the production database (the storefront renders the `<img>` branch, not its lettermark fallback) but the object was never uploaded to `aheed-images-production`, so it 404s — verified with and without a `Referer`, ruling out hotlink protection (#235), while staging serves the identical key `200`. Every production storefront page therefore renders a broken image where the brand mark belongs. Same shape as GAP-007: a production storage prerequisite never applied, invisible to every automated check because a present-but-unresolvable key has no fallback path. | Open |
+| GAP-025 | Performance / Storefront | Storefront LCP ~12s against a 2.5s target (#243) | **P1** | First-ever LCP measurement (P7d, #218): 11,700 / 12,482 / 12,633 ms across three Lighthouse runs on the default mobile slow-4G profile, against `specs/mission.md`'s `LCP < 2.5s` Gate-3 criterion. Cause is a single asset â€” `vendors/â€¦/logo.png` is **1,926,055 bytes, 83% of total page weight**, rendered into a 40 px-tall box by `Header.tsx`'s `h-10 w-auto`, on every storefront page. It is `docs/logo.png` from this repo uploaded unresized (byte-identical). No resizing layer exists to mitigate it: Cloudflare Image Transformations return 404 on this zone in all three URL forms, which is also why #46 was decided as "keep `<img>`". API latency meets its own target comfortably (worst warm p95 138.92 ms vs 400 ms), so this is byte weight alone. Remediation is an account/plan decision plus asset ops, not repo code. | Open |
+| GAP-026 | Operations / Infra | Production vendor logo object missing â€” broken image on every page (#244) | **P1** | `VendorBranding.logoStorageKey` is populated in the production database (the storefront renders the `<img>` branch, not its lettermark fallback) but the object was never uploaded to `aheed-images-production`, so it 404s â€” verified with and without a `Referer`, ruling out hotlink protection (#235), while staging serves the identical key `200`. Every production storefront page therefore renders a broken image where the brand mark belongs. Same shape as GAP-007: a production storage prerequisite never applied, invisible to every automated check because a present-but-unresolvable key has no fallback path. | Open |
 
 ---
 
-## Reconciliation note — 2026-08-17
+## Reconciliation note â€” 2026-08-17
 
 Performed by `specs/2026-08-17-p6.5-residual-validation/` (issue #192). Every row above was
 re-derived from the code, the schema and `gh` issue state rather than from what the row said about
@@ -66,13 +66,13 @@ itself. Prior to this audit the register had been wrong on **seven** of fifteen 
 | GAP-004 | Confirmed unchanged (`Fixed`). |
 | GAP-005 | Confirmed unchanged (`Open`); #104 open. |
 | GAP-006 | Confirmed unchanged (`Open`); #113 open. |
-| GAP-007 | **Issue citation corrected: #167 → #180.** #167 is the *closed* P6b2 image-upload slice; the production-CORS prerequisite is #180, which is open. Status `Open` unchanged and correct. |
-| GAP-008 | **`Deferred` → `Fixed`.** Shipped in P7a and corrected in PR #204; #123 closed. |
-| GAP-009 | **`Deferred` → `Fixed`.** `components/cart/CartDrawer.tsx` ships and is mounted from `components/layout/Header.tsx`. |
-| GAP-010 | **`Deferred` → `Fixed`.** Built in PR #204 (`features/orders/advance-status-bulk.ts`); #162 closed. |
+| GAP-007 | **Issue citation corrected: #167 â†’ #180.** #167 is the *closed* P6b2 image-upload slice; the production-CORS prerequisite is #180, which is open. Status `Open` unchanged and correct. |
+| GAP-008 | **`Deferred` â†’ `Fixed`.** Shipped in P7a and corrected in PR #204; #123 closed. |
+| GAP-009 | **`Deferred` â†’ `Fixed`.** `components/cart/CartDrawer.tsx` ships and is mounted from `components/layout/Header.tsx`. |
+| GAP-010 | **`Deferred` â†’ `Fixed`.** Built in PR #204 (`features/orders/advance-status-bulk.ts`); #162 closed. |
 | GAP-011 | Confirmed unchanged (`Deferred`); no `pg_trgm` index exists, #163 and #169 both open. Evidence added: `lib/repositories/products.ts:173`. |
-| GAP-012 | **`Deferred` → `Fixed`.** `features/orders/reorder-items.ts` is a complete server action wired into a real `<form action={reorderItems}>` on the order detail page. **Issue #124 was still open** against work that had already shipped. |
-| GAP-013 | **`Deferred` → `Fixed (partial)`.** The rail shipped and #45 is closed, but `app/(storefront)/page.tsx:28` populates it with `productsRepo.search("", { take: 4, isHalal: true })` — the comment in that file calls it "simulated deals / halal featured". No featured flag exists on `Product`. The remainder is **#208**. |
+| GAP-012 | **`Deferred` â†’ `Fixed`.** `features/orders/reorder-items.ts` is a complete server action wired into a real `<form action={reorderItems}>` on the order detail page. **Issue #124 was still open** against work that had already shipped. |
+| GAP-013 | **`Deferred` â†’ `Fixed (partial)`.** The rail shipped and #45 is closed, but `app/(storefront)/page.tsx:28` populates it with `productsRepo.search("", { take: 4, isHalal: true })` â€” the comment in that file calls it "simulated deals / halal featured". No featured flag exists on `Product`. The remainder is **#208**. |
 | GAP-014 | Status `Deferred` unchanged and correct, but the Root Cause understated the position: the schema already has `ProductImage` with `sortOrder`/`isPrimary`, a gallery read path, and `attachProductImage`/`setPrimaryProductImage`. What is missing is **remove** and **reorder**, not multi-image support outright. Wording corrected. |
 | GAP-015 | Confirmed unchanged (`Deferred`); no delete path exists in `lib/storage`. |
 
@@ -84,8 +84,8 @@ tested, and verified". Both claims were false on the day they were written:
 
 - **GAP-010 was recorded as an accounted-for `Deferred` item while the feature had never been
   built**, and `specs/roadmap.md`'s P7a-closure row simultaneously reported it as shipped.
-- The guest order lookup shipped in P7a reused `findOrderForWebhook` — the one deliberately
-  un-scoped read in the codebase — behind a public page with an *optional* email field, so an order
+- The guest order lookup shipped in P7a reused `findOrderForWebhook` â€” the one deliberately
+  un-scoped read in the codebase â€” behind a public page with an *optional* email field, so an order
   number alone disclosed any order's full contents, in any vendor, unauthenticated and unthrottled.
   That is a P0 security gap by this register's own severity scale, and it went unlisted.
 
@@ -95,7 +95,7 @@ That is why P6.5's exit gate was rewritten in the same slice
 
 ---
 
-## Reconciliation note — 2026-08-18
+## Reconciliation note â€” 2026-08-18
 
 Performed by `specs/2026-08-18-validation-debt-bucket/` (issue #231), which rewrote P6.6's and
 P6.6c's exit gates so they could be walked at all. **Two new gaps were found before the walk even
@@ -103,84 +103,84 @@ started**, both by reading the code against the requirements rather than by runn
 
 | GAP-ID | Change |
 |---|---|
-| GAP-016 | **New.** The homepage hero's hardcoded `images.unsplash.com` image is outside this app's own CSP `img-src` allowlist and had been failing in production since 2026-08-17. Recorded `Fixed` — the element was removed in the same slice, since P6.6's R6 already forbade it; the per-vendor replacement is **#233**. Later confirmed live on `srimart-staging.nocaped.com` at `64e4a46` (`unsplashLoaded: false`), the first evidence of this gap outside local reasoning. |
-| GAP-017 | **New.** P6.6's R1 requires a header wishlist link that does not exist anywhere in the code. Recorded `Deferred` against **#232**. The same shape as GAP-010, and found the same way — by comparing a requirement to the artifact instead of to another document. |
-| GAP-018..023 | **New, all six found by actually walking the rewritten P6.6/P6.6c gates and by #103's live payment-failure window** — none was visible from any document. GAP-018 (#239) and GAP-019 (#238) are the two that matter most: a second vendor advertising another vendor's halal certification, and a financial report overstating revenue by 39%. Both were reachable only by exercising the artifact against a *second tenant* and against *real order data* respectively — neither is detectable by reading code or by re-reading a spec. |
+| GAP-016 | **New.** The homepage hero's hardcoded `images.unsplash.com` image is outside this app's own CSP `img-src` allowlist and had been failing in production since 2026-08-17. Recorded `Fixed` â€” the element was removed in the same slice, since P6.6's R6 already forbade it; the per-vendor replacement is **#233**. Later confirmed live on `srimart-staging.nocaped.com` at `64e4a46` (`unsplashLoaded: false`), the first evidence of this gap outside local reasoning. |
+| GAP-017 | **New.** P6.6's R1 requires a header wishlist link that does not exist anywhere in the code. Recorded `Deferred` against **#232**. The same shape as GAP-010, and found the same way â€” by comparing a requirement to the artifact instead of to another document. |
+| GAP-018..023 | **New, all six found by actually walking the rewritten P6.6/P6.6c gates and by #103's live payment-failure window** â€” none was visible from any document. GAP-018 (#239) and GAP-019 (#238) are the two that matter most: a second vendor advertising another vendor's halal certification, and a financial report overstating revenue by 39%. Both were reachable only by exercising the artifact against a *second tenant* and against *real order data* respectively â€” neither is detectable by reading code or by re-reading a spec. |
 
 Rows GAP-001..GAP-015 were not re-derived in this pass; the 2026-08-17 audit above remains their
 last full reconciliation. **GAP-011 stays `Deferred`** and is assessed under #218 (P7d), not here.
 
 **What this pass says about the register's coverage.** Both new rows come from *slice specs*, not
-from the register's own review process — which had no way to find them, because it audits gaps
+from the register's own review process â€” which had no way to find them, because it audits gaps
 already recorded rather than requirements never checked. GAP-010's lesson was that a recorded row
 can be wrong about the code; GAP-016/017's is narrower and sharper: **a requirement that was never
 compared to the artifact does not appear in this register at all**, at any status. The register is a
 ledger of known gaps, not a measure of how much has actually been verified.
 
 **Addendum, `/document` (same slice, after `/validate`/`/fix`): GAP-024.** A third, different shape
-from GAP-016/017 — this one *was* named in `validation.md` (P6.6c's R9 row explicitly flagged the
+from GAP-016/017 â€” this one *was* named in `validation.md` (P6.6c's R9 row explicitly flagged the
 signed-in-non-staff runbook case as never exercised) but wasn't actually checked until the
 fresh-context `/validate` pass fired it. The gap existed the whole time the slice's own spec
-correctly anticipated it; what changed was someone finally running the row. Recorded `Fixed` —
+correctly anticipated it; what changed was someone finally running the row. Recorded `Fixed` â€”
 corrected at `/fix` in the same slice, before shipping.
 
 ---
 
 ## Detailed Gap Descriptions
 
-### GAP-001 — IPv6 loopback host truncation
-- **Severity:** **P1** · **Status:** Fixed
+### GAP-001 â€” IPv6 loopback host truncation
+- **Severity:** **P1** Â· **Status:** Fixed
 - **Description:** `lib/tenant.ts` parsed the Host header with `.split(":")[0]`, truncating a
   bracketed IPv6 literal (`[::1]:8787`) to `[` and failing tenant resolution.
 - **Evidence:** `lib/tenant.ts:17` now calls `splitHostPort(rawHost).hostname`.
 
-### GAP-002 — Local preview sign-in origin mismatch (#176)
-- **Severity:** **P1** · **Status:** Fixed
+### GAP-002 â€” Local preview sign-in origin mismatch (#176)
+- **Severity:** **P1** Â· **Status:** Fixed
 - **Description:** Sign-in against `npm run preview` at `http://localhost:8787` returned 403 with
   `Invalid origin`, because the port was dropped when building Better Auth's trusted origin and
   `wrangler dev`'s default `x-forwarded-proto: https` was trusted over a plain-HTTP loopback.
 - **Evidence:** `lib/auth-origin.ts:43-68` (`splitHostPort`, `inferProto`), `buildAuthOrigin:82`
   preserving a non-default port, and 26 unit tests in `tests/auth-origin.test.ts`.
-- **Note:** Until 2026-08-17 the only evidence for this row was those unit tests — the reported
+- **Note:** Until 2026-08-17 the only evidence for this row was those unit tests â€” the reported
   symptom itself had never been re-fired, which is why #176 stayed open while the register said
   `Fixed`. See the verification record in the reconciliation note.
 
-### GAP-003 — Unstyled fallback 404 page
-- **Severity:** **P2** · **Status:** Fixed
+### GAP-003 â€” Unstyled fallback 404 page
+- **Severity:** **P2** Â· **Status:** Fixed
 - **Evidence:** `app/not-found.tsx` exists and renders vendor-branded markup with a store return link.
 
-### GAP-004 — `ARTIFACT_INDEX.md` staleness
-- **Severity:** **P3** · **Status:** Fixed
+### GAP-004 â€” `ARTIFACT_INDEX.md` staleness
+- **Severity:** **P3** Â· **Status:** Fixed
 - **Evidence:** `gates.yml`'s normalised rebuild-and-diff check; `npm run kms:build-index`.
 
-### GAP-005 — Transactional Email Service & Outbound Domain (#104)
+### GAP-005 â€” Transactional Email Service & Outbound Domain (#104)
 - **Category:** Operations / Transactional Email
-- **Severity:** **P1** · **Status:** Open
+- **Severity:** **P1** Â· **Status:** Open
 - **Description:** `EmailService` logs and dispatches transactional emails via Resend API. To eliminate external service costs and resolve Cloudflare Workers Error 1102 (10ms CPU timeout limit), the platform is flagged to migrate to Cloudflare Email Sending (outbound) and Cloudflare Email Routing (inbound) under Cloudflare Workers Paid ($5/month).
 - **Evidence:** `lib/email.ts` line 45; issue `#104`; Cloudflare Dashboard Email Service.
 - **Root Cause:** Transition from developer sandbox email to production edge-native email & CPU headroom expansion.
 - **Recommended Fix (Flagged for Phase 8):** Upgrade Cloudflare account to Workers Paid ($5/mo) to unlock Cloudflare Email Sending (outbound) + Email Routing (inbound) and 50ms CPU time limit.
 - **Dependencies:** Cloudflare Workers Paid subscription ($5/mo) and domain DNS binding. **External to this repo.**
 
-### GAP-006 — Stripe Production Live Keys (#113)
+### GAP-006 â€” Stripe Production Live Keys (#113)
 - **Category:** Operations / Payments
-- **Severity:** **P1** · **Status:** Open
+- **Severity:** **P1** Â· **Status:** Open
 - **Description:** Production environment relies on Stripe test-mode API keys (`pk_test_...`, `sk_test_...`). Real customer transactions cannot be processed until live keys are configured.
 - **Evidence:** `secrets/production.vars` and issue `#113`.
 - **Root Cause:** Deliberate safety posture during development and testing phases.
 - **Recommended Fix:** Swap `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in production secrets to live mode keys prior to launch.
 - **Dependencies:** Stripe account activation. **External to this repo.**
 
-### GAP-007 — Production R2 Bucket CORS Setup (#180)
+### GAP-007 â€” Production R2 Bucket CORS Setup (#180)
 - **Category:** Operations / Storage Infrastructure
-- **Severity:** **P1** · **Status:** **Fixed** (2026-08-18)
+- **Severity:** **P1** Â· **Status:** **Fixed** (2026-08-18)
 - **Description:** Browser-direct product image uploads (presigned `PUT`) worked in staging
   (`aheed-images-staging`), but the production bucket (`aheed-images-production`) had no CORS
   configuration at all, so every production browser upload failed at preflight.
 - **Evidence:** Applied out of band at P7's `/propose` with
   `wrangler r2 bucket cors set aheed-images-production --file <policy> --force`, using the R2 API
   shape (`rules[].allowed`) documented in `specs/2026-08-12-p6b2-image-upload/plan.md`. Absence was
-  confirmed first — `wrangler r2 bucket cors list` returned *"The CORS configuration does not exist
+  confirmed first â€” `wrangler r2 bucket cors list` returned *"The CORS configuration does not exist
   [code: 10059]"*. Verified afterwards by live `OPTIONS` preflight rather than by the set command's
   own success: `https://aheedfoodcentre.nocaped.com` and `https://srimart.nocaped.com` each return
   `204` with `Access-Control-Allow-Origin` echoing the origin, `PUT` and `content-type` allowed;
@@ -188,8 +188,8 @@ corrected at `/fix` in the same slice, before shipping.
   with no such header, proving the policy discriminates rather than being permissive. Full record
   on **#180**.
 - **Root Cause:** Cloudflare R2 bucket CORS policies are applied per bucket via Wrangler CLI, not
-  via application code — so nothing in a deploy could ever have applied it.
-- **Severity in hindsight:** #180's own text read "Blocks nothing else… the last outstanding item
+  via application code â€” so nothing in a deploy could ever have applied it.
+- **Severity in hindsight:** #180's own text read "Blocks nothing elseâ€¦ the last outstanding item
   from P6." That was true when filed, when the only upload path was P6b2's single primary image.
   PR #214 then promoted the whole multi-image manager to production, and **every** admin image
   operation there was failing preflight. An issue's severity assessment goes stale when a later
@@ -197,9 +197,9 @@ corrected at `/fix` in the same slice, before shipping.
 - **Citation history:** This row cited `#167` until 2026-08-17. #167 is the closed P6b2 image-upload
   slice, not the CORS prerequisite; the correct issue is **#180**.
 
-### GAP-008 — Guest Order Status Lookup (#123)
+### GAP-008 â€” Guest Order Status Lookup (#123)
 - **Category:** User Journey / Guest Checkout
-- **Severity:** **P2** · **Status:** Fixed
+- **Severity:** **P2** Â· **Status:** Fixed
 - **Description:** Guest shoppers could not look up an order after checkout without an account.
 - **Evidence:** `/orders/lookup` with `findOrderForGuestLookup` (vendor-scoped, email-matched) and a
   Postgres-backed 5/minute limiter (`OrderLookupAttempt`), migration
@@ -207,51 +207,51 @@ corrected at `/fix` in the same slice, before shipping.
 - **History:** The P7a implementation reused `findOrderForWebhook` with an *optional* email field,
   disclosing any order in any vendor from its order number alone. Fixed at P7a's first `/validate`.
 
-### GAP-009 — Slide-Over Cart Drawer vs Dedicated Cart Page
+### GAP-009 â€” Slide-Over Cart Drawer vs Dedicated Cart Page
 - **Category:** UI Reference Parity / Frontend
-- **Severity:** **P2** · **Status:** Fixed
+- **Severity:** **P2** Â· **Status:** Fixed
 - **Description:** The reference mockup (`docs/ui-ref/src/components/CartDrawer.tsx`) provides an instant slide-over drawer when clicking the cart icon; the storefront originally offered only `/cart`.
 - **Evidence:** `components/cart/CartDrawer.tsx` and `components/cart/CartDrawerShell.tsx`, mounted from `components/layout/Header.tsx`. The `/cart` page is retained for deep-linking, as the original recommendation proposed.
 
-### GAP-010 — Staff Bulk Order Status Transitions (#162)
+### GAP-010 â€” Staff Bulk Order Status Transitions (#162)
 - **Category:** Feature / Admin
-- **Severity:** **P2** · **Status:** Fixed
+- **Severity:** **P2** Â· **Status:** Fixed
 - **Evidence:** `features/orders/advance-status-bulk.ts`, wired into `app/(admin)/staff/orders/page.tsx` via HTML5's `form=` attribute (nested `<form>`s being invalid). One `$transaction` per batch, legality re-checked per order against its own persisted status. Built in **PR #204**; #162 closed.
 - **History:** This row read `Deferred` while `specs/roadmap.md`'s 2026-08-13 P7a-closure row simultaneously claimed bulk transitions had shipped. Neither was true until PR #204.
 
-### GAP-011 — Dedicated Database Trigram Index for Search (#163, #169)
+### GAP-011 â€” Dedicated Database Trigram Index for Search (#163, #169)
 - **Category:** Feature / Search
-- **Severity:** **P2** · **Status:** Deferred
+- **Severity:** **P2** Â· **Status:** Deferred
 - **Description:** Global product search matches on substring containment rather than fuzzy/typo-tolerant matching.
 - **Evidence:** `lib/repositories/products.ts:173`'s `search()` builds an `OR` of `contains`/`insensitive`
-  filters on `name` and `description` — no `pg_trgm` extension, index, or raw SQL query anywhere in
+  filters on `name` and `description` â€” no `pg_trgm` extension, index, or raw SQL query anywhere in
   the repo. Deferred until catalogue size demands it; #163 and #169 both open.
 
-### GAP-012 — Reorder Past Order in One Click (#124)
+### GAP-012 â€” Reorder Past Order in One Click (#124)
 - **Category:** User Journey / Cart
-- **Severity:** **P3** · **Status:** Fixed
+- **Severity:** **P3** Â· **Status:** Fixed
 - **Evidence:** `features/orders/reorder-items.ts` (a `"use server"` action that re-adds an order's items to the caller's cart, skipping lines whose product no longer exists), rendered as `<form action={reorderItems}>` in `app/(storefront)/account/orders/[orderNumber]/page.tsx:45`.
-- **Live verification (2026-08-17):** signed in as `demo-staff` against `npm run preview`, clicking **Reorder items** on cancelled order `AHE-20260817-3V492G` redirected to `/cart` containing exactly that order's line (`5 × Kitchen Roll, pack of 4`, subtotal `£16.45`).
+- **Live verification (2026-08-17):** signed in as `demo-staff` against `npm run preview`, clicking **Reorder items** on cancelled order `AHE-20260817-3V492G` redirected to `/cart` containing exactly that order's line (`5 Ã— Kitchen Roll, pack of 4`, subtotal `Â£16.45`).
 - **Note:** Found already built during the 2026-08-17 audit while both this row and issue #124 still reported it outstanding. #124 closed on the evidence above.
 
-### GAP-013 — Homepage Featured Products Rail (#45)
+### GAP-013 â€” Homepage Featured Products Rail (#45)
 - **Category:** UI Reference Parity
-- **Severity:** **P3** · **Status:** Fixed
+- **Severity:** **P3** Â· **Status:** Fixed
 - **Evidence:** `Product.isFeatured` (`prisma/schema.prisma`), an admin checkbox in `ProductForm`, and `app/(storefront)/page.tsx` reading it via `ProductRepository.list({ isFeatured: true })`. The rail is retitled "Featured Products".
-- **Also found and fixed (#211):** the rail — and the "New Arrivals" row beside it — rendered **nothing at all**, independent of the proxy-flag issue. Both called `productsRepo.search("", {...})`, and `search()`'s empty-query guard (`lib/repositories/products.ts`) unconditionally returns zero results; `ProductRow` renders `null` for zero products. Neither row's title appeared anywhere in `npm run preview`'s rendered homepage before this fix. `#208`'s own text ("It renders correctly; only its data source is a placeholder") was itself wrong on the first half — this is the reconciliation.
+- **Also found and fixed (#211):** the rail â€” and the "New Arrivals" row beside it â€” rendered **nothing at all**, independent of the proxy-flag issue. Both called `productsRepo.search("", {...})`, and `search()`'s empty-query guard (`lib/repositories/products.ts`) unconditionally returns zero results; `ProductRow` renders `null` for zero products. Neither row's title appeared anywhere in `npm run preview`'s rendered homepage before this fix. `#208`'s own text ("It renders correctly; only its data source is a placeholder") was itself wrong on the first half â€” this is the reconciliation.
 
-### GAP-014 — Admin Multi-Image Product Management (#173)
+### GAP-014 â€” Admin Multi-Image Product Management (#173)
 - **Category:** Feature / Admin
-- **Severity:** **P3** · **Status:** Fixed
-- **Description (was):** `ProductImage` already modelled many images per product (`sortOrder`, `isPrimary`) and the storefront read a gallery, but **no code path had ever created a second row** — `attachProductImage` always repointed the single primary row. The real gap was bigger than "remove and reorder are missing".
+- **Severity:** **P3** Â· **Status:** Fixed
+- **Description (was):** `ProductImage` already modelled many images per product (`sortOrder`, `isPrimary`) and the storefront read a gallery, but **no code path had ever created a second row** â€” `attachProductImage` always repointed the single primary row. The real gap was bigger than "remove and reorder are missing".
 - **Evidence:** `lib/repositories/products.ts`'s `addProductImage`/`promoteProductImage`/`removeProductImage`/`reorderProductImages`, wired into `features/admin/product-image.ts`'s four new server actions and `components/staff/ProductImageManager.tsx`.
 
-### GAP-015 — Superseded Image Storage Cleanup (#174)
+### GAP-015 â€” Superseded Image Storage Cleanup (#174)
 - **Category:** Feature / Admin
-- **Severity:** **P3** · **Status:** Fixed (partial)
-- **Description (was):** Replacing a product photo writes a new immutable key and repoints the row (by design — keys are immutable so no CDN purge is needed). The superseded object was never deleted, and neither was an abandoned upload's.
+- **Severity:** **P3** Â· **Status:** Fixed (partial)
+- **Description (was):** Replacing a product photo writes a new immutable key and repoints the row (by design â€” keys are immutable so no CDN purge is needed). The superseded object was never deleted, and neither was an abandoned upload's.
 - **Evidence:** `lib/storage.ts`'s `deleteObject`, called from `removeProductImage` (`features/admin/product-image.ts`) whenever an image is removed or replaced.
-- **Remaining:** an abandoned upload — an object PUT to storage whose `ProductImage` row was never written (browser closed mid-flow) — has no cleanup path. Inline delete doesn't reach it; a scheduled sweep was considered and deliberately deferred as bigger infrastructure than this slice's scope. **#174 stays open** for that narrower remainder.
+- **Remaining:** an abandoned upload â€” an object PUT to storage whose `ProductImage` row was never written (browser closed mid-flow) â€” has no cleanup path. Inline delete doesn't reach it; a scheduled sweep was considered and deliberately deferred as bigger infrastructure than this slice's scope. **#174 stays open** for that narrower remainder.
 
 ---
 
@@ -265,22 +265,22 @@ corrected at `/fix` in the same slice, before shipping.
 | **Total** | **15** | **5** | **5** | **5** |
 
 All three `Open` rows are P1 operational prerequisites whose fix is an action outside this
-repository — a Resend DNS verification, a Stripe live-key provisioning, and an R2 bucket CORS
+repository â€” a Resend DNS verification, a Stripe live-key provisioning, and an R2 bucket CORS
 policy. No P1 gap remains open against a code defect.
 
 ---
 
 ## Production Readiness
 
-**Decision: READY WITH CONDITIONS**, unchanged — but on evidence rather than on assertion.
+**Decision: READY WITH CONDITIONS**, unchanged â€” but on evidence rather than on assertion.
 
 Two conditions remain: **GAP-005** (Resend sending domain, #104) and **GAP-006** (Stripe live keys,
-#113) — both owner actions, neither of them code. **GAP-007 was the third and is now discharged**
+#113) â€” both owner actions, neither of them code. **GAP-007 was the third and is now discharged**
 (production bucket CORS applied and preflight-verified, 2026-08-18).
 
 > **Superseded claims (2026-08-13).** This section previously stated "0 P0 (Critical Code/Security)
 > gaps" and that the application was "100% functionally complete, fully tested, and verified", and
-> the Audit Consistency Matrix rated Backend↔Frontend and Test-Coverage↔Business-Rules at "100%
+> the Audit Consistency Matrix rated Backendâ†”Frontend and Test-Coverageâ†”Business-Rules at "100%
 > Consistent". Those claims did not survive contact with P7a's first real validation, which found an
 > unauthenticated cross-vendor order-disclosure hole and a feature recorded as deferred that had
 > never been built. They are removed rather than restated: a readiness percentage that nothing
@@ -289,21 +289,21 @@ Two conditions remain: **GAP-005** (Resend sending domain, #104) and **GAP-006**
 
 ## KMS Pilot: Orders & Fulfilment Findings (2026-09-22)
 
-### KMS-001 � Revenue limitation for cancelled-but-unrefunded orders (#795)
+### KMS-001 — Revenue limitation for cancelled-but-unrefunded orders (#795)
 - **Status:** [Unresolved]
 - **Sources:** lib/order-status.ts (REVENUE_STATUSES), specs/2026-09-17-p696-staff-cancel-confirmed-order/plan.md
 - **Reader Impact:** Staff reports do not count cancelled orders as revenue, even though the payment was captured and not refunded. The dashboard figures are technically an understatement of cash collected until refunds are implemented.
 - **Resolution Needed:** A product decision (Issue #606 / #795) on whether to derive revenue from the Payment state rather than the Order state, or to implement the refund workflow.
 - **Owner:** Product / Backend (Unassigned)
 
-### KMS-002 � Collection tier spend mismatch
+### KMS-002 — Collection tier spend mismatch
 - **Status:** [Unresolved]
 - **Sources:** lib/repositories/loyalty.ts (windowSpendPence), specs/2026-09-17-p696-staff-cancel-confirmed-order/plan.md
 - **Reader Impact:** Click & Collect orders (COLLECTED, READY_FOR_COLLECTION) do not currently count towards a customer's loyalty tier progression, unlike Delivery orders.
 - **Resolution Needed:** Code fix to include collection statuses in the windowSpendPence calculation.
 - **Owner:** Backend (Unassigned)
 
-### KMS-003 � Missing paid-order cancellation guidance
+### KMS-003 — Missing paid-order cancellation guidance
 - **Status:** [Resolved]
 - **Sources:** docs/operations-research/order-fulfilment-core.md
 - **Reader Impact:** Staff previously lacked documentation on how cancelled orders interact with inventory, loyalty, and revenue.

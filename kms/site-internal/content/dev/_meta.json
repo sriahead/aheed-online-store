@@ -1,0 +1,8 @@
+{
+  "index": "Engineering Portal Hub",
+  "adr": "Architecture Decisions (ADRs)",
+  "spec": "System Specifications",
+  "doc": "Architecture & Standards",
+  "runbook": "Developer Runbooks",
+  "guide": "Technical Guides"
+}

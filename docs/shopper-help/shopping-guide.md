@@ -1,14 +1,14 @@
 ---
 id: shopping-guide
-title: "Shopping Guide & Help Center"
-audience: [shopper]
+title: "Customer Shopping Guide & Help Center"
+audience: [store-admin, staff, shopper]
 type: guide
 status: approved
 version: "1.6.0"
-updated: 2026-10-10
-visibility: public
-summary: "A complete guide for customers on how to browse, place orders, and manage their account."
-tags: ["shopper", "help", "orders"]
+updated: 2026-10-26
+visibility: internal
+summary: "A complete guide for customers and staff on how to browse, place orders, and manage account features."
+tags: ["shopper", "help", "orders", "customer"]
 ---
 
 # Shopping Guide

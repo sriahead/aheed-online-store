@@ -1,56 +1,85 @@
 ---
-title: Client & Staff Documentation Centre
+title: Client Help & Documentation Centre
 ---
 
 # Client Help & Documentation Centre
 
-Welcome to the Client & Staff Help Centre. This portal contains verified guides, standard operating procedures (SOPs), and end-to-end user journeys for managing storefronts, products, deliveries, and platform operations.
+Welcome to the Client Knowledge Centre. This portal provides complete, verified guides and standard operating procedures (SOPs) to help store owners, administrators, and staff independently configure, launch, operate, and troubleshoot their stores.
 
 ---
 
-## 1. Getting Started & Onboarding
-- **[Client Onboarding & Store Launch Readiness](/staff/guide/getting-started-onboarding)** — Step-by-step onboarding guide, store configuration sequence, and pre-launch audit checklists for store operators and platform administrators.
-- **[Roles & Permissions Matrix](/staff/guide/roles-permissions-matrix)** — Detailed capability matrix for Platform Admins, Store Admins, Staff, and Customers.
+## 1. 🚀 Home & Getting Started
+- **[Client Onboarding & Store Launch Readiness](/staff/guide/getting-started-onboarding)** — Step-by-step store setup sequence, mandatory pre-launch verification checklist, and go-live procedures.
+- **[Storefront Configuration & Launch Audit](/staff/guide/getting-started-onboarding#phase-6-launch-readiness-audit--go-live)** — Audit verification to confirm delivery postcodes, catalogue stock, operating hours, and Stripe connection before opening.
 
 ---
 
-## 2. End-to-End User Journeys
-- **[Client & Role User Journey Maps](/staff/guide/client-user-journeys)** — Documented visual flows, step-by-step procedures, prerequisites, and checklists for:
-  - **Platform Admin Journey:** Host routing, multi-tenant roll-up, system health diagnostics, and AI allowance management.
-  - **Vendor Admin Journey:** Onboarding audit, storefront branding, delivery postcodes, fulfilment slots, product import, and staff management.
-  - **Store Staff Journey:** Orders queue state machine, pick-and-pack workflow, live stock toggles, and review moderation.
-  - **Customer Journey:** Storefront discovery, category browsing, cart limits, guest vs account checkout, Stripe payment, and order tracking.
+## 2. 🗺️ User Journey Maps
+- **[Complete Role User Journey Maps](/staff/guide/client-user-journeys)** — Visual flows, decision gates, required permissions, and step sequences for all platform roles:
+  - **Platform Admin Journey:** Host routing, multi-tenant setup, database telemetry, and AI token budget caps.
+  - **Vendor Admin Journey:** Initial onboarding, branding customization, catalogue creation, delivery slots, and launch audit.
+  - **Store Staff Journey:** Daily sign-in, order fulfillment queue processing, pick-and-pack workflow, and live stock overrides.
+  - **Customer Journey:** Storefront discovery, category browsing, cart limits, delivery/collection slot reservation, Stripe checkout, and live order tracking.
 
 ---
 
-## 3. Product & Catalogue Management
-- **[Products & Catalogue Management Guide](/staff/guide/products-catalogue-guide)** — Product creation, category hierarchies, barcode scanning, and bulk spreadsheet upload.
-- **[Live Inventory & Availability SOP](/staff/runbook/staff-tabs-guide#live-inventory--availability---staffinventory)** — Real-time out-of-stock toggles and quick restocking.
+## 3. 🏪 Set Up & Launch Your Store
+- **[Initial Store Configuration](/staff/guide/getting-started-onboarding#phase-1-vendor-provisioning--storefront-shell)** — Store profile, currency (integer pence GBP), store logo, contact details, and banner branding.
+- **[Catalogue & Category Setup](/staff/guide/products-catalogue-guide)** — Creating category hierarchies, assigning product tax rates, and setting up initial inventory.
+- **[Staff Access & Invitations](/staff/guide/roles-permissions-matrix#staff-invitation--management-workflow)** — Inviting store staff, setting role tiers, and managing team member access.
+- **[Payment & Technical Integrations](/staff/guide/integrations-guide)** — Connecting Stripe Connect for direct customer payouts, Cloudflare Workers AI budgets, and WhatsApp customer support.
+- **[Pre-Launch Verification & Testing](/staff/guide/getting-started-onboarding#phase-5-end-to-end-sandbox-validation)** — Placing test orders in sandbox mode, validating postal outcodes, and verifying fulfillment slot capacity.
+- **[Post-Launch Operational Tasks](/staff/runbook/staff-tabs-guide)** — Opening checklists, daily shift handover, order queue management, and closing procedures.
 
 ---
 
-## 4. Features & Settings
-- **[Store Features & Settings Reference](/staff/guide/features-settings-reference)** — Operating hours, holiday overrides, postcode prefix delivery zones, fulfilment time windows, discount coupons, and customer loyalty rewards.
-- **[Store Admin Feature Reference](/staff/runbook/store-admin-tabs-guide)** — Complete section-by-section walkthrough of all store administrator tabs.
+## 4. 📋 Feature & Task Guides (Outcome-Oriented)
+- **Catalogue & Inventory Management:**
+  - **[Products & Catalogue Management Guide](/staff/guide/products-catalogue-guide)** — Adding products, barcode scanning, category assignment, and unit prices.
+  - **[Bulk Spreadsheet Import Guide](/staff/guide/products-catalogue-guide#bulk-product-spreadsheet-import)** — Excel `.xlsx` file upload specifications, column headers, and validation rules.
+  - **[Live Inventory & Availability SOP](/staff/runbook/staff-tabs-guide#live-inventory--availability---staffinventory)** — Immediate out-of-stock toggles during peak store hours.
+- **Orders & Fulfilment Operations:**
+  - **[Order Fulfilment Core Runbook](/staff/runbook/order-fulfilment-core)** — Canonical order lifecycle state transitions (`PENDING` &rarr; `ACCEPTED` &rarr; `PREPARING` &rarr; `READY` &rarr; `DISPATCHED`/`COLLECTED`).
+  - **[Cancellations & Item Substitutions](/staff/runbook/order-fulfilment-core#cancellations-refunds--payment-exceptions)** — Handling out-of-stock item substitutions and issuing customer refunds.
+- **Store Settings & Rules:**
+  - **[Operating Hours & Holiday Overrides](/staff/guide/features-settings-reference#1-operating-hours--schedule-management)** — Standard weekly schedule and bank holiday overrides.
+  - **[Delivery Areas & Minimum Order Values](/staff/guide/features-settings-reference#2-delivery-areas--postcode-outcodes)** — Postal outcodes (e.g. `UB1`, `UB2`), delivery fees, and minimum spend rules.
+  - **[Fulfilment Slot Windows](/staff/guide/features-settings-reference#3-fulfilment-slots--capacity-limits)** — Setting delivery time windows, order lead times, and capacity caps per slot.
+- **Marketing & Customer Loyalty:**
+  - **[Promotional Discounts & Vouchers](/staff/guide/features-settings-reference#4-discounts--promotional-campaigns)** — Creating fixed-amount and percentage discount coupons.
+  - **[Customer Loyalty Rewards](/staff/guide/features-settings-reference#5-customer-loyalty-programme)** — Loyalty stamp cards and automated reward thresholds.
+- **Administrative Overview:**
+  - **[Store Admin Master Walkthrough](/staff/runbook/store-admin-tabs-guide)** — Comprehensive reference for all store management tabs in `/staff`.
+  - **[Daily Staff Operations Playbook](/staff/runbook/staff-tabs-guide)** — Step-by-step playbook for store shift operators.
 
 ---
 
-## 5. Technical Integrations & Infrastructure
-- **[Platform Integrations Guide](/staff/guide/integrations-guide)** — Stripe payment processing, Cloudflare Workers AI budgets, WhatsApp customer support contact, and Better Auth SSO.
-- **[Platform & Technical Admin Guide](/staff/guide/platform-admin-guide)** — Multi-tenant hosting, custom domains, error events, and database connection diagnostics.
+## 5. 🔐 Roles, Permissions & Security
+- **[Roles & Permissions Reference Matrix](/staff/guide/roles-permissions-matrix)** — Capabilities and restrictions for Platform Admin, Store Admin, Store Staff, and Customers.
+- **[Tenant Data Isolation Guarantees](/staff/guide/roles-permissions-matrix#tenant-isolation--row-level-security)** — Row-level tenant partitioning by `vendorId`, preventing cross-store data leakage.
+- **[Access Troubleshooting & Refusal Screens](/staff/guide/roles-permissions-matrix#permission-troubleshooting--access-refusal)** — Why "Access Denied" appears and how store admins grant appropriate permissions.
+- **[Platform & Technical Admin Guide](/staff/guide/platform-admin-guide)** — Platform administrator responsibilities, domain provisioning, and multi-tenant telemetry.
 
 ---
 
-## 6. Tutorials, FAQs & Operations
-- **[Store Operations Tutorials & FAQ Management](/staff/guide/tutorials-and-faqs)** — Step-by-step tutorials and instructions for maintaining customer FAQs in `/staff/faqs`.
-- **[Order Fulfilment Core Runbook](/staff/runbook/order-fulfilment-core)** — The canonical order lifecycle, payment rejections, refund handling, and delivery exceptions.
+## 6. 🛠️ Troubleshooting & Support
+- **[Store Troubleshooting & Escalation Matrix](/staff/runbook/troubleshooting-escalation)** — Diagnostic matrix mapping symptoms to step-by-step solutions:
+  - **Product Import Errors:** Missing barcodes, duplicate codes (`23505`), invalid currency formatting.
+  - **Payment Failures:** Stripe payment rejections, card authentication timeouts, webhook delays.
+  - **Delivery Outcode Rejections:** Unrecognized postal outcodes, address outside delivery zone.
+  - **Order State Locks:** Resolving stuck orders and processing manual refunds.
+- **[4-Tier Support Escalation Path](/staff/runbook/troubleshooting-escalation#support-escalation-tiers)** — Escalation pathways from Store Staff to Store Admin, Platform Admin, and Core Engineering.
+- **[Support Contacts & Operational Channels](/staff/runbook/troubleshooting-escalation#support-contacts--channels)** — Official WhatsApp operations contact and issue reporting.
 
 ---
 
-## 7. Troubleshooting & Escalation
-- **[Store Operations Troubleshooting & Escalation](/staff/runbook/troubleshooting-escalation)** — Symptom-to-solution matrix, payment failures, delivery postcode boundary checks, and support escalation tiers.
+## 7. 📚 Reference Library
+- **[Customer Shopping Guide & Experience](/staff/guide/shopping-guide)** — Walkthrough of the shopper experience (browsing, cart validation, slot booking, payment) so staff can assist customers.
+- **[Store Features & Settings Reference](/staff/guide/features-settings-reference)** — Technical configuration parameters, slot capacity limits, and discount calculation rules.
+- **[Store Operations Tutorials & FAQ CMS](/staff/guide/tutorials-and-faqs)** — Step-by-step tutorials and instructions for maintaining public customer FAQs in `/staff/faqs`.
+- **[Platform Glossary & Release Notes](/staff/doc/glossary-and-release-notes)** — Domain terminology (integer pence, guest tokens, canonical hosts) and recent platform release notes.
 
 ---
 
-## 8. Glossary & Release Notes
-- **[Platform Glossary & Release Notes](/staff/doc/glossary-and-release-notes)** — Domain terminology, integer pence monetary rules, feature availability flags, and recent release notes.
+## 8. ✍️ Documentation Management
+- **[Documentation Management & Governance Guide](/staff/guide/documentation-management)** — Guidelines for maintaining documentation, review cycles, freshness dates (`updated`), FAQ CMS management, and gap tracking.

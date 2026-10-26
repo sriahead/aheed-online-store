@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Restructure KMS documentation into Client Knowledge Centre and Internal Engineering section** (issue `#1274`).
+  - **Client Help & Documentation Centre (`/staff`):** Reorganized into 8 primary client-friendly categories: Home & Getting Started, User Journey Maps, Set Up & Launch Your Store, Feature & Task Guides, Roles, Permissions & Security, Troubleshooting & Support, Reference Library, and Documentation Management.
+  - **Internal Project & Engineering Knowledge (`/dev`):** Established a dedicated, access-controlled technical repository housing System Architecture, ADRs (001–008), Business Strategy & Pitch, Product Requirements (PRD), Developer Playbooks, and 200+ milestone engineering plans.
+  - **Document Governance & Clean Separation:** Created `docs/client-help-centre/documentation-management.md` for article freshness, review cycles, and no-code `/staff/faqs` CMS authoring; pruned engineering sprint plans from the `/staff` track; integrated `shopping-guide.md` into the staff reference library.
+  - **Navigation & Discovery:** Configured Nextra 4 `_meta.json` sidebar metadata across root, `/staff`, and `/dev` for structured topic browsing and Pagefind indexing.
+
 - **Integrate Client Help & Documentation Centre into existing KMS** (issue `#1272`).
   - **Comprehensive Client Help Centre:** Added 9 core documentation guides under `docs/client-help-centre/` covering Getting Started, Roles & Permissions, Features & Settings, Products & Catalogue, Integrations, Tutorials & FAQs, Troubleshooting & Escalation, and Glossary & Release Notes.
   - **Documented End-to-End User Journey Maps:** Authored verified visual flowcharts (Mermaid), step-by-step guides, prerequisites, alternative error paths, and onboarding checklists for all 4 roles: Platform Admin, Vendor Admin, Staff, and Customer.

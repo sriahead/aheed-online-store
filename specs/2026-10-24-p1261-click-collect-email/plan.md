@@ -1,7 +1,7 @@
 ---
 id: p1261-click-collect-email
 title: "Plan — Click & Collect order details: replace order reference with customer email (#1261)"
-audience: [dev, staff]
+audience: [dev, product]
 type: spec
 status: approved
 version: "1.0.0"

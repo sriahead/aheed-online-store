@@ -1,7 +1,7 @@
 ---
 id: kms-strategy-evaluation
 title: "KMS Strategy — Target Design and Governance Standard"
-audience: [dev, operations, product]
+audience: [dev, product, architect]
 type: spec
 status: review
 version: "2.1.1"
