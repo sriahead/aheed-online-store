@@ -21,7 +21,9 @@ type DocArticle = {
 
 export const metadata: Metadata = { title: "Internal Operational Runbook" };
 
-export default async function RunbookPage() {
+export default async function RunbookPage(props: {
+  searchParams?: Promise<{ doc?: string; q?: string }>;
+}) {
   // Available to both STAFF and ADMIN
   const auth = await requireVendorRole("STAFF", "ADMIN");
   if (!auth.ok) {
@@ -42,10 +44,15 @@ export default async function RunbookPage() {
   // reasoning (#508): a per-vendor store admin also satisfies requireVendorRole("ADMIN"), but
   // platform-level material is not theirs to read.
   const filteredDocs = docsForViewer(INTERNAL_DOCS as DocArticle[], auth.via === "platform-admin");
+  const searchParams = props.searchParams ? await props.searchParams : undefined;
 
   return (
     <PageContainer width="wide">
-      <RunbookClient docs={filteredDocs} />
+      <RunbookClient
+        docs={filteredDocs}
+        initialDocId={searchParams?.doc}
+        initialQuery={searchParams?.q}
+      />
     </PageContainer>
   );
 }

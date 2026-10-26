@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import {
   exampleDeliveryAreaForVendor,
@@ -67,19 +68,29 @@ export default async function StaffDeliveryAreasPage() {
 
   return (
     <PageContainer width="standard">
-      <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-primary">
-        <Icon name="truck" className="h-5 w-5" />
-        Delivery areas
-      </h1>
-      <p className="mb-6 text-sm text-primary-muted">
-        The postcode areas and districts this store delivers to.{" "}
-        {examples
-          ? `An area such as ${examples.area} covers every district in it; a district such as ${examples.district} covers only that one.`
-          : "An area covers every district in it; a district covers only that one."}{" "}
-        Any area or district can have its own delivery charge, minimum order and free-delivery
-        threshold — leave them blank to use the store&apos;s defaults. A customer whose postcode
-        falls outside every entry here cannot complete a delivery order.
-      </p>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-primary">
+            <Icon name="truck" className="h-5 w-5" />
+            Delivery areas
+          </h1>
+          <p className="text-sm text-primary-muted">
+            The postcode areas and districts this store delivers to.{" "}
+            {examples
+              ? `An area such as ${examples.area} covers every district in it; a district such as ${examples.district} covers only that one.`
+              : "An area covers every district in it; a district covers only that one."}{" "}
+            Any area or district can have its own delivery charge, minimum order and free-delivery
+            threshold — leave them blank to use the store&apos;s defaults. A customer whose postcode
+            falls outside every entry here cannot complete a delivery order.
+          </p>
+        </div>
+        <Link
+          href="/staff/runbook?doc=features-settings-reference"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-action bg-action-tint/50 hover:bg-action-tint px-3 py-1.5 rounded-lg border border-action/20 transition shrink-0 self-start"
+        >
+          View Delivery Rules Guide →
+        </Link>
+      </div>
 
       <section className="mb-8 rounded-2xl border border-black/10 bg-white p-5">
         <h2 className="mb-3 text-sm font-bold text-primary">Add areas or districts</h2>

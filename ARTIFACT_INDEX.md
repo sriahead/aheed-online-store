@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-25T19:19:16.696Z` · commit `aeeebc9` · `271` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-25T23:57:46.506Z` · commit `e547d36` · `280` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -283,6 +283,15 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 |---|---|---|---|---|---|---|
 | [Business Case & Platform Pitch](docs/business-analysis/business-case.md) | doc | 1.0.0 | 2026-09-16 | approved | internal | The stakeholder-facing commercial case for the Aheed platform — what is built, what it costs to run, what it saves against Shopify, how it can earn, and what remains to be invested. Reviewed and updated at every milestone close. |
 | [Master Application Gap Register](docs/business-analysis/gap-register.md) | doc | 2.6.0 | 2026-08-19 | approved | internal | The single master gap register for the application — every GAP-ID in the repo, its severity, its current status and the artifact that proves it, reconciled against the code rather than against itself. |
+| [Store Features & Settings Reference Guide](docs/client-help-centre/features-settings-reference.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Detailed reference for store operating hours, delivery zone postcodes, fulfilment time slots, loyalty rules, and discount configurations. |
+| [Client Onboarding & Store Launch Readiness](docs/client-help-centre/getting-started-onboarding.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Step-by-step onboarding guide, store configuration sequence, and pre-launch audit checklists for store operators and platform administrators. |
+| [Platform Glossary & Release Notes](docs/client-help-centre/glossary-and-release-notes.md) | doc | 1.0.0 | 2026-10-25 | approved | internal | Platform terminology definitions, monetary conventions (integer pence), status indicator meanings, and recent feature release milestones. |
+| [Platform Integrations & Technical Seams Guide](docs/client-help-centre/integrations-guide.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Setup instructions, architecture seams, configuration, and troubleshooting for Stripe, Cloudflare Workers AI, Better Auth, and WhatsApp support. |
+| [Products & Catalogue Management Guide](docs/client-help-centre/products-catalogue-guide.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Complete guide to catalogue management, bulk Excel spreadsheet imports, template specifications, validation error handling, and stock controls. |
+| [Roles & Permissions Reference Matrix](docs/client-help-centre/roles-permissions-matrix.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Comprehensive matrix of platform roles (Platform Admin, Store Admin, Staff, Customer), capability boundaries, and tenant isolation rules. |
+| [Store Operations Troubleshooting & Escalation Matrix](docs/client-help-centre/troubleshooting-escalation.md) | runbook | 1.0.0 | 2026-10-25 | approved | internal | Diagnostic procedures, symptoms, root causes, corrective actions, and support escalation paths for store operators and technical administrators. |
+| [Store Operations Tutorials & FAQ Management](docs/client-help-centre/tutorials-and-faqs.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Step-by-step tutorials for common operational workflows and instructions for managing customer FAQs via the in-app CMS. |
+| [Client & Role User Journey Maps](docs/client-help-centre/user-journeys.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Comprehensive end-to-end user journey maps with Mermaid flowcharts, step-by-step guides, permissions, and checklists for Platform Admin, Vendor Admin, Staff, and Customer. |
 | [Phase 6.5 Gap Register (superseded by the master register)](docs/developer-portal/sdd/self-review/GAP-REGISTER.md) | doc | 2.0.0 | 2026-08-17 | approved | internal | The Phase 6.5 audit's gap register, now a pointer — its four findings (GAP-001..004) were folded into the single master register at docs/gap-register.md on 2026-08-17. |
 | [Phase 6.5 Autonomous Self-Review Report](docs/developer-portal/sdd/self-review/SELF-REVIEW.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Executive summary and status breakdown of Phase 6.5 audit loop across architecture, schema, security, payments, and deployment. |
 | [Phase 6.5 Validation & Test Results](docs/developer-portal/sdd/self-review/VALIDATION-RESULTS.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Verification log of test runs, build checks, and validation evidence for Phase 6.5 audit loop. |

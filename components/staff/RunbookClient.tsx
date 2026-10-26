@@ -9,6 +9,7 @@ import {
   type RunbookAudience,
 } from "@/lib/runbook-audiences";
 import { DocumentSectionRenderer } from "@/components/ui/DocumentSectionRenderer";
+import { Icon } from "@/components/icons/Icon";
 
 type DocArticle = {
   id: string;
@@ -22,7 +23,7 @@ type DocArticle = {
 };
 
 /**
- * The runbook reader (#633, updated #683).
+ * The runbook reader (#633, updated #683, enhanced for Client Help Centre search & deep linking).
  *
  * THIS COMPONENT DOES NOT FILTER BY AUDIENCE. `app/(admin)/staff/runbook/page.tsx` has already
  * decided what this viewer may see; a second filter here is what produced #625, where the page
@@ -33,19 +34,73 @@ type DocArticle = {
  * (`deriveAudienceTabs`), so a tab exists only when it has something behind it. See
  * `lib/runbook-audiences.ts` for the full reasoning.
  */
-export function RunbookClient({ docs }: { docs: DocArticle[] }) {
+export function RunbookClient({
+  docs,
+  initialDocId,
+  initialQuery = "",
+}: {
+  docs: DocArticle[];
+  initialDocId?: string;
+  initialQuery?: string;
+}) {
   const tabs = deriveAudienceTabs(docs);
 
   // `null` is the "All" tab. Not a member of RunbookAudience — "all" is not an audience, and
   // modelling it as one is how the old hardcoded list came to include a value nothing matched.
   const [filter, setFilter] = useState<RunbookAudience | null>(null);
-  const filteredDocs = filter === null ? docs : docsWithAudience(docs, filter);
+  const [search, setSearch] = useState<string>(initialQuery);
 
-  const [selectedDoc, setSelectedDoc] = useState<DocArticle>(docs[0] || null);
+  const initialDoc = initialDocId
+    ? docs.find(
+        (d) =>
+          d.id === initialDocId ||
+          d.id.endsWith(`/${initialDocId}.md`) ||
+          d.id.includes(initialDocId),
+      ) ||
+      docs[0] ||
+      null
+    : docs[0] || null;
+
+  const [selectedDoc, setSelectedDoc] = useState<DocArticle | null>(initialDoc);
+
+  const audienceFiltered = filter === null ? docs : docsWithAudience(docs, filter);
+  const searchLower = search.trim().toLowerCase();
+  const filteredDocs = searchLower
+    ? audienceFiltered.filter(
+        (doc) =>
+          doc.title.toLowerCase().includes(searchLower) ||
+          doc.summary.toLowerCase().includes(searchLower) ||
+          doc.category.toLowerCase().includes(searchLower) ||
+          doc.id.toLowerCase().includes(searchLower),
+      )
+    : audienceFiltered;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       <div className="lg:col-span-4 space-y-4">
+        {/* Search input for quick article discovery */}
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary-muted">
+            <Icon name="search" className="w-4 h-4 text-primary-muted" />
+          </div>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search articles..."
+            className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-black/10 rounded-xl text-primary placeholder:text-primary-muted focus:outline-none focus:ring-2 focus:ring-action/20 focus:border-action"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-xs text-primary-muted hover:text-primary"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
         {/* Overflow-x-auto handles wrapping neatly on narrow screens without squishing */}
         <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-xl overflow-x-auto custom-scrollbar">
           <button
