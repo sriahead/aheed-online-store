@@ -30,8 +30,8 @@ export default async function StaffProductImportPage() {
         <div>
           <h1 className="mb-1 text-2xl font-semibold text-primary">Import stock file</h1>
           <p className="text-sm text-primary-muted">
-            Upload spreadsheets to preview and import product lines while enforcing ADR-007 catalogue
-            safeguards.
+            Upload spreadsheets to preview and import product lines while enforcing ADR-007
+            catalogue safeguards.
           </p>
         </div>
         <Link
