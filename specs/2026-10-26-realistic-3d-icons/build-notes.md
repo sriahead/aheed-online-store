@@ -18,7 +18,7 @@ Addresses issue `#1280`. Base branch: `staging`.
      - `order-updates.png` & `.webp` (SMS/Email notification bell and envelope)
      - `postcode-search.png` & `.webp` (Postcode validator and local delivery radius map pin)
      - `contact-follow.png` & `.webp` (Customer care messaging and chat bubbles)
-   - Saved 24 optimized image files (`.png` and `.webp`) in `public/images/icons-3d/` with transparent alpha cutouts, centered in 512x512 canvas, lightweight (all <65KB).
+   - Saved 24 optimized image files (`.png` and `.webp`) in `public/images/icons-3d/` with transparent alpha cutouts, centered in 512x512 canvas, lightweight (all under 65KB).
 
 2. **Component Architecture Enhancement (`components/icons/Icon3D.tsx`):**
    - Added `ICON_3D_IMAGE_ASSETS` registry mapping semantic 3D icon identifiers to their WebP and PNG assets.
