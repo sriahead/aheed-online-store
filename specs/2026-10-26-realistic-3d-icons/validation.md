@@ -5,7 +5,7 @@ Closes `#1280`.
 ## Automated Tests
 
 1. `tests/realistic-3d-icons.test.tsx`:
-   - Validates all 11 realistic 3D icon assets exist under `public/images/icons-3d/` with valid image headers, non-zero file sizes, and <60KB footprint.
+   - Validates all 11 realistic 3D icon assets exist under `public/images/icons-3d/` with valid image headers, non-zero file sizes, and under 60KB footprint.
    - Validates `Icon3D` renders `img` with correct src and dimension attributes when image assets exist.
    - Validates `Icon3D` preserves accessibility semantics (`alt=""`, `aria-hidden="true"` when decorative; `aria-label` when non-decorative).
    - Validates fallback to inline SVG when image is missing or omitted.

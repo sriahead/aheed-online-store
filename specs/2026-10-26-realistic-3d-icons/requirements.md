@@ -19,7 +19,7 @@ R2. High-resolution matching 3D rendered assets are provisioned for all supporti
     - `postcode-search`: 3D map location pin with delivery indicator.
     - `contact-follow`: 3D conversational chat bubble hub.
 
-R3. Every icon asset is square (512x512 resolution or crisp downscalable equivalent), compressed to <50KB, with soft drop shadows and clean edges on both light and dark backgrounds.
+R3. Every icon asset is square (512x512 resolution or crisp downscalable equivalent), compressed to under 50KB, with soft drop shadows and clean edges on both light and dark backgrounds.
 
 ## 2. Icon3D Component Enhancement
 

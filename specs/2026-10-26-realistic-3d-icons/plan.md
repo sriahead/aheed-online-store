@@ -41,7 +41,7 @@ This slice implements these realistic 3D assets, enhances `Icon3D` to deliver th
 - Extract the 5 primary icons from the reference image (`storefront`, `quick-shop`, `user-profile`, `rewards-gift`/`rewards-coin`, `cart-add`).
 - Process with transparent alpha backgrounds, crisp anti-aliased outlines, and consistent 512x512 resolution under `public/images/icons-3d/`.
 - Generate the complementary set of 6 supporting 3D icons (`delivery-van`, `halal-certified`, `secure-checkout`, `order-updates`, `postcode-search`, `contact-follow`) in the identical 3D studio render style.
-- Optimize all assets to WebP/PNG (<50KB per icon) to ensure zero impact on initial page load times.
+- Optimize all assets to WebP/PNG (under 50KB per icon) to ensure zero impact on initial page load times.
 
 ### 2.2 Component Architecture (`Icon3D.tsx`)
 - Keep `Icon3DName` as the single source of truth.
