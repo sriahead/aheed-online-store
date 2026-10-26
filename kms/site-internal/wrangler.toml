@@ -10,6 +10,10 @@ compatibility_flags = ["nodejs_compat"]
 # publishes the workers.dev URL to the internet with no Access gate in front of it.
 workers_dev = false
 
+[vars]
+PLATFORM_NAME = "Aheed"
+NEXT_PUBLIC_PLATFORM_NAME = "Aheed"
+
 [assets]
 directory = ".open-next/assets"
 binding = "ASSETS"

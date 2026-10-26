@@ -1,4 +1,8 @@
 {
+  "home": {
+    "title": "← Portal Overview",
+    "href": "/"
+  },
   "index": "Knowledge Centre Hub",
   "guide": "Guides & Procedures",
   "runbook": "Operational Runbooks",
