@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-26T00:44:22.061Z` · commit `e61c64f` · `281` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-26T15:43:08.183Z` · commit `e93624c` · `283` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -273,6 +273,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Platform Admin role and platform-wide management suite (plan)](specs/2026-10-25-platform-admin-role-and-management/plan.md) | spec | 1.0.0 | 2026-10-25 | approved | internal | Implement a dedicated Platform Admin role, canonical requirePlatformAdmin() server-side gate, dedicated platform administration navigation and dashboard suite, cross-vendor security enforcement, and storefront configuration dashboard role alignment. |
 | [Staff Panel Stock File Upload & Catalogue Import (plan)](specs/2026-10-25-staff-catalogue-import/plan.md) | spec | 1.0.0 | 2026-10-25 | draft | internal | Spec for staff panel stock file upload at /staff/products/import: two-phase validate/preview and apply workflow, browser/streaming grid parsing keeping @e965/xlsx out of worker bundle, ADR-007 hidden & UNKNOWN stock invariants, and audit logging. |
 | [Storefront Configuration Dashboard and Vendor Onboarding Readiness (plan)](specs/2026-10-25-storefront-configuration-dashboard/plan.md) | spec | 1.0.0 | 2026-10-25 | draft | internal | Plan for issue #1267: in-app Storefront Configuration Dashboard at /staff/onboarding and categorized onboarding audit benchmarked against aheedfoodcentre.nocaped.com, featuring live completion tracking, validation rules, deep links, and readiness status. |
+| [Realistic product photography for categories, Category.imageKey schema, and dynamic image URLs (plan)](specs/2026-10-26-category-realistic-photography/plan.md) | spec | 1.0.0 | 2026-10-26 | approved | internal | Add Category.imageKey schema column and migration, replace generic icons with realistic commercial product photography across categories, deliver image URLs dynamically via APIs, and establish onboarding standards. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.43.0 | 2026-10-22 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
@@ -292,6 +293,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
+| [Category Image Standards & Photography Guide](docs/client-help-centre/category-image-standards.md) | guide | 1.0.0 | 2026-10-26 | approved | internal | Technical image specifications, commercial studio photography standards, aspect ratios, file formats, and onboarding requirements for store categories and departments. |
 | [Documentation Management & Governance Guide](docs/client-help-centre/documentation-management.md) | guide | 1.0.0 | 2026-10-26 | approved | internal | Governance, review workflows, freshness tracking, and restricted authoring procedures for the Knowledge Management System and in-app FAQs. |
 | [Store Features & Settings Reference Guide](docs/client-help-centre/features-settings-reference.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Detailed reference for store operating hours, delivery zone postcodes, fulfilment time slots, loyalty rules, and discount configurations. |
 | [Client Onboarding & Store Launch Readiness](docs/client-help-centre/getting-started-onboarding.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Step-by-step onboarding guide, store configuration sequence, and pre-launch audit checklists for store operators and platform administrators. |

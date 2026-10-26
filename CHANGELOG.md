@@ -15,6 +15,14 @@ every branch merges.
 
 ### Added
 
+- **Realistic product photography for categories, Category.imageKey schema, and dynamic image URLs** (issue `#1278`; `specs/2026-10-26-category-realistic-photography/`).
+  - **Schema & Migration:** Hand-authored migration `prisma/migrations/20261026150000_category_image_key/migration.sql` adding `imageKey TEXT` to "Category" with backfill for all existing seeded categories, updated `prisma/schema.prisma`, and regenerated WASM client.
+  - **15 Commercial Studio Photographic Assets:** Created 512x512 high-resolution, lightweight commercial studio product photographs under `public/images/categories/<slug>.jpg` matching UK supermarket retail standards (Tesco reference model) across Fresh Food, Bakery, Dairy & Eggs, Halal Meat, Food Cupboard, Drinks, Treats & Snacks, Household, Frozen Food, International, Health & Beauty, Baby & Kids, Pet Supplies, SriMart Electronics, and Home.
+  - **Dynamic Image URL Delivery:** Updated `lib/repositories/categories.ts` and `lib/categories-service.ts` to compose `imageUrl` dynamically from `CDN_BASE_URL` and relative `imageKey`. Updated search suggestions endpoint (`app/api/search/suggest/route.ts`) and staff category forms.
+  - **Responsive Photographic Scroller:** Enhanced `components/layout/DepartmentScroller.tsx` and `DepartmentGlyph.tsx` with clean card framing, eager loading for top 6 items, lazy loading for remainder, and seamless fallback to semantic icons without layout shift.
+  - **KMS Category Image Standards:** Documented image specifications and client onboarding guide in `docs/client-help-centre/category-image-standards.md`.
+
+
 - **Restructure KMS documentation into Client Knowledge Centre and Internal Engineering section** (issue `#1274`).
   - **Client Help & Documentation Centre (`/staff`):** Reorganized into 8 primary client-friendly categories: Home & Getting Started, User Journey Maps, Set Up & Launch Your Store, Feature & Task Guides, Roles, Permissions & Security, Troubleshooting & Support, Reference Library, and Documentation Management.
   - **Internal Project & Engineering Knowledge (`/dev`):** Established a dedicated, access-controlled technical repository housing System Architecture, ADRs (001–008), Business Strategy & Pitch, Product Requirements (PRD), Developer Playbooks, and 200+ milestone engineering plans.

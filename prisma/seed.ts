@@ -337,7 +337,7 @@ type CatalogueProduct = {
 };
 
 type CatalogueCategory = {
-  category: { slug: string; name: string };
+  category: { slug: string; name: string; imageKey?: string };
   products: CatalogueProduct[];
   /**
    * #489 — the second tier. `Category.parentId` has existed since P2a and
@@ -834,6 +834,14 @@ async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
       (c) => c.slug,
     ),
   );
+  // #1278: ensure existing categories have realistic photography imageKey populated
+  for (const { category } of catalogue) {
+    await prisma.category.updateMany({
+      where: { vendorId, slug: category.slug, imageKey: null },
+      data: { imageKey: `categories/${category.slug}.jpg` },
+    });
+  }
+
   const pending = catalogue.filter(({ category }) => !existingSlugs.has(category.slug));
   if (pending.length === 0) {
     console.log(
@@ -862,7 +870,11 @@ async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
   for (const { category, products } of pending) {
     await prisma.$transaction(async (tx) => {
       const createdCategory = await tx.category.create({
-        data: { ...category, vendorId },
+        data: {
+          ...category,
+          vendorId,
+          imageKey: category.imageKey ?? `categories/${category.slug}.jpg`,
+        },
       });
 
       for (const product of products) {

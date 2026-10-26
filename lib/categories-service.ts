@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { getPrisma } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
+import { getEnv } from "@/lib/config";
 import {
   countHiddenWithCategory as countHiddenWithCategoryRepo,
   createCategoryForVendor as createCategoryForVendorRepo,
@@ -38,13 +39,15 @@ import type { CatalogueWriteResult } from "@/lib/repositories/products";
  * arguments, are called once per render today, and adding an argument-keyed
  * cache would be speculation rather than a measured saving.
  */
-const listTopLevelForRequest = cache(async () =>
-  listTopLevelCategories(getPrisma(), await getCurrentVendorId()),
-);
+const listTopLevelForRequest = cache(async () => {
+  const { CDN_BASE_URL } = getEnv();
+  return listTopLevelCategories(getPrisma(), await getCurrentVendorId(), CDN_BASE_URL);
+});
 
-const listTreeForRequest = cache(async () =>
-  listCategoryTreeForStorefront(getPrisma(), await getCurrentVendorId()),
-);
+const listTreeForRequest = cache(async () => {
+  const { CDN_BASE_URL } = getEnv();
+  return listCategoryTreeForStorefront(getPrisma(), await getCurrentVendorId(), CDN_BASE_URL);
+});
 
 /**
  * Request-scoped wrapper around `lib/repositories/categories.ts`'s pure reads
@@ -75,11 +78,13 @@ export function getCategoryRepository(): CategoryRepository {
     },
 
     async getBySlug(slug) {
-      return getCategoryBySlug(prisma, await vendorId(), slug);
+      const { CDN_BASE_URL } = getEnv();
+      return getCategoryBySlug(prisma, await vendorId(), slug, CDN_BASE_URL);
     },
 
     async suggest(terms, limit) {
-      return suggestCategories(prisma, await vendorId(), terms, limit);
+      const { CDN_BASE_URL } = getEnv();
+      return suggestCategories(prisma, await vendorId(), terms, limit, CDN_BASE_URL);
     },
 
     async listTree() {
@@ -123,7 +128,8 @@ export async function getCategoryForAdmin(
   vendorId: string,
   id: string,
 ): Promise<AdminCategoryDetail | null> {
-  return getCategoryForAdminRepo(getPrisma(), vendorId, id);
+  const { CDN_BASE_URL } = getEnv();
+  return getCategoryForAdminRepo(getPrisma(), vendorId, id, CDN_BASE_URL);
 }
 
 /** `/staff/categories/[id]`'s "what switching this off hides" note (#1131). */

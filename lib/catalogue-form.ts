@@ -101,6 +101,7 @@ export interface CategoryFormValues {
   parentId: string | null;
   sortOrder: number;
   isActive: boolean;
+  imageKey?: string | null;
   /** #1135 — shoppers may attach a note to products in this category and its sub-categories. */
   allowsCustomNote: boolean;
 }
@@ -126,6 +127,7 @@ export interface SubmittedCategory {
   parentId: string;
   sortOrder: string;
   isActive: boolean;
+  imageKey: string;
   allowsCustomNote: boolean;
 }
 
@@ -138,6 +140,7 @@ export function readSubmittedCategory(form: FormData): SubmittedCategory {
     parentId: raw.parentId ?? "",
     sortOrder: raw.sortOrder ?? "",
     isActive: checkbox(raw, "isActive"),
+    imageKey: raw.imageKey ?? "",
     allowsCustomNote: checkbox(raw, "allowsCustomNote"),
   };
 }
@@ -596,6 +599,7 @@ export function parseCategoryForm(raw: RawForm): ParseResult<CategoryFormValues>
       parentId: optionalText(raw, "parentId"),
       sortOrder: sortOrder.value,
       isActive: checkbox(raw, "isActive"),
+      imageKey: optionalText(raw, "imageKey"),
       allowsCustomNote: checkbox(raw, "allowsCustomNote"),
     },
   };
@@ -653,6 +657,7 @@ export const CATEGORY_FIELDS = [
   "parentId",
   "sortOrder",
   "isActive",
+  "imageKey",
   "allowsCustomNote",
 ] as const;
 
