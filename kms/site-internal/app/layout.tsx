@@ -4,7 +4,8 @@ import { Head } from "nextra/components";
 import { getPageMap } from "nextra/page-map";
 import "nextra-theme-docs/style.css";
 
-const platformName = process.env.NEXT_PUBLIC_PLATFORM_NAME || process.env.PLATFORM_NAME || "Platform";
+const platformName =
+  process.env.NEXT_PUBLIC_PLATFORM_NAME || process.env.PLATFORM_NAME || "Platform";
 
 export const metadata = {
   title: { default: `${platformName} KMS — Internal`, template: `%s — ${platformName} KMS` },
