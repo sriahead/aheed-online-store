@@ -1,7 +1,7 @@
 ---
 id: business-case
 title: "Business Case & Platform Pitch"
-audience: [product, platform-admin]
+audience: [product, dev, architect]
 type: doc
 status: approved
 version: "1.0.0"

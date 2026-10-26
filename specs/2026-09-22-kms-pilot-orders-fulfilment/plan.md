@@ -1,7 +1,7 @@
 ---
 id: kms-pilot-orders-fulfilment
 title: "KMS Pilot: Orders, Fulfilment & Payment Exceptions (plan)"
-audience: [dev, product, staff, store-admin, shopper]
+audience: [dev, product]
 type: spec
 status: draft
 version: "1.1.0"

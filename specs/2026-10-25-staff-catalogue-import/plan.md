@@ -1,7 +1,7 @@
 ---
 id: staff-catalogue-import
 title: "Staff Panel Stock File Upload & Catalogue Import (plan)"
-audience: [dev, staff]
+audience: [dev, product]
 type: spec
 status: draft
 version: "1.0.0"
