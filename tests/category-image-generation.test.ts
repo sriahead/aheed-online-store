@@ -80,7 +80,7 @@ describe("Category AI image generation", () => {
 
       const res = await generateHandler(req);
       expect(res.status).toBe(403);
-      const json = await res.json();
+      const json = (await res.json()) as any;
       expect(json.error).toBe("Forbidden");
     });
 
@@ -98,7 +98,7 @@ describe("Category AI image generation", () => {
 
       const res = await generateHandler(req);
       expect(res.status).toBe(400);
-      const json = await res.json();
+      const json = (await res.json()) as any;
       expect(json.error).toBe("Missing categoryId");
     });
 
@@ -125,7 +125,7 @@ describe("Category AI image generation", () => {
 
       const res = await generateHandler(req);
       expect(res.status).toBe(429);
-      const json = await res.json();
+      const json = (await res.json()) as any;
       expect(json.error).toContain("used its AI allowance for today");
     });
 
@@ -148,7 +148,7 @@ describe("Category AI image generation", () => {
 
       const res = await generateHandler(req);
       expect(res.status).toBe(200);
-      const json = await res.json();
+      const json = (await res.json()) as any;
       expect(json.imageKey).toBe("categories/v1/bakery-123.png");
       expect(json.imageUrl).toBe("https://assets.example.com/categories/v1/bakery-123.png");
     });
@@ -186,7 +186,7 @@ describe("Category AI image generation", () => {
 
       const res = await backfillHandler(req);
       expect(res.status).toBe(200);
-      const json = await res.json();
+      const json = (await res.json()) as any;
       expect(json.processed).toBe(0);
       expect(json.totalRemaining).toBe(0);
     });
@@ -215,7 +215,7 @@ describe("Category AI image generation", () => {
 
       const res = await backfillHandler(req);
       expect(res.status).toBe(200);
-      const json = await res.json();
+      const json = (await res.json()) as any;
       expect(json.processed).toBe(2);
       expect(json.totalRemaining).toBe(0);
       expect(mockRunCategoryImagePipeline).toHaveBeenCalledTimes(2);
