@@ -8,6 +8,8 @@ every branch merges.
 
 ### Fixed
 
+- **Escape raw angle brackets in 3D icon spec files preventing MDX compilation errors in internal KMS** (issue `#1280`).
+
 - **Resolve broken 404 links, drill-down navigation to portal home, and configurable platform branding** (issue `#1276`).
   - **404 Link Resolution:** Corrected broken links in `/dev` landing page (`/dev/doc/architecture`, `/dev/doc/tech-stack`, `/dev/doc/design-system`, `/dev/doc/roadmap`, `/dev/doc/sdd-workflow`, `/dev/doc/mission`), staff runbooks (`/staff/runbook/order-fulfilment-core`), and SDD self-review audit records. Validated 0 broken internal links across all 280+ compiled documentation artifacts.
   - **Drill-down Navigation to Portal Home:** Configured Nextra 4 `_meta.json` top-level entries with `"type": "page"`, establishing persistent top navbar tabs (`Welcome`, `Client Help Centre`, `Internal Engineering`) across all views. Added `home: { title: "← Portal Overview", href: "/" }` to `/staff` and `/dev` sidebars to provide direct 1-click drill-down navigation back to the portal root (`/`).
