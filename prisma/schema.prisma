@@ -654,6 +654,8 @@ model Category {
   // #1135 — shoppers may attach a note to a basket line for products in this category (and its
   // sub-categories). Decided by lib/custom-note.ts's productAcceptsNote, nowhere else.
   allowsCustomNote Boolean             @default(false)
+  // #1278 — relative storage key for realistic category photography (ADR-003; never a URL)
+  imageKey         String?
   products         Product[]
   campaign         DepartmentCampaign?
 

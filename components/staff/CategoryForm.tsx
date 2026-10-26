@@ -69,6 +69,7 @@ export function CategoryForm({ category, categories, hiddenCounts = null }: Cate
     parentId: category?.parentId ?? "",
     sortOrder: String(category?.sortOrder ?? 0),
     isActive: category?.isActive ?? true,
+    imageKey: category?.imageKey ?? "",
     allowsCustomNote: category?.allowsCustomNote ?? false,
   };
   // A changed key remounts the fields, so a select or checkbox cannot keep a stale DOM default.
@@ -158,6 +159,16 @@ export function CategoryForm({ category, categories, hiddenCounts = null }: Cate
           defaultValue={values.sortOrder}
           error={isInvalid("sortOrder")}
           errorId="category-form-error"
+        />
+
+        <FormField
+          name="imageKey"
+          label="Photograph storage key (e.g. categories/fruit-veg.jpg)"
+          placeholder="categories/slug.jpg"
+          defaultValue={values.imageKey}
+          error={isInvalid("imageKey")}
+          errorId="category-form-error"
+          hint="Relative storage key for realistic product photography. If blank, defaults to /images/categories/[slug].jpg"
         />
 
         <label className="flex items-center gap-2 text-sm text-primary">

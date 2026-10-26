@@ -2,11 +2,35 @@ import type { getPrisma } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/repositories/prisma-errors";
 import type { CatalogueWriteResult } from "@/lib/repositories/products";
 import { visibleCategoryWhere } from "@/lib/category-visibility";
+import { composePublicUrl } from "@/lib/storage";
+
+/**
+ * Resolves a category's public image URL (ADR-003, #1278).
+ *
+ * If `imageKey` is set and `cdnBaseUrl` is provided, composes via `composePublicUrl`.
+ * If `imageKey` is a static path starting with '/' or 'http', returns it directly.
+ * Otherwise, falls back to the canonical static photography asset `/images/categories/${slug}.webp`.
+ */
+export function composeCategoryImageUrl(
+  imageKey: string | null | undefined,
+  slug: string,
+  cdnBaseUrl?: string | null,
+): string | null {
+  if (imageKey && cdnBaseUrl) {
+    return composePublicUrl(cdnBaseUrl, imageKey);
+  }
+  if (imageKey && (imageKey.startsWith("/") || imageKey.startsWith("http"))) {
+    return imageKey;
+  }
+  return `/images/categories/${slug}.jpg`;
+}
 
 export interface CategorySummary {
   id: string;
   slug: string;
   name: string;
+  imageKey?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface CategoryWithChildren extends CategorySummary {
@@ -53,12 +77,20 @@ export interface StorefrontCategoryNode extends CategorySummary {
 export async function listTopLevelCategories(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
+  cdnBaseUrl?: string | null,
 ): Promise<CategorySummary[]> {
-  return prisma.category.findMany({
+  const rows = await prisma.category.findMany({
     where: { vendorId, parentId: null, isActive: true },
     orderBy: { sortOrder: "asc" },
-    select: { id: true, slug: true, name: true },
+    select: { id: true, slug: true, name: true, imageKey: true },
   });
+  return rows.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    imageKey: c.imageKey,
+    imageUrl: composeCategoryImageUrl(c.imageKey, c.slug, cdnBaseUrl),
+  }));
 }
 
 /**
@@ -80,15 +112,25 @@ export async function listTopLevelCategories(
 export async function listCategoryTreeForStorefront(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
+  cdnBaseUrl?: string | null,
 ): Promise<StorefrontCategoryNode[]> {
-  return prisma.category.findMany({
+  const rows = await prisma.category.findMany({
     // #1131 — visible, not merely active: a subcategory under a hidden department keeps its own
     // `isActive: true` (see lib/category-visibility.ts), so `isActive` alone would leak it into
     // /search's tree, /bundles and the sitemap.
     where: { vendorId, ...visibleCategoryWhere },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, slug: true, name: true, parentId: true, isActive: true },
+    select: { id: true, slug: true, name: true, parentId: true, isActive: true, imageKey: true },
   });
+  return rows.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    parentId: c.parentId,
+    isActive: c.isActive,
+    imageKey: c.imageKey,
+    imageUrl: composeCategoryImageUrl(c.imageKey, c.slug, cdnBaseUrl),
+  }));
 }
 
 /**
@@ -108,9 +150,10 @@ export async function suggestCategories(
   vendorId: string,
   terms: readonly string[],
   limit: number,
+  cdnBaseUrl?: string | null,
 ): Promise<CategorySummary[]> {
   if (terms.length === 0) return [];
-  return prisma.category.findMany({
+  const rows = await prisma.category.findMany({
     where: {
       vendorId,
       // #1131 — under `AND`, not spread: the visibility predicate and the term match each carry an
@@ -120,41 +163,82 @@ export async function suggestCategories(
     },
     orderBy: { sortOrder: "asc" },
     take: limit,
-    select: { id: true, slug: true, name: true },
+    select: { id: true, slug: true, name: true, imageKey: true },
   });
+  return rows.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    imageKey: c.imageKey,
+    imageUrl: composeCategoryImageUrl(c.imageKey, c.slug, cdnBaseUrl),
+  }));
 }
 
 export async function getCategoryBySlug(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
   slug: string,
+  cdnBaseUrl?: string | null,
 ): Promise<CategoryWithChildren | null> {
-  return prisma.category.findFirst({
+  const row = await prisma.category.findFirst({
     // #1131 — a hidden department's page 404s, and so does a subcategory under one.
     where: { vendorId, slug, ...visibleCategoryWhere },
     select: {
       id: true,
       slug: true,
       name: true,
+      imageKey: true,
       children: {
         where: { vendorId, isActive: true },
         orderBy: { sortOrder: "asc" },
-        select: { id: true, slug: true, name: true },
+        select: { id: true, slug: true, name: true, imageKey: true },
       },
       parent: {
         select: {
           id: true,
           slug: true,
           name: true,
+          imageKey: true,
           children: {
             where: { vendorId, isActive: true },
             orderBy: { sortOrder: "asc" },
-            select: { id: true, slug: true, name: true },
+            select: { id: true, slug: true, name: true, imageKey: true },
           },
         },
       },
     },
   });
+  if (!row) return null;
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    imageKey: row.imageKey,
+    imageUrl: composeCategoryImageUrl(row.imageKey, row.slug, cdnBaseUrl),
+    children: (row.children ?? []).map((child) => ({
+      id: child.id,
+      slug: child.slug,
+      name: child.name,
+      imageKey: child.imageKey,
+      imageUrl: composeCategoryImageUrl(child.imageKey, child.slug, cdnBaseUrl),
+    })),
+    parent: row.parent
+      ? {
+          id: row.parent.id,
+          slug: row.parent.slug,
+          name: row.parent.name,
+          imageKey: row.parent.imageKey,
+          imageUrl: composeCategoryImageUrl(row.parent.imageKey, row.parent.slug, cdnBaseUrl),
+          children: (row.parent.children ?? []).map((c) => ({
+            id: c.id,
+            slug: c.slug,
+            name: c.name,
+            imageKey: c.imageKey,
+            imageUrl: composeCategoryImageUrl(c.imageKey, c.slug, cdnBaseUrl),
+          })),
+        }
+      : null,
+  };
 }
 
 /* ------------------------------------------------------------------------- *
@@ -191,6 +275,8 @@ export interface AdminCategoryDetail {
   parentId: string | null;
   sortOrder: number;
   isActive: boolean;
+  imageKey?: string | null;
+  imageUrl?: string | null;
   /** #1135 — products here (and in sub-categories) take a shopper note. */
   allowsCustomNote: boolean;
 }
@@ -202,6 +288,7 @@ export interface CategoryWriteInput {
   parentId: string | null;
   sortOrder: number;
   isActive: boolean;
+  imageKey?: string | null;
   /** #1135 — products in this category (and its sub-categories) take a shopper note. Absent (a
    * script, a seed) leaves the stored value alone on update and takes the column default on create. */
   allowsCustomNote?: boolean;
@@ -304,8 +391,9 @@ export async function getCategoryForAdmin(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
   id: string,
+  cdnBaseUrl?: string | null,
 ): Promise<AdminCategoryDetail | null> {
-  return prisma.category.findFirst({
+  const row = await prisma.category.findFirst({
     where: { id, vendorId },
     select: {
       id: true,
@@ -314,9 +402,15 @@ export async function getCategoryForAdmin(
       parentId: true,
       sortOrder: true,
       isActive: true,
+      imageKey: true,
       allowsCustomNote: true,
     },
   });
+  if (!row) return null;
+  return {
+    ...row,
+    imageUrl: composeCategoryImageUrl(row.imageKey, row.slug, cdnBaseUrl),
+  };
 }
 
 /** What switching a category off hides from shoppers (#1131) — see `countHiddenWithCategory`. */
@@ -413,6 +507,7 @@ export async function createCategoryForVendor(
         parentId: input.parentId,
         sortOrder: input.sortOrder,
         isActive: input.isActive,
+        imageKey: input.imageKey,
         allowsCustomNote: input.allowsCustomNote,
       },
       select: { id: true },
@@ -455,6 +550,7 @@ export async function updateCategoryForVendor(
         parentId: input.parentId,
         sortOrder: input.sortOrder,
         isActive: input.isActive,
+        imageKey: input.imageKey,
         allowsCustomNote: input.allowsCustomNote,
       },
     });
