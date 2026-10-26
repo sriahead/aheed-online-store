@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-26T00:36:56.532Z` · commit `72c2d11` · `281` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-26T00:44:22.061Z` · commit `e61c64f` · `281` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -305,7 +305,6 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Operations & Fulfillment Procedures](docs/operations-research/operations-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for operations teams detailing the fulfillment lifecycle, stock management, and exception handling. |
 | [Order & Fulfilment Operations](docs/operations-research/order-fulfilment-core.md) | runbook | 1.0.0 | 2026-09-22 | approved | internal | Canonical rules for order status transitions, fulfilment slots, cancellations, and payment exceptions. |
 | [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.2.0 | 2026-10-19 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
-| [Customer Shopping Guide & Help Center](docs/shopper-help/shopping-guide.md) | guide | 1.6.0 | 2026-10-26 | approved | internal | A complete guide for customers and staff on how to browse, place orders, and manage account features. |
 | [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.14.0 | 2026-10-22 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item. |
 | [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.19.0 | 2026-10-24 | approved | internal | How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access. |
 
@@ -313,4 +312,4 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
-| _`<no artifacts yet>`_ | | | | | | |
+| [Shopping Guide & Help Center](docs/shopper-help/shopping-guide.md) | guide | 1.6.0 | 2026-10-10 | approved | public | A complete guide for customers on how to browse, place orders, and manage their account. |
