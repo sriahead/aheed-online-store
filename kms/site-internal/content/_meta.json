@@ -1,5 +1,14 @@
 {
-  "index": "Overview & Welcome",
-  "staff": "Client Help Centre",
-  "dev": "Internal Engineering"
+  "index": {
+    "title": "Welcome",
+    "type": "page"
+  },
+  "staff": {
+    "title": "Client Help Centre",
+    "type": "page"
+  },
+  "dev": {
+    "title": "Internal Engineering",
+    "type": "page"
+  }
 }

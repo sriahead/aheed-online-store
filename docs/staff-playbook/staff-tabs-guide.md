@@ -109,7 +109,7 @@ against it and appears in the order's history. The customer sees the new status 
 page. Status moves cannot be undone from this page, so read the order number before you act on a bulk
 selection.
 
-> **Note on operational rules:** For authoritative guidance on cancellations, payment exceptions, and how fulfilment slots interact with order states, see the canonical [Order & Fulfilment Operations](../operations-research/order-fulfilment-core.md) guide.
+> **Note on operational rules:** For authoritative guidance on cancellations, payment exceptions, and how fulfilment slots interact with order states, see the canonical [Order & Fulfilment Operations](/staff/runbook/order-fulfilment-core) guide.
 
 
 ## Internal Operational Runbook — `/staff/runbook`

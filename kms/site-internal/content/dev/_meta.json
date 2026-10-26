@@ -1,4 +1,8 @@
 {
+  "home": {
+    "title": "← Portal Overview",
+    "href": "/"
+  },
   "index": "Engineering Portal Hub",
   "adr": "Architecture Decisions (ADRs)",
   "spec": "System Specifications",

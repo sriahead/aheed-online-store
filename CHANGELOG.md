@@ -6,6 +6,13 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Resolve broken 404 links, drill-down navigation to portal home, and configurable platform branding** (issue `#1276`).
+  - **404 Link Resolution:** Corrected broken links in `/dev` landing page (`/dev/doc/architecture`, `/dev/doc/tech-stack`, `/dev/doc/design-system`, `/dev/doc/roadmap`, `/dev/doc/sdd-workflow`, `/dev/doc/mission`), staff runbooks (`/staff/runbook/order-fulfilment-core`), and SDD self-review audit records. Validated 0 broken internal links across all 280+ compiled documentation artifacts.
+  - **Drill-down Navigation to Portal Home:** Configured Nextra 4 `_meta.json` top-level entries with `"type": "page"`, establishing persistent top navbar tabs (`Welcome`, `Client Help Centre`, `Internal Engineering`) across all views. Added `home: { title: "← Portal Overview", href: "/" }` to `/staff` and `/dev` sidebars to provide direct 1-click drill-down navigation back to the portal root (`/`).
+  - **Configurable Platform Name:** Replaced hardcoded "Aheed KMS" strings in `kms/site-internal` layout, metadata, navbar, and footer with dynamic resolution via `process.env.NEXT_PUBLIC_PLATFORM_NAME` / `process.env.PLATFORM_NAME` (defaulting cleanly to configurable platform name with `"Aheed"` defined in `wrangler.toml`). Exported `<PlatformName />` component via `kms/site-internal/mdx-components.tsx` and updated KMS index heading.
+
 ### Added
 
 - **Restructure KMS documentation into Client Knowledge Centre and Internal Engineering section** (issue `#1274`).
