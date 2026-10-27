@@ -505,7 +505,7 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
                       type="button"
                       onClick={() => setSelectedAssetForPreview(asset)}
                       title="Inspect asset"
-                      className="rounded-lg p-1 text-black/50 hover:bg-black/5 hover:text-black"
+                      className="rounded-lg p-1 text-black/60 hover:bg-black/5 hover:text-black"
                     >
                       <Icon name="eye" className="h-3.5 w-3.5" />
                     </button>
@@ -516,7 +516,7 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
                       disabled={isPending || generating}
                       aria-label="Delete asset"
                       title="Delete asset"
-                      className="rounded-lg p-1 text-black/50 hover:bg-danger-tint/50 hover:text-danger disabled:opacity-50"
+                      className="rounded-lg p-1 text-black/60 hover:bg-danger-tint/50 hover:text-danger disabled:opacity-50"
                     >
                       <Icon name="trash" className="h-3.5 w-3.5" />
                     </button>
