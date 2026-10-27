@@ -46,8 +46,9 @@ export const PLATFORM_NAV_ITEMS: readonly PlatformNavItem[] = [
   },
   {
     href: "/staff/platform/costs",
-    label: "Running Costs",
-    description: "What the platform costs now, what is planned, and what changes at renewal.",
+    label: "Costs, Pricing & Business Model",
+    description:
+      "Running costs, competitor pricing, proposed pricing, profitability and business models.",
     icon: "coins",
   },
   {

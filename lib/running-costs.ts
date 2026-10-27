@@ -19,8 +19,28 @@
  */
 
 export type CostStatus = "actual" | "planned" | "estimate" | "unverified";
+/**
+ * `open-licence` (#1309): free, open data or assets, where the "pricing page" is the licence. Such
+ * an item costs 0 and its `limits.sourceUrl` is the licence or terms page.
+ */
 export type CostBasis =
-  "owner-stated" | "provider-dashboard" | "provider-pricing-page" | "not-confirmed";
+  | "owner-stated"
+  | "provider-dashboard"
+  | "provider-pricing-page"
+  | "not-confirmed"
+  | "open-licence";
+/**
+ * #1309 - which kind of cost an item is. `platform-fixed`: a subscription or registration the
+ * platform needs to run. `platform-usage`: billed by use. `dev-tools`: used to build the platform,
+ * not to run it.
+ */
+export type CostGroup = "platform-fixed" | "platform-usage" | "dev-tools";
+/**
+ * #1309 - how often an item's figures are re-checked: monthly for running costs, quarterly for
+ * annual subscriptions and open licences. `reviewEvery` is `quarter` exactly when `period` is `year`
+ * or `basis` is `open-licence` (tested).
+ */
+export type ReviewInterval = "month" | "quarter";
 export type CostCategory =
   | "hosting"
   | "domain"
@@ -30,7 +50,9 @@ export type CostCategory =
   | "payments"
   | "email"
   | "security"
-  | "devtools";
+  | "devtools"
+  | "data"
+  | "assets";
 export type CostPeriod = "month" | "year";
 
 export interface CostLimits {
@@ -57,6 +79,8 @@ export interface CostItem {
   name: string;
   provider: string;
   category: CostCategory;
+  group: CostGroup;
+  reviewEvery: ReviewInterval;
   /** What the item is used for, or `null`. */
   role: string | null;
   plan: string;
@@ -93,6 +117,8 @@ const COM_PRICE_CHANGE: CostPriceChange = {
 export const RUNNING_COST_ITEMS: readonly CostItem[] = [
   {
     id: "cloudflare-workers",
+    group: "platform-fixed",
+    reviewEvery: "month",
     name: "Cloudflare Workers",
     provider: "Cloudflare",
     category: "hosting",
@@ -120,6 +146,8 @@ export const RUNNING_COST_ITEMS: readonly CostItem[] = [
   },
   {
     id: "domain-nocaped",
+    group: "platform-fixed",
+    reviewEvery: "quarter",
     name: "nocaped.com",
     provider: "Cloudflare Registrar",
     category: "domain",
@@ -140,6 +168,8 @@ export const RUNNING_COST_ITEMS: readonly CostItem[] = [
   },
   {
     id: "domain-merqify",
+    group: "platform-fixed",
+    reviewEvery: "quarter",
     name: "merqify.com",
     provider: "Cloudflare Registrar",
     category: "domain",
@@ -160,6 +190,8 @@ export const RUNNING_COST_ITEMS: readonly CostItem[] = [
   },
   {
     id: "domain-aheedfoodcentre",
+    group: "platform-fixed",
+    reviewEvery: "quarter",
     name: "aheedfoodcentre.co.uk",
     provider: "Cloudflare Registrar",
     category: "domain",
@@ -180,6 +212,8 @@ export const RUNNING_COST_ITEMS: readonly CostItem[] = [
   },
   {
     id: "neon",
+    group: "platform-fixed",
+    reviewEvery: "month",
     name: "Neon Postgres",
     provider: "Neon",
     category: "database",
@@ -208,6 +242,8 @@ export const RUNNING_COST_ITEMS: readonly CostItem[] = [
   },
   {
     id: "cloudflare-r2",
+    group: "platform-usage",
+    reviewEvery: "month",
     name: "Cloudflare R2",
     provider: "Cloudflare",
     category: "storage",
@@ -236,6 +272,8 @@ export const RUNNING_COST_ITEMS: readonly CostItem[] = [
   },
   {
     id: "cloudflare-access",
+    group: "dev-tools",
+    reviewEvery: "month",
     name: "Cloudflare Access",
     provider: "Cloudflare",
     category: "security",
@@ -256,6 +294,8 @@ export const RUNNING_COST_ITEMS: readonly CostItem[] = [
   },
   {
     id: "github",
+    group: "dev-tools",
+    reviewEvery: "month",
     name: "GitHub",
     provider: "GitHub",
     category: "devtools",
@@ -276,6 +316,8 @@ export const RUNNING_COST_ITEMS: readonly CostItem[] = [
   },
   {
     id: "workers-ai",
+    group: "platform-usage",
+    reviewEvery: "month",
     name: "Cloudflare Workers AI",
     provider: "Cloudflare",
     category: "ai",
@@ -298,10 +340,12 @@ export const RUNNING_COST_ITEMS: readonly CostItem[] = [
       confirmedByOwner: false,
     },
     usage: "workers-ai",
-    note: null,
+    note: "Product and campaign image generation (flux-1-schnell) is billed under this item, alongside the text features.",
   },
   {
     id: "stripe",
+    group: "platform-usage",
+    reviewEvery: "month",
     name: "Stripe",
     provider: "Stripe",
     category: "payments",
@@ -322,6 +366,8 @@ export const RUNNING_COST_ITEMS: readonly CostItem[] = [
   },
   {
     id: "cloudflare-email",
+    group: "platform-usage",
+    reviewEvery: "month",
     name: "Cloudflare Email Service",
     provider: "Cloudflare",
     category: "email",
@@ -339,6 +385,159 @@ export const RUNNING_COST_ITEMS: readonly CostItem[] = [
     limits: null,
     usage: null,
     note: "Planned replacement for the current email provider setting. Its price is not confirmed.",
+  },
+  // #1309 - the rest of the brief's audit list. Nothing here is a guess: the open-licence rows link
+  // their licence, and Claude and Gemini Pro stay unpriced until the owner states the plan.
+  {
+    id: "postcode-reference",
+    group: "platform-fixed",
+    reviewEvery: "month",
+    name: "Postcode reference database",
+    provider: "Neon",
+    category: "database",
+    role: "Postcode and address lookup at checkout",
+    plan: "Free",
+    costStatus: "actual",
+    basis: "owner-stated",
+    asOf: "2026-10-27",
+    amountCents: 0,
+    period: "month",
+    currency: "USD",
+    renewsOn: null,
+    autoRenew: null,
+    priceChange: null,
+    limits: null,
+    usage: null,
+    note: "A separate Neon project, uk-location-reference, on the same free plan as the main database. It is read only through lib/reference/.",
+  },
+  {
+    id: "os-opendata",
+    group: "platform-fixed",
+    reviewEvery: "quarter",
+    name: "OS OpenData (Code-Point Open, OS Open Names)",
+    provider: "Ordnance Survey",
+    category: "data",
+    role: "Source data for the postcode reference database",
+    plan: "Open Government Licence",
+    costStatus: "actual",
+    basis: "open-licence",
+    asOf: "2026-10-27",
+    amountCents: 0,
+    period: "month",
+    currency: "USD",
+    renewsOn: null,
+    autoRenew: null,
+    priceChange: null,
+    limits: {
+      allowance: "Free to use, including commercially, with attribution",
+      overage: null,
+      sourceUrl: "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+      retrievedOn: "2026-10-27",
+      confirmedByOwner: false,
+    },
+    usage: null,
+    note: "Downloaded with no API key by .github/workflows/sync-reference-data.yml.",
+  },
+  {
+    id: "iconify-icons",
+    group: "platform-fixed",
+    reviewEvery: "quarter",
+    name: "Iconify icon sets",
+    provider: "Iconify (Lucide, Noto, Phosphor)",
+    category: "assets",
+    role: "Interface and category icons, built into the bundle",
+    plan: "Open-source licences",
+    costStatus: "actual",
+    basis: "open-licence",
+    asOf: "2026-10-27",
+    amountCents: 0,
+    period: "month",
+    currency: "USD",
+    renewsOn: null,
+    autoRenew: null,
+    priceChange: null,
+    limits: {
+      allowance: "Lucide: ISC (no attribution required, commercial use allowed)",
+      overage: null,
+      sourceUrl: "https://icon-sets.iconify.design/lucide/",
+      retrievedOn: "2026-10-27",
+      confirmedByOwner: false,
+    },
+    usage: null,
+    note: "Noto is Apache 2.0 and Phosphor is MIT; the licence texts are in scripts/icon-licences/.",
+  },
+  {
+    id: "open-food-facts",
+    group: "platform-fixed",
+    reviewEvery: "quarter",
+    name: "Open Food Facts",
+    provider: "Open Food Facts",
+    category: "data",
+    role: "Product data source",
+    plan: "Open Database Licence",
+    costStatus: "actual",
+    basis: "open-licence",
+    asOf: "2026-10-27",
+    amountCents: 0,
+    period: "month",
+    currency: "USD",
+    renewsOn: null,
+    autoRenew: null,
+    priceChange: null,
+    limits: {
+      allowance:
+        "Database under the Open Database Licence; individual contents under the Database Contents Licence",
+      overage: null,
+      sourceUrl: "https://world.openfoodfacts.org/terms-of-use",
+      retrievedOn: "2026-10-27",
+      confirmedByOwner: false,
+    },
+    usage: null,
+    note: null,
+  },
+  {
+    id: "claude",
+    group: "dev-tools",
+    reviewEvery: "month",
+    name: "Claude",
+    provider: "Anthropic",
+    category: "devtools",
+    role: "AI coding assistant used to build the platform",
+    plan: "Not stated by the owner",
+    costStatus: "unverified",
+    basis: "not-confirmed",
+    asOf: "2026-10-27",
+    amountCents: null,
+    period: null,
+    currency: "USD",
+    renewsOn: null,
+    autoRenew: null,
+    priceChange: null,
+    limits: null,
+    usage: null,
+    note: "The owner has not stated the plan or amount. Set both and costStatus once confirmed.",
+  },
+  {
+    id: "gemini-pro",
+    group: "dev-tools",
+    reviewEvery: "month",
+    name: "Gemini Pro",
+    provider: "Google",
+    category: "devtools",
+    role: "AI assistant used to build the platform",
+    plan: "Not stated by the owner",
+    costStatus: "unverified",
+    basis: "not-confirmed",
+    asOf: "2026-10-27",
+    amountCents: null,
+    period: null,
+    currency: "USD",
+    renewsOn: null,
+    autoRenew: null,
+    priceChange: null,
+    limits: null,
+    usage: null,
+    note: "The owner has not stated the plan or amount. Set both and costStatus once confirmed.",
   },
 ];
 
@@ -382,6 +581,23 @@ export interface CostReport {
   renewals: RenewalEntry[];
   /** Ids of items with no fixed amount: listed on the page, never in a total. */
   unpriced: string[];
+  /** #1309 - the `current` rule (actual items only) restricted to each group. */
+  byGroup: Record<CostGroup, CostTotals>;
+  /** #1309 - ids whose `asOf` is older than their review interval. */
+  stale: string[];
+  /** #1309 - ids the owner still has to confirm (`costStatus: "unverified"`). */
+  ownerToConfirm: string[];
+}
+
+export const COST_GROUPS: readonly CostGroup[] = ["platform-fixed", "platform-usage", "dev-tools"];
+
+/** Days after which an item is stale, per review interval (#1309). */
+export const REVIEW_INTERVAL_DAYS: Record<ReviewInterval, number> = { month: 31, quarter: 92 };
+
+/** Whole UTC days from `date` (`YYYY-MM-DD`) to the UTC calendar date of `now`. */
+export function daysSince(date: string, now: Date): number {
+  const today = utcDay(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.round((today - parseDay(date)) / DAY_MS);
 }
 
 /** How far ahead "soon" looks, in days, for a renewal or a price change. */
@@ -454,5 +670,19 @@ export function buildCostReport(items: readonly CostItem[], now: Date): CostRepo
     attention,
     renewals,
     unpriced: items.filter((item) => item.amountCents === null).map((item) => item.id),
+    byGroup: Object.fromEntries(
+      COST_GROUPS.map((group) => [
+        group,
+        totals(
+          items.filter((item) => item.group === group),
+          ["actual"],
+          false,
+        ),
+      ]),
+    ) as Record<CostGroup, CostTotals>,
+    stale: items
+      .filter((item) => daysSince(item.asOf, now) > REVIEW_INTERVAL_DAYS[item.reviewEvery])
+      .map((item) => item.id),
+    ownerToConfirm: items.filter((item) => item.costStatus === "unverified").map((item) => item.id),
   };
 }
