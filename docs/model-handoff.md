@@ -78,7 +78,7 @@ reconciliation. If overall project state did not materially change, leave this f
     `lib/pricing/*`), and the refresh buttons only *suggest*; the guide is the platform admin guide 1.4.0.
     Open: R39 (refresh usage showing as "Pricing review" on `/staff/ai-usage`; **the dev database still
     lacks the `PRICING_REVIEW` migration**, while staging has it), and the quarterly `pricing-review`
-    workflow, which does nothing until it reaches `main`. Owner decision `#1310` (ADR-005 Connect trigger).
+    workflow, which does nothing until it reaches `main`. Follow-ups: `#1310` (owner decision, ADR-005 Connect trigger), `#1312` (refresh suggestion quality).
   - **Document commits carry forward on the local branch `docs/carry-forward-1309`**, which holds the
     unpushed Document passes for `#1295`, `#1305` and `#1309`. Until 2026-10-27 the `#1295`/`#1305`
     passes sat only on the local `feature/1305` branch and were missed when `#1309` branched from
