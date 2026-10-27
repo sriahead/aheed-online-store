@@ -20,6 +20,8 @@ function item(overrides: Partial<CostItem> & { id: string }): CostItem {
     name: overrides.id,
     provider: "Test",
     category: "hosting",
+    group: "platform-fixed",
+    reviewEvery: "month",
     role: null,
     plan: "Test",
     costStatus: "actual",
@@ -77,6 +79,14 @@ function invariantFailures(entry: CostItem): string[] {
   if (entry.costStatus === "actual" && entry.basis === "not-confirmed") {
     failures.push("actual item with an unconfirmed basis");
   }
+  // #1309 R1
+  const quarterly = entry.period === "year" || entry.basis === "open-licence";
+  if (entry.reviewEvery !== (quarterly ? "quarter" : "month")) {
+    failures.push("reviewEvery does not follow the period/basis rule");
+  }
+  if (entry.basis === "open-licence" && (entry.amountCents !== 0 || entry.limits === null)) {
+    failures.push("open-licence item is not free or has no licence link");
+  }
   return failures;
 }
 
@@ -85,7 +95,9 @@ describe("lib/running-costs.ts is pure (R1)", () => {
 
   it("has no directive and imports nothing from react, next, the database or prisma", () => {
     expect(source.split("\n")[0]).not.toMatch(/use (client|server)/);
-    expect(source).not.toMatch(/^import[^;]*from "(react|next\/|@\/lib\/db|@prisma\/)/m);
+    expect(source).not.toMatch(
+      /^import[^;]*from "(react|next\/|@\/lib\/db|@\/lib\/config|@prisma\/)/m,
+    );
     expect(source).not.toMatch(/\bfetch\(/);
   });
 
@@ -128,11 +140,17 @@ describe("registry invariants (R2)", () => {
         }),
       ),
     ).toContain("priceChange on a non-year item");
+    expect(invariantFailures(item({ id: "x", period: "year", reviewEvery: "month" }))).toContain(
+      "reviewEvery does not follow the period/basis rule",
+    );
+    expect(
+      invariantFailures(item({ id: "x", basis: "open-licence", reviewEvery: "quarter" })),
+    ).toContain("open-licence item is not free or has no licence link");
   });
 });
 
 describe("registry content (R3)", () => {
-  it("holds exactly the 11 agreed items", () => {
+  it("holds exactly the 17 agreed items (#1309 R3)", () => {
     expect(RUNNING_COST_ITEMS.map((entry) => entry.id).sort()).toEqual(
       [
         "cloudflare-access",
@@ -146,8 +164,54 @@ describe("registry content (R3)", () => {
         "neon",
         "stripe",
         "workers-ai",
+        "postcode-reference",
+        "os-opendata",
+        "iconify-icons",
+        "open-food-facts",
+        "claude",
+        "gemini-pro",
       ].sort(),
     );
+  });
+
+  it("puts each item in its group (#1309 R2, R3)", () => {
+    const groups: Record<string, string> = {
+      "cloudflare-workers": "platform-fixed",
+      "domain-nocaped": "platform-fixed",
+      "domain-merqify": "platform-fixed",
+      "domain-aheedfoodcentre": "platform-fixed",
+      neon: "platform-fixed",
+      "cloudflare-r2": "platform-usage",
+      "workers-ai": "platform-usage",
+      stripe: "platform-usage",
+      "cloudflare-email": "platform-usage",
+      "cloudflare-access": "dev-tools",
+      github: "dev-tools",
+      "postcode-reference": "platform-fixed",
+      "os-opendata": "platform-fixed",
+      "iconify-icons": "platform-fixed",
+      "open-food-facts": "platform-fixed",
+      claude: "dev-tools",
+      "gemini-pro": "dev-tools",
+    };
+    for (const [id, group] of Object.entries(groups)) expect(find(id).group, id).toBe(group);
+    expect(find("workers-ai").note).toMatch(/image generation/i);
+    expect(find("postcode-reference").note).toContain("uk-location-reference");
+  });
+
+  it("the six new rows have the specified status, basis and amount (#1309 R3)", () => {
+    const expected: Record<string, unknown[]> = {
+      "postcode-reference": ["actual", "owner-stated", 0, "month"],
+      "os-opendata": ["actual", "open-licence", 0, "month"],
+      "iconify-icons": ["actual", "open-licence", 0, "month"],
+      "open-food-facts": ["actual", "open-licence", 0, "month"],
+      claude: ["unverified", "not-confirmed", null, null],
+      "gemini-pro": ["unverified", "not-confirmed", null, null],
+    };
+    for (const [id, want] of Object.entries(expected)) {
+      const got = find(id);
+      expect([got.costStatus, got.basis, got.amountCents, got.period], id).toEqual(want);
+    }
   });
 
   it("matches the specified status, basis, amount, renewal and price change", () => {
@@ -307,9 +371,9 @@ describe("buildCostReport renewals (R7)", () => {
 });
 
 describe("buildCostReport unpriced and zero (R8)", () => {
-  it("lists the three items with no fixed amount", () => {
+  it("lists the five items with no fixed amount", () => {
     expect(buildCostReport(RUNNING_COST_ITEMS, NOW).unpriced.sort()).toEqual(
-      ["cloudflare-email", "stripe", "workers-ai"].sort(),
+      ["cloudflare-email", "stripe", "workers-ai", "claude", "gemini-pro"].sort(),
     );
   });
 
@@ -317,5 +381,35 @@ describe("buildCostReport unpriced and zero (R8)", () => {
     const report = buildCostReport([item({ id: "a" }), item({ id: "b" })], NOW);
     expect(report.current.annualCents).toBe(0);
     expect(report.unpriced).toEqual([]);
+  });
+});
+
+describe("buildCostReport groups, staleness and owner confirmations (#1309 R4)", () => {
+  it("totals each group with the current rule", () => {
+    expect(buildCostReport(RUNNING_COST_ITEMS, NOW).byGroup).toEqual({
+      "platform-fixed": { annualCents: 7046, monthlyCents: 587 },
+      "platform-usage": { annualCents: 0, monthlyCents: 0 },
+      "dev-tools": { annualCents: 0, monthlyCents: 0 },
+    });
+  });
+
+  it("nothing is stale on 2026-10-27; on 2026-12-01 exactly the monthly items are", () => {
+    expect(buildCostReport(RUNNING_COST_ITEMS, NOW).stale).toEqual([]);
+    const monthly = RUNNING_COST_ITEMS.filter((i) => i.reviewEvery === "month").map((i) => i.id);
+    expect(
+      buildCostReport(RUNNING_COST_ITEMS, new Date("2026-12-01T00:00:00Z")).stale.sort(),
+    ).toEqual(monthly.sort());
+  });
+
+  it("an item 31 days old is not stale and 32 days old is", () => {
+    const stale = (asOf: string) => buildCostReport([item({ id: "a", asOf })], NOW).stale;
+    expect(stale("2026-09-26")).toEqual([]);
+    expect(stale("2026-09-25")).toEqual(["a"]);
+  });
+
+  it("lists the unverified items for the owner to confirm", () => {
+    expect(buildCostReport(RUNNING_COST_ITEMS, NOW).ownerToConfirm.sort()).toEqual(
+      ["stripe", "cloudflare-email", "claude", "gemini-pro"].sort(),
+    );
   });
 });

@@ -2093,6 +2093,7 @@ enum AiFeature {
   NET_CONTENT
   PRODUCT_IMAGE
   CAMPAIGN_IMAGE
+  PRICING_REVIEW
 }
 
 // REPORTED = Workers AI's own figure for the call; ESTIMATED = computed from lib/workers-ai.ts.

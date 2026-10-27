@@ -103,7 +103,7 @@ export function PanelNav({ canSeeOrders, currentTier, isPlatformAdmin }: PanelNa
     <nav
       ref={navRef}
       aria-label="Store admin"
-      className="w-full border-b border-black/10 bg-white shadow-sm"
+      className="w-full border-b border-black/10 bg-white shadow-sm print:hidden"
     >
       {/*
        * `max-w-7xl`, WIDER THAN THE max-w-5xl CONTENT COLUMN BELOW IT, deliberately (#1177
