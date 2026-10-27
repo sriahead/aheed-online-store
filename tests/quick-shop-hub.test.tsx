@@ -81,6 +81,12 @@ const TILES = [
     description: "Paste or type a list and match it to what is in stock.",
   },
   { href: "/bundles", label: "Value Bundles", description: "Multi-item bundles at a set price." },
+  // #1302 — appended last, so the four above keep the order #1187 fixed.
+  {
+    href: "/account/orders",
+    label: "Your orders",
+    description: "Reorder a past order or save it as a list.",
+  },
 ];
 
 afterEach(() => {
@@ -89,11 +95,18 @@ afterEach(() => {
 });
 
 describe("#1187 Quick Shop hub", () => {
-  it("renders exactly four tiles, in the fixed order (R3)", () => {
+  it("renders exactly five tiles, in the fixed order (R3; #1302 R1)", () => {
     const { container } = render(QuickShopPage());
     const hrefs = [...container.querySelectorAll("a")].map((a) => a.getAttribute("href"));
-    // Exact array equality, so a fifth tile or a reorder both fail rather than one of them passing.
+    // Exact array equality, so a sixth tile or a reorder both fail rather than one of them passing.
     expect(hrefs).toEqual(TILES.map((t) => t.href));
+  });
+
+  it("introduces the tiles without counting them (#1302 R2)", () => {
+    const { container } = render(QuickShopPage());
+    const intro = container.querySelector("h1 + p")?.textContent;
+    expect(intro).toBe("Quick ways to fill your basket without browsing from scratch.");
+    expect(intro).not.toMatch(/Four|Five/);
   });
 
   it("labels each tile with its destination page's own name (R4)", () => {

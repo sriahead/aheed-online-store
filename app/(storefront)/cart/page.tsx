@@ -58,7 +58,17 @@ export default async function CartPage({
   return (
     <PageContainer width="standard" padY="tight">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-primary">Your cart</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-xl font-bold text-primary">Your cart</h1>
+          {/* #1302 — a populated cart had no way back to the shop; only the empty state did. */}
+          <Link
+            href="/categories"
+            className="flex items-center gap-1 text-sm font-semibold text-primary-muted hover:text-primary"
+          >
+            <Icon name="chevron-left" className="h-4 w-4" />
+            Continue shopping
+          </Link>
+        </div>
         {/* The other cart-entry path (P3d, #114) — discoverable without knowing the URL. #1187
             relabelled it "Smart Lists" to match the page it opens, and deliberately left it
             pointing at the paste page rather than the new hub: this link exists to get a shopper

@@ -199,6 +199,36 @@ describe("saveOrderAsList", () => {
     expect(items.map((i) => i.rawText)).toEqual(["Basmati Rice 5kg", "Chicken Breast"]);
   });
 
+  it("returns to the orders list when posted from it (#1302 R9)", async () => {
+    const lines = { items: [{ productName: "Whole Milk 2L", quantity: 1 }] };
+    const send = (extra: [string, string][] = []) =>
+      whereItRedirected(() => saveOrderAsList(form([["orderNumber", "AH-1001"], ...extra])));
+
+    order.getForUser.mockResolvedValue(lines);
+    expect(await send([["from", "orders-list"]])).toBe("/account/orders?list=saved");
+
+    service.save.mockResolvedValue(null);
+    expect(await send([["from", "orders-list"]])).toBe("/account/orders?list=capped");
+
+    order.getForUser.mockResolvedValue({ items: [] });
+    expect(await send([["from", "orders-list"]])).toBe("/account/orders?list=empty");
+  });
+
+  it("ignores any other `from`, so the detail page behaves as before (#1302 R10)", async () => {
+    order.getForUser.mockResolvedValue({ items: [{ productName: "Whole Milk 2L", quantity: 1 }] });
+
+    const to = await whereItRedirected(() =>
+      saveOrderAsList(
+        form([
+          ["orderNumber", "AH-1001"],
+          ["from", "https://evil.example"],
+        ]),
+      ),
+    );
+
+    expect(to).toBe("/account/orders/AH-1001?list=saved");
+  });
+
   it("writes nothing when the order does not belong to this shopper", async () => {
     // getForUser scopes by the signed-in user, so somebody else's order number resolves to null.
     order.getForUser.mockResolvedValue(null);
