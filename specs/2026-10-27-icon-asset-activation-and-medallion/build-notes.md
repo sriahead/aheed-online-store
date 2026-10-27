@@ -186,3 +186,14 @@ One line per changed site: `file:line — what it replaced — new size`. "Icon 
   coming from a variable (e.g. `starSizeClass`) is invisible to it by design.
 - **Production is down** (`#1289`); this slice cannot be promoted until it is fixed, and staging already
   carries two unpromoted migrations this slice depends on.
+
+## Fix (post-Validate)
+
+- **R18 validation row corrected (the row was wrong, not the code).** It required
+  `git grep -l IconMedallion -- components/product` to print nothing, but R16 and `plan.md` §D make
+  `QuickViewDrawer`'s `h-8` error `<Icon>` a medallion site, while its photos stay unframed
+  (it renders them through `ProductImageGallery`). The row now asserts the real invariant: the only
+  medallion in `components/product` is `icon="triangle-alert"`, and none takes an `imageUrl`.
+  No source, test or CHANGELOG change: behaviour is unchanged.
+- **Not fixed, not code:** R6 and R29 need the dev DB migration `20261027080000_category_and_system_assets`
+  applied by the owner; the R28 visual check and CI `gates` are still unverified.
