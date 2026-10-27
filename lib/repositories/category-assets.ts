@@ -1,4 +1,5 @@
 import type { getPrisma, getPrismaWs } from "@/lib/db";
+import { composePublicUrl } from "@/lib/storage";
 
 /**
  * Category and UI system icon asset management repository.
@@ -313,6 +314,7 @@ export async function deleteCategoryAsset(
   const wasSelected = asset.isSelected;
   const storageKey = asset.storageKey;
   const categoryId = asset.categoryId;
+  const slot = asset.slot;
 
   await prismaWs.categoryAsset.delete({
     where: { id: asset.id },
@@ -341,10 +343,62 @@ export async function deleteCategoryAsset(
     }
   }
 
+  if (wasSelected && slot) {
+    const nextCandidate = await prismaWs.categoryAsset.findFirst({
+      where: { vendorId, slot },
+      orderBy: { createdAt: "desc" },
+    });
+    if (nextCandidate) {
+      await prismaWs.categoryAsset.update({
+        where: { id: nextCandidate.id },
+        data: { isSelected: true },
+      });
+    }
+  }
+
   return {
     ok: true,
     storageKey,
     categoryId,
     wasSelected,
   };
+}
+
+/**
+ * Returns a map of all currently active (selected) system slot assets for a vendor.
+ * Maps slot ID -> public image URL.
+ */
+export async function getActiveSlotAssetsMap(
+  prisma: Db,
+  vendorId: string,
+  cdnBaseUrl?: string | null,
+): Promise<Record<string, string>> {
+  const rows = await prisma.categoryAsset.findMany({
+    where: {
+      vendorId,
+      slot: { not: null },
+      isSelected: true,
+    },
+    select: {
+      slot: true,
+      storageKey: true,
+    },
+  });
+
+  const map: Record<string, string> = {};
+  for (const r of rows) {
+    if (r.slot) {
+      const url =
+        r.storageKey.startsWith("/") || r.storageKey.startsWith("http")
+          ? r.storageKey
+          : cdnBaseUrl
+            ? composePublicUrl(cdnBaseUrl, r.storageKey)
+            : `/${r.storageKey}`;
+      map[r.slot] = url;
+      // Alias common equivalents
+      if (r.slot === "cart-floating") map["cart-add"] = url;
+      if (r.slot === "cart-add") map["cart-floating"] = url;
+    }
+  }
+  return map;
 }

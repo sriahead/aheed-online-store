@@ -39,8 +39,10 @@ export interface HeroDepartment {
   id: string;
   slug: string;
   name: string;
-  /** Reserved for a future `Category.imageKey`; the icon renders when absent. */
+  /** Relative storage key for category image or photography. */
   imageKey?: string | null;
+  /** Explicit composed public image URL. */
+  imageUrl?: string | null;
   /** Alt text for `imageKey`, when one exists. */
   altText?: string | null;
   spotlight?: {
@@ -168,9 +170,10 @@ export function DepartmentHero({
       >
         {departments.map((department, index) => {
           const imageUrl =
-            department.imageKey && cdnBaseUrl
+            department.imageUrl ||
+            (department.imageKey && cdnBaseUrl
               ? composePublicUrl(cdnBaseUrl, department.imageKey)
-              : null;
+              : null);
           const isCurrent = index === current;
 
           // P8.5e (#356): a LIVE campaign (liveness already decided by the
@@ -306,6 +309,7 @@ export function DepartmentHero({
                             slug={department.slug}
                             loading={index === 0 ? "eager" : "lazy"}
                             use3D={use3D}
+                            imageUrl={imageUrl}
                           />
                         }
                       />
@@ -314,6 +318,7 @@ export function DepartmentHero({
                         slug={department.slug}
                         loading={index === 0 ? "eager" : "lazy"}
                         use3D={use3D}
+                        imageUrl={imageUrl}
                       />
                     )}
                   </div>

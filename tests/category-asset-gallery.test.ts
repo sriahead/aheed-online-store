@@ -5,6 +5,7 @@ import {
   createCategoryAsset,
   selectCategoryAsset,
   deleteCategoryAsset,
+  getActiveSlotAssetsMap,
 } from "@/lib/repositories/category-assets";
 import {
   GET as getAssetsHandler,
@@ -51,6 +52,8 @@ vi.mock("@/lib/storage", () => ({
     publicUrl: (key: string) => `https://cdn.example.com/${key}`,
     deleteObject: (...args: unknown[]) => mockStorageDelete(...args),
   }),
+  composePublicUrl: (baseUrl: string, key: string) =>
+    `${baseUrl.replace(/\/$/, "")}/${key.replace(/^\//, "")}`,
 }));
 
 vi.mock("next/cache", () => ({
@@ -320,6 +323,24 @@ describe("Category & UI System Icon Asset Management", () => {
         "v1",
         expect.anything(),
       );
+    });
+
+    it("retrieves active slot assets map with public URLs and aliases", async () => {
+      mockPrismaDb.categoryAsset.findMany.mockResolvedValueOnce([
+        { slot: "storefront", storageKey: "icons/v1/storefront.png" },
+        { slot: "cart-floating", storageKey: "icons/v1/cart.png" },
+      ]);
+
+      const map = await getActiveSlotAssetsMap(
+        mockPrismaDb as any,
+        "v1",
+        "https://cdn.example.com",
+      );
+
+      expect(map["storefront"]).toBe("https://cdn.example.com/icons/v1/storefront.png");
+      expect(map["cart-floating"]).toBe("https://cdn.example.com/icons/v1/cart.png");
+      // Alias cart-add automatically mirrors cart-floating
+      expect(map["cart-add"]).toBe("https://cdn.example.com/icons/v1/cart.png");
     });
   });
 });

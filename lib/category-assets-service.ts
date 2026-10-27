@@ -1,10 +1,12 @@
 import { getPrisma, getPrismaWs } from "@/lib/db";
+import { getEnv } from "@/lib/config";
 import {
   listCategoryAssets,
   getCategoryAssetById,
   createCategoryAsset,
   selectCategoryAsset,
   deleteCategoryAsset,
+  getActiveSlotAssetsMap,
   type CategoryAssetSummary,
   type ListCategoryAssetsOptions,
 } from "./repositories/category-assets";
@@ -54,4 +56,12 @@ export async function selectCategoryAssetForVendor(vendorId: string, assetId: st
 export async function deleteCategoryAssetForVendor(vendorId: string, assetId: string) {
   const prismaWs = getPrismaWs();
   return deleteCategoryAsset(prismaWs, vendorId, assetId);
+}
+
+export async function getActiveSlotAssetsForVendor(
+  vendorId: string,
+): Promise<Record<string, string>> {
+  const prisma = getPrisma();
+  const { CDN_BASE_URL } = getEnv();
+  return getActiveSlotAssetsMap(prisma, vendorId, CDN_BASE_URL);
 }

@@ -22,11 +22,6 @@ export function DepartmentGlyph({
   /** Optional explicit image URL from CategorySummary / DepartmentHero. */
   imageUrl?: string | null;
 }) {
-  const icon3D = use3D ? department3DIcon(slug) : null;
-  if (icon3D) {
-    return <Icon3D name={icon3D} size={96} className="h-24 w-24 md:h-32 md:w-32" />;
-  }
-
   const fallback = (
     <Icon
       name={categoryIconName(slug)}
@@ -50,6 +45,11 @@ export function DepartmentGlyph({
         />
       </div>
     );
+  }
+
+  const icon3D = use3D ? department3DIcon(slug) : null;
+  if (icon3D) {
+    return <Icon3D name={icon3D} size={96} className="h-24 w-24 md:h-32 md:w-32" />;
   }
 
   const src = departmentIllustration(slug);

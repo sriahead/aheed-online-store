@@ -73,24 +73,50 @@ export function buildSlotAssetKey(
 }
 
 /**
- * Constructs an AI generation prompt for UI system icon assets.
+ * Constructs an AI generation prompt for UI system icon assets, strictly aligned with
+ * the application's commercial theme (emerald green #059669, royal navy #1E3A8A, warm gold #F59E0B)
+ * and isolated on pure white with crisp edges so icons remain vivid and clearly readable at 24px.
  */
-export function buildSlotAssetPrompt(slot: string, style: CategoryImageStyle = "3d-icon"): string {
-  const slotDescriptions: Record<string, string> = {
-    "delivery-van": "modern refrigerated grocery delivery van in white and fresh green livery",
+export function buildSlotAssetPrompt(slot: string, _style?: CategoryImageStyle): string {
+  const themedSlotPrompts: Record<string, string> = {
+    "delivery-van":
+      "Commercial 3D UI app icon of a sleek modern refrigerated grocery delivery van, 3D rendered commercial app icon style, isometric 3/4 front perspective, clean white vehicle body with fresh emerald green accents and royal navy trim, glossy headlights, isolated on pure white background (#ffffff), crisp silhouette, soft contact shadow beneath the tires, high contrast readable at 24px, zero background scenery, no text, no watermarks.",
     storefront:
-      "friendly modern grocery storefront entrance with clean glass windows and welcome sign",
+      "Commercial 3D UI app icon of a charming miniature grocery store boutique, pastel cyan and white striped awning, warm peach stucco facade, neat glass window, colorful paper gift shopping bags sitting neatly out front, isolated on pure seamless white background (#ffffff), crisp silhouette, glossy plastic and smooth clay textures, soft contact shadow directly underneath, high contrast readable at 24px, no street, no sky, no text, no watermarks.",
     "quick-shop":
-      "grocery shopping wire basket loaded with fresh colorful fruits and bread with quick lightning badge",
-    "user-profile": "stylized professional customer avatar bust with smooth premium finish",
-    "cart-floating": "chrome wire grocery shopping trolley filled with fresh groceries and produce",
-    "secure-checkout": "metallic security shield with brass padlock ensuring encrypted payments",
-    "order-updates": "golden notification bell with postal delivery envelope",
-    "view-shopper": "grocery paper shopping bag with fresh organic baguette and greens",
-    "view-staff": "retail supermarket store counter with cash register and barcode scanner",
-    "view-admin": "polished platinum security shield with administrative key",
+      "Commercial 3D UI app icon of a dynamic shopping cart with electric speed energy, sleek blue wireframe basket with chrome wheels, an energetic bright golden yellow and magenta gradient 3D lightning bolt bursting forward through the cart, isolated on pure seamless white background (#ffffff), high contrast, crisp silhouette readable at 24px, soft contact shadow, glossy specular highlights, no background scenery, no text, no watermarks.",
+    "user-profile":
+      "Commercial 3D UI app icon of a sleek minimalist glossy modern avatar bust, smooth stylized human profile silhouette, vibrant iridescent electric gradient from royal blue to deep magenta purple, glossy specular sheen, isolated on pure seamless white background (#ffffff), centered composition, high contrast, crisp edges readable at 24px, soft contact shadow underneath, no background scenery, no clothes details, no text, no watermarks.",
+    "cart-floating":
+      "Commercial 3D UI app icon of a high-detail chrome wire grocery shopping trolley cart, vibrant orange handle, filled to the brim with fresh colorful supermarket groceries: crisp lettuce, bright red tomatoes, green apples, yellow bananas, golden baguette loaf, isolated on pure seamless white background (#ffffff), soft natural contact shadow directly beneath the wheels, sharp 3/4 isometric perspective, vibrant saturated colors, crisp silhouette readable at 24px, no background room, no floor grid, no text, no watermarks.",
+    "cart-add":
+      "Commercial 3D UI app icon of a high-detail chrome wire grocery shopping trolley cart, vibrant orange handle, filled to the brim with fresh colorful supermarket groceries: crisp lettuce, bright red tomatoes, green apples, yellow bananas, golden baguette loaf, isolated on pure seamless white background (#ffffff), soft natural contact shadow directly beneath the wheels, sharp 3/4 isometric perspective, vibrant saturated colors, crisp silhouette readable at 24px, no background room, no floor grid, no text, no watermarks.",
+    "secure-checkout":
+      "Commercial 3D UI app icon of a heavy polished metallic security shield with an embossed brass padlock, glowing emerald green security checkmark accent, deep royal navy border, warm golden specular reflections, isolated on pure seamless solid white background (#ffffff), high contrast, crisp silhouette readable at 24px, soft drop shadow, no food, no background scenery, no text, no watermarks.",
+    "order-updates":
+      "Commercial 3D UI app icon of a gleaming warm golden notification bell with a crisp white and emerald green postal delivery envelope with an alert badge, isolated on pure seamless solid white background (#ffffff), high contrast, crisp silhouette readable at 24px, soft contact shadow, no background scenery, no text, no watermarks.",
+    "view-shopper":
+      "Commercial 3D UI app icon of a classic brown paper grocery shopping bag filled with fresh artisan baguette, leafy greens, and red apples, isolated on pure seamless solid white background (#ffffff), crisp edges, high contrast readable at 24px, soft contact shadow, no background scenery, no text, no watermarks.",
+    "view-staff":
+      "Commercial 3D UI app icon of a modern retail store point-of-sale register terminal and handheld barcode scanner, emerald green and deep navy housing with glowing screen, isolated on pure seamless solid white background (#ffffff), crisp silhouette readable at 24px, soft contact shadow, no supermarket aisle, no background room, no text, no watermarks.",
+    "view-admin":
+      "Commercial 3D UI app icon of a polished platinum security badge with a golden master administrative key, deep royal navy enamel accents, isolated on pure seamless solid white background (#ffffff), high contrast, crisp edges readable at 24px, soft drop shadow, no background scenery, no text, no watermarks.",
+    "rewards-coin":
+      "Commercial 3D UI app icon of a celebratory gleaming golden trophy bursting out of an open red gift box tied with shimmering gold ribbons, surrounded by floating miniature 3D golden, cyan, and magenta star particles, isolated on pure seamless white background (#ffffff), soft contact shadow, glossy metallic reflections, clean icon silhouette readable at 24px, zero background scenery, no text, no watermarks.",
+    "rewards-gift":
+      "Commercial 3D UI app icon of a celebratory gleaming golden trophy bursting out of an open red gift box tied with shimmering gold ribbons, surrounded by floating miniature 3D golden, cyan, and magenta star particles, isolated on pure seamless white background (#ffffff), soft contact shadow, glossy metallic reflections, clean icon silhouette readable at 24px, zero background scenery, no text, no watermarks.",
+    "halal-certified":
+      "Commercial 3D UI icon of a prestigious golden halal certification rosette medal badge with emerald green ribbon and clean geometric emblem, isolated on pure seamless solid white background (#ffffff), high contrast, crisp silhouette, soft contact shadow, no text, no watermarks.",
   };
 
-  const subject = slotDescriptions[slot] || slot.replace(/-/g, " ");
-  return buildCategoryImagePrompt(subject, style);
+  if (themedSlotPrompts[slot]) {
+    return themedSlotPrompts[slot];
+  }
+
+  const cleanSlot = slot.replace(/[-_]/g, " ");
+  return (
+    `Commercial 3D UI icon of ${cleanSlot}, vibrant theme colors (emerald green, royal navy, warm gold), ` +
+    `isolated on pure white background, crisp silhouette, high contrast, soft subtle contact shadow, ` +
+    `centered composition, clean icon render readable at 24px, no background scenery, no text, no watermarks.`
+  );
 }

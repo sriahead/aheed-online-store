@@ -23,12 +23,14 @@ const SYSTEM_SLOTS = [
   { id: "storefront", label: "Header: Shop / Storefront" },
   { id: "quick-shop", label: "Header: Quick Shop Basket" },
   { id: "user-profile", label: "Header: User Profile Avatar" },
-  { id: "cart-floating", label: "Floating Cart Trolley" },
+  { id: "cart-floating", label: "Floating Cart Trolley (cart-add)" },
   { id: "secure-checkout", label: "Trust: Secure Checkout Shield" },
   { id: "order-updates", label: "Trust: Order Updates Bell" },
   { id: "view-shopper", label: "Role Switcher: Shopper View" },
   { id: "view-staff", label: "Role Switcher: Staff View" },
   { id: "view-admin", label: "Role Switcher: Admin View" },
+  { id: "rewards-coin", label: "Floating Action: Rewards Launcher" },
+  { id: "halal-certified", label: "Trust Badge: Halal Certified" },
 ];
 
 function useOptionalRouter() {
@@ -259,7 +261,9 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
             <div className="flex rounded-lg border border-black/15 p-0.5 bg-surface-muted">
               <button
                 type="button"
-                onClick={() => setTargetType("category")}
+                onClick={() => {
+                  setTargetType("category");
+                }}
                 className={`flex-1 rounded-md py-1 text-xs font-semibold transition ${
                   targetType === "category" ? "bg-white text-primary shadow-sm" : "text-black/60"
                 }`}
@@ -268,7 +272,10 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
               </button>
               <button
                 type="button"
-                onClick={() => setTargetType("slot")}
+                onClick={() => {
+                  setTargetType("slot");
+                  setGenStyle("3d-icon");
+                }}
                 className={`flex-1 rounded-md py-1 text-xs font-semibold transition ${
                   targetType === "slot" ? "bg-white text-primary shadow-sm" : "text-black/60"
                 }`}

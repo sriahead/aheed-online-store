@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { getCategoryRepository } from "@/lib/categories-service";
 import { getProductRepository } from "@/lib/products-service";
 import { getEnv } from "@/lib/config";
 import { DepartmentHero } from "@/components/layout/DepartmentHero";
+import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { formatPrice } from "@/components/product/format-price";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
@@ -67,9 +69,8 @@ export default async function HomePage() {
       id: category.id,
       slug: category.slug,
       name: category.name,
-      // `Category` has no image column yet (#279 / P8.5b's plan.md); the hero
-      // renders each department's icon until one exists.
-      imageKey: null,
+      imageKey: category.imageKey ?? null,
+      imageUrl: category.imageUrl ?? null,
       spotlight: spotlights.get(category.id) ?? null,
       campaign:
         campaign && isCampaignLive(campaign, now)
@@ -203,6 +204,23 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+
+      {/* Shop by department — category product photography showcase */}
+      {categories.length > 0 && (
+        <section className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-primary">Shop by department</h2>
+            <Link
+              href="/categories"
+              prefetch={false}
+              className="text-xs font-semibold text-action hover:underline"
+            >
+              View all ({categories.length}) &rarr;
+            </Link>
+          </div>
+          <DepartmentScroller categories={categories} use3D />
+        </section>
+      )}
 
       {/* Trust Values Strip — P7.5c+f (#239) & 3D Icon upgrade (#1245). */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">

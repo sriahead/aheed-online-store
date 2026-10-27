@@ -1,8 +1,11 @@
+"use client";
+
 import type { CSSProperties } from "react";
 import { ICON_3D_DEFINITIONS } from "@/lib/icons-3d/catalog";
 import { renderIconSvg } from "@/lib/icons-3d/render";
 import type { ThemeMode } from "@/lib/icons-3d/types";
 import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
+import { useActiveSlotIcons } from "./ActiveSlotIconsProvider";
 
 export type Icon3DName = keyof typeof ICON_3D_DEFINITIONS;
 
@@ -115,10 +118,17 @@ export function Icon3D({
   decorative,
   renderAs = "auto",
 }: Icon3DProps) {
+  const activeIcons = useActiveSlotIcons();
   const definition = ICON_3D_DEFINITIONS[name];
   if (!definition) return null;
 
-  const imageAsset = renderAs !== "svg" ? ICON_3D_IMAGE_ASSETS[name] : undefined;
+  const activeUrl =
+    activeIcons[name] ||
+    (name === "cart-add" ? activeIcons["cart-floating"] : undefined) ||
+    (name === "cart-floating" ? activeIcons["cart-add"] : undefined);
+
+  const staticAsset = renderAs !== "svg" ? ICON_3D_IMAGE_ASSETS[name] : undefined;
+  const imageAsset = activeUrl ? { png: activeUrl, webp: activeUrl } : staticAsset;
 
   const rendered = renderIconSvg(definition, {
     theme,
@@ -152,7 +162,14 @@ export function Icon3D({
           loading="eager"
           decoding="async"
           className="w-full h-full object-contain pointer-events-none select-none"
-          fallback={null}
+          fallback={
+            rendered ? (
+              <span
+                className="w-full h-full flex items-center justify-center"
+                dangerouslySetInnerHTML={{ __html: rendered.svg }}
+              />
+            ) : null
+          }
         />
       </span>
     );
@@ -176,7 +193,14 @@ export function Icon3D({
           loading="eager"
           decoding="async"
           className="w-full h-full object-contain pointer-events-none select-none relative z-10"
-          fallback={null}
+          fallback={
+            rendered ? (
+              <span
+                className="w-full h-full flex items-center justify-center"
+                dangerouslySetInnerHTML={{ __html: rendered.svg }}
+              />
+            ) : null
+          }
         />
         {/* Zero-layout-shift fallback & semantic vector artwork */}
         <span
