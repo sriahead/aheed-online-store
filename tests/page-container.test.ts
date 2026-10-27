@@ -103,7 +103,8 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(storefront)/account/lists/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/lists/[listId]/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/loyalty/page.tsx": { width: "standard", padY: "default" },
-  "app/(storefront)/account/orders/page.tsx": { width: "standard", padY: "default" },
+  // #1302 — a 1/2/3-column card grid; three columns do not fit a 1024px `standard` column.
+  "app/(storefront)/account/orders/page.tsx": { width: "wide", padY: "default" },
   "app/(storefront)/account/orders/[orderNumber]/page.tsx": {
     width: "standard",
     padY: "default",

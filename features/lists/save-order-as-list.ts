@@ -40,7 +40,11 @@ export async function saveOrderAsList(formData: FormData): Promise<void> {
       order.items.map((item) => ({ name: item.productName, quantity: item.quantity })),
     ),
   );
-  if (items.length === 0) redirect(`/account/orders/${orderNumber}?list=empty`);
+  // #1302 — the orders list posts here too and wants its own page back. `from` is only compared
+  // against a constant, never used as a redirect target, so it cannot become an open redirect.
+  const base =
+    formData.get("from") === "orders-list" ? "/account/orders" : `/account/orders/${orderNumber}`;
+  if (items.length === 0) redirect(`${base}?list=empty`);
 
   const submitted = formData.get("name");
   const name =
@@ -48,5 +52,5 @@ export async function saveOrderAsList(formData: FormData): Promise<void> {
     defaultListName(new Date());
 
   const saved = await getShoppingListService().save(name, items);
-  redirect(`/account/orders/${orderNumber}?list=${saved === null ? "capped" : "saved"}`);
+  redirect(`${base}?list=${saved === null ? "capped" : "saved"}`);
 }

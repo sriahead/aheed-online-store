@@ -6,6 +6,10 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **Orders list is a card grid with Reorder items and Save as list on each card; Quick Shop links to orders; the cart has Continue shopping** — `/account/orders` shows 1, 2 or 3 orders per row (wide container), each card keeping its detail link with the two actions beneath it; Save as list from the list returns to the list with a status message. Quick Shop gains a "Your orders" tile and a count-free intro line. `/cart` always links back to `/categories`. Storefront only, no schema change (issue `#1302`, spec `specs/2026-10-27-orders-grid-quickshop-cart/`).
+
 ### Fixed
 
 - **Staff users saw asset buttons that always failed** — `/staff/icons` is now read-only for STAFF; the mutation routes were already ADMIN-only (issue `#1288`).

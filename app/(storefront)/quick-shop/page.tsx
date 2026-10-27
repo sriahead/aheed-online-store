@@ -69,6 +69,14 @@ const TILES: {
     icon: "boxes",
     iconClass: "text-accent",
   },
+  // #1302 — appended last so the four tiles above keep the fixed order #1187 pinned.
+  {
+    href: "/account/orders",
+    label: "Your orders",
+    description: "Reorder a past order or save it as a list.",
+    icon: "package",
+    iconClass: "text-action",
+  },
 ] as const;
 
 export default function QuickShopPage() {
@@ -76,7 +84,7 @@ export default function QuickShopPage() {
     <PageContainer width="standard">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Quick Shop</h1>
       <p className="mb-6 text-sm text-primary-muted">
-        Four ways to fill your basket without browsing from scratch.
+        Quick ways to fill your basket without browsing from scratch.
       </p>
 
       {/* Same responsive card grid as `/account`: 2-column on desktop, single-column on mobile. */}

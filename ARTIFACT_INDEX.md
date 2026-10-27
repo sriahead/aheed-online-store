@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-27T15:34:27.181Z` · commit `3384ab2` · `289` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-27T18:13:41.496Z` · commit `babe236` · `290` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -278,6 +278,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Realistic 3D rendered icon suite, high-res asset delivery for Icon3D, and icon standards documentation (plan)](specs/2026-10-26-realistic-3d-icons/plan.md) | spec | 1.0.0 | 2026-10-26 | approved | internal | Deliver commercial-grade realistic 3D rendered icons matching the user reference, enhance Icon3D with image asset support and inline SVG fallback, upgrade navigation and trust touchpoints, and establish KMS icon standards. |
 | [Category Asset Management, Dedicated Icon Gallery & Realistic System Icons (plan)](specs/2026-10-27-category-asset-gallery-and-realistic-icons/plan.md) | spec | 1.0.0 | 2026-10-27 | approved | internal | Enable operators to generate, review, select, and delete assets within categories, launch a dedicated Icon & Asset Gallery at /staff/icons, and deliver realistic commercial system icons across all touchpoints. |
 | [Icon assets: deactivation, circular medallion, and the AI-replaceable icon inventory (plan)](specs/2026-10-27-icon-asset-activation-and-medallion/plan.md) | spec | 1.0.0 | 2026-10-27 | approved | internal | Let operators set an active category or icon asset back to inactive, render every icon and category tile inside one vendor-tinted circular medallion, and make every 3D and decorative/status icon replaceable with an AI-generated asset (#1288). |
+| [Orders grid, Quick Shop orders tile and cart Continue shopping (plan)](specs/2026-10-27-orders-grid-quickshop-cart/plan.md) | spec | 1.0.0 | 2026-10-27 | draft | internal | Adds a Your orders tile to Quick Shop, turns /account/orders into a 1/2/3-column card grid with Reorder items and Save as list on each card, and adds Continue shopping to /cart (#1302). |
 | [Running costs report for platform admins (plan)](specs/2026-10-27-running-costs-report/plan.md) | spec | 1.0.0 | 2026-10-27 | draft | internal | A read-only /staff/platform/costs page for platform admins: what the platform costs now, what is planned, what changes at renewal, and today's Workers AI usage, from a typed in-repo registry (#1295). |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.43.0 | 2026-10-22 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
