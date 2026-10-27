@@ -421,4 +421,49 @@ export const ICON_3D_DEFINITIONS: Record<string, Icon3DDefinition> = {
         <path d="m68 23 1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z" fill="#ffffff"/>
       </g>`,
   },
+
+  "view-shopper": {
+    id: "view-shopper",
+    name: "Shopper View",
+    category: "commerce",
+    purpose: "Role switcher customer shopping view icon",
+    recommendedAnim: "pop",
+    tags: ["shopper", "bag", "groceries", "view"],
+    render: (p, sid) =>
+      buildDefs(sid, p) +
+      `<g filter="url(#soft-${sid})">
+        <rect x="24" y="32" width="48" height="48" rx="6" fill="url(#gold-${sid})" stroke="#b45309" stroke-width="1.5"/>
+        <path d="M36 32 C36 22 60 22 60 32" fill="none" stroke="#78350f" stroke-width="2.5" stroke-linecap="round"/>
+      </g>`,
+  },
+
+  "view-staff": {
+    id: "view-staff",
+    name: "Staff View",
+    category: "commerce",
+    purpose: "Role switcher staff portal view icon",
+    recommendedAnim: "pop",
+    tags: ["staff", "counter", "store", "view"],
+    render: (p, sid) =>
+      buildDefs(sid, p) +
+      `<g filter="url(#soft-${sid})">
+        <rect x="20" y="38" width="56" height="42" rx="4" fill="url(#body-${sid})" stroke="${p.accentDark}" stroke-width="1.5"/>
+        <path d="M16 80 h64" stroke="${p.accentDark}" stroke-width="3" stroke-linecap="round"/>
+      </g>`,
+  },
+
+  "view-admin": {
+    id: "view-admin",
+    name: "Admin View",
+    category: "commerce",
+    purpose: "Role switcher admin portal view icon",
+    recommendedAnim: "pop",
+    tags: ["admin", "shield", "badge", "view"],
+    render: (p, sid) =>
+      buildDefs(sid, p) +
+      `<g filter="url(#soft-${sid})">
+        <path d="M48 18 L76 30 V50 C76 68 48 82 48 82 C48 82 20 68 20 50 V30 Z" fill="url(#metal-${sid})" stroke="#475569" stroke-width="2"/>
+        <circle cx="48" cy="46" r="10" fill="url(#gold-${sid})" stroke="#b45309" stroke-width="1.2"/>
+      </g>`,
+  },
 };

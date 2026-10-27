@@ -45,6 +45,7 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(admin)/staff/runbook/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/reports/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/categories/page.tsx": { width: "wide", padY: "default" },
+  "app/(admin)/staff/icons/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/promotions/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/brands/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/attributes/page.tsx": { width: "wide", padY: "default" },

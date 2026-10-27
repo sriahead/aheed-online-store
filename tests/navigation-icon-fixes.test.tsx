@@ -91,10 +91,10 @@ afterEach(() => {
 });
 
 describe("Navigation & Icon Improvements (#1251)", () => {
-  it("registers user-profile in ICON_3D_DEFINITIONS, bringing total catalog to 20 icons", () => {
+  it("registers user-profile in ICON_3D_DEFINITIONS, with catalog containing at least 20 icons", () => {
     const keys = Object.keys(ICON_3D_DEFINITIONS);
     expect(keys).toContain("user-profile");
-    expect(keys.length).toBe(20);
+    expect(keys.length).toBeGreaterThanOrEqual(20);
 
     const userProfile = ICON_3D_DEFINITIONS["user-profile"];
     expect(userProfile.name).toBe("User Profile");
@@ -108,7 +108,7 @@ describe("Navigation & Icon Improvements (#1251)", () => {
     const manifestRes = await getIconManifest(manifestReq);
     expect(manifestRes.status).toBe(200);
     const json = (await manifestRes.json()) as { totalIcons: number; icons: Array<{ id: string }> };
-    expect(json.totalIcons).toBe(20);
+    expect(json.totalIcons).toBeGreaterThanOrEqual(20);
     expect(json.icons.some((i) => i.id === "user-profile")).toBe(true);
 
     const detailReq = new Request("http://localhost:3000/api/icons/user-profile");

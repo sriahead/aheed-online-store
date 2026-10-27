@@ -5,9 +5,9 @@ audience: [store-admin, platform-admin, staff]
 type: guide
 status: approved
 version: "1.0.0"
-updated: 2026-10-26
+updated: 2026-10-27
 visibility: internal
-summary: "Technical image specifications, commercial studio photography standards, aspect ratios, file formats, and onboarding requirements for store categories and departments."
+summary: "Technical image specifications, commercial studio photography standards, aspect ratios, candidate asset review, dedicated icon gallery, and onboarding requirements for store categories and departments."
 tags: [catalogue, categories, photography, images, standards, onboarding, store-admin]
 related: [getting-started-onboarding, products-catalogue-guide, store-admin-tabs-guide]
 ---
@@ -59,18 +59,29 @@ Categories must depict authentic, high-quality representative products that inst
 
 ## 3. How to Configure & Generate Category Imagery
 
-### One-Click AI Image Generation (`/staff/categories/[id]`)
+### Candidate Asset Management (Generate, Review, Select, Delete)
 
-Store administrators can generate retail-grade category imagery on demand using the integrated Workers AI engine:
+Operators can generate multiple candidate assets for a single category to compare visual alternatives before deciding which to activate:
 
-1. Navigate to **Catalogue &rarr; Categories** and select any existing category.
-2. In the **Category Imagery & Icon** manager:
-   - Select your desired visual style:
-     - **Studio Product Photography:** Authentic, clean commercial grocery food photography (Tesco style).
-     - **Commercial 3D Rendered Icon:** Isometric 3D tactile rendered icon with soft studio lighting.
-   - Click **Auto-generate image**.
-3. The platform generates the image via Cloudflare Workers AI (`@cf/black-forest-labs/flux-1-schnell`), uploads the asset directly to object storage, and updates the category record.
-4. The preview updates instantly, and the relative key is automatically populated in the form field.
+1. In the **Category Imagery & Icon** panel on `/staff/categories/[id]`, click **Generate New Candidate** as many times as desired.
+2. All generated variations appear below in the **Generated Candidate Assets** gallery.
+3. Each candidate card displays:
+   - High-resolution preview thumbnail.
+   - Preset style badge (*Photo* or *3D Icon*).
+   - **Active Badge** on the currently assigned primary icon.
+   - **Select** button: Activates the candidate as the primary live image and updates `imageKey` immediately.
+   - **Delete** button: Permanently removes the candidate from object storage and catalog database.
+4. If an active image is deleted, the system automatically promotes the next available candidate or clears the field gracefully.
+
+### Centralized Icon & Asset Gallery (`/staff/icons`)
+
+To inspect and manage all visual assets across the entire store in one unified interface:
+
+1. Navigate to **Catalogue &rarr; Visual Asset Gallery** (`/staff/icons`).
+2. Use the tabs to filter between **All Assets**, **Category Imagery**, and **System Icons**.
+3. Search by department name, slot key, or storage key.
+4. Click any asset thumbnail to open the **High-Resolution Inspection Modal** featuring full image preview, storage key, creation timestamp, and dimensions.
+5. Use the **Quick Generator** bar at the top to generate new assets on-the-fly for any category or system icon slot (*delivery-van*, *storefront*, *quick-shop*, *user-profile*, *cart-floating*, *secure-checkout*, *order-updates*, etc.).
 
 ### Bulk Backfill Missing Category Images (`/staff/categories`)
 

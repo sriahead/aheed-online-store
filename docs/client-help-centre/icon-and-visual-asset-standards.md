@@ -4,10 +4,10 @@ title: "Icon & Visual Asset Standards Guide"
 audience: [store-admin, platform-admin, staff, dev]
 type: guide
 status: approved
-version: "1.0.0"
-updated: 2026-10-26
+version: "1.1.0"
+updated: 2026-10-27
 visibility: internal
-summary: "Technical specifications, commercial 3D rendering guidelines, lighting models, alpha transparency cutouts, and client onboarding requirements for store icons and UI visual assets."
+summary: "Technical specifications, photorealistic 3D rendering guidelines, lighting models, alpha transparency cutouts, dedicated icon gallery, and client onboarding requirements for store icons and UI visual assets."
 tags: [icons, 3d-icons, design-system, visual-assets, standards, onboarding, store-admin]
 related: [category-image-standards, getting-started-onboarding, products-catalogue-guide]
 ---
@@ -65,6 +65,9 @@ The table below documents the core 12 commercial 3D icons currently active acros
 | `order-updates` | SMS / Email order tracking alerts | Glossy golden notification bell tilted with teal message envelope and red ping dot. |
 | `postcode-search` | Delivery radius & address finder | Glossy red and chrome map pin standing on a miniature isometric street grid. |
 | `contact-follow` | Floating customer care hub | Overlapping glossy 3D chat speech bubbles in royal blue and cheerful cyan. |
+| `view-shopper` | Role Switcher (Shopper View) | Craft paper grocery shopping bag brimming with fresh vegetables and daily essentials. |
+| `view-staff` | Role Switcher (Staff View) | Modern supermarket cashier POS checkout terminal with scanner and receipt printer. |
+| `view-admin` | Role Switcher (Admin View) | Polished platinum security badge with administrative crest and golden master key. |
 
 ---
 

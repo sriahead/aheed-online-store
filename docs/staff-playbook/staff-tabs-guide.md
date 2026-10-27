@@ -185,6 +185,23 @@ department list in the header search bar. Products already assigned to a categor
 it through a rename.
 
 
+## Icon & Visual Asset Gallery — `/staff/icons`
+
+**Purpose:** Unified visual library to browse, generate, preview, select, and delete category imagery and UI system icons across the store.
+
+**Who can access:** Staff and store admins
+
+**What you can do:** View all generated candidate images for departments and system slots, generate new candidates with AI, inspect high-resolution previews, set active candidates, and permanently delete obsolete assets.
+
+**Typical workflow:** When refreshing department visuals or system touchpoints, navigate to `/staff/icons`, generate candidate styles, preview them in high resolution, activate the best image, and delete redundant candidates.
+
+**Important fields and filters:** Filter tabs permit switching between All Assets, Category Imagery, and System Icons. Search filters by department name or slot key. The Quick Generator allows picking between Category or System Icon, choosing the target department or slot, and choosing between Studio Photography and 3D Rendered Icon presets.
+
+**Common mistakes and limitations:** Deleting an active candidate automatically selects the next most recent candidate or clears the active slot. System slot assignments update touchpoint renders across the storefront instantly.
+
+**What happens after changes are saved:** Selected active images immediately update category cards, navigation scrollers, and touchpoints across the storefront with zero cache staleness.
+
+
 ## Brands — `/staff/brands`
 
 **Purpose:** The brands shoppers can filter by, such as Shan or TRS.
