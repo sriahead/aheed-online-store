@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.146.0"
+version: "1.147.0"
 updated: 2026-10-27
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -44,8 +44,9 @@ reconciliation. If overall project state did not materially change, leave this f
   quota`; the storefront home page returns 500. Staging is healthy (separate Neon project). Began ~2026-10-26
   (the daily `fill-product-images` run on `main` first failed then). Owner action in the Neon console; no
   alert exists. **No promotion can succeed until it is fixed** (`deploy-production` migrates).
-  - **Staging is ahead of `main`** (`#1272`–`#1305`) including two migrations,
-    `20261026150000_category_image_key` and `20261027080000_category_and_system_assets`.
+  - **Staging is ahead of `main`** (`#1272`–`#1309`) including three migrations,
+    `20261026150000_category_image_key`, `20261027080000_category_and_system_assets` and
+    `20261027120000_ai_feature_pricing_review`.
   - **`#1288` (icon deactivate + circular `IconMedallion` + AI-replaceable icon inventory) is MERGED TO
     STAGING (PR #1292, `204d86a`), not promoted.** Spec and build notes:
     `specs/2026-10-27-icon-asset-activation-and-medallion/`. ADR-008 is now v1.3.0 (Decision 6). Validated
@@ -71,6 +72,17 @@ reconciliation. If overall project state did not materially change, leave this f
     they are worth one staging pass by the owner. Follow-ups: `#1303` (detail page shows no
     empty-save message), `#1306` (Super Saver tab and slot markers need a slot length/type in the
     schema). Both issues are `In Review`.
+  - **`#1309` (`/staff/platform/costs` becomes the advisory Costs, Pricing & Business Model dashboard) is
+    MERGED TO STAGING (PR #1311, `01af208`), not promoted.** Spec, build notes and validation record:
+    `specs/2026-10-27-pricing-business-model/`. The registries are files edited by PR (`lib/running-costs.ts`,
+    `lib/pricing/*`), and the refresh buttons only *suggest*; the guide is the platform admin guide 1.4.0.
+    Open: R39 (refresh usage showing as "Pricing review" on `/staff/ai-usage`; **the dev database still
+    lacks the `PRICING_REVIEW` migration**, while staging has it), and the quarterly `pricing-review`
+    workflow, which does nothing until it reaches `main`. Owner decision `#1310` (ADR-005 Connect trigger).
+  - **Document commits carry forward on the local branch `docs/carry-forward-1309`**, which holds the
+    unpushed Document passes for `#1295`, `#1305` and `#1309`. Until 2026-10-27 the `#1295`/`#1305`
+    passes sat only on the local `feature/1305` branch and were missed when `#1309` branched from
+    `origin/staging`. **The next slice branches from `docs/carry-forward-1309`, not `origin/staging`.**
   - **`deploy-staging` can fail on a transient `npm ci`** (Prisma engine postinstall `ECONNRESET`, hit at
     `#1295`): every later step is skipped, so nothing deployed and no migration ran. After checking
     githubstatus.com, `gh run rerun <id> --failed` is enough.
