@@ -21,6 +21,7 @@ vi.mock("@/features/storefront/delivery", () => ({
 vi.mock("@/features/checkout/preview-code", () => ({ previewDiscountCode: vi.fn() }));
 vi.mock("@/features/checkout/slots", () => ({
   getAvailableSlotsForDate: vi.fn().mockResolvedValue([]),
+  getAvailableSlotsForWeek: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("next/link", () => ({

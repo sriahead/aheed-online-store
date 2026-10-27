@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { placeOrderAction, type CheckoutState } from "@/features/checkout/place-order";
 import { inputClass, labelClass } from "@/lib/form-classes";
@@ -758,14 +759,23 @@ export function CheckoutForm({
         )}
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        <Icon name="shield-check" className="h-4 w-4" />
-        {pending ? "Continuing to payment…" : "Continue to payment"}
-      </button>
+      {/* #1305 — a way back to the shop beside the primary action. An anchor, so it cannot submit. */}
+      <div className="flex flex-col-reverse gap-2 sm:flex-row">
+        <Link
+          href="/categories"
+          className="flex items-center justify-center rounded-2xl border border-primary px-4 py-3.5 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white sm:flex-1"
+        >
+          Continue shopping
+        </Link>
+        <button
+          type="submit"
+          disabled={pending}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-1"
+        >
+          <Icon name="shield-check" className="h-4 w-4" />
+          {pending ? "Continuing to payment…" : "Continue to payment"}
+        </button>
+      </div>
     </form>
   );
 }

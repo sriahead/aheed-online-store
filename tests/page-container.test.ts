@@ -103,8 +103,9 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(storefront)/account/lists/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/lists/[listId]/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/loyalty/page.tsx": { width: "standard", padY: "default" },
-  // #1302 — a 1/2/3-column card grid; three columns do not fit a 1024px `standard` column.
-  "app/(storefront)/account/orders/page.tsx": { width: "wide", padY: "default" },
+  // #1305 — back to `standard`, with 2 cards per row: cart, checkout and order history now share a
+  // width (`#1302` had made this `wide` for a third column).
+  "app/(storefront)/account/orders/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/orders/[orderNumber]/page.tsx": {
     width: "standard",
     padY: "default",
@@ -112,13 +113,15 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(storefront)/cart/page.tsx": { width: "standard", padY: "tight" },
   "app/(storefront)/icon-credits/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/products/[slug]/page.tsx": { width: "standard", padY: "default" },
-  // --- storefront: narrow
-  "app/(storefront)/checkout/page.tsx": { width: "narrow", padY: "tight" },
-  "app/(storefront)/checkout/[orderNumber]/page.tsx": { width: "narrow", padY: "default" },
+  // #1305 — checkout was `narrow` (672px), which squeezed its form + summary columns; it now shares
+  // the cart's width.
+  "app/(storefront)/checkout/page.tsx": { width: "standard", padY: "tight" },
+  "app/(storefront)/checkout/[orderNumber]/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/checkout/[orderNumber]/cancel/page.tsx": {
-    width: "narrow",
+    width: "standard",
     padY: "default",
   },
+  // --- storefront: narrow
   "app/(storefront)/shop-your-list/page.tsx": { width: "narrow", padY: "tight" },
   "app/(storefront)/orders/lookup/page.tsx": { width: "narrow", padY: "default" },
   "app/(storefront)/feedback/page.tsx": { width: "narrow", padY: "default" },

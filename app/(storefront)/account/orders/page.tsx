@@ -47,7 +47,7 @@ export default async function OrdersPage({
   });
 
   return (
-    <PageContainer width="wide">
+    <PageContainer width="standard">
       <h1 className="mb-6 text-2xl font-semibold text-primary">Your orders</h1>
 
       {/* #1302 — Save as list from this page comes back here, so say what happened. */}
@@ -90,7 +90,7 @@ export default async function OrdersPage({
           </Link>
         </div>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid gap-3 sm:grid-cols-2">
           {items.map((order) => (
             <li key={order.orderNumber} className="flex">
               {/* A form cannot sit inside a link, so the card is a wrapper: the details are the

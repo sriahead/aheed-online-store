@@ -55,7 +55,7 @@ export default async function CancelOrderPage({
   }
 
   return (
-    <PageContainer width="narrow">
+    <PageContainer width="standard">
       <div className="mb-6 flex items-center gap-3">
         <IconMedallion
           icon="circle-alert"

@@ -115,7 +115,7 @@ export default async function CheckoutPage() {
   });
 
   return (
-    <PageContainer width="narrow" padY="tight">
+    <PageContainer width="standard" padY="tight">
       <div className="mb-6 flex items-center gap-3.5 border-b border-black/10 pb-4">
         <IconMedallion icon3d="secure-checkout" size={44} decorative />
         <div>

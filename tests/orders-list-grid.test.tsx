@@ -70,12 +70,13 @@ afterEach(() => {
 });
 
 describe("#1302 orders list grid", () => {
-  it("lays orders out 1 / 2 / 3 columns (R4)", async () => {
+  it("lays orders out 1 column, then 2 from sm — never 3 (#1305 R7)", async () => {
     const { container } = await renderPage();
     const ul = container.querySelector("ul");
     expect(ul?.className).toContain("grid");
     expect(ul?.className).toContain("sm:grid-cols-2");
-    expect(ul?.className).toContain("xl:grid-cols-3");
+    expect(ul?.className).not.toContain("lg:grid-cols-3");
+    expect(ul?.className).not.toContain("xl:grid-cols-3");
   });
 
   it("keeps a detail link carrying the card's facts (R6)", async () => {
