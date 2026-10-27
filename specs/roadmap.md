@@ -4,7 +4,7 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.184.0"
+version: "1.185.0"
 updated: 2026-10-27
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P11, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, vendor onboarding P11.
@@ -1300,3 +1300,4 @@ is unrelated guest-cart retention, and no correctly-numbered issue for this exis
 | 2026-10-27 | **AI category image generation and bulk backfill (`#1283`) merged to staging** (PR #1284, merge `3d5bdcc`; `specs/2026-10-26-category-ai-image-generation/`). Issue `#1283` was closed and set to `Done` on the board although the slice is not in production. Row carried forward by `#1288` (2026-10-27). | Audit carry-forward |
 | 2026-10-27 | **Category asset management and `/staff/icons` gallery (`#1285`) merged to staging** (PR #1286, merge `1084ad5`; follow-up PR #1287, `e95b6ad`; `specs/2026-10-27-category-asset-gallery-and-realistic-icons/`). Carries migration `20261027080000_category_and_system_assets`, not yet promoted. `#1285` is closed and `Done` though it is staging-only. Row carried forward by `#1288` (2026-10-27). | Audit carry-forward |
 | 2026-10-27 | **KMS restructure slices `#1272`, `#1274`, `#1276` merged to staging without a `specs/` folder** (PRs #1273 `72c2d11`, #1275 `075734b`, #1277 `e93624c`). They skipped Gate 2, so `sdd:audit` cannot see them; recorded here so the gap is visible. Found at `#1288`'s Orient. | Process gap recorded |
+| 2026-10-27 | **Icon asset deactivation, circular `IconMedallion` and the AI-replaceable icon inventory (`#1288`) merged to staging** (PR #1292, merge `204d86a`; `specs/2026-10-27-icon-asset-activation-and-medallion/`). No schema change; `deploy-staging` succeeded and both staging hosts' `/api/health` report `204d86a`. Validation left R6, R29 and the R28 visual check unverified (dev DB lacked the previous slice's migration); tracked in the follow-up issue. `#1288` is `In Review`; not promoted, and production is down (`#1289`). | Staging merge |

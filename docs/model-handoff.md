@@ -46,16 +46,17 @@ reconciliation. If overall project state did not materially change, leave this f
   alert exists. **No promotion can succeed until it is fixed** (`deploy-production` migrates).
   - **Staging is 9 commits ahead of `main`** (`#1272`–`#1287`) including two migrations,
     `20261026150000_category_image_key` and `20261027080000_category_and_system_assets`.
-  - **`#1288` (icon deactivate + circular `IconMedallion` + AI-replaceable icon inventory) is built on
-    `feature/1288-icon-asset-medallion`, not yet validated or shipped.** Spec and build notes:
-    `specs/2026-10-27-icon-asset-activation-and-medallion/`. ADR-008 is now v1.3.0 (Decision 6).
+  - **`#1288` (icon deactivate + circular `IconMedallion` + AI-replaceable icon inventory) is MERGED TO
+    STAGING (PR #1292, `204d86a`), not promoted.** Spec and build notes:
+    `specs/2026-10-27-icon-asset-activation-and-medallion/`. ADR-008 is now v1.3.0 (Decision 6). Validated
+    except R6, R29 and the R28 visual check (dev DB lacked the `#1285` migration); those are tracked in
+    the follow-up issue, and the issue is `In Review`, not `Done`.
   - **Board drift found:** `#1283` and `#1285` are closed and `Done` though staging-only; `#1272`–`#1280`
     are open in `Backlog` though merged to staging. KMS slices `#1272/#1274/#1276` merged with no `specs/`
     folder (recorded in the roadmap change log). Reconciling the board is an owner call.
   - **`CHANGELOG.md` was a binary blob to git** (a UTF-16 row appended long ago added 113 NUL bytes, so
-    `.gitattributes` never normalised it and it stayed CRLF). Fixed on the `#1288` branch; until that
-    merges, any `CHANGELOG.md` edit still shows a whole-file diff. Write CHANGELOG entries with the Edit
-    tool, never PowerShell — backtick escapes (`` `b``, `` `a``, `` `f``) had corrupted two entries.
+    `.gitattributes` never normalised it and it stayed CRLF). Fixed and merged with `#1288` (PR #1292); the
+    file is LF text now. Write CHANGELOG entries with the Edit tool, never PowerShell — backtick escapes (`` `b``, `` `a``, `` `f``) had corrupted two entries.
 
 - **2026-10-24, `#1223` icon system (all phases) & `#1239` colourful Noto Emoji icons: PROMOTED TO PRODUCTION (`main`, `bf4984a`).**
   Promotion PR #1241 ("Promote colourful Noto Emoji icon system to production (#1223, #1239)", merge `bf4984a`, `staging -> main`, 2026-10-24)

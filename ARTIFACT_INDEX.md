@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-27T13:41:09.174Z` · commit `2a4ecff` · `288` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-27T14:41:35.863Z` · commit `204d86a` · `288` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -289,7 +289,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [ADR-008 — Icon system: semantic registry, build-time Iconify data, three tiers](specs/decisions/ADR-008-icon-system.md) | adr | 1.3.0 | 2026-10-27 | approved | internal | Icons are addressed by semantic name through a registry and rendered by one component from build-time Iconify data: Lucide for functional icons, Noto Emoji for decorative and status. Since 1288 a vendor may override Noto and 3D icons with AI art, only inside the circular medallion. |
 | [Design System](specs/design-system.md) | doc | 1.26.0 | 2026-10-27 | approved | internal | The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases. |
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
-| [Roadmap](specs/roadmap.md) | doc | 1.184.0 | 2026-10-27 | approved | internal | Master backlog and phase sequencing (M0, P0-P11, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, vendor onboarding P11. |
+| [Roadmap](specs/roadmap.md) | doc | 1.185.0 | 2026-10-27 | approved | internal | Master backlog and phase sequencing (M0, P0-P11, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, vendor onboarding P11. |
 | [SDD Workflow](specs/sdd-workflow.md) | doc | 2.51.0 | 2026-10-23 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands. |
 | [Tech Stack](specs/tech-stack.md) | doc | 1.6.0 | 2026-10-22 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
 
