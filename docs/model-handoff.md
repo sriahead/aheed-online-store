@@ -51,6 +51,13 @@ reconciliation. If overall project state did not materially change, leave this f
     `specs/2026-10-27-icon-asset-activation-and-medallion/`. ADR-008 is now v1.3.0 (Decision 6). Validated
     except R6, R29 and the R28 visual check (dev DB lacked the `#1285` migration); those are tracked in
     the follow-up issue, and the issue is `In Review`, not `Done`.
+  - **`#1295` (platform-admin running costs report at `/staff/platform/costs`) is BUILT on
+    `feature/1295-running-costs-report`, not validated or shipped.** Spec and build notes:
+    `specs/2026-10-27-running-costs-report/`. Platform-admin pages live under
+    `app/(admin)/staff/platform/*` and register once in `components/staff/platform-nav-items.ts`
+    (`/staff/errors` is the only special case). The branch also carries the unpushed `#1288` Document
+    commit. Follow-ups: `#1296` alerts, `#1297` provider usage APIs, `#1298` owner data updates after the
+    domain purchases, `#1299` Resend config and `WORKERS_AI_PLAN` mismatch with Workers Paid.
   - **Board drift found:** `#1283` and `#1285` are closed and `Done` though staging-only; `#1272`–`#1280`
     are open in `Backlog` though merged to staging. KMS slices `#1272/#1274/#1276` merged with no `specs/`
     folder (recorded in the roadmap change log). Reconciling the board is an owner call.
