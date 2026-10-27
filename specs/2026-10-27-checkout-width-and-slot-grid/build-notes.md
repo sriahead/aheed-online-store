@@ -68,3 +68,16 @@ Otherwise none.
 - **Not independent:** built and written on Sonnet 5.5, not Opus 5, in one session.
 - `getAvailableSlotsForWeek` makes up to 7 parallel lookups (2 queries each) per page view; fine at the
   current scale, and a range query is the follow-up if it ever matters. Not built.
+
+## Fix after validation (R28)
+
+Validation reverted one change at a time and found that removing `setSelected(null)` from `goToPage`
+(paging no longer clears the selection) left all 16 `tests/slot-picker-grid.test.tsx` tests green. The
+code was right; the test was weak. The old paging test asserted `fulfilmentSlotId` was absent after
+paging, which is true regardless, because the old cell's radio is not rendered on the new page.
+
+Fix, test only: the paging test now also asserts `fulfilmentDate` returns to today after paging
+forward (a stale selection would still send its own day), then pages back and asserts no radio is
+checked and the form data is back to defaults. Re-checked by reverting `setSelected(null)` again: the
+test now fails; restored, it passes. No source, spec or CHANGELOG change, because observable behaviour
+did not change.

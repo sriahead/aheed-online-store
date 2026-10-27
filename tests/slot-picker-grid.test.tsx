@@ -222,8 +222,26 @@ describe("#1305 slot grid: paging and fetching", () => {
     });
 
     expect(formData().get("fulfilmentSlotId")).toBeNull();
+    // The off-screen choice must be gone, not merely not rendered: a stale selection would still
+    // send its day (the slot radio is simply absent from this page, so the slot id alone proves
+    // nothing).
+    expect(formData().get("fulfilmentDate")).toBe("2026-10-27");
     expect((screen.getByLabelText("Previous week") as HTMLButtonElement).disabled).toBe(false);
     expect((screen.getByLabelText("Next week") as HTMLButtonElement).disabled).toBe(true);
+
+    // And paging back must not resurrect it.
+    fireEvent.click(screen.getByLabelText("Previous week"));
+    await waitFor(() => {
+      expect(document.querySelectorAll('thead th[scope="col"]')[1].textContent?.trim()).toBe(
+        "Tue 27",
+      );
+    });
+    const checked = document.querySelectorAll<HTMLInputElement>(
+      'input[name="fulfilmentSlotId"]:checked',
+    );
+    expect(checked).toHaveLength(0);
+    expect(formData().get("fulfilmentSlotId")).toBeNull();
+    expect(formData().get("fulfilmentDate")).toBe("2026-10-27");
   });
 
   it("asks for each page's days once (R21)", async () => {
