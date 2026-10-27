@@ -17,6 +17,13 @@ every branch merges.
 
 ### Added
 
+- **Category asset management, dedicated icon gallery, and realistic commercial system icons** (issue `#1285`; `specs/2026-10-27-category-asset-gallery-and-realistic-icons/`).
+  - **Category Asset Management Workflow:** Upgraded `CategoryImageManager.tsx` on `/staff/categories/[id]` enabling operators to generate multiple candidate visual assets, review them side-by-side in a responsive thumbnail grid, select the active live asset, and permanently delete redundant variations.
+  - **Dedicated Icon & Visual Asset Gallery:** Built centralized staff panel at `/staff/icons` (`IconGalleryClient.tsx` & `StaffIconsPage`) providing cross-category and system slot inspection, search filtering, high-resolution modal preview, activation, and one-click asset generation metered by Cloudflare Workers AI.
+  - **Relational Asset Ledger (`CategoryAsset`):** Added `CategoryAsset` Postgres model and hand-authored non-destructive migration `20261027080000_category_and_system_assets` with data backfill linking existing category images.
+  - **Photorealistic Commercial System Icons:** Generated, feathered, and optimized high-resolution WebP and PNG assets for 10 system touchpoints: `delivery-van`, `storefront`, `quick-shop`, `user-profile`, `cart-add`, `secure-checkout`, `order-updates`, `view-shopper`, `view-staff`, and `view-admin`. Registered in `Icon3D.tsx` and wired into `LocationControl.tsx` and `ViewSwitcher.tsx`.
+  - **Operator Playbook & Visual Standards:** Documented `/staff/icons` across all 7 required sections in `docs/staff-playbook/staff-tabs-guide.md` and updated `docs/client-help-centre/category-image-standards.md` and `icon-and-visual-asset-standards.md`.
+
 - **AI image generation for category icons and bulk catalogue backfill** (issue `#1283`; `specs/2026-10-26-category-ai-image-generation/`).
   - **One-Click Category AI Image Generation:** Added `CategoryImageManager.tsx` with style selector (`photo` vs `3d-icon`), real-time image preview via `ImageWithFallback`, and one-click auto-generation backed by Cloudflare Workers AI (`@cf/black-forest-labs/flux-1-schnell`) and R2 object storage.
   - **Bulk Catalogue Backfill:** Added `BackfillCategoryImagesButton.tsx` and `/api/admin/category-images/backfill` to batch-generate imagery for all categories missing photos/icons up to 5 per invocation with budget guardrails.

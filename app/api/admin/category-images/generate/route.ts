@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { runCategoryImagePipeline } from "@/lib/category-image-pipeline";
+import { runCategoryImagePipeline, runSlotAssetPipeline } from "@/lib/category-image-pipeline";
 import { describeAiBudgetRefusal } from "@/lib/ai-meter";
 import { getVendorAiMeter } from "@/lib/ai-meter-service";
 import type { CategoryImageStyle } from "@/lib/category-image";
@@ -13,17 +13,24 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { categoryId?: unknown; style?: unknown };
+    const body = (await request.json()) as {
+      categoryId?: unknown;
+      slot?: unknown;
+      style?: unknown;
+    };
     const categoryId = typeof body.categoryId === "string" ? body.categoryId.trim() : "";
-    if (!categoryId) {
+    const slot = typeof body.slot === "string" ? body.slot.trim() : "";
+
+    if (!categoryId && !slot) {
       return NextResponse.json({ error: "Missing categoryId" }, { status: 400 });
     }
 
     const style: CategoryImageStyle = body.style === "3d-icon" ? "3d-icon" : "photo";
 
-    const result = await runCategoryImagePipeline(categoryId, style, auth.vendorId, {
-      aiMeter: getVendorAiMeter(auth.vendorId, "PRODUCT_IMAGE"),
-    });
+    const aiMeter = getVendorAiMeter(auth.vendorId, "PRODUCT_IMAGE");
+    const result = categoryId
+      ? await runCategoryImagePipeline(categoryId, style, auth.vendorId, { aiMeter })
+      : await runSlotAssetPipeline(slot, style, auth.vendorId, { aiMeter });
 
     if (result && "budgetRefused" in result) {
       return NextResponse.json(
@@ -33,20 +40,20 @@ export async function POST(request: Request) {
     }
 
     if (!result) {
-      return NextResponse.json(
-        { error: "Failed to generate or persist category image" },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "Failed to generate or persist asset" }, { status: 500 });
     }
 
     revalidatePath("/staff/categories");
-    revalidatePath(`/staff/categories/${categoryId}`);
+    if (categoryId) {
+      revalidatePath(`/staff/categories/${categoryId}`);
+    }
+    revalidatePath("/staff/icons");
     revalidatePath("/categories");
     revalidatePath("/");
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error("Category image generation error:", error);
+    console.error("Category/slot image generation error:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal error" },
       { status: 500 },

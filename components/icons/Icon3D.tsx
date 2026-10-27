@@ -80,6 +80,18 @@ export const ICON_3D_IMAGE_ASSETS: Partial<Record<Icon3DName, { png: string; web
     png: "/images/icons-3d/contact-follow.png",
     webp: "/images/icons-3d/contact-follow.webp",
   },
+  "view-shopper": {
+    png: "/images/icons-3d/view-shopper.png",
+    webp: "/images/icons-3d/view-shopper.webp",
+  },
+  "view-staff": {
+    png: "/images/icons-3d/view-staff.png",
+    webp: "/images/icons-3d/view-staff.webp",
+  },
+  "view-admin": {
+    png: "/images/icons-3d/view-admin.png",
+    webp: "/images/icons-3d/view-admin.webp",
+  },
 };
 
 /**
