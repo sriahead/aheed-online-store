@@ -6,6 +6,19 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **`/staff/platform/costs` becomes "Costs, Pricing & Business Model"**:
+  - **Costs**: 17 items grouped as fixed, usage-based and development tools, with an Owner to confirm list.
+  - **Competitors**: 10 competitors read from their own pricing pages on 2026-10-27, with source links. Unreadable or unpublished ones show no figures.
+  - **Proposed pricing**: four plans, each labelled Proposal.
+  - **Profitability**: break-even and at-zero-sales scenarios, converted at a dated Bank of England rate. No sales, order or vendor-count forecasts.
+  - **Business models**: six models with a written recommendation, which warns when the numbers disagree with it or its review date has passed.
+  - **Refresh Costs / Refresh Recommendations**: fetch only the registries' own pricing pages and use Workers AI to show unconfirmed, unsaved suggestions. Metered as the new `PRICING_REVIEW` AI feature, which needs one enum migration.
+  - **Export and review**: CSV export per section, Print / Save as PDF, and a quarterly `pricing-review` workflow that opens one reminder issue.
+
+  Advisory only: nothing changes live prices (issue `#1309`, spec `specs/2026-10-27-pricing-business-model/`).
+
 ### Changed
 
 - **Checkout slot picker is a 7-day grid; Continue shopping beside Proceed to checkout and Continue to payment; cart, checkout and orders share the `standard` width; orders show 2 per row** — the slot picker now shows a week at a time (days across, time ranges down in Morning / Afternoon / Evening, Free / N left / Full cells, previous and next week arrows) and submits the same `fulfilmentSlotId` and `fulfilmentDate`; one new server action, `getAvailableSlotsForWeek`, fetches a week through the existing per-day lookup. Cart header Continue shopping and Smart Lists are matching pill buttons. The cart drawer is unchanged. Checkout moves from `narrow` to `standard`, so `specs/design-system.md` lists it there. Storefront only, no schema change (issue `#1305`, spec `specs/2026-10-27-checkout-width-and-slot-grid/`).

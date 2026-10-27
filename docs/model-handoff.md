@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.145.0"
+version: "1.146.0"
 updated: 2026-10-27
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -2109,6 +2109,9 @@ These are separate from, not a silent reordering of, the owner's High priorities
 - The raw-SQL exception has no mechanical single-file enforcement (#676).
 - Workers Logs remain at 100 percent sampling and must be reviewed before real traffic.
 - The platform remains merchant of record for all vendors until ADR-005's Connect trigger is met.
+  **Selling the platform to third-party stores is that trigger** (`#1310`, owner decision, filed
+  2026-10-27 while building `#1309`'s pricing dashboard, whose advisory recommendation of a hybrid
+  fee-plus-commission plan assumes the platform keeps paying card fees until then).
 
 ## Requires Live Access
 
