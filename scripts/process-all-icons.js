@@ -185,6 +185,18 @@ async function main() {
       name: "contact-follow",
       src: "C:/Users/User/.gemini/antigravity-cli/brain/edfde53c-800d-4f00-89e9-216a3a6b170a/chat_bubbles_icon_1793050092697.jpg",
     },
+    {
+      name: "view-shopper",
+      src: "C:/Users/User/.gemini/antigravity-cli/brain/edfde53c-800d-4f00-89e9-216a3a6b170a/grocery_paper_bag_1793088499881.jpg",
+    },
+    {
+      name: "view-staff",
+      src: "C:/Users/User/.gemini/antigravity-cli/brain/edfde53c-800d-4f00-89e9-216a3a6b170a/supermarket_cashier_checkout_desk_png_1793088506479.jpg",
+    },
+    {
+      name: "view-admin",
+      src: "C:/Users/User/.gemini/antigravity-cli/brain/edfde53c-800d-4f00-89e9-216a3a6b170a/platinum_security_badge_admin_key_clean_1793088529368.jpg",
+    },
   ];
 
   for (const item of genIcons) {

@@ -8,6 +8,12 @@ every branch merges.
 
 ### Fixed
 
+- **Dynamic slot asset activation across storefront touchpoints and themed 3D isometric prompt generation** (issue \#1285\).
+  - **Dynamic Slot Asset Activation:** Created \ActiveSlotIconsProvider\ supplying active system icon assets from the \CategoryAsset\ relational ledger directly into \<Icon3D />\. Now, activating or deactivating candidate assets in \/staff/icons\ dynamically propagates to the live storefront header, view switcher, trust strip cards, and floating cart drawer.
+  - **Themed 3D Isometric Prompt Engineering:** Refined \uildSlotAssetPrompt\ in \lib/category-image.ts\ to align strictly with the store's visual identity (emerald green \#059669\, royal navy \#1E3A8A\, warm gold \#F59E0B\) and isolated 3D app icon specifications, preventing opaque photographic backgrounds or cluttered supermarket scenes.
+  - **Department Scroller on Landing Page:** Rendered \<DepartmentScroller />\ on the storefront home page with prioritized high-fidelity category imagery ahead of procedural vector glyphs.
+  - **Alpha-Transparent 3D Icon Suite:** Reprocessed all 14 commercial 3D icons in \public/images/icons-3d/\ with feathered alpha edge cutouts, ensuring crisp rendering without white bounding boxes across light, dark, and brand-tinted surfaces.
+
 - **Escape raw angle brackets in 3D icon spec files preventing MDX compilation errors in internal KMS** (issue `#1280`).
 
 - **Resolve broken 404 links, drill-down navigation to portal home, and configurable platform branding** (issue `#1276`).
