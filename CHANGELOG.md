@@ -8,6 +8,8 @@ every branch merges.
 
 ### Changed
 
+- **Checkout slot picker is a 7-day grid; Continue shopping beside Proceed to checkout and Continue to payment; cart, checkout and orders share the `standard` width; orders show 2 per row** — the slot picker now shows a week at a time (days across, time ranges down in Morning / Afternoon / Evening, Free / N left / Full cells, previous and next week arrows) and submits the same `fulfilmentSlotId` and `fulfilmentDate`; one new server action, `getAvailableSlotsForWeek`, fetches a week through the existing per-day lookup. Cart header Continue shopping and Smart Lists are matching pill buttons. The cart drawer is unchanged. Checkout moves from `narrow` to `standard`, so `specs/design-system.md` lists it there. Storefront only, no schema change (issue `#1305`, spec `specs/2026-10-27-checkout-width-and-slot-grid/`).
+
 - **Orders list is a card grid with Reorder items and Save as list on each card; Quick Shop links to orders; the cart has Continue shopping** — `/account/orders` shows 1, 2 or 3 orders per row (wide container), each card keeping its detail link with the two actions beneath it; Save as list from the list returns to the list with a status message. Quick Shop gains a "Your orders" tile and a count-free intro line. `/cart` always links back to `/categories`. Storefront only, no schema change (issue `#1302`, spec `specs/2026-10-27-orders-grid-quickshop-cart/`).
 
 ### Fixed

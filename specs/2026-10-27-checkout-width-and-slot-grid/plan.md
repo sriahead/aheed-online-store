@@ -81,5 +81,4 @@ a day strip plus a list.
 - **A "Continue shopping" link on the order confirmation page**: it already has one (`/categories`).
 - **Hiding Continue shopping when the cart is below the vendor minimum**: not requested.
 
-**Open items carried forward:** the 4hr / Super Saver slot type is the only one; it will need an issue
-if the owner wants it. None is filed now because it is not yet a decision, only a possibility.
+**Open items carried forward:** the 4hr / Super Saver slot type and the slot markers are tracked as `#1306`; it needs an owner decision before a spec.
