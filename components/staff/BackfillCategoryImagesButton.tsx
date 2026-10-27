@@ -9,13 +9,21 @@ export interface BackfillCategoryImagesButtonProps {
   missingCount?: number;
 }
 
+function useOptionalRouter() {
+  try {
+    return useRouter();
+  } catch {
+    return null;
+  }
+}
+
 export function BackfillCategoryImagesButton({
   missingCount = 0,
 }: BackfillCategoryImagesButtonProps) {
   const [loading, setLoading] = useState(false);
   const [style, setStyle] = useState<CategoryImageStyle>("photo");
   const [result, setResult] = useState<{ tone: "ok" | "error"; message: string } | null>(null);
-  const router = useRouter();
+  const router = useOptionalRouter();
 
   async function handleBackfill() {
     setLoading(true);
@@ -47,7 +55,7 @@ export function BackfillCategoryImagesButton({
         tone: "ok",
         message: data.message || `Processed ${data.processed ?? 0} category images.`,
       });
-      router.refresh();
+      router?.refresh();
     } catch (cause) {
       setResult({
         tone: "error",

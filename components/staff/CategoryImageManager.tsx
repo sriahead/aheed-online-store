@@ -14,6 +14,14 @@ export interface CategoryImageManagerProps {
   onImageKeyChange?: (newKey: string) => void;
 }
 
+function useOptionalRouter() {
+  try {
+    return useRouter();
+  } catch {
+    return null;
+  }
+}
+
 export function CategoryImageManager({
   categoryId,
   categoryName,
@@ -26,7 +34,7 @@ export function CategoryImageManager({
   const [error, setError] = useState<string | null>(null);
   const [currentUrl, setCurrentUrl] = useState<string | null>(imageUrl);
   const [currentKey, setCurrentKey] = useState<string | null>(imageKey);
-  const router = useRouter();
+  const router = useOptionalRouter();
 
   async function handleGenerate() {
     if (!categoryId) {
@@ -60,7 +68,7 @@ export function CategoryImageManager({
         if (onImageKeyChange) {
           onImageKeyChange(data.imageKey);
         }
-        router.refresh();
+        router?.refresh();
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
