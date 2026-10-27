@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-26T21:57:33.121Z` · commit `e51b42c` · `285` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-26T22:52:47.381Z` · commit `13d1029` · `286` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -273,6 +273,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Platform Admin role and platform-wide management suite (plan)](specs/2026-10-25-platform-admin-role-and-management/plan.md) | spec | 1.0.0 | 2026-10-25 | approved | internal | Implement a dedicated Platform Admin role, canonical requirePlatformAdmin() server-side gate, dedicated platform administration navigation and dashboard suite, cross-vendor security enforcement, and storefront configuration dashboard role alignment. |
 | [Staff Panel Stock File Upload & Catalogue Import (plan)](specs/2026-10-25-staff-catalogue-import/plan.md) | spec | 1.0.0 | 2026-10-25 | draft | internal | Spec for staff panel stock file upload at /staff/products/import: two-phase validate/preview and apply workflow, browser/streaming grid parsing keeping @e965/xlsx out of worker bundle, ADR-007 hidden & UNKNOWN stock invariants, and audit logging. |
 | [Storefront Configuration Dashboard and Vendor Onboarding Readiness (plan)](specs/2026-10-25-storefront-configuration-dashboard/plan.md) | spec | 1.0.0 | 2026-10-25 | draft | internal | Plan for issue #1267: in-app Storefront Configuration Dashboard at /staff/onboarding and categorized onboarding audit benchmarked against aheedfoodcentre.nocaped.com, featuring live completion tracking, validation rules, deep links, and readiness status. |
+| [AI Image Generation for Category Icons & Departments (plan)](specs/2026-10-26-category-ai-image-generation/plan.md) | spec | 1.0.0 | 2026-10-26 | approved | internal | Bring full parity to category icons and photography by adding one-click AI generation and bulk backfill powered by Cloudflare Workers AI and R2 storage. |
 | [Realistic product photography for categories, Category.imageKey schema, and dynamic image URLs (plan)](specs/2026-10-26-category-realistic-photography/plan.md) | spec | 1.0.0 | 2026-10-26 | approved | internal | Add Category.imageKey schema column and migration, replace generic icons with realistic commercial product photography across categories, deliver image URLs dynamically via APIs, and establish onboarding standards. |
 | [Realistic 3D rendered icon suite, high-res asset delivery for Icon3D, and icon standards documentation (plan)](specs/2026-10-26-realistic-3d-icons/plan.md) | spec | 1.0.0 | 2026-10-26 | approved | internal | Deliver commercial-grade realistic 3D rendered icons matching the user reference, enhance Icon3D with image asset support and inline SVG fallback, upgrade navigation and trust touchpoints, and establish KMS icon standards. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.43.0 | 2026-10-22 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |

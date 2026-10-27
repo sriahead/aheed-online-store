@@ -17,6 +17,12 @@ every branch merges.
 
 ### Added
 
+- **AI image generation for category icons and bulk catalogue backfill** (issue `#1283`; `specs/2026-10-26-category-ai-image-generation/`).
+  - **One-Click Category AI Image Generation:** Added `CategoryImageManager.tsx` with style selector (`photo` vs `3d-icon`), real-time image preview via `ImageWithFallback`, and one-click auto-generation backed by Cloudflare Workers AI (`@cf/black-forest-labs/flux-1-schnell`) and R2 object storage.
+  - **Bulk Catalogue Backfill:** Added `BackfillCategoryImagesButton.tsx` and `/api/admin/category-images/backfill` to batch-generate imagery for all categories missing photos/icons up to 5 per invocation with budget guardrails.
+  - **Standardized Prompt Engineering:** Authored `lib/category-image.ts` defining distinct prompt formulas for Tesco-model commercial grocery studio photography and clean 3D isometric tactile icons.
+  - **Client Help Centre Documentation:** Updated `docs/client-help-centre/category-image-standards.md` detailing single and bulk generation workflows, style modes, and storage key conventions.
+
 - **Realistic 3D rendered icon suite, high-resolution asset delivery for Icon3D, and visual standards documentation** (issue `#1280`; `specs/2026-10-26-realistic-3d-icons/`).
   - **Photorealistic Commercial 3D Rendered Suite:** Extracted and generated 12 commercial 3D rendered icons with studio lighting, clay-smooth tactile surfaces, and true alpha transparency: `storefront`, `quick-shop`, `user-profile`, `rewards-gift`, `rewards-coin`, `cart-add`, `delivery-van`, `halal-certified`, `secure-checkout`, `order-updates`, `postcode-search`, and `contact-follow`.
   - **Dual-Format Asset Optimization:** Saved 24 lightweight WebP and PNG assets under `public/images/icons-3d/` (512x512 canvas, 432x432 safe zone, <65KB per asset).
