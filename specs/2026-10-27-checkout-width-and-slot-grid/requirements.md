@@ -94,7 +94,9 @@ R23. The table is inside an element with `overflow-x-auto`, and its first column
      `sticky` with `left-0`; the page has no horizontal scroll at a 390px viewport (browser check).
 R24. The picker no longer contains the text "Select Date" or "Select Time Slot".
 R25. `SlotPicker.tsx` and `lib/slot-grid.ts` contain none of "Christmas", "Super Saver", "Book Now",
-     "truck", and no raw colour literal (`#` followed by 3 to 6 hex digits, or `bg-[#`).
+     "truck", and no raw colour literal (a quoted `#` followed by 3 to 8 hex digits, or an
+     arbitrary value beginning `-[#`). An issue reference in a comment such as `#1305` is not a
+     colour literal.
 R26. Every icon the picker uses exists in `components/icons/registry.ts`, and `git diff
      origin/staging -- components/icons` is empty.
 
