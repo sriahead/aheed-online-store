@@ -37,6 +37,7 @@ export function CartContents({
   localityName,
   cdnBaseUrl,
   showViewCartLink = false,
+  continueShoppingHref,
 }: {
   summary: CartSummary;
   method: FulfilmentMethodChoice;
@@ -45,6 +46,8 @@ export function CartContents({
   localityName: string;
   cdnBaseUrl: string;
   showViewCartLink?: boolean;
+  /** #1305 — when set, a Continue shopping link sits beside Proceed to checkout. The drawer omits it. */
+  continueShoppingHref?: string;
 }) {
   const progress = fulfilmentProgress(summary.subtotalPence, {
     method,
@@ -239,7 +242,22 @@ export function CartContents({
           </div>
           {/* The cart deliberately stops at a subtotal — delivery fee and total are
               computed at checkout (P3b) so the two can never disagree. */}
-          <CheckoutLink />
+          {continueShoppingHref ? (
+            // #1305 — /cart only. Stacked with checkout on top below `sm`, side by side from `sm`.
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <Link
+                href={continueShoppingHref}
+                className="flex items-center justify-center rounded-2xl border border-primary px-4 py-3 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white sm:flex-1"
+              >
+                Continue shopping
+              </Link>
+              <div className="sm:flex-1">
+                <CheckoutLink />
+              </div>
+            </div>
+          ) : (
+            <CheckoutLink />
+          )}
 
           {showViewCartLink && (
             <Link

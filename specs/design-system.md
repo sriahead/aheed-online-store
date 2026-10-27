@@ -525,8 +525,8 @@ its own `mx-auto … max-w-… px-4`; `tests/page-container.test.ts` fails if it
 | `width` | Class | For |
 |---|---|---|
 | `wide` | `max-w-7xl` (1280) | Matches the chrome exactly. Dashboards, lists, tables, product grids, browse. |
-| `standard` | `max-w-5xl` (1024) | Account pages, settings, record detail. |
-| `narrow` | `max-w-2xl` (672) | Forms, auth, checkout, reading copy. |
+| `standard` | `max-w-5xl` (1024) | Account pages, settings, record detail, the cart and checkout (#1305). |
+| `narrow` | `max-w-2xl` (672) | Forms, auth, reading copy. |
 
 **All three render `mx-auto w-full px-4`, and that shared gutter is the point** — not the
 `max-width`. A `narrow` page still shares a left edge and a gutter with the header; it just stops

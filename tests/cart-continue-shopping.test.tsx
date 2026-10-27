@@ -51,6 +51,27 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+describe("#1305 /cart header pills (R1, R2)", () => {
+  it.each([
+    ["an empty cart", []],
+    ["a cart with lines", [{ productId: "p1", name: "Whole Milk 2L", quantity: 1 }]],
+  ])("renders both actions as the same pill for %s", async (_label, lines) => {
+    getSummary.mockResolvedValue({ lines, mergePending: false });
+    const { container } = render(await CartPage({ searchParams: Promise.resolve({}) }));
+    const named = (text: string) =>
+      [...container.querySelectorAll("a")].find((a) => a.textContent?.trim() === text);
+    const keep = named("Continue shopping");
+    const lists = named("Smart Lists");
+
+    expect(keep?.getAttribute("href")).toBe("/categories");
+    expect(lists?.getAttribute("href")).toBe("/shop-your-list");
+    expect(keep?.className).toBe(lists?.className);
+    for (const token of ["rounded-full", "border", "border-primary", "text-primary", "font-bold"]) {
+      expect(keep?.className.split(/\s+/)).toContain(token);
+    }
+  });
+});
+
 describe("#1302 /cart Continue shopping (R13)", () => {
   it.each([
     ["an empty cart", []],

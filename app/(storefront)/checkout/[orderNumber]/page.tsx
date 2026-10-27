@@ -45,7 +45,7 @@ export default async function OrderConfirmationPage({
   if (!order) redirect(`/orders/lookup?orderNumber=${encodeURIComponent(orderNumber)}`);
 
   return (
-    <PageContainer width="narrow">
+    <PageContainer width="standard">
       {/* Status comes from the DB on every request — never from the fact that the
           shopper arrived at the provider's success_url. That redirect routinely
           races the webhook, and a closed tab means it never happens at all. */}
