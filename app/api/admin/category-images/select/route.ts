@@ -14,7 +14,12 @@ export async function POST(request: Request) {
       assetId?: unknown;
       id?: unknown;
     };
-    const assetId = typeof body.assetId === "string" ? body.assetId : typeof body.id === "string" ? body.id : null;
+    const assetId =
+      typeof body.assetId === "string"
+        ? body.assetId
+        : typeof body.id === "string"
+          ? body.id
+          : null;
 
     if (!assetId) {
       return NextResponse.json({ error: "Missing assetId" }, { status: 400 });

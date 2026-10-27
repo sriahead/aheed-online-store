@@ -46,18 +46,12 @@ export async function createCategoryAssetForVendor(
   return createCategoryAsset(prismaWs, vendorId, data);
 }
 
-export async function selectCategoryAssetForVendor(
-  vendorId: string,
-  assetId: string,
-) {
+export async function selectCategoryAssetForVendor(vendorId: string, assetId: string) {
   const prismaWs = getPrismaWs();
   return selectCategoryAsset(prismaWs, vendorId, assetId);
 }
 
-export async function deleteCategoryAssetForVendor(
-  vendorId: string,
-  assetId: string,
-) {
+export async function deleteCategoryAssetForVendor(vendorId: string, assetId: string) {
   const prismaWs = getPrismaWs();
   return deleteCategoryAsset(prismaWs, vendorId, assetId);
 }

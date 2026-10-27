@@ -279,7 +279,10 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
           </div>
 
           <div>
-            <label htmlFor="quick-gen-target-select" className="block text-xs font-semibold text-primary-muted mb-1">
+            <label
+              htmlFor="quick-gen-target-select"
+              className="block text-xs font-semibold text-primary-muted mb-1"
+            >
               {targetType === "category" ? "Department:" : "Icon Slot:"}
             </label>
             {targetType === "category" ? (
@@ -314,7 +317,10 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
           </div>
 
           <div>
-            <label htmlFor="quick-gen-style-select" className="block text-xs font-semibold text-primary-muted mb-1">
+            <label
+              htmlFor="quick-gen-style-select"
+              className="block text-xs font-semibold text-primary-muted mb-1"
+            >
               Visual Preset:
             </label>
             <select
@@ -566,7 +572,9 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
                   width={512}
                   height={512}
                   className="h-full w-full object-contain"
-                  fallback={<Icon name="folder-tree" className="h-12 w-12 text-primary-subtle m-auto" />}
+                  fallback={
+                    <Icon name="folder-tree" className="h-12 w-12 text-primary-subtle m-auto" />
+                  }
                 />
               ) : (
                 <Icon name="folder-tree" className="h-12 w-12 text-primary-subtle" />

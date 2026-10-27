@@ -48,14 +48,12 @@ export default async function StaffIconsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-primary">Icon &amp; Visual Asset Gallery</h1>
         <p className="mt-1 text-sm text-primary-muted">
-          Unified library of category photographs, app icons, and realistic system visual assets across your store.
+          Unified library of category photographs, app icons, and realistic system visual assets
+          across your store.
         </p>
       </div>
 
-      <IconGalleryClient
-        initialAssets={initialAssets}
-        categories={categoryOptions}
-      />
+      <IconGalleryClient initialAssets={initialAssets} categories={categoryOptions} />
     </PageContainer>
   );
 }

@@ -54,7 +54,12 @@ export async function DELETE(request: Request) {
 
     if (!assetId) {
       const body = (await request.json().catch(() => ({}))) as { id?: unknown; assetId?: unknown };
-      assetId = typeof body.id === "string" ? body.id : typeof body.assetId === "string" ? body.assetId : null;
+      assetId =
+        typeof body.id === "string"
+          ? body.id
+          : typeof body.assetId === "string"
+            ? body.assetId
+            : null;
     }
 
     if (!assetId) {
