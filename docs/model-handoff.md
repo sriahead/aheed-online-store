@@ -44,7 +44,7 @@ reconciliation. If overall project state did not materially change, leave this f
   quota`; the storefront home page returns 500. Staging is healthy (separate Neon project). Began ~2026-10-26
   (the daily `fill-product-images` run on `main` first failed then). Owner action in the Neon console; no
   alert exists. **No promotion can succeed until it is fixed** (`deploy-production` migrates).
-  - **Staging is ahead of `main`** (`#1272`–`#1295`) including two migrations,
+  - **Staging is ahead of `main`** (`#1272`–`#1305`) including two migrations,
     `20261026150000_category_image_key` and `20261027080000_category_and_system_assets`.
   - **`#1288` (icon deactivate + circular `IconMedallion` + AI-replaceable icon inventory) is MERGED TO
     STAGING (PR #1292, `204d86a`), not promoted.** Spec and build notes:
@@ -60,6 +60,17 @@ reconciliation. If overall project state did not materially change, leave this f
     `components/staff/platform-nav-items.ts` (`/staff/errors` is the only special case). Follow-ups:
     `#1296` alerts, `#1297` provider usage APIs, `#1298` owner data updates after the domain purchases,
     `#1299` Resend config and `WORKERS_AI_PLAN` mismatch with Workers Paid.
+  - **`#1302` and `#1305` (storefront layout follow-ups) are MERGED TO STAGING (PRs #1304 `57d52c5`,
+    #1307 `8626962`), not promoted.** Specs: `specs/2026-10-27-orders-grid-quickshop-cart/`,
+    `specs/2026-10-27-checkout-width-and-slot-grid/`. Orders list is a 2-per-row card grid with Reorder /
+    Save as list on each card; Quick Shop has a "Your orders" tile; `/cart` and checkout carry Continue
+    shopping beside the primary button (the cart drawer is deliberately unchanged); cart, checkout and
+    orders share `PageContainer width="standard"` (`specs/design-system.md` updated); the checkout slot
+    picker is a 7-day grid fed by `getAvailableSlotsForWeek`. **Both ran validation in the building
+    session and left the browser checks and a real later-day booking unverified** (signed-in only), so
+    they are worth one staging pass by the owner. Follow-ups: `#1303` (detail page shows no
+    empty-save message), `#1306` (Super Saver tab and slot markers need a slot length/type in the
+    schema). Both issues are `In Review`.
   - **`deploy-staging` can fail on a transient `npm ci`** (Prisma engine postinstall `ECONNRESET`, hit at
     `#1295`): every later step is skipped, so nothing deployed and no migration ran. After checking
     githubstatus.com, `gh run rerun <id> --failed` is enough.
