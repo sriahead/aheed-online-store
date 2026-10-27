@@ -4,8 +4,8 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.2.0"
-updated: "2026-10-19"
+version: "1.3.0"
+updated: "2026-10-27"
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
 tags: ["admin", "platform", "technical", "multi-tenancy"]
@@ -147,3 +147,19 @@ reload to see them.
 
 **What happens after changes are saved:** Re-measures connection latency and queries the latest diagnostic records fresh on every page load.
 
+
+## Platform Running Costs — `/staff/platform/costs`
+
+**Purpose:** Shows what the platform costs to run: the fixed monthly and yearly costs, planned purchases, what changes at renewal, and today's Workers AI usage.
+
+**Who can access:** Platform admins only
+
+**What you can do:** Read the six totals (now, with planned items, and at renewal prices, each per month and per year), the Needs attention list, the Upcoming renewals list and one card for each service. The page is read-only; nothing on it can be changed or saved.
+
+**Typical workflow:** Open it before a renewal date, or after buying a domain or changing a plan. Check Needs attention first, then Upcoming renewals, then the service cards. To change a figure, edit `lib/running-costs.ts` and ship the change.
+
+**Important fields and filters:** Each card carries a status label. Actual is a figure read from a bill or a provider dashboard. Planned is about to be bought and is counted only in the with-planned and renewal totals. Estimate is worked out from usage and Unverified is not confirmed; neither is in any total. A card also shows its As of date, its cost, the free allowance and what it costs beyond that (with the provider site and the date the page was read, marked Not confirmed by the owner until someone confirms it), and a usage line. Only Workers AI usage is read live, as neurons used today; every other card says Usage not monitored, and if the live read fails the Workers AI card says Usage unavailable instead of showing zero. Needs attention lists a service with auto-renew off, a renewal within 60 days, and a price change taking effect within 60 days. There are no filters.
+
+**Common mistakes and limitations:** The figures are not pulled from the providers, so each is only as current as its As of date. Prices are US dollars as the provider quotes them; the card is charged in pounds, so the real amounts differ slightly. A card showing Not priced is in no total, and Limits not recorded means the provider page could not be read, not that there is no limit. The page sends no alerts and no emails.
+
+**What happens after changes are saved:** Nothing is saved from this page. An edit to `lib/running-costs.ts` takes effect once deployed; the page recalculates every total, and reads Workers AI usage, fresh on each load.

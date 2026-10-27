@@ -45,6 +45,12 @@ export const PLATFORM_NAV_ITEMS: readonly PlatformNavItem[] = [
     icon: "gauge",
   },
   {
+    href: "/staff/platform/costs",
+    label: "Running Costs",
+    description: "What the platform costs now, what is planned, and what changes at renewal.",
+    icon: "coins",
+  },
+  {
     href: "/staff/errors",
     label: "Error Events",
     description: "Recent server-side exceptions and stack traces across all stores.",

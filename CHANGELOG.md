@@ -25,6 +25,14 @@ every branch merges.
 
 ### Added
 
+- **Running costs report for platform admins at `/staff/platform/costs`** (issue `#1295`; `specs/2026-10-27-running-costs-report/`). Read-only; registered in `PLATFORM_NAV_ITEMS` and refused to anyone who is not a platform admin.
+  - **Registry, not a table:** `lib/running-costs.ts` lists 11 services (Workers Paid $5/month, the `nocaped.com`, `merqify.com` and `aheedfoodcentre.co.uk` domains, Neon, R2, Access, GitHub on free tiers, Workers AI, Stripe, Cloudflare email), each marked Actual, Planned, Estimate or Unverified with an as-of date. USD only; no conversion. Edited in code and shipped; no schema change.
+  - **Totals:** now ($70.46/yr, $5.87/mo), with planned items ($86.22/yr) and at renewal prices after Verisign's `.com` rise on 2026-11-01 ($87.64/yr). Usage-based and unpriced items are in no total.
+  - **Needs attention and renewals:** auto-renew off, a renewal or a price change within 60 days. Today that flags `nocaped.com`, whose auto-renew is off and which expires 2027-08-15.
+  - **Live usage:** only Workers AI (`getPlatformAiNeuronsToday`); a failed read says "Usage unavailable", never 0. Every other row says "Usage not monitored".
+  - **Provider limits** for Workers, Neon, R2 and Workers AI are copied from the providers' own pricing pages with source and date, shown as not confirmed by the owner. Access, GitHub and Stripe pages could not be read, so those rows say "Limits not recorded".
+  - **Deferred:** threshold alerts, notifications and email, provider-API usage pulls, trial and credit expiry, domain rows read from the database.
+
 - **Deactivate icon and category assets, one circular icon medallion everywhere, and AI-replaceable icon inventory** (issue `#1288`; `specs/2026-10-27-icon-asset-activation-and-medallion/`).
   - **Deactivate:** an active asset can be switched off from `/staff/icons` and the category manager (`POST /api/admin/category-images/deactivate`); the surface falls back to its built-in artwork, and a category's `imageKey` is cleared. Activate and deactivate each run in one interactive transaction.
   - **`IconMedallion`:** every 3D icon, every decorative icon drawn at 32 px or more, and all category imagery render in one vendor-tinted circle (`components/icons/IconMedallion.tsx`); product photography stays square. `tests/icon-medallion-coverage.test.tsx` enforces it.
