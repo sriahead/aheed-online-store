@@ -57,6 +57,19 @@ export async function getAiUsageOverview(vendorId: string): Promise<AiUsageOverv
 }
 
 /**
+ * #1295 - the whole platform's Workers AI neurons since 00:00 UTC today, and the configured plan,
+ * for the platform-admin running-costs page. Not vendor-scoped on purpose: the shared allowance is
+ * one pool (the same read `sumPlatformMilliNeuronsSince` serves for #1028). A fresh client per call.
+ */
+export async function getPlatformAiNeuronsToday(): Promise<{
+  plan: WorkersAiPlan;
+  neurons: number;
+}> {
+  const milli = await sumPlatformMilliNeuronsSince(getPrisma(), startOfUtcDay(new Date()));
+  return { plan: getAiEnv().WORKERS_AI_PLAN, neurons: milli / 1000 };
+}
+
+/**
  * Write a vendor's daily budget. Authorisation and validation are the caller's (the server action).
  * `false` when the vendor has no `VendorConfig` row to write to (#1161).
  */

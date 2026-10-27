@@ -60,7 +60,7 @@ function discoverStaffRoutes(): string[] {
     routes.push("products/import");
   }
 
-  const platformSubdirs = ["vendors", "domains", "onboarding", "settings", "health"];
+  const platformSubdirs = ["vendors", "domains", "onboarding", "settings", "health", "costs"];
   for (const sub of platformSubdirs) {
     if (existsSync(join(STAFF_ROUTES_DIR, "platform", sub, "page.tsx"))) {
       routes.push(`platform/${sub}`);
