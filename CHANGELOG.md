@@ -8,6 +8,8 @@ every branch merges.
 
 ### Fixed
 
+- **Staff users saw asset buttons that always failed** — `/staff/icons` is now read-only for STAFF; the mutation routes were already ADMIN-only (issue `#1288`).
+
 - **Dynamic slot asset activation across storefront touchpoints and themed 3D isometric prompt generation** (issue `#1285`).
   - **Dynamic Slot Asset Activation:** Created `ActiveSlotIconsProvider` supplying active system icon assets from the `CategoryAsset` relational ledger directly into `<Icon3D />`. Now, activating or deactivating candidate assets in `/staff/icons` dynamically propagates to the live storefront header, view switcher, trust strip cards, and floating cart drawer.
   - **Themed 3D Isometric Prompt Engineering:** Refined `buildSlotAssetPrompt` in `lib/category-image.ts` to align strictly with the store's visual identity (emerald green `#059669`, royal navy `#1E3A8A`, warm gold `#F59E0B`) and isolated 3D app icon specifications, preventing opaque photographic backgrounds or cluttered supermarket scenes.
@@ -22,6 +24,12 @@ every branch merges.
   - **Configurable Platform Name:** Replaced hardcoded "Aheed KMS" strings in `kms/site-internal` layout, metadata, navbar, and footer with dynamic resolution via `process.env.NEXT_PUBLIC_PLATFORM_NAME` / `process.env.PLATFORM_NAME` (defaulting cleanly to configurable platform name with `"Aheed"` defined in `wrangler.toml`). Exported `<PlatformName />` component via `kms/site-internal/mdx-components.tsx` and updated KMS index heading.
 
 ### Added
+
+- **Deactivate icon and category assets, one circular icon medallion everywhere, and AI-replaceable icon inventory** (issue `#1288`; `specs/2026-10-27-icon-asset-activation-and-medallion/`).
+  - **Deactivate:** an active asset can be switched off from `/staff/icons` and the category manager (`POST /api/admin/category-images/deactivate`); the surface falls back to its built-in artwork, and a category's `imageKey` is cleared. Activate and deactivate each run in one interactive transaction.
+  - **`IconMedallion`:** every 3D icon, every decorative icon drawn at 32 px or more, and all category imagery render in one vendor-tinted circle (`components/icons/IconMedallion.tsx`); product photography stays square. `tests/icon-medallion-coverage.test.tsx` enforces it.
+  - **Slot registry:** `lib/icon-slots.ts` lists 15 3D slots (adds `postcode-search`, `contact-follow`, `rewards-gift`) and 81 flat `icon:<name>` slots; the generate route rejects unknown slots. The inventory is in the Icon & Visual Asset Standards Guide.
+  - **Prompts:** use the vendor's own brand colours and ask for circle-safe framing; Aheed's hardcoded colours are removed. ADR-008 v1.3.0 (Decision 6) and the design system record the rules.
 
 - **Category asset management, dedicated icon gallery, and realistic commercial system icons** (issue `#1285`; `specs/2026-10-27-category-asset-gallery-and-realistic-icons/`).
   - **Category Asset Management Workflow:** Upgraded `CategoryImageManager.tsx` on `/staff/categories/[id]` enabling operators to generate multiple candidate visual assets, review them side-by-side in a responsive thumbnail grid, select the active live asset, and permanently delete redundant variations.
