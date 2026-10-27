@@ -116,7 +116,7 @@ R10. `lib/pricing/business-models.ts` (pure) exports `BUSINESS_MODELS` with exac
 
 R11. `lib/pricing/analysis.ts` is a pure module exporting `buildPricingAnalysis(input, now)`, where
      `input` is `{ costs: CostReport, assumptions, plans, scenarioVendorCounts, recommendation,
-     models }`. The analysis uses `costs.withPlanned.monthlyCents` as the platform's monthly cost
+     models, competitors }` (amended at Build: R16's competitor staleness needs `competitors`). The analysis uses `costs.withPlanned.monthlyCents` as the platform's monthly cost
      (`costUsdCents`). `costPence` is `roundHalfUp(costUsdCents * 100 / usdCentsPerGbp)`, or `null`
      when `usd-cents-per-gbp` has a `null` value. When `costPence` is `null`, every value in R12-R14
      that depends on it is `null`.
@@ -158,8 +158,10 @@ R16. The analysis returns `stale`: entries `{ registry, id }` for every competit
 ## D. Refresh
 
 R17. `lib/pricing/refresh.ts` is a pure module exporting `refreshSources(scope)`, where `scope` is
-     `"costs"` or `"all"`. It returns the distinct `sourceUrl`s of cost items' non-null `limits` (for
-     `"costs"`), or those plus every competitor plan's `sourceUrl` (for `"all"`), in registry order,
+     `"costs"` or `"all"`. It returns the distinct `sourceUrl`s of cost items' non-null `limits`,
+     excluding items with `basis: "open-licence"` (their URL is a licence, not a price page; amended
+     at Build) (for `"costs"`), or those plus every competitor plan's `sourceUrl` (for `"all"`), in
+     registry order,
      truncated to 25. It also exports `parseExtraction(json)`, which validates a model reply against the
      schema `{ plans: { name: string; monthlyFee: { amount: number; currency: "GBP" | "USD" } | null;
      commissionPercent: number | null; cardFeePercent: number | null; cardFeeFixed: number | null }[] }`
@@ -237,8 +239,10 @@ R24. `app/(admin)/staff/platform/costs/export/route.ts` exports `GET` and `dynam
      `<section>-<YYYY-MM-DD>.csv`. Unauthenticated requests get 401 and authenticated non-platform-admins
      get 403, each with no CSV body. An unknown `section` gets 400. Money columns are minor units plus a
      `currency` column, never a formatted string. Every row has an `as_of` or `retrieved_on` column.
-     A cell value starting with `=`, `+`, `-` or `@` is written with a leading `'`, and values are
-     quoted per RFC 4180.
+     A **text** cell starting with `=`, `+`, `-` or `@` is written with a leading `'`, and values are
+     quoted per RFC 4180. Numeric cells are written as numbers, so a negative profit stays `-700`
+     (amended at Build: prefixing numbers would turn data into text, and a number cannot carry a
+     formula).
 
 R25. The page renders a "Print / Save as PDF" button that calls `window.print()`. The page's buttons, the
      review panel, and the staff navigation rendered by `components/staff/PanelNav.tsx` carry the
@@ -358,8 +362,10 @@ R41. Unit tests exist and pass under `npx vitest run --maxWorkers=4`: `tests/run
      that is not JSON, a negative number, a URL outside the allow-list never fetched, and a refused
      meter), `tests/pricing-actions.test.ts` (R22 for platform admin, vendor ADMIN, STAFF and
      unauthenticated), `tests/pricing-export-route.test.ts` (R24 including the injection prefix and
-     the 401/403/400 cases), `tests/running-costs-page.test.tsx` (updated for R28-R33), and
-     `tests/pricing-review-workflow.test.ts` (R26-R27, parsing the YAML).
+     the 401/403/400 cases), `tests/running-costs-page.test.tsx` (updated for R28-R33),
+     `tests/pricing-review-panel.test.tsx` (R23), and `tests/pricing-review-workflow.test.ts`
+     (R26-R27; it reads the workflow as text, because no YAML parser is a declared dependency and
+     adding one would break R36; amended at Build).
 
 R42. `CHANGELOG.md` updated (Gate 4), edited with the Edit tool (`grep -cP '\x08' CHANGELOG.md` prints 0).
 
