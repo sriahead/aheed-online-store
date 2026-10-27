@@ -128,7 +128,7 @@ asset-management fixes (A) and the decorative-icon replacement (B).
 
 ### E. Prompts tuned for the circle, branded per vendor
 - `buildSlotAssetPrompt` and `buildCategoryImagePrompt` take a `palette` built from the vendor's
-  `BrandPrimitives` (`green`, `orange`) read through `getVendorBranding(vendorId)` in the pipeline;
+  `BrandPrimitives` (`green`, `orange`) read through `fetchVendorProfile(vendorId)` in the pipeline;
   no vendor colour or vendor name is hardcoded in `lib/category-image.ts`.
 - Every prompt ends with one exported constant, `CIRCULAR_FRAMING_CLAUSE`, asking for a subject
   centred inside the middle 70 % of a square frame on a plain pure-white background with nothing

@@ -144,7 +144,8 @@ R22. A flat slot's prompt contains its Noto id with hyphens replaced by spaces (
      Noto id is `red-apple`, the prompt contains "red apple").
 
 R23. `runSlotAssetPipeline` and `runCategoryImagePipeline` build `palette` from the vendor's
-     `BrandPrimitives` (`primitives` of `getVendorBranding(vendorId)` in `lib/vendor-service.ts`):
+     `BrandPrimitives` (`primitives` of `fetchVendorProfile(vendorId)` in `lib/vendor-service.ts`, which
+     falls back to `DEFAULT_BRAND_PRIMITIVES`):
      `primary` = `primitives.green`, `accent` = `primitives.orange`.
 
 ## F. Documentation and standing decisions
