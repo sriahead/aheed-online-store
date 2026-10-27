@@ -124,15 +124,9 @@ export function LocationControl({
             className="flex h-full min-h-tap w-full cursor-pointer list-none items-center gap-1.5 whitespace-nowrap rounded-xl border border-black/10 bg-surface-muted px-3 py-2 text-xs font-bold text-black/80 transition hover:bg-black/5 sm:w-auto lg:min-h-0 [&::-webkit-details-marker]:hidden"
           >
             {method === "COLLECTION" ? (
-              <Icon3D name="storefront" size={20} className="-my-0.5" animated={false} decorative />
+              <Icon name="store" className="h-4 w-4 shrink-0 text-primary" />
             ) : (
-              <Icon3D
-                name="delivery-van"
-                size={20}
-                className="-my-0.5"
-                animated={false}
-                decorative
-              />
+              <Icon name="truck" className="h-4 w-4 shrink-0 text-primary" />
             )}
             <span className="min-w-0 truncate">{summaryLabel}</span>
             <Icon
@@ -160,13 +154,7 @@ export function LocationControl({
                 aria-current={method === "COLLECTION" ? "true" : undefined}
                 className={itemClass}
               >
-                <Icon3D
-                  name="storefront"
-                  size={20}
-                  className="-my-0.5"
-                  animated={false}
-                  decorative
-                />
+                <Icon name="store" className="h-4 w-4 shrink-0 text-primary" />
                 <span className="flex-1">Click &amp; Collect</span>
                 {method === "COLLECTION" && (
                   <Icon name="check" className="h-4 w-4 shrink-0 text-action" />
@@ -184,13 +172,7 @@ export function LocationControl({
                   aria-current={method === "DELIVERY" ? "true" : undefined}
                   className={itemClass}
                 >
-                  <Icon3D
-                    name="delivery-van"
-                    size={20}
-                    className="-my-0.5"
-                    animated={false}
-                    decorative
-                  />
+                  <Icon name="truck" className="h-4 w-4 shrink-0 text-primary" />
                   <span className="flex-1">{deliveryLabel}</span>
                   {method === "DELIVERY" && (
                     <Icon name="check" className="h-4 w-4 shrink-0 text-action" />

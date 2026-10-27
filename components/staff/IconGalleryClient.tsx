@@ -451,7 +451,7 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
                       alt={targetLabel}
                       width={180}
                       height={180}
-                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                      className="h-full w-full object-cover transition-transform group-hover:scale-105 motion-reduce:group-hover:scale-100"
                       fallback={
                         <Icon name="folder-tree" className="h-8 w-8 text-primary-subtle m-auto" />
                       }
