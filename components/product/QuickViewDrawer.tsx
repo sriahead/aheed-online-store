@@ -18,6 +18,7 @@ import type { ProductDetail } from "@/lib/repositories/products";
 import { RestockNotice } from "@/components/product/RestockNotice";
 import type { ReviewSummary, ReviewInput } from "@/lib/repositories/reviews";
 import { Icon } from "@/components/icons/Icon";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -289,7 +290,7 @@ export function QuickViewDrawer() {
 
             {error && !displayProduct && (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16 text-center">
-                <Icon name="triangle-alert" className="h-8 w-8 text-danger" />
+                <IconMedallion icon="triangle-alert" size={32} tint="danger" decorative />
                 <p className="text-sm font-medium text-danger">{error}</p>
                 <button
                   type="button"

@@ -53,7 +53,12 @@ export default async function StaffIconsPage() {
         </p>
       </div>
 
-      <IconGalleryClient initialAssets={initialAssets} categories={categoryOptions} />
+      {/* #1288 R7: the mutation routes are ADMIN-only, so STAFF browse read-only. */}
+      <IconGalleryClient
+        initialAssets={initialAssets}
+        categories={categoryOptions}
+        canManage={auth.via !== "STAFF"}
+      />
     </PageContainer>
   );
 }

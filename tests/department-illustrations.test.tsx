@@ -104,16 +104,19 @@ describe("DepartmentScroller (R44, R45, R47)", () => {
     expect(tile.querySelector("svg")?.getAttribute("data-icon")).toBe("tag");
   });
 
-  it("keeps the 64px tile, a 48px illustration and alternates the tint by position", () => {
+  // #1288 R17: the tile is the circular IconMedallion — still 64px, one action tint for every tile
+  // (no more alternating), with the illustration inset to 80% (51px).
+  it("keeps the 64px tile as a single-tint medallion with the illustration inset", () => {
     const { container } = render(<DepartmentScroller categories={CATEGORIES} />);
     const tiles = [...container.querySelectorAll("a[href^='/categories/']")];
-    tiles.forEach((tile, index) => {
-      const box = tile.querySelector("div")!;
-      expect(box.className).toContain("h-16 w-16");
-      expect(box.className).toContain(index % 2 === 0 ? "bg-action-tint" : "bg-accent-tint");
-      expect(box.className).not.toContain(index % 2 === 0 ? "bg-accent-tint" : "bg-action-tint");
+    tiles.forEach((tile) => {
+      const box = tile.querySelector<HTMLElement>("[data-medallion]")!;
+      expect(box.style.width).toBe("64px");
+      expect(box.className).toContain("rounded-full");
+      expect(box.className).toContain("bg-action-tint");
+      expect(box.className).not.toContain("bg-accent-tint");
       const img = tile.querySelector("img");
-      if (img) expect(img.getAttribute("class")).toBe("h-12 w-12");
+      if (img) expect(img.getAttribute("width")).toBe("51");
     });
   });
 
@@ -122,8 +125,8 @@ describe("DepartmentScroller (R44, R45, R47)", () => {
     const images = [...container.querySelectorAll("img")];
     expect(images).toHaveLength(7);
     images.forEach((img, index) => {
-      expect(img.getAttribute("width")).toBe("48");
-      expect(img.getAttribute("height")).toBe("48");
+      expect(img.getAttribute("width")).toBe("51"); // #1288: 80% of the 64px medallion
+      expect(img.getAttribute("height")).toBe("51");
       expect(img.getAttribute("decoding")).toBe("async");
       expect(img.getAttribute("loading")).toBe(index < 6 ? "eager" : "lazy");
     });
@@ -135,7 +138,10 @@ describe("DepartmentGlyph (R46)", () => {
     const { container } = render(<DepartmentGlyph slug="halal-meat" />);
     const img = container.querySelector("img")!;
     expect(img.getAttribute("src")).toBe("/illustrations/departments/halal-meat.svg");
-    expect(img.getAttribute("class")).toBe("h-24 w-24 md:h-32 md:w-32");
+    // #1288: inset in the 96px medallion (the md: size is on the medallion itself).
+    expect(img.getAttribute("class")).toBe("object-contain mix-blend-multiply");
+    expect(img.getAttribute("width")).toBe("77");
+    expect(container.querySelector("[data-medallion]")?.className).toContain("md:!h-32");
     expect(img.getAttribute("alt")).toBe("");
     expect(img.getAttribute("decoding")).toBe("async");
     expect(container.querySelector("svg")).toBeNull();

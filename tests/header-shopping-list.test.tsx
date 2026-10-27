@@ -152,7 +152,8 @@ describe("Header Sign In icon (#1173 R8)", () => {
     const { container } = render(await Header({}));
     const signIn = container.querySelector('a[href="/login"]');
     expect(signIn?.textContent).toContain("Sign In");
-    expect(signIn?.querySelector('svg[data-icon="circle-user-round"]')).not.toBeNull();
+    // #1288: the 3D icon renders in an IconMedallion, whose root carries the data-icon.
+    expect(signIn?.querySelector('[data-medallion][data-icon="circle-user-round"]')).not.toBeNull();
     expect(signIn?.querySelector('svg[data-icon="log-in"]')).toBeNull();
   });
 });

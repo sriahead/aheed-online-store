@@ -8,7 +8,7 @@ import { formatOrderDate } from "@/lib/order-status";
 import { formatPrice } from "@/components/product/format-price";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { Icon } from "@/components/icons/Icon";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 // Reads the session and the viewer's own orders — must render per-request.
 export const dynamic = "force-dynamic";
@@ -48,7 +48,7 @@ export default async function OrdersPage({
 
       {items.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <Icon name="package" className="mx-auto mb-3 h-8 w-8 text-primary-subtle" />
+          <IconMedallion icon="package" size={32} className="mx-auto mb-3" decorative />
           <p className="mb-4 text-sm text-primary-muted">
             You haven&apos;t placed any orders with us yet.
           </p>

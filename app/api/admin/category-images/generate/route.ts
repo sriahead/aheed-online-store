@@ -5,6 +5,7 @@ import { runCategoryImagePipeline, runSlotAssetPipeline } from "@/lib/category-i
 import { describeAiBudgetRefusal } from "@/lib/ai-meter";
 import { getVendorAiMeter } from "@/lib/ai-meter-service";
 import type { CategoryImageStyle } from "@/lib/category-image";
+import { isIconSlotId } from "@/lib/icon-slots";
 
 export async function POST(request: Request) {
   const auth = await requireVendorRole("ADMIN");
@@ -23,6 +24,11 @@ export async function POST(request: Request) {
 
     if (!categoryId && !slot) {
       return NextResponse.json({ error: "Missing categoryId" }, { status: 400 });
+    }
+
+    // #1288 R10: only a registered slot can be generated, checked before any AI budget is touched.
+    if (!categoryId && !isIconSlotId(slot)) {
+      return NextResponse.json({ error: "Unknown slot" }, { status: 400 });
     }
 
     const style: CategoryImageStyle = body.style === "3d-icon" ? "3d-icon" : "photo";

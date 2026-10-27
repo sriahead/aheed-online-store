@@ -8,7 +8,7 @@ import {
   useAssistantLauncher,
 } from "@/components/assistant/AssistantLauncher";
 import { Icon } from "@/components/icons/Icon";
-import { Icon3D } from "@/components/icons/Icon3D";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 /**
  * Floating per-vendor contact cluster (P9.2, #407 / #405).
@@ -151,7 +151,13 @@ function FloatingContactPanel(props: FloatingContactProps) {
           {open ? (
             <Icon name="x" className="h-5 w-5" />
           ) : (
-            <Icon3D name="contact-follow" dataIcon="users" size={38} className="-my-0.5" />
+            <IconMedallion
+              icon3d="contact-follow"
+              dataIcon="users"
+              size={38}
+              className="-my-0.5"
+              decorative
+            />
           )}
         </button>
       </div>

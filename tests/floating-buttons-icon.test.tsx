@@ -17,7 +17,7 @@ describe("Floating checkout and contact buttons icons (#1242)", () => {
     );
 
     const button = screen.getByRole("button", { name: /cart/i });
-    const icon = button.querySelector("svg");
+    const icon = button.querySelector("[data-medallion]"); // #1288
     expect(icon).not.toBeNull();
     expect(icon?.getAttribute("data-icon")).toBe("shopping-cart");
   });
@@ -34,7 +34,7 @@ describe("Floating checkout and contact buttons icons (#1242)", () => {
     );
 
     const button = screen.getByRole("button", { name: /contact and follow/i });
-    const icon = button.querySelector("svg");
+    const icon = button.querySelector("[data-medallion]"); // #1288
     expect(icon).not.toBeNull();
     expect(icon?.getAttribute("data-icon")).toBe("users");
   });

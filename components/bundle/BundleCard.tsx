@@ -2,7 +2,7 @@ import { addBundleToCart } from "@/features/cart/add-bundle-to-cart";
 import { formatPrice } from "@/components/product/format-price";
 import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { availableBundleItems, bundleTotalPence, type BundleItemInput } from "@/lib/bundle-pricing";
-import { Icon } from "@/components/icons/Icon";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 interface BundleCardProps {
   id: string;
@@ -51,7 +51,7 @@ interface BundleCardProps {
 function NoBundleImage() {
   return (
     <div className="flex h-full w-full items-center justify-center bg-surface-muted">
-      <Icon name="package" className="h-10 w-10 text-primary-subtle" />
+      <IconMedallion icon="package" size={40} decorative />
     </div>
   );
 }

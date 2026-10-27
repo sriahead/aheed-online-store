@@ -168,6 +168,7 @@ export function CategoryForm({ category, categories, hiddenCounts = null }: Cate
           <CategoryImageManager
             categoryId={category.id}
             categoryName={category.name}
+            slug={category.slug}
             imageKey={imageKey}
             imageUrl={category.imageUrl ?? null}
             onImageKeyChange={(newKey) => setImageKey(newKey)}

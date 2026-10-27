@@ -151,6 +151,7 @@ export function Icon3D({
         className={`inline-flex shrink-0 items-center justify-center relative ${className}`}
         style={{ width: size, height: size, ...style }}
         data-icon={dataIcon ?? name}
+        data-icon3d={name}
         aria-hidden={decorative ? "true" : undefined}
       >
         <ImageWithFallback
@@ -182,6 +183,7 @@ export function Icon3D({
         className={`inline-flex shrink-0 items-center justify-center relative ${className}`}
         style={{ width: size, height: size, ...style }}
         data-icon={dataIcon ?? name}
+        data-icon3d={name}
         aria-hidden={decorative ? "true" : undefined}
       >
         <ImageWithFallback
@@ -217,6 +219,7 @@ export function Icon3D({
     <span
       className={`inline-flex shrink-0 items-center justify-center ${className}`}
       style={{ width: size, height: size, ...style }}
+      data-icon3d={name}
       dangerouslySetInnerHTML={{ __html: rendered.svg }}
     />
   );

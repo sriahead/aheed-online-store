@@ -4,7 +4,7 @@ import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getPlatformBrandingEnv } from "@/lib/config";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Icon } from "@/components/icons/Icon";
-import { Icon3D } from "@/components/icons/Icon3D";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 export const dynamic = "force-dynamic";
 
@@ -166,7 +166,7 @@ export default async function IconCreditsPage() {
                 className="flex items-center gap-3 rounded-xl border border-black/10 bg-surface-muted/50 p-3"
               >
                 <div className="shrink-0">
-                  <Icon3D name={item.id as never} size={32} animated={false} decorative />
+                  <IconMedallion icon3d={item.id} size={32} decorative />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold truncate text-primary">{item.name}</p>

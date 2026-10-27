@@ -4,7 +4,12 @@ import { imageExtensionForContentType } from "@/lib/product-image";
 import { POST as generateHandler } from "@/app/api/admin/category-images/generate/route";
 import { POST as backfillHandler } from "@/app/api/admin/category-images/backfill/route";
 
+const PALETTE = { primary: "#123456", accent: "#abcdef" };
+
 const mockRequireVendorRole = vi.fn();
+const mockGenerateImage = vi.fn();
+const mockFetchVendorProfile = vi.fn();
+const mockGetCategoryForAdmin = vi.fn();
 const mockRunCategoryImagePipeline = vi.fn();
 const mockListCategoriesForAdmin = vi.fn();
 
@@ -18,6 +23,27 @@ vi.mock("@/lib/category-image-pipeline", () => ({
 
 vi.mock("@/lib/categories-service", () => ({
   listCategoriesForAdmin: (...args: unknown[]) => mockListCategoriesForAdmin(...args),
+  getCategoryForAdmin: (...args: unknown[]) => mockGetCategoryForAdmin(...args),
+}));
+
+// The real pipeline's collaborators, for the #1288 R23 cases below (which load the actual module
+// with vi.importActual, since the route cases above mock it).
+vi.mock("@/lib/vendor-service", () => ({
+  fetchVendorProfile: (...args: unknown[]) => mockFetchVendorProfile(...args),
+}));
+vi.mock("@/lib/image-generation", () => ({
+  IMAGE_GENERATION_MODEL: "test-model",
+  getImageGenerationService: () => ({ generateImage: mockGenerateImage }),
+}));
+vi.mock("@/lib/storage", () => ({
+  getStorage: () => ({
+    putObject: vi.fn(async () => {}),
+    publicUrl: (key: string) => `https://cdn.example.com/${key}`,
+  }),
+}));
+vi.mock("@/lib/db", () => ({ getPrismaWs: () => ({}) }));
+vi.mock("@/lib/repositories/category-assets", () => ({
+  createCategoryAsset: vi.fn(async () => ({ id: "asset-1" })),
 }));
 
 vi.mock("@/lib/ai-meter-service", () => ({
@@ -50,14 +76,14 @@ describe("Category AI image generation", () => {
     });
 
     it("builds prompt tailored for studio photography", () => {
-      const prompt = buildCategoryImagePrompt("Fresh Produce", "photo");
+      const prompt = buildCategoryImagePrompt("Fresh Produce", "photo", PALETTE);
       expect(prompt).toContain("Fresh Produce");
       expect(prompt).toContain("Commercial studio grocery photography");
       expect(prompt).toContain("genuine product photography");
     });
 
     it("builds prompt tailored for 3D rendered icon", () => {
-      const prompt = buildCategoryImagePrompt("Treats & Snacks", "3d-icon");
+      const prompt = buildCategoryImagePrompt("Treats & Snacks", "3d-icon", PALETTE);
       expect(prompt).toContain("Treats & Snacks");
       expect(prompt).toContain("3D rendered commercial app icon");
       expect(prompt).toContain("pure white background");
@@ -219,6 +245,49 @@ describe("Category AI image generation", () => {
       expect(json.processed).toBe(2);
       expect(json.totalRemaining).toBe(0);
       expect(mockRunCategoryImagePipeline).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("pipelines prompt with the vendor's own palette (#1288 R23)", () => {
+    const SRIMART_LIKE = { green: "#1d4ed8", orange: "#f97316" };
+    const meter = {
+      check: vi.fn(async () => ({ allowed: true })),
+      recordImage: vi.fn(async () => {}),
+    };
+
+    beforeEach(() => {
+      mockFetchVendorProfile.mockResolvedValue({ primitives: SRIMART_LIKE });
+      mockGenerateImage.mockResolvedValue(new Uint8Array([1, 2, 3]));
+      mockGetCategoryForAdmin.mockResolvedValue({
+        id: "cat-1",
+        name: "Chargers",
+        slug: "chargers",
+      });
+    });
+
+    it("runSlotAssetPipeline builds its prompt from fetchVendorProfile's primitives", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/category-image-pipeline")>(
+        "@/lib/category-image-pipeline",
+      );
+      await actual.runSlotAssetPipeline("storefront", "3d-icon", "v-srimart", {
+        aiMeter: meter as never,
+      });
+      expect(mockFetchVendorProfile).toHaveBeenCalledWith("v-srimart");
+      const prompt = mockGenerateImage.mock.calls[0][0] as string;
+      expect(prompt).toContain("#1d4ed8");
+      expect(prompt).toContain("#f97316");
+    });
+
+    it("runCategoryImagePipeline builds its prompt from fetchVendorProfile's primitives", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/category-image-pipeline")>(
+        "@/lib/category-image-pipeline",
+      );
+      await actual.runCategoryImagePipeline("cat-1", "photo", "v-srimart", {
+        aiMeter: meter as never,
+      });
+      const prompt = mockGenerateImage.mock.calls[0][0] as string;
+      expect(prompt).toContain("#1d4ed8");
+      expect(prompt).toContain("#f97316");
     });
   });
 });

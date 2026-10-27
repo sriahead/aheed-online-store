@@ -3,7 +3,8 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons/Icon";
-import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
+import { IconMedallion } from "@/components/icons/IconMedallion";
+import { FLAT_ICON_SLOTS, ICON_3D_SLOTS } from "@/lib/icon-slots";
 import type { CategoryAssetItem } from "@/components/staff/CategoryImageManager";
 import type { CategoryImageStyle } from "@/lib/category-image";
 
@@ -16,22 +17,21 @@ export interface CategoryOption {
 export interface IconGalleryClientProps {
   initialAssets: CategoryAssetItem[];
   categories: CategoryOption[];
+  /**
+   * #1288 R7: only an admin can generate, activate, deactivate or delete — the routes behind those
+   * controls are ADMIN-only, so a STAFF viewer gets the library read-only instead of buttons that 403.
+   */
+  canManage: boolean;
 }
 
-const SYSTEM_SLOTS = [
-  { id: "delivery-van", label: "Header & Trust: Delivery Van" },
-  { id: "storefront", label: "Header: Shop / Storefront" },
-  { id: "quick-shop", label: "Header: Quick Shop Basket" },
-  { id: "user-profile", label: "Header: User Profile Avatar" },
-  { id: "cart-floating", label: "Floating Cart Trolley (cart-add)" },
-  { id: "secure-checkout", label: "Trust: Secure Checkout Shield" },
-  { id: "order-updates", label: "Trust: Order Updates Bell" },
-  { id: "view-shopper", label: "Role Switcher: Shopper View" },
-  { id: "view-staff", label: "Role Switcher: Staff View" },
-  { id: "view-admin", label: "Role Switcher: Admin View" },
-  { id: "rewards-coin", label: "Floating Action: Rewards Launcher" },
-  { id: "halal-certified", label: "Trust Badge: Halal Certified" },
-];
+/** Flat (Noto) icon slots are stored as `icon:<name>`; 3D system slots are bare names. */
+function isFlatSlot(slot: string | null | undefined): boolean {
+  return Boolean(slot?.startsWith("icon:"));
+}
+
+/** Card and modal previews show the asset in the same circle shoppers see (#1288 R17). */
+const CARD_MEDALLION_SIZE = 120;
+const PREVIEW_MEDALLION_SIZE = 320;
 
 function useOptionalRouter() {
   try {
@@ -41,9 +41,13 @@ function useOptionalRouter() {
   }
 }
 
-export function IconGalleryClient({ initialAssets, categories }: IconGalleryClientProps) {
+export function IconGalleryClient({
+  initialAssets,
+  categories,
+  canManage,
+}: IconGalleryClientProps) {
   const [assets, setAssets] = useState<CategoryAssetItem[]>(initialAssets);
-  const [filterTab, setFilterTab] = useState<"all" | "categories" | "slots">("all");
+  const [filterTab, setFilterTab] = useState<"all" | "categories" | "slots" | "flat">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssetForPreview, setSelectedAssetForPreview] = useState<CategoryAssetItem | null>(
     null,
@@ -52,7 +56,7 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
   // Quick generator state
   const [targetType, setTargetType] = useState<"category" | "slot">("category");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(categories[0]?.id || "");
-  const [selectedSlotId, setSelectedSlotId] = useState<string>(SYSTEM_SLOTS[0].id);
+  const [selectedSlotId, setSelectedSlotId] = useState<string>(ICON_3D_SLOTS[0].id);
   const [genStyle, setGenStyle] = useState<CategoryImageStyle>("photo");
   const [generating, setGenerating] = useState(false);
   const [actionPendingId, setActionPendingId] = useState<string | null>(null);
@@ -66,7 +70,8 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
   const filteredAssets = useMemo(() => {
     return assets.filter((asset) => {
       if (filterTab === "categories" && !asset.categoryId) return false;
-      if (filterTab === "slots" && !asset.slot) return false;
+      if (filterTab === "slots" && (!asset.slot || isFlatSlot(asset.slot))) return false;
+      if (filterTab === "flat" && !isFlatSlot(asset.slot)) return false;
 
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
@@ -196,6 +201,43 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
     }
   }
 
+  // #1288 R4: switch the active asset off; the surface falls back to its built-in artwork.
+  async function handleDeactivate(asset: CategoryAssetItem) {
+    setStatusMessage(null);
+    setActionPendingId(asset.id);
+
+    try {
+      const res = await fetch("/api/admin/category-images/deactivate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetId: asset.id }),
+      });
+
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to deactivate asset.");
+      }
+
+      setAssets((prev) => prev.map((a) => (a.id === asset.id ? { ...a, isSelected: false } : a)));
+      setSelectedAssetForPreview((prev) =>
+        prev?.id === asset.id ? { ...prev, isSelected: false } : prev,
+      );
+
+      setStatusMessage({
+        type: "success",
+        text: "Asset deactivated. The built-in artwork is shown again.",
+      });
+      router?.refresh();
+    } catch (cause) {
+      setStatusMessage({
+        type: "error",
+        text: cause instanceof Error ? cause.message : String(cause),
+      });
+    } finally {
+      setActionPendingId(null);
+    }
+  }
+
   async function handleDelete(asset: CategoryAssetItem) {
     if (
       !window.confirm(
@@ -243,134 +285,151 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
 
   return (
     <div className="space-y-6">
-      {/* Quick Generator Panel */}
-      <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <Icon name="sparkles" className="h-5 w-5 text-amber-500" />
-          <h2 className="text-sm font-bold text-primary">Generate New Asset</h2>
-          <span className="text-xs text-primary-muted ml-auto">
-            Metred via Cloudflare Workers AI
-          </span>
-        </div>
+      {!canManage && (
+        <p className="rounded-xl border border-black/10 bg-surface-muted px-3 py-2 text-xs text-primary-muted">
+          Only an admin can generate or change visual assets.
+        </p>
+      )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-          <div>
-            <span className="block text-xs font-semibold text-primary-muted mb-1">
-              Asset Target:
+      {/* Quick Generator Panel */}
+      {canManage && (
+        <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <Icon name="sparkles" className="h-5 w-5 text-amber-500" />
+            <h2 className="text-sm font-bold text-primary">Generate New Asset</h2>
+            <span className="text-xs text-primary-muted ml-auto">
+              Metred via Cloudflare Workers AI
             </span>
-            <div className="flex rounded-lg border border-black/15 p-0.5 bg-surface-muted">
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <span className="block text-xs font-semibold text-primary-muted mb-1">
+                Asset Target:
+              </span>
+              <div className="flex rounded-lg border border-black/15 p-0.5 bg-surface-muted">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTargetType("category");
+                  }}
+                  className={`flex-1 rounded-md py-1 text-xs font-semibold transition ${
+                    targetType === "category" ? "bg-white text-primary shadow-sm" : "text-black/60"
+                  }`}
+                >
+                  Category
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTargetType("slot");
+                    setGenStyle("3d-icon");
+                  }}
+                  className={`flex-1 rounded-md py-1 text-xs font-semibold transition ${
+                    targetType === "slot" ? "bg-white text-primary shadow-sm" : "text-black/60"
+                  }`}
+                >
+                  System Icon
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="quick-gen-target-select"
+                className="block text-xs font-semibold text-primary-muted mb-1"
+              >
+                {targetType === "category" ? "Department:" : "Icon Slot:"}
+              </label>
+              {targetType === "category" ? (
+                <select
+                  id="quick-gen-target-select"
+                  value={selectedCategoryId}
+                  onChange={(e) => setSelectedCategoryId(e.target.value)}
+                  disabled={generating}
+                  className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
+                >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.slug})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <select
+                  id="quick-gen-target-select"
+                  value={selectedSlotId}
+                  onChange={(e) => setSelectedSlotId(e.target.value)}
+                  disabled={generating}
+                  className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
+                >
+                  <optgroup label="3D icons">
+                    {ICON_3D_SLOTS.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Flat icons">
+                    {FLAT_ICON_SLOTS.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="quick-gen-style-select"
+                className="block text-xs font-semibold text-primary-muted mb-1"
+              >
+                Visual Preset:
+              </label>
+              <select
+                id="quick-gen-style-select"
+                value={genStyle}
+                onChange={(e) => setGenStyle(e.target.value as CategoryImageStyle)}
+                disabled={generating}
+                className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
+              >
+                <option value="photo">Studio Product Photography</option>
+                <option value="3d-icon">Commercial 3D Rendered Icon</option>
+              </select>
+            </div>
+
+            <div className="flex items-end">
               <button
                 type="button"
-                onClick={() => {
-                  setTargetType("category");
-                }}
-                className={`flex-1 rounded-md py-1 text-xs font-semibold transition ${
-                  targetType === "category" ? "bg-white text-primary shadow-sm" : "text-black/60"
-                }`}
+                onClick={handleGenerate}
+                disabled={generating}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-action px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-action-hover disabled:opacity-50"
               >
-                Category
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTargetType("slot");
-                  setGenStyle("3d-icon");
-                }}
-                className={`flex-1 rounded-md py-1 text-xs font-semibold transition ${
-                  targetType === "slot" ? "bg-white text-primary shadow-sm" : "text-black/60"
-                }`}
-              >
-                System Icon
+                <Icon
+                  name="sparkles"
+                  className={`h-4 w-4 ${generating ? "animate-spin" : "text-amber-300"}`}
+                />
+                {generating ? "Generating…" : "Generate & Add to Library"}
               </button>
             </div>
           </div>
 
-          <div>
-            <label
-              htmlFor="quick-gen-target-select"
-              className="block text-xs font-semibold text-primary-muted mb-1"
+          {statusMessage && (
+            <div
+              role="alert"
+              className={`mt-3 rounded-xl border px-3 py-2 text-xs ${
+                statusMessage.type === "success"
+                  ? "border-action/30 bg-action-tint/30 text-action"
+                  : "border-danger/30 bg-danger-tint/60 text-danger"
+              }`}
             >
-              {targetType === "category" ? "Department:" : "Icon Slot:"}
-            </label>
-            {targetType === "category" ? (
-              <select
-                id="quick-gen-target-select"
-                value={selectedCategoryId}
-                onChange={(e) => setSelectedCategoryId(e.target.value)}
-                disabled={generating}
-                className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
-              >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.slug})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <select
-                id="quick-gen-target-select"
-                value={selectedSlotId}
-                onChange={(e) => setSelectedSlotId(e.target.value)}
-                disabled={generating}
-                className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
-              >
-                {SYSTEM_SLOTS.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          <div>
-            <label
-              htmlFor="quick-gen-style-select"
-              className="block text-xs font-semibold text-primary-muted mb-1"
-            >
-              Visual Preset:
-            </label>
-            <select
-              id="quick-gen-style-select"
-              value={genStyle}
-              onChange={(e) => setGenStyle(e.target.value as CategoryImageStyle)}
-              disabled={generating}
-              className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
-            >
-              <option value="photo">Studio Product Photography</option>
-              <option value="3d-icon">Commercial 3D Rendered Icon</option>
-            </select>
-          </div>
-
-          <div className="flex items-end">
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={generating}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-action px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-action-hover disabled:opacity-50"
-            >
-              <Icon
-                name="sparkles"
-                className={`h-4 w-4 ${generating ? "animate-spin" : "text-amber-300"}`}
-              />
-              {generating ? "Generating…" : "Generate & Add to Library"}
-            </button>
-          </div>
+              {statusMessage.text}
+            </div>
+          )}
         </div>
-
-        {statusMessage && (
-          <div
-            role="alert"
-            className={`mt-3 rounded-xl border px-3 py-2 text-xs ${
-              statusMessage.type === "success"
-                ? "border-action/30 bg-action-tint/30 text-action"
-                : "border-danger/30 bg-danger-tint/60 text-danger"
-            }`}
-          >
-            {statusMessage.text}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Library Controls: Tabs & Search */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -402,7 +461,16 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
               filterTab === "slots" ? "bg-primary text-white" : "text-black/70 hover:bg-black/5"
             }`}
           >
-            System Icons ({assets.filter((a) => a.slot).length})
+            System Icons ({assets.filter((a) => a.slot && !isFlatSlot(a.slot)).length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterTab("flat")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+              filterTab === "flat" ? "bg-primary text-white" : "text-black/70 hover:bg-black/5"
+            }`}
+          >
+            Flat icons ({assets.filter((a) => isFlatSlot(a.slot)).length})
           </button>
         </div>
 
@@ -424,7 +492,7 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
       {/* Asset Grid */}
       {filteredAssets.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-black/15 bg-white p-12 text-center">
-          <Icon name="folder-tree" className="mx-auto h-8 w-8 text-primary-subtle mb-2" />
+          <IconMedallion icon="folder-tree" size={32} className="mx-auto mb-2" decorative />
           <h3 className="text-sm font-bold text-primary">No visual assets found</h3>
           <p className="text-xs text-primary-muted mt-1">
             Generate candidate images using the generator above or check category settings.
@@ -449,24 +517,20 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
                 <button
                   type="button"
                   onClick={() => setSelectedAssetForPreview(asset)}
-                  className="relative aspect-square w-full overflow-hidden rounded-xl bg-surface-muted focus:outline-none focus:ring-2 focus:ring-action"
+                  className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-surface-muted focus:outline-none focus:ring-2 focus:ring-action"
                   title="Click to preview full asset"
                 >
                   {asset.imageUrl ? (
-                    <ImageWithFallback
-                      src={asset.imageUrl}
-                      alt={targetLabel}
-                      width={180}
-                      height={180}
-                      className="h-full w-full object-cover transition-transform group-hover:scale-105 motion-reduce:group-hover:scale-100"
-                      fallback={
-                        <Icon name="folder-tree" className="h-8 w-8 text-primary-subtle m-auto" />
-                      }
+                    <IconMedallion
+                      imageUrl={asset.imageUrl}
+                      fallbackIcon="folder-tree"
+                      size={CARD_MEDALLION_SIZE}
+                      label={targetLabel}
+                      loading="lazy"
+                      className="transition-transform group-hover:scale-105 motion-reduce:group-hover:scale-100"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <Icon name="folder-tree" className="h-8 w-8 text-primary-subtle" />
-                    </div>
+                    <IconMedallion icon="folder-tree" size={CARD_MEDALLION_SIZE} decorative />
                   )}
 
                   {asset.isSelected && (
@@ -493,7 +557,11 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
                   </div>
 
                   <div className="mt-3 flex items-center gap-1 pt-2 border-t border-black/5">
-                    {!asset.isSelected ? (
+                    {!canManage ? (
+                      <span className="flex-1 text-[11px] font-bold text-primary-muted py-1 text-center">
+                        {asset.isSelected ? "Active" : "Inactive"}
+                      </span>
+                    ) : !asset.isSelected ? (
                       <button
                         type="button"
                         onClick={() => handleSelect(asset)}
@@ -503,9 +571,14 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
                         {isPending ? "Selecting…" : "Activate"}
                       </button>
                     ) : (
-                      <span className="flex-1 text-[11px] font-bold text-action py-1 text-center">
-                        Active
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeactivate(asset)}
+                        disabled={isPending || generating}
+                        className="flex-1 rounded-lg border border-black/15 bg-white px-2 py-1 text-[11px] font-bold text-primary hover:bg-black/5 disabled:opacity-50"
+                      >
+                        {isPending ? "Deactivating…" : "Deactivate"}
+                      </button>
                     )}
 
                     <button
@@ -517,16 +590,18 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
                       <Icon name="eye" className="h-3.5 w-3.5" />
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(asset)}
-                      disabled={isPending || generating}
-                      aria-label="Delete asset"
-                      title="Delete asset"
-                      className="rounded-lg p-1 text-black/60 hover:bg-danger-tint/50 hover:text-danger disabled:opacity-50"
-                    >
-                      <Icon name="trash" className="h-3.5 w-3.5" />
-                    </button>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(asset)}
+                        disabled={isPending || generating}
+                        aria-label="Delete asset"
+                        title="Delete asset"
+                        className="rounded-lg p-1 text-black/60 hover:bg-danger-tint/50 hover:text-danger disabled:opacity-50"
+                      >
+                        <Icon name="trash" className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -573,18 +648,14 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
 
             <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-surface-muted flex items-center justify-center">
               {selectedAssetForPreview.imageUrl ? (
-                <ImageWithFallback
-                  src={selectedAssetForPreview.imageUrl}
-                  alt="High resolution preview"
-                  width={512}
-                  height={512}
-                  className="h-full w-full object-contain"
-                  fallback={
-                    <Icon name="folder-tree" className="h-12 w-12 text-primary-subtle m-auto" />
-                  }
+                <IconMedallion
+                  imageUrl={selectedAssetForPreview.imageUrl}
+                  fallbackIcon="folder-tree"
+                  size={PREVIEW_MEDALLION_SIZE}
+                  label="High resolution preview"
                 />
               ) : (
-                <Icon name="folder-tree" className="h-12 w-12 text-primary-subtle" />
+                <IconMedallion icon="folder-tree" size={PREVIEW_MEDALLION_SIZE} decorative />
               )}
             </div>
 
@@ -604,7 +675,7 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2">
-              {!selectedAssetForPreview.isSelected && (
+              {canManage && !selectedAssetForPreview.isSelected && (
                 <button
                   type="button"
                   onClick={() => {
@@ -616,13 +687,24 @@ export function IconGalleryClient({ initialAssets, categories }: IconGalleryClie
                   Activate Asset
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => handleDelete(selectedAssetForPreview)}
-                className="rounded-xl border border-danger/30 bg-danger-tint/30 px-4 py-2 text-xs font-bold text-danger hover:bg-danger-tint/60"
-              >
-                Delete Asset
-              </button>
+              {canManage && selectedAssetForPreview.isSelected && (
+                <button
+                  type="button"
+                  onClick={() => handleDeactivate(selectedAssetForPreview)}
+                  className="rounded-xl border border-black/15 bg-white px-4 py-2 text-xs font-bold text-primary hover:bg-black/5"
+                >
+                  Deactivate Asset
+                </button>
+              )}
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(selectedAssetForPreview)}
+                  className="rounded-xl border border-danger/30 bg-danger-tint/30 px-4 py-2 text-xs font-bold text-danger hover:bg-danger-tint/60"
+                >
+                  Delete Asset
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setSelectedAssetForPreview(null)}

@@ -8,7 +8,9 @@ import {
   buildSlotAssetKey,
   buildSlotAssetPrompt,
   type CategoryImageStyle,
+  type PromptPalette,
 } from "./category-image";
+import { fetchVendorProfile } from "./vendor-service";
 import { getCategoryForAdmin } from "./categories-service";
 import { getPrismaWs } from "./db";
 import { createCategoryAsset, type CategoryAssetSummary } from "./repositories/category-assets";
@@ -21,6 +23,15 @@ export interface CategoryPipelineResult {
 
 export interface CategoryPipelineBudgetRefused {
   budgetRefused: AiBudgetCheck;
+}
+
+/**
+ * The vendor's own colours for the prompt (#1288 R23): `green` is the brand primary, `orange` the
+ * accent — the same primitives `brandStyle()` themes the storefront with.
+ */
+async function vendorPromptPalette(vendorId: string): Promise<PromptPalette> {
+  const { primitives } = await fetchVendorProfile(vendorId);
+  return { primary: primitives.green, accent: primitives.orange };
 }
 
 export async function runCategoryImagePipeline(
@@ -37,7 +48,11 @@ export async function runCategoryImagePipeline(
     return { budgetRefused: budgetCheck };
   }
 
-  const prompt = buildCategoryImagePrompt(category.name, style);
+  const prompt = buildCategoryImagePrompt(
+    category.name,
+    style,
+    await vendorPromptPalette(vendorId),
+  );
   const aiSvc = getImageGenerationService();
   const imageBuffer = await aiSvc.generateImage(prompt);
   if (!imageBuffer) return null;
@@ -74,7 +89,7 @@ export async function runSlotAssetPipeline(
     return { budgetRefused: budgetCheck };
   }
 
-  const prompt = buildSlotAssetPrompt(slot, style);
+  const prompt = buildSlotAssetPrompt(slot, style, await vendorPromptPalette(vendorId));
   const aiSvc = getImageGenerationService();
   const imageBuffer = await aiSvc.generateImage(prompt);
   if (!imageBuffer) return null;

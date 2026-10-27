@@ -7,6 +7,7 @@
  */
 
 import { IMAGE_CONTENT_TYPE, imageExtensionForContentType } from "./product-image";
+import { getIconSlot } from "./icon-slots";
 
 export type CategoryImageStyle = "photo" | "3d-icon";
 
@@ -29,29 +30,49 @@ export function buildCategoryImageKey(
 }
 
 /**
+ * The vendor's own colours, passed into every prompt (#1288 R20/R23). Built by the pipeline from the
+ * vendor's `BrandPrimitives` (`green` → `primary`, `orange` → `accent`), so no vendor's palette is
+ * hardcoded here (ADR-004).
+ */
+export interface PromptPalette {
+  primary: string;
+  accent: string;
+}
+
+/**
+ * Appended to EVERY prompt (#1288 R20): each generated image is shown inside the circular
+ * `IconMedallion`, which crops a photo or AI asset to a circle and multiplies its white background
+ * into the vendor's tint — so the subject must sit well inside the frame on plain white.
+ */
+export const CIRCULAR_FRAMING_CLAUSE =
+  "Framing: the image will be cropped to a circle, so keep the whole subject centred inside the " +
+  "middle 70% of a square 1:1 frame, with nothing touching or crossing the edges, on a plain flat " +
+  "pure white background (#ffffff) with no border, no vignette, no text and no watermarks.";
+
+function paletteClause(palette: PromptPalette): string {
+  return `Use the store's brand colours as accents: primary ${palette.primary} and accent ${palette.accent}.`;
+}
+
+/**
  * Constructs an AI generation prompt for category imagery based on the requested visual style.
  */
 export function buildCategoryImagePrompt(
   categoryName: string,
-  style: CategoryImageStyle = "photo",
+  style: CategoryImageStyle,
+  palette: PromptPalette,
 ): string {
   const cleanName = categoryName.trim();
 
-  if (style === "3d-icon") {
-    return (
-      `3D rendered commercial app icon of ${cleanName}, isolated on a pure white background (#ffffff). ` +
-      `Clay-smooth tactile plastic and metallic materials, glossy specular highlights, studio ambient lighting ` +
-      `with soft contact shadow directly underneath, isometric 45-degree angle. ` +
-      `High detail, vibrant retail colors, zero text, zero watermarks, zero background clutter.`
-    );
-  }
+  const lead =
+    style === "3d-icon"
+      ? `3D rendered commercial app icon of ${cleanName}. ` +
+        `Clay-smooth tactile plastic and metallic materials, glossy specular highlights, studio ambient lighting ` +
+        `with a soft contact shadow directly underneath, isometric 45-degree angle, high detail, vibrant retail colours.`
+      : // Default: Commercial studio product photography
+        `Commercial studio grocery photography of fresh appetizing ${cleanName}, realistic retail presentation, ` +
+        `soft studio ambient lighting, genuine product photography, high resolution, sharp focus.`;
 
-  // Default: Commercial studio product photography
-  return (
-    `Commercial studio grocery photography of fresh appetizing ${cleanName}, realistic retail food presentation, ` +
-    `centered square composition, clean bright neutral background, soft studio ambient lighting, ` +
-    `genuine product photography, high resolution, 1:1 aspect ratio, sharp focus, no text, no watermarks.`
-  );
+  return `${lead} ${paletteClause(palette)} ${CIRCULAR_FRAMING_CLAUSE}`;
 }
 
 /**
@@ -73,50 +94,58 @@ export function buildSlotAssetKey(
 }
 
 /**
- * Constructs an AI generation prompt for UI system icon assets, strictly aligned with
- * the application's commercial theme (emerald green #059669, royal navy #1E3A8A, warm gold #F59E0B)
- * and isolated on pure white with crisp edges so icons remain vivid and clearly readable at 24px.
+ * The subject of each 3D slot's icon (#1288): WHAT to draw, with no colours of any vendor — the
+ * palette and the circular framing are added by `buildSlotAssetPrompt`. Keyed by `ICON_SLOTS` id.
  */
-export function buildSlotAssetPrompt(slot: string, _style?: CategoryImageStyle): string {
-  const themedSlotPrompts: Record<string, string> = {
-    "delivery-van":
-      "Commercial 3D UI app icon of a sleek modern refrigerated grocery delivery van, 3D rendered commercial app icon style, isometric 3/4 front perspective, clean white vehicle body with fresh emerald green accents and royal navy trim, glossy headlights, isolated on pure white background (#ffffff), crisp silhouette, soft contact shadow beneath the tires, high contrast readable at 24px, zero background scenery, no text, no watermarks.",
-    storefront:
-      "Commercial 3D UI app icon of a charming miniature grocery store boutique, pastel cyan and white striped awning, warm peach stucco facade, neat glass window, colorful paper gift shopping bags sitting neatly out front, isolated on pure seamless white background (#ffffff), crisp silhouette, glossy plastic and smooth clay textures, soft contact shadow directly underneath, high contrast readable at 24px, no street, no sky, no text, no watermarks.",
-    "quick-shop":
-      "Commercial 3D UI app icon of a dynamic shopping cart with electric speed energy, sleek blue wireframe basket with chrome wheels, an energetic bright golden yellow and magenta gradient 3D lightning bolt bursting forward through the cart, isolated on pure seamless white background (#ffffff), high contrast, crisp silhouette readable at 24px, soft contact shadow, glossy specular highlights, no background scenery, no text, no watermarks.",
-    "user-profile":
-      "Commercial 3D UI app icon of a sleek minimalist glossy modern avatar bust, smooth stylized human profile silhouette, vibrant iridescent electric gradient from royal blue to deep magenta purple, glossy specular sheen, isolated on pure seamless white background (#ffffff), centered composition, high contrast, crisp edges readable at 24px, soft contact shadow underneath, no background scenery, no clothes details, no text, no watermarks.",
-    "cart-floating":
-      "Commercial 3D UI app icon of a high-detail chrome wire grocery shopping trolley cart, vibrant orange handle, filled to the brim with fresh colorful supermarket groceries: crisp lettuce, bright red tomatoes, green apples, yellow bananas, golden baguette loaf, isolated on pure seamless white background (#ffffff), soft natural contact shadow directly beneath the wheels, sharp 3/4 isometric perspective, vibrant saturated colors, crisp silhouette readable at 24px, no background room, no floor grid, no text, no watermarks.",
-    "cart-add":
-      "Commercial 3D UI app icon of a high-detail chrome wire grocery shopping trolley cart, vibrant orange handle, filled to the brim with fresh colorful supermarket groceries: crisp lettuce, bright red tomatoes, green apples, yellow bananas, golden baguette loaf, isolated on pure seamless white background (#ffffff), soft natural contact shadow directly beneath the wheels, sharp 3/4 isometric perspective, vibrant saturated colors, crisp silhouette readable at 24px, no background room, no floor grid, no text, no watermarks.",
-    "secure-checkout":
-      "Commercial 3D UI app icon of a heavy polished metallic security shield with an embossed brass padlock, glowing emerald green security checkmark accent, deep royal navy border, warm golden specular reflections, isolated on pure seamless solid white background (#ffffff), high contrast, crisp silhouette readable at 24px, soft drop shadow, no food, no background scenery, no text, no watermarks.",
-    "order-updates":
-      "Commercial 3D UI app icon of a gleaming warm golden notification bell with a crisp white and emerald green postal delivery envelope with an alert badge, isolated on pure seamless solid white background (#ffffff), high contrast, crisp silhouette readable at 24px, soft contact shadow, no background scenery, no text, no watermarks.",
-    "view-shopper":
-      "Commercial 3D UI app icon of a classic brown paper grocery shopping bag filled with fresh artisan baguette, leafy greens, and red apples, isolated on pure seamless solid white background (#ffffff), crisp edges, high contrast readable at 24px, soft contact shadow, no background scenery, no text, no watermarks.",
-    "view-staff":
-      "Commercial 3D UI app icon of a modern retail store point-of-sale register terminal and handheld barcode scanner, emerald green and deep navy housing with glowing screen, isolated on pure seamless solid white background (#ffffff), crisp silhouette readable at 24px, soft contact shadow, no supermarket aisle, no background room, no text, no watermarks.",
-    "view-admin":
-      "Commercial 3D UI app icon of a polished platinum security badge with a golden master administrative key, deep royal navy enamel accents, isolated on pure seamless solid white background (#ffffff), high contrast, crisp edges readable at 24px, soft drop shadow, no background scenery, no text, no watermarks.",
-    "rewards-coin":
-      "Commercial 3D UI app icon of a celebratory gleaming golden trophy bursting out of an open red gift box tied with shimmering gold ribbons, surrounded by floating miniature 3D golden, cyan, and magenta star particles, isolated on pure seamless white background (#ffffff), soft contact shadow, glossy metallic reflections, clean icon silhouette readable at 24px, zero background scenery, no text, no watermarks.",
-    "rewards-gift":
-      "Commercial 3D UI app icon of a celebratory gleaming golden trophy bursting out of an open red gift box tied with shimmering gold ribbons, surrounded by floating miniature 3D golden, cyan, and magenta star particles, isolated on pure seamless white background (#ffffff), soft contact shadow, glossy metallic reflections, clean icon silhouette readable at 24px, zero background scenery, no text, no watermarks.",
-    "halal-certified":
-      "Commercial 3D UI icon of a prestigious golden halal certification rosette medal badge with emerald green ribbon and clean geometric emblem, isolated on pure seamless solid white background (#ffffff), high contrast, crisp silhouette, soft contact shadow, no text, no watermarks.",
-  };
+const SLOT_SUBJECTS: Record<string, string> = {
+  "delivery-van":
+    "a sleek modern refrigerated grocery delivery van, isometric 3/4 front perspective, clean white body, glossy headlights",
+  storefront:
+    "a charming miniature grocery store boutique with a striped awning, a neat glass window and paper shopping bags out front",
+  "quick-shop":
+    "a dynamic shopping cart with a 3D lightning bolt bursting forward through it, chrome wheels",
+  "user-profile":
+    "a sleek minimalist glossy avatar bust, smooth stylised human profile silhouette, no clothing details",
+  "cart-floating":
+    "a chrome wire grocery shopping trolley filled with fresh groceries: lettuce, tomatoes, apples, bananas and a baguette, 3/4 isometric perspective",
+  "secure-checkout":
+    "a polished metallic security shield with an embossed padlock and a security checkmark",
+  "order-updates":
+    "a gleaming notification bell with a postal delivery envelope and an alert badge",
+  "view-shopper": "a brown paper grocery bag filled with a baguette, leafy greens and apples",
+  "view-staff": "a modern retail point-of-sale register terminal and a handheld barcode scanner",
+  "view-admin": "a polished security badge with a master administrative key",
+  "rewards-coin": "an embossed golden loyalty coin with a star emblem",
+  "halal-certified":
+    "a halal certification rosette medal badge with a ribbon and a clean geometric emblem",
+  "postcode-search": "a 3D location map pin with a magnifying glass lens",
+  "contact-follow": "a speech bubble beside a smartphone, suggesting contact and social follow",
+  "rewards-gift":
+    "an open gift box tied with a satin ribbon, a small golden trophy rising out of it",
+};
 
-  if (themedSlotPrompts[slot]) {
-    return themedSlotPrompts[slot];
-  }
+function slotSubject(slot: string): string {
+  const known = SLOT_SUBJECTS[slot];
+  if (known) return known;
+  const entry = getIconSlot(slot);
+  if (entry?.kind === "flat") return `a ${entry.notoId.replace(/-/g, " ")}`;
+  return `a ${slot.replace(/[-_:]+/g, " ").trim()}`;
+}
 
-  const cleanSlot = slot.replace(/[-_]/g, " ");
-  return (
-    `Commercial 3D UI icon of ${cleanSlot}, vibrant theme colors (emerald green, royal navy, warm gold), ` +
-    `isolated on pure white background, crisp silhouette, high contrast, soft subtle contact shadow, ` +
-    `centered composition, clean icon render readable at 24px, no background scenery, no text, no watermarks.`
-  );
+/**
+ * Constructs an AI generation prompt for a UI icon slot (`ICON_SLOTS`, #1288): the slot's subject,
+ * the vendor's palette and the circular framing clause, readable at 24px.
+ */
+export function buildSlotAssetPrompt(
+  slot: string,
+  style: CategoryImageStyle,
+  palette: PromptPalette,
+): string {
+  const subject = slotSubject(slot);
+  const lead =
+    style === "photo"
+      ? `Commercial studio photograph of ${subject}, realistic materials, soft studio lighting, sharp focus.`
+      : `Commercial 3D rendered UI app icon of ${subject}, clay-smooth and glossy materials, soft contact shadow ` +
+        `directly underneath, crisp silhouette, high contrast, clearly readable at 24px.`;
+  return `${lead} ${paletteClause(palette)} ${CIRCULAR_FRAMING_CLAUSE}`;
 }

@@ -17,7 +17,7 @@ import { getCustomerFeedbackRepository } from "@/lib/customer-feedback-service";
 import { getVendorReviewLinkRepository } from "@/lib/vendor-review-links-service";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Icon } from "@/components/icons/Icon";
-import { Icon3D } from "@/components/icons/Icon3D";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 /** How many approved cards the stack holds. Beyond this the fan is unreadable anyway. */
 const FEEDBACK_CARD_LIMIT = 12;
@@ -126,7 +126,7 @@ export default async function HomePage() {
           <div className="max-w-2xl space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-2 bg-black/25 border border-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm">
-                <Icon3D name="delivery-van" size={24} className="-my-1" />
+                <IconMedallion icon3d="delivery-van" size={24} className="-my-1" decorative />
                 <span>
                   {profile?.offerCollection
                     ? `Local Delivery across ${localityName} & Click & Collect`
@@ -134,7 +134,7 @@ export default async function HomePage() {
                 </span>
               </div>
               <div className="inline-flex items-center gap-2 bg-black/25 border border-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm backdrop-blur-sm">
-                <Icon3D name="halal-certified" size={24} className="-my-1" />
+                <IconMedallion icon3d="halal-certified" size={24} className="-my-1" decorative />
                 <span>100% Certified HMC Halal</span>
               </div>
             </div>
@@ -225,8 +225,8 @@ export default async function HomePage() {
       {/* Trust Values Strip — P7.5c+f (#239) & 3D Icon upgrade (#1245). */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3.5 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-xl bg-action-tint/30 flex items-center justify-center font-bold shrink-0 group-hover:scale-105 motion-reduce:group-hover:scale-100 transition-transform">
-            <Icon3D name="delivery-van" size={44} />
+          <div className="shrink-0 group-hover:scale-105 motion-reduce:group-hover:scale-100 transition-transform">
+            <IconMedallion icon3d="delivery-van" size={48} tint="action" decorative />
             <span className="hidden">
               <Icon name="trust-delivery" tone="primary" />
             </span>
@@ -244,8 +244,8 @@ export default async function HomePage() {
         </div>
 
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3.5 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-xl bg-accent-tint/30 flex items-center justify-center font-bold shrink-0 group-hover:scale-105 motion-reduce:group-hover:scale-100 transition-transform">
-            <Icon3D name="secure-checkout" size={44} />
+          <div className="shrink-0 group-hover:scale-105 motion-reduce:group-hover:scale-100 transition-transform">
+            <IconMedallion icon3d="secure-checkout" size={48} tint="accent" decorative />
             <span className="hidden">
               <Icon name="trust-payment" tone="accent" />
             </span>
@@ -259,8 +259,8 @@ export default async function HomePage() {
         </div>
 
         <div className="group bg-white p-4 rounded-2xl border border-black/10 flex items-center gap-3.5 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-xl bg-danger-tint/30 flex items-center justify-center font-bold shrink-0 group-hover:scale-105 motion-reduce:group-hover:scale-100 transition-transform">
-            <Icon3D name="order-updates" size={44} />
+          <div className="shrink-0 group-hover:scale-105 motion-reduce:group-hover:scale-100 transition-transform">
+            <IconMedallion icon3d="order-updates" size={48} tint="danger" decorative />
             <span className="hidden">
               <Icon name="trust-updates" tone="danger" />
             </span>

@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { IconName } from "@/components/icons/registry";
 import { Icon } from "@/components/icons/Icon";
-import { Icon3D, type Icon3DName } from "@/components/icons/Icon3D";
+import type { Icon3DName } from "@/components/icons/Icon3D";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 export interface ViewSwitcherProps {
   canSeeAdmin: boolean;
@@ -72,13 +73,7 @@ export function ViewSwitcher({ canSeeAdmin, currentTier, isPortal }: ViewSwitche
         disabled={isPending}
         className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
       >
-        <Icon3D
-          name={activeOption.icon3d}
-          size={18}
-          className="-my-0.5"
-          animated={false}
-          decorative
-        />
+        <IconMedallion icon3d={activeOption.icon3d} size={18} className="-my-0.5" decorative />
         <span className="hidden sm:inline">{activeOption.label}</span>
         <Icon
           name="chevron-down"
@@ -100,13 +95,7 @@ export function ViewSwitcher({ canSeeAdmin, currentTier, isPortal }: ViewSwitche
                     : "font-medium text-black/70 hover:bg-black/5"
                 }`}
               >
-                <Icon3D
-                  name={view.icon3d}
-                  size={20}
-                  className="-my-0.5"
-                  animated={false}
-                  decorative
-                />
+                <IconMedallion icon3d={view.icon3d} size={20} className="-my-0.5" decorative />
                 {view.label}
               </button>
             );

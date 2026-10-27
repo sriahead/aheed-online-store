@@ -1,4 +1,4 @@
-import { Icon } from "@/components/icons/Icon";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 /**
  * The branded "something went wrong" surface, defined once (#478/#479).
@@ -38,9 +38,7 @@ export function ErrorPanel({
         fullHeight ? "min-h-screen" : "min-h-[60vh]"
       } flex-col items-center justify-center gap-4 px-6 text-center bg-surface-muted text-primary`}
     >
-      <div className="rounded-full bg-danger-tint p-4 text-danger">
-        <Icon name="triangle-alert" className="h-8 w-8" />
-      </div>
+      <IconMedallion icon="triangle-alert" size={64} tint="danger" decorative />
       <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
       <p className="max-w-md text-sm text-primary-muted">{message}</p>
       <button
