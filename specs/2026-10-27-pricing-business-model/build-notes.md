@@ -181,3 +181,53 @@ Not amended, worth knowing:
    duplicate guard and `date +%-m` are GNU/Linux-only; that is fine on `ubuntu-latest`.
 7. **R35 doc-claims trace**: the guide says a GitHub issue opens on the first day of each quarter
    "as a reminder". That is true only once the workflow is on `main`.
+
+## Validation record (2026-10-27): IN-SESSION, NOT INDEPENDENT
+
+The owner chose to validate in the same Opus context that built the slice (no Clear, no Sonnet
+switch). Treat this as a careful self-check, not an independent validation.
+
+- **Pre-flight**: lint, format:check, `tsc --noEmit`, `vitest --maxWorkers=4` (354 files / 4,984
+  tests), `npm run build`, kms:validate and kms:check-generated all pass at `1509ecf`. No
+  docs or spec changed after the internal docs-site build at that commit.
+- **R7 spot-check (3/3)**, read independently of WebFetch:
+  - Shopify via curl: £25 / £65 / £344 monthly, and 2% / 1.7% / 1.5% + 25p.
+  - Stripe via curl: 1.5% + 20p standard UK, 2.5% + 20p EEA, 3.15% + 20p international, +2%
+    conversion.
+  - Uber Eats via headless Chrome `--dump-dom` (curl got HTTP 406): 30% (33% for Uber One), 13%,
+    13%, £650 excl. VAT.
+
+  All match the registry.
+- **R8**: Bank of England page shows US dollar 1.3387 on 23 Oct 2026. **R3**: OGL v3 page and the
+  Lucide "ISC" licence confirmed.
+- **R38** under preview (dev host `ep-dry-morning`):
+  - Admin: 200, the 6 sections in order, 17 / 10 / 6 elements, the advisory banner, and CSV with
+    `text/csv` and the attachment filename.
+  - Vendor admin and staff: page 200 showing the refusal with no data; export 403.
+  - No cookie: page 307; export 401.
+  - `verify-mobile-layout --widths 360` signed in: `documentScrollWidth` 360 = viewport, so no
+    horizontal scroll. The comparison table is **4,167 px tall** at 360 px.
+  - Screenshot: **unverified**, because the browser extension was not connected.
+- **R25**: the served CSS contains `@media print{.print\:hidden{display:none}}`, and `print:hidden`
+  appears 13 times in the rendered HTML. The print preview / PDF screenshot is **unverified** (no
+  browser).
+- **R23 live**: the `costs` and `profitability` section HTML is SHA-1-identical before and after a
+  refresh.
+- **R39**: both actions were driven with curl (`Next-Action` ids taken from the compiled chunk).
+  - Refresh Costs: 4/4 sources `read` in 11 s; Workers Paid $5 and Neon Free $0 came back `same`.
+  - Refresh Recommendations: 10/10 distinct sources `read` in 20 s; deltas empty; actions listed.
+  - `lib/` unchanged afterwards.
+  - **"Pricing review" stayed 0 on `/staff/ai-usage`**, because the R21 migration is not applied
+    to dev (`migrate status` lists it pending). The failure path is `meter.record`, which never
+    throws. **R39 is open until the owner runs the dev migration and one refresh is repeated.**
+- **Unverified until Ship**: R27 (the workflow runs only from `main`), R40 (staging deploy), and
+  R43's CI `gates` run.
+- **Findings, not requirement failures** (candidates for a follow-up):
+  1. Plan-name matching is exact after normalising, so a renamed plan reads as `missing` plus
+     `new`. Live examples: Stripe "Standard" came back `missing`, so the card-fee what-if (R20) did
+     not fire on real data; R2 "Free" against the page's "Free tier".
+  2. Suggestions are noisy. Ecwid's annual-billing prices came back as `changed` against the
+     monthly-billing registry, and Square fields that are `null` in the registry are reported as
+     changed. Every one is labelled unconfirmed, as designed, but the actions list is long.
+  3. Spec wording: R26 lists the modules the script may import, and `lib/pricing/committed.ts` is
+     not among them. It is pure and only composes those modules.
