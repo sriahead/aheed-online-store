@@ -13,6 +13,7 @@ import { composePublicUrl } from "@/lib/storage";
 
 type Db = ReturnType<typeof getPrisma>;
 type DbWs = ReturnType<typeof getPrismaWs>;
+type Tx = Parameters<Parameters<DbWs["$transaction"]>[0]>[0];
 
 export interface CategoryAssetSummary {
   id: string;
@@ -189,107 +190,114 @@ export async function createCategoryAsset(
   };
 }
 
+const ASSET_INCLUDE = {
+  category: {
+    select: { id: true, name: true, slug: true },
+  },
+} as const;
+
+type AssetRow = Awaited<ReturnType<Tx["categoryAsset"]["update"]>> & {
+  category?: { id: string; name: string; slug: string } | null;
+};
+
+function toSummary(row: AssetRow): CategoryAssetSummary {
+  return {
+    id: row.id,
+    vendorId: row.vendorId,
+    categoryId: row.categoryId,
+    slot: row.slot,
+    storageKey: row.storageKey,
+    style: row.style,
+    isSelected: row.isSelected,
+    createdAt: row.createdAt,
+    category: row.category,
+  };
+}
+
+/**
+ * Makes one asset the active one for its category or slot (#1285; atomic since #1288 R2).
+ *
+ * Every write runs inside ONE interactive transaction: clearing the previous selection and setting
+ * the new one used to be separate statements, so a failure between them left the category or slot
+ * with nothing selected. Interactive transactions need the WebSocket client (CLAUDE.md).
+ */
 export async function selectCategoryAsset(
   prismaWs: DbWs,
   vendorId: string,
   assetId: string,
 ): Promise<{ ok: boolean; asset?: CategoryAssetSummary; error?: string }> {
-  const asset = await prismaWs.categoryAsset.findFirst({
-    where: { id: assetId, vendorId },
-  });
-
-  if (!asset) {
-    return { ok: false, error: "Asset not found" };
-  }
-
-  if (asset.categoryId) {
-    await prismaWs.categoryAsset.updateMany({
-      where: { vendorId, categoryId: asset.categoryId },
-      data: { isSelected: false },
+  return prismaWs.$transaction(async (tx: Tx) => {
+    const asset = await tx.categoryAsset.findFirst({
+      where: { id: assetId, vendorId },
     });
-    const updated = await prismaWs.categoryAsset.update({
+
+    if (!asset) {
+      return { ok: false, error: "Asset not found" };
+    }
+
+    if (asset.categoryId) {
+      await tx.categoryAsset.updateMany({
+        where: { vendorId, categoryId: asset.categoryId },
+        data: { isSelected: false },
+      });
+    } else if (asset.slot) {
+      await tx.categoryAsset.updateMany({
+        where: { vendorId, slot: asset.slot },
+        data: { isSelected: false },
+      });
+    }
+
+    const updated = await tx.categoryAsset.update({
       where: { id: asset.id },
       data: { isSelected: true },
-      include: {
-        category: {
-          select: { id: true, name: true, slug: true },
-        },
-      },
+      include: ASSET_INCLUDE,
     });
-    await prismaWs.category.update({
-      where: { id: asset.categoryId, vendorId },
-      data: { imageKey: asset.storageKey },
-    });
-    return {
-      ok: true,
-      asset: {
-        id: updated.id,
-        vendorId: updated.vendorId,
-        categoryId: updated.categoryId,
-        slot: updated.slot,
-        storageKey: updated.storageKey,
-        style: updated.style,
-        isSelected: updated.isSelected,
-        createdAt: updated.createdAt,
-        category: updated.category,
-      },
-    };
-  }
 
-  if (asset.slot) {
-    await prismaWs.categoryAsset.updateMany({
-      where: { vendorId, slot: asset.slot },
-      data: { isSelected: false },
-    });
-    const updated = await prismaWs.categoryAsset.update({
-      where: { id: asset.id },
-      data: { isSelected: true },
-      include: {
-        category: {
-          select: { id: true, name: true, slug: true },
-        },
-      },
-    });
-    return {
-      ok: true,
-      asset: {
-        id: updated.id,
-        vendorId: updated.vendorId,
-        categoryId: updated.categoryId,
-        slot: updated.slot,
-        storageKey: updated.storageKey,
-        style: updated.style,
-        isSelected: updated.isSelected,
-        createdAt: updated.createdAt,
-        category: updated.category,
-      },
-    };
-  }
+    if (asset.categoryId) {
+      await tx.category.update({
+        where: { id: asset.categoryId, vendorId },
+        data: { imageKey: asset.storageKey },
+      });
+    }
 
-  const updated = await prismaWs.categoryAsset.update({
-    where: { id: asset.id },
-    data: { isSelected: true },
-    include: {
-      category: {
-        select: { id: true, name: true, slug: true },
-      },
-    },
+    return { ok: true, asset: toSummary(updated) };
   });
+}
 
-  return {
-    ok: true,
-    asset: {
-      id: updated.id,
-      vendorId: updated.vendorId,
-      categoryId: updated.categoryId,
-      slot: updated.slot,
-      storageKey: updated.storageKey,
-      style: updated.style,
-      isSelected: updated.isSelected,
-      createdAt: updated.createdAt,
-      category: updated.category,
-    },
-  };
+/**
+ * Switches an asset back to inactive (#1288 R1) so the surface falls back to its built-in artwork:
+ * a slot to the static 3D asset or build-time icon, a category to its icon/illustration/glyph
+ * (`Category.imageKey` is cleared). Idempotent: an already-inactive asset returns `ok: true`.
+ */
+export async function deactivateCategoryAsset(
+  prismaWs: DbWs,
+  vendorId: string,
+  assetId: string,
+): Promise<{ ok: boolean; asset?: CategoryAssetSummary; error?: string }> {
+  return prismaWs.$transaction(async (tx: Tx) => {
+    const asset = await tx.categoryAsset.findFirst({
+      where: { id: assetId, vendorId },
+    });
+
+    if (!asset) {
+      return { ok: false, error: "Asset not found" };
+    }
+
+    const updated = await tx.categoryAsset.update({
+      where: { id: asset.id },
+      data: { isSelected: false },
+      include: ASSET_INCLUDE,
+    });
+
+    if (asset.categoryId) {
+      await tx.category.update({
+        where: { id: asset.categoryId, vendorId },
+        data: { imageKey: null },
+      });
+    }
+
+    return { ok: true, asset: toSummary(updated) };
+  });
 }
 
 export async function deleteCategoryAsset(

@@ -159,24 +159,28 @@ describe("Navigation & Icon Improvements (#1251)", () => {
     expect(button).not.toBeNull();
     expect(button?.getAttribute("title")).toContain("Contact & Follow Hub");
 
-    const svg = container.querySelector('svg[data-icon="users"]');
+    const svg = container.querySelector<HTMLElement>('[data-medallion][data-icon="users"]');
     expect(svg).not.toBeNull();
-    expect(svg?.getAttribute("width")).toBe("38");
-    expect(svg?.getAttribute("height")).toBe("38");
+    expect(svg?.style.width).toBe("38px");
+    expect(svg?.style.height).toBe("38px");
   });
 
   it("enlarges Header Shop and Quick Shop 3D icons to size={24} (R2)", async () => {
     const { container } = render(await Header({ isLanding: false }));
-    const shopSvg = container.querySelector('svg[data-icon="storefront"]');
-    const quickShopSvg = container.querySelector('svg[data-icon="quick-shop"]');
+    const shopSvg = container.querySelector<HTMLElement>(
+      '[data-medallion][data-icon="storefront"]',
+    );
+    const quickShopSvg = container.querySelector<HTMLElement>(
+      '[data-medallion][data-icon="quick-shop"]',
+    );
 
     expect(shopSvg).not.toBeNull();
-    expect(shopSvg?.getAttribute("width")).toBe("24");
-    expect(shopSvg?.getAttribute("height")).toBe("24");
+    expect(shopSvg?.style.width).toBe("24px");
+    expect(shopSvg?.style.height).toBe("24px");
 
     expect(quickShopSvg).not.toBeNull();
-    expect(quickShopSvg?.getAttribute("width")).toBe("24");
-    expect(quickShopSvg?.getAttribute("height")).toBe("24");
+    expect(quickShopSvg?.style.width).toBe("24px");
+    expect(quickShopSvg?.style.height).toBe("24px");
   });
 
   it("replaces user letter initial with 3D user-profile icon in signed-in state (R3)", async () => {
@@ -189,9 +193,9 @@ describe("Navigation & Icon Improvements (#1251)", () => {
     expect(accountLink?.querySelector(".text-\\[10px\\]")).toBeNull();
 
     // Must render the 3D user icon
-    const userSvg = accountLink?.querySelector('svg[data-icon="user"]');
+    const userSvg = accountLink?.querySelector<HTMLElement>('[data-medallion][data-icon="user"]');
     expect(userSvg).not.toBeNull();
-    expect(userSvg?.getAttribute("width")).toBe("24");
+    expect(userSvg?.style.width).toBe("24px");
   });
 
   it("renders 3D user-profile icon in signed-out state with clear tooltip (R3)", async () => {
@@ -202,9 +206,11 @@ describe("Navigation & Icon Improvements (#1251)", () => {
     expect(loginLink).not.toBeNull();
     expect(loginLink?.getAttribute("title")).toContain("Sign in");
 
-    const userSvg = loginLink?.querySelector('svg[data-icon="circle-user-round"]');
+    const userSvg = loginLink?.querySelector<HTMLElement>(
+      '[data-medallion][data-icon="circle-user-round"]',
+    );
     expect(userSvg).not.toBeNull();
-    expect(userSvg?.getAttribute("width")).toBe("24");
+    expect(userSvg?.style.width).toBe("24px");
   });
 
   it("enlarges Cart and Rewards 3D icons with informative tooltips (R2)", () => {
@@ -215,15 +221,19 @@ describe("Navigation & Icon Improvements (#1251)", () => {
     );
     const cartButton = cartContainer.querySelector("button");
     expect(cartButton?.getAttribute("title")).toBe("My Cart");
-    const cartSvg = cartContainer.querySelector('svg[data-icon="shopping-cart"]');
-    expect(cartSvg?.getAttribute("width")).toBe("28");
+    const cartSvg = cartContainer.querySelector<HTMLElement>(
+      '[data-medallion][data-icon="shopping-cart"]',
+    );
+    expect(cartSvg?.style.width).toBe("28px");
 
     const { container: rewardsContainer } = render(
       <RewardsLauncher vendorName="Aheed Food Centre" />,
     );
     const rewardsButton = rewardsContainer.querySelector("button");
     expect(rewardsButton?.getAttribute("title")).toBe("Rewards & Loyalty Points");
-    const rewardsSvg = rewardsContainer.querySelector('svg[data-icon="rewards-coin"]');
-    expect(rewardsSvg?.getAttribute("width")).toBe("24");
+    const rewardsSvg = rewardsContainer.querySelector<HTMLElement>(
+      '[data-medallion][data-icon="rewards-coin"]',
+    );
+    expect(rewardsSvg?.style.width).toBe("24px");
   });
 });

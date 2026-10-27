@@ -121,7 +121,9 @@ describe.each(boundaries)("$name", ({ Component, log }) => {
     // tests/design-tokens-contrast.test.ts audits.
     expect(container.innerHTML).not.toMatch(/\b(?:bg|text|border)-red-\d{2,3}\b/);
     expect(container.innerHTML).toContain("bg-danger-tint");
-    expect(container.innerHTML).toContain("text-danger");
+    // #1288: the disc is now the circular IconMedallion on the danger tint (its Noto glyph is
+    // full-colour, so no text-danger is needed for the icon itself).
+    expect(container.querySelector("[data-medallion]")?.className).toContain("bg-danger-tint");
   });
 });
 

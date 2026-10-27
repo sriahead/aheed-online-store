@@ -8,11 +8,13 @@ every branch merges.
 
 ### Fixed
 
-- **Dynamic slot asset activation across storefront touchpoints and themed 3D isometric prompt generation** (issue \#1285\).
-  - **Dynamic Slot Asset Activation:** Created \ActiveSlotIconsProvider\ supplying active system icon assets from the \CategoryAsset\ relational ledger directly into \<Icon3D />\. Now, activating or deactivating candidate assets in \/staff/icons\ dynamically propagates to the live storefront header, view switcher, trust strip cards, and floating cart drawer.
-  - **Themed 3D Isometric Prompt Engineering:** Refined \uildSlotAssetPrompt\ in \lib/category-image.ts\ to align strictly with the store's visual identity (emerald green \#059669\, royal navy \#1E3A8A\, warm gold \#F59E0B\) and isolated 3D app icon specifications, preventing opaque photographic backgrounds or cluttered supermarket scenes.
-  - **Department Scroller on Landing Page:** Rendered \<DepartmentScroller />\ on the storefront home page with prioritized high-fidelity category imagery ahead of procedural vector glyphs.
-  - **Alpha-Transparent 3D Icon Suite:** Reprocessed all 14 commercial 3D icons in \public/images/icons-3d/\ with feathered alpha edge cutouts, ensuring crisp rendering without white bounding boxes across light, dark, and brand-tinted surfaces.
+- **Staff users saw asset buttons that always failed** — `/staff/icons` is now read-only for STAFF; the mutation routes were already ADMIN-only (issue `#1288`).
+
+- **Dynamic slot asset activation across storefront touchpoints and themed 3D isometric prompt generation** (issue `#1285`).
+  - **Dynamic Slot Asset Activation:** Created `ActiveSlotIconsProvider` supplying active system icon assets from the `CategoryAsset` relational ledger directly into `<Icon3D />`. Now, activating or deactivating candidate assets in `/staff/icons` dynamically propagates to the live storefront header, view switcher, trust strip cards, and floating cart drawer.
+  - **Themed 3D Isometric Prompt Engineering:** Refined `buildSlotAssetPrompt` in `lib/category-image.ts` to align strictly with the store's visual identity (emerald green `#059669`, royal navy `#1E3A8A`, warm gold `#F59E0B`) and isolated 3D app icon specifications, preventing opaque photographic backgrounds or cluttered supermarket scenes.
+  - **Department Scroller on Landing Page:** Rendered `<DepartmentScroller />` on the storefront home page with prioritized high-fidelity category imagery ahead of procedural vector glyphs.
+  - **Alpha-Transparent 3D Icon Suite:** Reprocessed all 14 commercial 3D icons in `public/images/icons-3d/` with feathered alpha edge cutouts, ensuring crisp rendering without white bounding boxes across light, dark, and brand-tinted surfaces.
 
 - **Escape raw angle brackets in 3D icon spec files preventing MDX compilation errors in internal KMS** (issue `#1280`).
 
@@ -22,6 +24,12 @@ every branch merges.
   - **Configurable Platform Name:** Replaced hardcoded "Aheed KMS" strings in `kms/site-internal` layout, metadata, navbar, and footer with dynamic resolution via `process.env.NEXT_PUBLIC_PLATFORM_NAME` / `process.env.PLATFORM_NAME` (defaulting cleanly to configurable platform name with `"Aheed"` defined in `wrangler.toml`). Exported `<PlatformName />` component via `kms/site-internal/mdx-components.tsx` and updated KMS index heading.
 
 ### Added
+
+- **Deactivate icon and category assets, one circular icon medallion everywhere, and AI-replaceable icon inventory** (issue `#1288`; `specs/2026-10-27-icon-asset-activation-and-medallion/`).
+  - **Deactivate:** an active asset can be switched off from `/staff/icons` and the category manager (`POST /api/admin/category-images/deactivate`); the surface falls back to its built-in artwork, and a category's `imageKey` is cleared. Activate and deactivate each run in one interactive transaction.
+  - **`IconMedallion`:** every 3D icon, every decorative icon drawn at 32 px or more, and all category imagery render in one vendor-tinted circle (`components/icons/IconMedallion.tsx`); product photography stays square. `tests/icon-medallion-coverage.test.tsx` enforces it.
+  - **Slot registry:** `lib/icon-slots.ts` lists 15 3D slots (adds `postcode-search`, `contact-follow`, `rewards-gift`) and 81 flat `icon:<name>` slots; the generate route rejects unknown slots. The inventory is in the Icon & Visual Asset Standards Guide.
+  - **Prompts:** use the vendor's own brand colours and ask for circle-safe framing; Aheed's hardcoded colours are removed. ADR-008 v1.3.0 (Decision 6) and the design system record the rules.
 
 - **Category asset management, dedicated icon gallery, and realistic commercial system icons** (issue `#1285`; `specs/2026-10-27-category-asset-gallery-and-realistic-icons/`).
   - **Category Asset Management Workflow:** Upgraded `CategoryImageManager.tsx` on `/staff/categories/[id]` enabling operators to generate multiple candidate visual assets, review them side-by-side in a responsive thumbnail grid, select the active live asset, and permanently delete redundant variations.
@@ -98,10 +106,10 @@ every branch merges.
   - **ADR-007 Default Policy & Stock Safety:** Enforces automatic restriction categorization (`TOBACCO`/`ALCOHOL` $\rightarrow$ `AGE_RESTRICTED`, `INSTANT LOTTERY` $\rightarrow$ `PROHIBITED`, `PHONE CARDS`/`NEWS`/`E-PAY`/`STAMPS` $\rightarrow$ `NOT_DELIVERABLE`, `DEFAULT` department $\rightarrow$ `NEEDS_REVIEW`). Creates all new products as hidden (`isActive: false`) with stock `UNKNOWN` and quantity 0.
   - **Session Isolation & 10,000 Row Limit:** Derives `vendorId` exclusively from verified session, rejecting client-supplied vendor IDs, and aborts payloads $> 10,000$ rows before execution.
 
-- **Click & Collect order details: replace order reference with customer email** (issue #1261; specs/2026-10-24-p1261-click-collect-email/).
-  - **Click & Collect Order Details:** Replaced redundant Order Reference on Click & Collect card with customer Email in components/orders/OrderAddressCard.tsx.
-  - **Multi-View Email Propagation:** Wired customer email across staff order view (pp/(admin)/staff/orders/[orderNumber]/page.tsx), account order history (pp/(storefront)/account/orders/[orderNumber]/page.tsx), and confirmation views (pp/(storefront)/checkout/[orderNumber]/page.tsx).
-  - **Repository & Summary Model:** Added customerEmail resolution to OrderSummary in lib/repositories/orders.ts (indOrderForViewer, indOrderForUser, and indOrderForStaff).
+- **Click & Collect order details: replace order reference with customer email** (issue `#1261`; `specs/2026-10-24-p1261-click-collect-email/`).
+  - **Click & Collect Order Details:** Replaced redundant Order Reference on Click & Collect card with customer Email in `components/orders/OrderAddressCard.tsx`.
+  - **Multi-View Email Propagation:** Wired customer email across staff order view (`app/(admin)/staff/orders/[orderNumber]/page.tsx`), account order history (`app/(storefront)/account/orders/[orderNumber]/page.tsx`), and confirmation views (`app/(storefront)/checkout/[orderNumber]/page.tsx`).
+  - **Repository & Summary Model:** Added `customerEmail` resolution to `OrderSummary` in `lib/repositories/orders.ts` (`findOrderForViewer`, `findOrderForUser`, and `findOrderForStaff`).
 
 - **Icon credits page, generated icon attribution, and cart tooltip cleanup** (issue `#1257`; `specs/2026-10-24-p1257-icon-credits-cart-tooltip/`).
   - **Cart Hover Tooltip Purity:** Suppressed inner SVG `<title>` in `components/cart/CartDrawerShell.tsx` via `decorative={true}` on the trigger and drawer header icons, ensuring only `"My Cart"` displays on browser hover.
@@ -6870,12 +6878,3 @@ every branch merges.
 ### Notes
 - No feature code beyond the skeleton. Auth, catalogue, cart, checkout, and the design system
   arrive in P1+ behind their specs and gates.
-
-
-
-
-
- 
- |   2 0 2 6 - 0 9 - 1 2   |   D o c u m e n t a t i o n   h a n d o f f   f o r   # 7 3 4 ,   b u i l t   a n d   m e r g e d   t o   s t a g i n g .   |   P o s t - s h i p   d o c s   r e c o n c i l i a t i o n   | 
- 
- 

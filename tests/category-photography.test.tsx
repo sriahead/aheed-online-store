@@ -85,7 +85,8 @@ describe("DepartmentScroller Photography Rendering (#1278)", () => {
 
     expect(img).not.toBeNull();
     expect(img.getAttribute("src")).toBe("/images/categories/fruit-veg.jpg");
-    expect(fruitTile.querySelector("div")?.className).toContain("rounded-2xl");
+    // #1288 R17: every department tile is the circular medallion, photo or not.
+    expect(fruitTile.querySelector("[data-medallion]")?.className).toContain("rounded-full");
   });
 
   it("eager loads the first 6 category photographs and lazy loads subsequent ones", () => {

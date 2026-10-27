@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import { categoryIconName } from "@/components/product/category-icon";
-import { Icon } from "@/components/icons/Icon";
-import { Icon3D } from "@/components/icons/Icon3D";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 import { departmentIllustration, department3DIcon } from "@/components/icons/illustrations";
-import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { HorizontalScroller } from "@/components/layout/HorizontalScroller";
 import type { CategorySummary } from "@/lib/repositories/categories";
 
@@ -20,6 +18,8 @@ import type { CategorySummary } from "@/lib/repositories/categories";
  * to the semantic vector icon (`categoryIconName`). The first six images load eagerly, the rest lazily.
  */
 const EAGER_PHOTOGRAPHS = 6;
+/** The tile's 64 px (`h-16 w-16`) frame, unchanged by #1288. */
+const TILE_SIZE = 64;
 
 export function DepartmentScroller({
   categories,
@@ -39,15 +39,17 @@ export function DepartmentScroller({
     >
       {categories.map((category, index) => {
         const isActive = category.slug === activeSlug;
-        const glyph = (
-          <Icon name={categoryIconName(category.slug)} className="h-7 w-7 text-primary" />
-        );
+        const glyphName = categoryIconName(category.slug);
+        const loading = index < EAGER_PHOTOGRAPHS ? "eager" : "lazy";
 
         // Realistic product photography (Tesco model, #1278)
         const photoUrl = category.imageUrl;
         const icon3D = use3D ? department3DIcon(category.slug) : null;
         const illustration = departmentIllustration(category.slug);
-        const isPhoto = Boolean(photoUrl);
+
+        // #1288 R17: one circular, single-tint medallion whatever the tile shows.
+        const medallionClass =
+          "transition duration-300 group-hover:scale-105 motion-reduce:group-hover:scale-100 group-hover:-translate-y-1 group-hover:ring-2 group-hover:ring-action/30 group-hover:shadow-md";
 
         return (
           <Link
@@ -56,48 +58,48 @@ export function DepartmentScroller({
             aria-current={isActive ? "page" : undefined}
             className="group flex w-20 shrink-0 flex-col items-center gap-2 text-center"
           >
-            <div
-              className={`flex h-16 w-16 items-center justify-center ${
-                isPhoto
-                  ? "overflow-hidden rounded-2xl border border-black/10 bg-white p-1.5 shadow-xs"
-                  : `rounded-full ${index % 2 === 0 ? "bg-action-tint" : "bg-accent-tint"}`
-              } transition duration-300 group-hover:scale-105 motion-reduce:group-hover:scale-100 group-hover:-translate-y-1 group-hover:border-action/40 group-hover:ring-2 group-hover:ring-action/30 group-hover:shadow-md ${
-                isActive ? "border-action ring-2 ring-action/50 shadow-sm" : ""
-              }`}
-            >
-              {photoUrl ? (
-                <ImageWithFallback
-                  src={photoUrl}
-                  alt=""
-                  width={56}
-                  height={56}
-                  loading={index < EAGER_PHOTOGRAPHS ? "eager" : "lazy"}
-                  decoding="async"
-                  className="h-full w-full object-contain transition duration-300 group-hover:scale-110 motion-reduce:group-hover:scale-100"
-                  fallback={glyph}
-                />
-              ) : icon3D ? (
-                <Icon3D
-                  name={icon3D}
-                  size={46}
-                  className="transition duration-300 group-hover:scale-105 motion-reduce:group-hover:scale-100"
-                  decorative
-                />
-              ) : illustration ? (
-                <ImageWithFallback
-                  src={illustration}
-                  alt=""
-                  width={48}
-                  height={48}
-                  loading={index < EAGER_PHOTOGRAPHS ? "eager" : "lazy"}
-                  decoding="async"
-                  className="h-12 w-12"
-                  fallback={glyph}
-                />
-              ) : (
-                glyph
-              )}
-            </div>
+            {photoUrl ? (
+              <IconMedallion
+                imageUrl={photoUrl}
+                fallbackIcon={glyphName}
+                size={TILE_SIZE}
+                tint="action"
+                active={isActive}
+                loading={loading}
+                className={medallionClass}
+                decorative
+              />
+            ) : icon3D ? (
+              <IconMedallion
+                icon3d={icon3D}
+                size={TILE_SIZE}
+                tint="action"
+                active={isActive}
+                className={medallionClass}
+                decorative
+              />
+            ) : illustration ? (
+              <IconMedallion
+                imageUrl={illustration}
+                imageFit="inset"
+                fallbackIcon={glyphName}
+                size={TILE_SIZE}
+                tint="action"
+                active={isActive}
+                loading={loading}
+                className={medallionClass}
+                decorative
+              />
+            ) : (
+              <IconMedallion
+                icon={glyphName}
+                size={TILE_SIZE}
+                tint="action"
+                active={isActive}
+                className={medallionClass}
+                decorative
+              />
+            )}
             <span className="line-clamp-2 text-xs font-medium leading-tight text-primary">
               {category.name}
             </span>

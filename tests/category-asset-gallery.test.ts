@@ -18,6 +18,14 @@ const mockRequireVendorRole = vi.fn();
 const mockRunCategoryImagePipeline = vi.fn();
 const mockRunSlotAssetPipeline = vi.fn();
 const mockStorageDelete = vi.fn();
+const mockGetVendorAiMeter = vi.fn(() => ({
+  check: vi.fn(async () => ({ allowed: true })),
+  recordImage: vi.fn(async () => {}),
+}));
+
+vi.mock("@/lib/ai-meter-service", () => ({
+  getVendorAiMeter: (...args: unknown[]) => mockGetVendorAiMeter(...(args as [])),
+}));
 
 const mockPrismaDb = {
   categoryAsset: {
@@ -72,9 +80,12 @@ describe("Category & UI System Icon Asset Management", () => {
     });
 
     it("builds custom slot prompts tailored for 3D system icons", () => {
-      const prompt = buildSlotAssetPrompt("delivery-van", "3d-icon");
+      const prompt = buildSlotAssetPrompt("delivery-van", "3d-icon", {
+        primary: "#123456",
+        accent: "#abcdef",
+      });
       expect(prompt).toContain("delivery van");
-      expect(prompt).toContain("3D rendered commercial app icon");
+      expect(prompt).toContain("3D rendered UI app icon");
       expect(prompt).toContain("pure white background");
     });
   });
@@ -181,8 +192,11 @@ describe("Category & UI System Icon Asset Management", () => {
           update: vi.fn().mockResolvedValue({}),
         },
       } as any;
+      // #1288 R2: every write runs inside one interactive transaction.
+      mockPrismaWs.$transaction = vi.fn((cb: (tx: unknown) => unknown) => cb(mockPrismaWs));
 
       const res = await selectCategoryAsset(mockPrismaWs, "v1", "asset-2");
+      expect(mockPrismaWs.$transaction).toHaveBeenCalledTimes(1);
       expect(res.ok).toBe(true);
       expect(res.asset?.isSelected).toBe(true);
       expect(mockPrismaWs.category.update).toHaveBeenCalledWith({
@@ -286,6 +300,46 @@ describe("Category & UI System Icon Asset Management", () => {
       const res = await selectAssetHandler(req);
       expect(res.status).toBe(400);
     });
+
+    it("POST /api/admin/category-images/generate rejects an unknown slot before any AI work (#1288 R10)", async () => {
+      mockRequireVendorRole.mockResolvedValueOnce({ ok: true, vendorId: "v1" });
+      const req = new Request("http://localhost/api/admin/category-images/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slot: "not-a-slot", style: "3d-icon" }),
+      });
+
+      const res = await generateHandler(req);
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: "Unknown slot" });
+      expect(mockGetVendorAiMeter).not.toHaveBeenCalled();
+      expect(mockRunSlotAssetPipeline).not.toHaveBeenCalled();
+    });
+
+    it.each(["icon:package", "postcode-search"])(
+      "POST /api/admin/category-images/generate accepts registered slot %s (#1288 R10)",
+      async (slot) => {
+        mockRequireVendorRole.mockResolvedValueOnce({ ok: true, vendorId: "v1" });
+        mockRunSlotAssetPipeline.mockResolvedValueOnce({
+          imageKey: "icons/v1/x.png",
+          imageUrl: "https://cdn.example.com/icons/v1/x.png",
+        });
+        const req = new Request("http://localhost/api/admin/category-images/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slot, style: "3d-icon" }),
+        });
+
+        const res = await generateHandler(req);
+        expect(res.status).toBe(200);
+        expect(mockRunSlotAssetPipeline).toHaveBeenCalledWith(
+          slot,
+          "3d-icon",
+          "v1",
+          expect.anything(),
+        );
+      },
+    );
 
     it("POST /api/admin/category-images/generate supports slot generation", async () => {
       mockRequireVendorRole.mockResolvedValueOnce({

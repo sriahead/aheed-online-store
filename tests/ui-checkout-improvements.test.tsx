@@ -81,8 +81,10 @@ describe("UI and Checkout Improvements (#1254)", () => {
     expect(trigger).not.toBeNull();
     expect(trigger?.getAttribute("title")).toBe("Contact & Follow Hub");
 
-    const svg = trigger?.querySelector("svg");
-    expect(svg?.querySelector("title")?.textContent).toBe("Contact & Follow Hub");
+    // #1288: the decorative medallion adds no competing <title>; the button's title is the tooltip.
+    const medallion = trigger?.querySelector("[data-medallion]");
+    expect(medallion?.getAttribute("aria-hidden")).toBe("true");
+    expect(medallion?.querySelector("title")).toBeNull();
   });
 
   it("R3: Official payment logos are valid 48x30 SVGs with brand colors", () => {
@@ -195,7 +197,7 @@ describe("UI and Checkout Improvements (#1254)", () => {
     const { container } = render(<ShoppingListLink />);
     const animatedIcon = container.querySelector(".animate-icon-pop");
     expect(animatedIcon).not.toBeNull();
-    const svg = container.querySelector("svg");
-    expect(svg).not.toBeNull();
+    // #1288: the animated element is the quick-shop medallion itself.
+    expect(animatedIcon?.hasAttribute("data-medallion")).toBe(true);
   });
 });

@@ -10,7 +10,7 @@ import { updateQuantity } from "@/features/cart/update-quantity";
 import { CheckoutLink } from "./CheckoutLink";
 import { CartLineNote } from "./CartLineNote";
 import { Icon } from "@/components/icons/Icon";
-import { Icon3D } from "@/components/icons/Icon3D";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 /**
  * Server-rendered cart body (P3a, #93) — shared by the drawer and /cart so both
@@ -106,7 +106,7 @@ export function CartContents({
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {summary.lines.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-            <Icon3D name="cart-add" size={72} className="mb-3" />
+            <IconMedallion icon3d="cart-add" size={72} className="mb-3" decorative />
             <h3 className="text-sm font-bold text-primary">Your cart is empty</h3>
             <p className="mt-1 max-w-xs text-xs text-primary-muted">
               Browse the aisles and add something you fancy.

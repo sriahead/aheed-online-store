@@ -5,6 +5,7 @@ import {
   getCategoryAssetById,
   createCategoryAsset,
   selectCategoryAsset,
+  deactivateCategoryAsset,
   deleteCategoryAsset,
   getActiveSlotAssetsMap,
   type CategoryAssetSummary,
@@ -51,6 +52,12 @@ export async function createCategoryAssetForVendor(
 export async function selectCategoryAssetForVendor(vendorId: string, assetId: string) {
   const prismaWs = getPrismaWs();
   return selectCategoryAsset(prismaWs, vendorId, assetId);
+}
+
+/** #1288 R3: switch an asset back to inactive (built-in artwork returns). */
+export async function deactivateCategoryAssetForVendor(vendorId: string, assetId: string) {
+  const prismaWs = getPrismaWs();
+  return deactivateCategoryAsset(prismaWs, vendorId, assetId);
 }
 
 export async function deleteCategoryAssetForVendor(vendorId: string, assetId: string) {

@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons/Icon";
-import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
+import { IconMedallion } from "@/components/icons/IconMedallion";
+import { categoryIconName } from "@/components/product/category-icon";
 import type { CategoryImageStyle } from "@/lib/category-image";
 
 export interface CategoryAssetItem {
@@ -29,6 +30,8 @@ export interface CategoryImageManagerProps {
   imageKey: string | null;
   imageUrl: string | null;
   onImageKeyChange?: (newKey: string) => void;
+  /** The category's slug, so the preview can show its built-in glyph when no asset is active. */
+  slug?: string;
 }
 
 function useOptionalRouter() {
@@ -45,7 +48,9 @@ export function CategoryImageManager({
   imageKey,
   imageUrl,
   onImageKeyChange,
+  slug,
 }: CategoryImageManagerProps) {
+  const builtInIcon = slug ? categoryIconName(slug) : "folder-tree";
   const [style, setStyle] = useState<CategoryImageStyle>("photo");
   const [generating, setGenerating] = useState(false);
   const [actionPendingId, setActionPendingId] = useState<string | null>(null);
@@ -169,6 +174,38 @@ export function CategoryImageManager({
     }
   }
 
+  // #1288 R5: switch the active candidate off; the category falls back to its built-in artwork.
+  async function handleDeactivate(asset: CategoryAssetItem) {
+    setError(null);
+    setActionPendingId(asset.id);
+
+    try {
+      const res = await fetch("/api/admin/category-images/deactivate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetId: asset.id }),
+      });
+
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to deactivate asset.");
+      }
+
+      setCurrentKey(null);
+      setCurrentUrl(null);
+      if (onImageKeyChange) {
+        onImageKeyChange("");
+      }
+      setAssets((prev) => prev.map((a) => ({ ...a, isSelected: false })));
+
+      router?.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setActionPendingId(null);
+    }
+  }
+
   async function handleDelete(asset: CategoryAssetItem) {
     if (!window.confirm("Are you sure you want to delete this asset?")) {
       return;
@@ -251,21 +288,19 @@ export function CategoryImageManager({
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
         {/* Active Thumbnail Preview */}
-        <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-black/10 bg-surface-muted">
+        <div className="flex shrink-0 flex-col items-center gap-1">
           {currentUrl ? (
-            <ImageWithFallback
-              src={currentUrl}
-              alt={categoryName || "Category preview"}
-              width={96}
-              height={96}
-              className="h-full w-full object-cover"
-              fallback={<Icon name="folder-tree" className="h-8 w-8 text-primary-subtle" />}
+            <IconMedallion
+              imageUrl={currentUrl}
+              fallbackIcon={builtInIcon}
+              size={96}
+              label={categoryName || "Category preview"}
             />
           ) : (
-            <div className="flex flex-col items-center justify-center text-center p-2">
-              <Icon name="folder-tree" className="h-7 w-7 text-primary-subtle mb-1" />
-              <span className="text-[10px] text-primary-subtle">No image</span>
-            </div>
+            <>
+              <IconMedallion icon={builtInIcon} size={96} decorative />
+              <span className="text-[10px] text-primary-subtle">Built-in artwork</span>
+            </>
           )}
         </div>
 
@@ -334,22 +369,17 @@ export function CategoryImageManager({
                       : "border-black/10 bg-surface-muted/50 hover:border-black/20"
                   }`}
                 >
-                  <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-surface-muted">
+                  <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg bg-surface-muted">
                     {asset.imageUrl ? (
-                      <ImageWithFallback
-                        src={asset.imageUrl}
-                        alt="Candidate asset"
-                        width={120}
-                        height={120}
-                        className="h-full w-full object-cover"
-                        fallback={
-                          <Icon name="folder-tree" className="h-6 w-6 text-primary-subtle m-auto" />
-                        }
+                      <IconMedallion
+                        imageUrl={asset.imageUrl}
+                        fallbackIcon={builtInIcon}
+                        size={88}
+                        label="Candidate asset"
+                        loading="lazy"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <Icon name="folder-tree" className="h-6 w-6 text-primary-subtle" />
-                      </div>
+                      <IconMedallion icon={builtInIcon} size={88} decorative />
                     )}
 
                     {isActive && (
@@ -375,7 +405,14 @@ export function CategoryImageManager({
                         {isPending ? "Selecting…" : "Select"}
                       </button>
                     ) : (
-                      <span className="flex-1 text-[11px] font-bold text-action py-1">Active</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeactivate(asset)}
+                        disabled={isPending || generating}
+                        className="flex-1 rounded-lg bg-white px-2 py-1 text-[11px] font-semibold text-primary border border-black/15 hover:bg-black/5 disabled:opacity-50"
+                      >
+                        {isPending ? "Deactivating…" : "Deactivate"}
+                      </button>
                     )}
 
                     <button

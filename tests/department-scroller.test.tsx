@@ -22,9 +22,13 @@ describe("DepartmentScroller renders Icon from a client component (R22, R44)", (
     const { container } = render(<DepartmentScroller categories={[CATEGORIES[1]]} />);
     const svg = container.querySelector("a[href='/categories/chargers'] svg")!;
     expect(svg.getAttribute("data-icon")).toBe("tag");
-    expect(svg.getAttribute("class")).toBe("h-7 w-7 text-primary");
     expect(svg.getAttribute("aria-hidden")).toBe("true");
-    expect(svg.getAttribute("width")).toBe("24");
+    // #1288: the glyph is the medallion's vector content, inset to 70% of the 64px tile.
+    const box = container.querySelector<HTMLElement>(
+      "a[href='/categories/chargers'] [data-medallion-content='vector']",
+    )!;
+    expect(box.style.width).toBe("45px");
+    expect(svg.getAttribute("class")).toBe("h-full w-full");
   });
 
   it("renders one tile per department, each either an illustration or an svg", () => {
