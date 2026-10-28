@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "../api-client";
+import { signedInPath } from "../signed-in-path";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string } = {}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +24,7 @@ export function LoginForm() {
       setError(signInError.message ?? "Sign in failed. Check your email and password.");
       return;
     }
-    router.push("/account");
+    router.push(signedInPath(next));
     router.refresh();
   }
 

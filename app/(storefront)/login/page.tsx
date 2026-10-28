@@ -16,19 +16,26 @@ export async function generateMetadata() {
   return { title: `Sign in — ${profile?.name ?? "Aheed Food Centre"}` };
 }
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
   const env = getEnv();
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+  // #1319 — forwarded to /signed-in, which accepts it only as a same-origin path.
+  const { next: rawNext } = await searchParams;
+  const next = typeof rawNext === "string" && rawNext !== "" ? rawNext : undefined;
 
   return (
     <PageContainer width="narrow">
       <div className="mx-auto max-w-sm">
         <h1 className="mb-6 text-2xl font-semibold text-primary">Sign in</h1>
-        <LoginForm />
+        <LoginForm next={next} />
         {googleEnabled && (
           <>
             <p className="my-4 text-center text-sm text-black/60">or</p>
-            <GoogleSignInButton />
+            <GoogleSignInButton next={next} />
           </>
         )}
         <p className="mt-8 text-center text-sm text-black/70">

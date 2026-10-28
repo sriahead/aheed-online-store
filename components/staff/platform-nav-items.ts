@@ -15,6 +15,13 @@ export interface PlatformNavItem {
 
 export const PLATFORM_NAV_ITEMS: readonly PlatformNavItem[] = [
   {
+    // #1319 — the platform admin's home, where /signed-in lands them.
+    href: "/staff/platform",
+    label: "Platform overview",
+    description: "Platform-wide figures and every operator control in one place.",
+    icon: "shield-check",
+  },
+  {
     href: "/staff/platform/vendors",
     label: "Vendors & Tenants",
     description: "Manage registered store vendors, active catalogues, and status.",

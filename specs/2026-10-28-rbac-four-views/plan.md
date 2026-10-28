@@ -65,7 +65,7 @@ The RBAC this brief asks for is largely built. This slice extends it rather than
     start with `//` or `/\`, and must contain no control characters.
   - `landingPath(access, next)` returns that safe `next` when one is given. Otherwise it maps
     `"platform-admin"` to `/staff/platform`, `"store"` to `/staff` and `"shopper"` to `/account`.
-- **New page `app/(storefront)/signed-in/page.tsx`.** It calls `requireVendorRole("STAFF", "ADMIN")`,
+- **New route handler `app/(storefront)/signed-in/route.ts`** (a page at Spec; amended at Build, see R5). It calls `requireVendorRole("STAFF", "ADMIN")`,
   which resolves the store from the host exactly as the panel does, maps the result to an access
   value, and redirects:
   - no session goes to `/login`;

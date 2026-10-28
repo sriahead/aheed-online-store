@@ -4,7 +4,7 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.5.0"
+version: "1.6.0"
 updated: "2026-10-28"
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
@@ -17,8 +17,21 @@ Welcome to the **Platform Admin** documentation. Unlike Store Admins (who manage
 
 ## Global Roles vs Vendor Roles
 It is critical to understand the distinction between the two types of administrative roles in the system:
-- **Global Platform `ADMIN`**: This role transcends all vendors. It grants access to system-wide configurations, vendor onboarding, and global user management.
+- **Global Platform `ADMIN`**: This role transcends all vendors. It grants access to system-wide configurations, vendor onboarding, and every store's admin panel. Managing users across all stores from one page is not built yet (`#1320`); team roles are managed per store at `/staff/team`.
 - **Vendor-Specific `ADMIN`**: This is a Store Admin. Their administrative powers are strictly scoped to a single vendor (e.g., managing the catalogue or delivery rules for "Aheed Food Centre" only). 
+
+**Where each role lands after sign-in (#1319).** Everyone signs in at the same `/login` page, and the
+server then sends each person to the home for their role:
+- a platform admin goes to `/staff/platform`;
+- staff or a store admin of the store whose web address they signed in on goes to `/staff`;
+- anyone else goes to `/account`.
+
+If the sign-in link carried a `next` page on the same site, that page wins; a `next` pointing at
+another site is ignored. Every page and action still checks the role on the server, so typing a
+URL never grants access the role does not have.
+
+The demo platform admin is `demo-platform-admin@example.com`. Since `#1319`,
+`demo-admin@example.com` is a store admin only (`docs/developer-portal/env-setup.md`).
 
 ## Managing Vendors (Tenants)
 The platform is designed to host multiple independent store fronts (vendors) from a single database.
@@ -33,6 +46,31 @@ The platform is designed to host multiple independent store fronts (vendors) fro
 
 ## Store Impersonation (Dev/Support)
 For support and debugging, Platform Admins can use the View Switcher to impersonate specific vendors and view the platform exactly as a Store Admin or Staff member of that vendor would see it.
+
+## Platform overview — `/staff/platform`
+
+**Purpose:** The platform admin's home page, and where a platform admin lands after signing in. It
+shows platform-wide figures and links to every platform page.
+
+**Who can access:** Platform admins only
+
+**What you can do:** Read seven figures: stores, active stores, domains, users, products, active
+products and recent errors. Open any platform page from its card: vendors, onboarding roll-up,
+domain registry, settings, system health, costs, and error events. The page has no controls and
+nothing to edit.
+
+**Typical workflow:** After signing in, glance at the figures for anything unexpected, such as a
+rise in recent errors or a store that is no longer active. Then open the matching page from its card.
+
+**Important fields and filters:** Each figure counts across every store on the platform, not only
+the store whose web address you are on. There are no filters.
+
+**Common mistakes and limitations:** **Store admins are refused here even though they hold an admin
+role**, as on every platform page. The figures are counts only; to act on one, open the page it
+relates to. The page does not manage users across stores (`#1320`).
+
+**What happens after changes are saved:** Nothing is editable. The figures are read live on each
+visit; reload to refresh them.
 
 ## Error events — `/staff/errors`
 

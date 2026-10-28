@@ -38,14 +38,19 @@ R4. `tests/auth-landing.test.ts` asserts:
     - that each of `//evil.example`, `/\evil.example`, `https://evil.example`, `evil`, the empty
       string, `null`, `undefined` and `/a` followed by a newline and `b` returns `null` from
       `safeNextPath` and falls back to the default in `landingPath`.
-R5. `app/(storefront)/signed-in/page.tsx` exists, with `export const dynamic = "force-dynamic"`. It
-    calls `requireVendorRole("STAFF", "ADMIN")` and always ends in `redirect(...)`:
+R5. `app/(storefront)/signed-in/route.ts` exists, exporting `GET`, with
+    `export const dynamic = "force-dynamic"`. It calls `requireVendorRole("STAFF", "ADMIN")` and always
+    ends in `redirect(...)`:
     - to `/login` on a 401;
-    - otherwise to `landingPath(access, next)`, where `next` is the page's `next` search parameter
-      and `access` is:
+    - otherwise to `landingPath(access, next)`, where `next` is the request's `next` search
+      parameter and `access` is:
       - `"platform-admin"` when `ok` with `via === "platform-admin"`;
       - `"store"` when `ok` with `via` of `"STAFF"` or `"ADMIN"`;
       - `"shopper"` on a 403.
+
+    *Amended at Build:* this was a `page.tsx`. `tests/page-container.test.ts` requires every page to
+    render a `PageContainer`, and this one only redirects, so it is a route handler. A `redirect()`
+    from a route handler answers 307 exactly as a page's does, so the behaviour is unchanged.
 R6. The success path of `features/auth/components/LoginForm.tsx` calls `router.push` with
     `/signed-in`, or `/signed-in?next=<encodeURIComponent(next)>` when its new optional `next` prop is
     a non-empty string. Its source no longer contains `router.push("/account")`.
@@ -128,8 +133,14 @@ R17. `tests/rbac-gate-matrix.test.ts` exists and works on the TypeScript AST (`t
 R18. **"Gated" in R17(a), R17(b) and R17(c)** means that the function's body contains a gate call, or calls
     either of the following, followed exactly one hop:
     - a function declared in the same file whose body contains a gate call;
-    - an identifier named-imported from an `@/…` or relative module, where that module's resolved
-      `.ts`/`.tsx` source contains a gate call.
+    - an identifier named-imported from an `@/…` or relative module, where the function of that name
+      (its original name, for `import { a as b }`) in the resolved `.ts`/`.tsx` source has a body that
+      contains a gate call.
+
+    *Amended at Build:* the spec first said "that module's source contains a gate call". R21's first
+    mutation (deleting the team page's gate) still passed under that rule, because the page calls
+    `getVendorTeam` from `lib/roles-service.ts`, and only that module's sibling `setVendorRole` gates.
+    The check is now per function. That is stricter, and all four R21 mutations fail under it.
 R19. `tests/rbac-gate-matrix.test.ts` asserts minimum discovered counts, so a broken walker cannot
     pass on zero files:
     - at least 30 pages under R17(a);

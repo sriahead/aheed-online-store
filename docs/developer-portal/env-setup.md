@@ -617,12 +617,26 @@ standing directive, keep these present in **both production and staging until al
 complete**, and re-run `add` after any DB reset (e.g. the staging Neon-project move, or the ADR-004
 `vendorId` migration) so they aren't lost.
 
-It manages a **fixed roster of five** (`DEMO_ACCOUNTS` in the script, one per RBAC/vendor-scope
-case): `demo-admin@example.com` (platform ADMIN), `demo-staff@example.com` (vendor STAFF),
-`demo-customer@example.com` (plain shopper), `demo-store-admin@example.com` (vendor ADMIN — needed
-because a platform admin's `vendorRole` is never actually read, `#190`), and
-`demo-srimart-admin@example.com` (vendor ADMIN on SriMart specifically, the platform's second
-vendor — needed to test a cross-vendor write refusal in both directions, `#141`). They are created
+It manages a **fixed roster of six** (`DEMO_ACCOUNTS` in the script, one per RBAC/vendor-scope
+case):
+
+- `demo-platform-admin@example.com`: platform ADMIN, the **only** platform admin, with no store
+  membership (`requireVendorRole` admits it at every store).
+- `demo-admin@example.com`: store (vendor) ADMIN only. **It was a platform admin until `#1319`
+  (2026-10-28).** Re-run `add` to demote it in an existing database, which keeps its store
+  membership.
+- `demo-staff@example.com`: vendor STAFF.
+- `demo-customer@example.com`: plain shopper.
+- `demo-store-admin@example.com`: vendor ADMIN. It was added because a platform admin's
+  `vendorRole` is never read (`#190`), and since `#1319` it does the same job as `demo-admin`.
+- `demo-srimart-admin@example.com`: vendor ADMIN on SriMart specifically, the platform's second
+  vendor. It is needed to test a cross-vendor write refusal in both directions (`#141`).
+
+After sign-in, `/signed-in` sends each account to its home: the platform admin to `/staff/platform`,
+staff and store admins of the host's store to `/staff`, and everyone else to `/account`.
+
+All six share **one password, `DEMO_ACCOUNT_PASSWORD`**, which is held in `.dev.vars` and
+`secrets/<env>.vars` and is never written into the repository or any document. They are created
 **through Better Auth** (hashed password, real sign-in) with `emailVerified` forced true and **no**
 verification email sent.
 

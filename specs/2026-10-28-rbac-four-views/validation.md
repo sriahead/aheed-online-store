@@ -26,7 +26,7 @@
 | R2  | Unit | Same test file passes; read `landingPath`'s three defaults. |
 | R3  | Unit | `grep -nE "^import\|fetch\(" lib/auth-landing.ts` prints nothing. |
 | R4  | Unit | Read `tests/auth-landing.test.ts` and confirm every listed input appears, including the newline case. The file passes. |
-| R5  | Unit | Read `app/(storefront)/signed-in/page.tsx` and confirm `force-dynamic`, the single gate call, the 401 branch to `/login`, and the three-way mapping. R22 proves it live. |
+| R5  | Unit | Read `app/(storefront)/signed-in/route.ts` (amended from `page.tsx` at Build) and confirm `force-dynamic`, the exported `GET`, the single gate call, the 401 branch to `/login`, and the three-way mapping. R22 proves it live. |
 | R6  | Unit | `grep -n 'router.push' features/auth/components/LoginForm.tsx` shows `/signed-in` only. `grep -c 'router.push("/account")' features/auth/components/LoginForm.tsx` prints 0. |
 | R7  | Unit | `grep -n callbackURL features/auth/components/GoogleSignInButton.tsx` shows `/signed-in`, and `grep -c 'callbackURL: "/account"'` on the same file prints 0. |
 | R8  | Unit | Read `app/(storefront)/login/page.tsx`: `next` from `searchParams` is passed to both components. `git diff origin/staging --stat -- 'app/(storefront)/register'` prints nothing. |

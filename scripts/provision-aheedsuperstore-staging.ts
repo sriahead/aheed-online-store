@@ -106,7 +106,8 @@ export async function runStagingProvisioning(
     console.log(`\nProvisioning ${manifest.slug}...`);
     await provisionVendor(prisma, manifest);
 
-    // Link demo-admin or demo-store-admin to the new vendor as ADMIN if users exist
+    // Link demo-admin or demo-store-admin to the new vendor as ADMIN if users exist. Both are
+    // store admins since #1319; the platform admin (demo-platform-admin) needs no membership.
     const adminUsers = await prisma.user.findMany({
       where: {
         email: { in: ["demo-admin@example.com", "demo-store-admin@example.com"] },

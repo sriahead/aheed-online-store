@@ -37,18 +37,24 @@ export interface DemoAccount {
   vendorSlug?: string;
 }
 
-/** Fixed, code-defined roster. demo-admin is a platform admin; demo-store-admin is a store
- *  admin (vendor ADMIN only); demo-staff is a normal user with a vendor STAFF membership
- *  (not a platform staffer); demo-customer is a plain shopper; demo-srimart-admin is a
- *  store admin on the platform's SECOND vendor (SriMart, not the default first-active one).
+/** Fixed, code-defined roster. demo-platform-admin is the ONLY platform admin; demo-admin
+ *  and demo-store-admin are store admins (vendor ADMIN only); demo-staff is a normal user
+ *  with a vendor STAFF membership (not a platform staffer); demo-customer is a plain
+ *  shopper; demo-srimart-admin is a store admin on the platform's SECOND vendor (SriMart,
+ *  not the default first-active one).
+ *
+ *  #1319 — demo-admin was a platform admin until 2026-10-28; it is now a store admin only,
+ *  and demo-platform-admin holds the platform role. `add` rewrites User.role on every run,
+ *  so re-running it demotes an existing demo-admin (its Aheed ADMIN membership is kept).
+ *  A platform admin needs no membership: requireVendorRole() admits it at every store.
  *
  *  demo-store-admin exists because a platform admin CANNOT stand in for a store admin:
  *  requireVendorRole() returns early with `via: "platform-admin"` for anyone whose
- *  User.role is ADMIN (lib/auth-rbac.ts), so demo-admin's vendorRole is never actually
- *  read. The role-hierarchy guards in lib/repositories/roles.ts — only a platform admin
- *  may grant ADMIN, a store admin may not touch a platform admin's privileges, and the
- *  self-lockout check — all fire only when `via === "ADMIN"`, which no other account in
- *  this roster can produce. Added for P6.7's validation walk (#190).
+ *  User.role is ADMIN (lib/auth-rbac.ts). The role-hierarchy guards in
+ *  lib/repositories/roles.ts — only a platform admin may grant ADMIN, a store admin may
+ *  not touch a platform admin's privileges, and the self-lockout check — fire only when
+ *  `via === "ADMIN"`. Added for P6.7's validation walk (#190), before demo-admin was
+ *  demoted; it now does the same job as demo-admin and is kept with the roster.
  *
  *  demo-srimart-admin exists because every other vendor-role account attaches to the
  *  same (first ACTIVE) vendor, so no cross-vendor write attempt could ever be tested in
@@ -58,8 +64,13 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
   {
     email: "demo-admin@example.com",
     name: "Demo Admin",
-    platformRole: "ADMIN",
+    platformRole: "CUSTOMER",
     vendorRole: "ADMIN",
+  },
+  {
+    email: "demo-platform-admin@example.com",
+    name: "Demo Platform Admin",
+    platformRole: "ADMIN",
   },
   {
     email: "demo-staff@example.com",
