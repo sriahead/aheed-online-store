@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { csvCell, toCsv } from "@/lib/pricing/csv";
 
-/** #1309 R24: the CSV export route and its quoting. */
+/** #1309 R24 and #1313 R24: the CSV export route, its sections and its quoting. */
 
 const requireVendorRole = vi.fn();
 vi.mock("@/lib/auth-rbac", () => ({ requireVendorRole }));
@@ -19,7 +19,7 @@ beforeEach(() => {
 });
 
 describe("platform admin", () => {
-  it.each(["costs", "competitors", "plans", "scenarios", "models"])(
+  it.each(["costs", "competitors", "production", "models", "comparison", "add-ons", "risks"])(
     "returns %s as an attachment CSV",
     async (section) => {
       const response = await get(section);
@@ -30,9 +30,7 @@ describe("platform admin", () => {
       );
       const [header] = (await response.text()).split("\r\n");
       expect(header).toMatch(/(^|,)(as_of|retrieved_on)(,|$)/);
-      if (["costs", "competitors", "plans", "scenarios", "models"].includes(section)) {
-        expect(header).toMatch(/currency/);
-      }
+      expect(header).toMatch(/currency/);
     },
   );
 
@@ -42,7 +40,21 @@ describe("platform admin", () => {
     expect(body).toContain(",2500,GBP,");
   });
 
-  it("rejects an unknown or missing section with 400", async () => {
+  it("#1313: the grids have one row per scenario", async () => {
+    const rows = async (section: string) =>
+      (await (await get(section)).text()).trimEnd().split(/\r\n/);
+    const models = await rows("models");
+    expect(models[0]).toBe(
+      "model,shops,orders_per_shop,basket_pence,shop_pays_pence,revenue_pence,cost_pence,partner_time_pence,margin_pence,currency,as_of",
+    );
+    expect(models).toHaveLength(1 + 216);
+    expect(await rows("production")).toHaveLength(1 + 54);
+    expect(await rows("comparison")).toHaveLength(1 + 7 * 3 * 3);
+  });
+
+  it("rejects an unknown or missing section with 400, including the removed v1 sections", async () => {
+    expect((await get("plans")).status).toBe(400);
+    expect((await get("scenarios")).status).toBe(400);
     expect((await get("secrets")).status).toBe(400);
     expect((await get(null)).status).toBe(400);
   });

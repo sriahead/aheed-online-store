@@ -11,8 +11,8 @@ import { STATUS_TEXT, type DiffRow, type RefreshResult } from "@/lib/pricing/ref
 
 /**
  * #1309 - the Review panel on /staff/platform/costs. Runs a refresh and shows the result as
- * UNCONFIRMED suggestions, held only in this tab: nothing is saved, and nothing here feeds a total,
- * the scenario table or the ranking (those are server-rendered from the committed registries).
+ * UNCONFIRMED suggestions, held only in this tab: nothing is saved, and nothing here feeds a total
+ * or a scenario table (those are server-rendered from the committed registries).
  */
 
 type Action = typeof refreshCostsAction;
@@ -41,13 +41,10 @@ function host(url: string): string {
   }
 }
 
-function breakEven(v: {
-  breakEvenVendors: number | null;
-  breakEvenGmvPence: number | null;
-}): string {
-  if (v.breakEvenVendors !== null) return `${v.breakEvenVendors} vendors`;
-  if (v.breakEvenGmvPence !== null) return `${formatMoney(gbp(v.breakEvenGmvPence))} sales`;
-  return "n/a";
+function reference(v: { marginPence: number | null; shopPaysPence: number }): string {
+  const margin =
+    v.marginPence === null ? "margin unavailable" : `margin ${formatMoney(gbp(v.marginPence))}`;
+  return `${margin}, shop pays ${formatMoney(gbp(v.shopPaysPence))}`;
 }
 
 export function PricingReviewPanel({ lastAnalysis }: { lastAnalysis: string }) {
@@ -155,21 +152,19 @@ export function PricingReviewPanel({ lastAnalysis }: { lastAnalysis: string }) {
               <h3 className="text-sm font-bold uppercase tracking-wide text-slate-600">
                 If these suggestions were accepted
               </h3>
-              {result.recommendations.deltas.plans.length === 0 ? (
-                <p>No break-even figure would change.</p>
+              {result.recommendations.deltas.models.length === 0 ? (
+                <p>No reference-scenario figure would change.</p>
               ) : (
                 <ul>
-                  {result.recommendations.deltas.plans.map((d) => (
-                    <li key={d.planId}>
-                      {d.planId}: {breakEven(d.committed)} → {breakEven(d.ifAccepted)}
+                  {result.recommendations.deltas.models.map((d) => (
+                    <li key={d.modelId}>
+                      {d.modelId}: {reference(d.committed)} → {reference(d.ifAccepted)}
                     </li>
                   ))}
                 </ul>
               )}
               <p>
-                Ranking{" "}
-                {result.recommendations.deltas.rankingChanged ? "would change" : "unchanged"};
-                recommendation check{" "}
+                Recommendation check{" "}
                 {result.recommendations.deltas.recommendationDisagreesChanged
                   ? "would change"
                   : "unchanged"}

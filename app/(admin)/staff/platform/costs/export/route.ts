@@ -1,5 +1,5 @@
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { analyse, COMMITTED } from "@/lib/pricing/committed";
+import { analyseV2, COMMITTED } from "@/lib/pricing/committed";
 import { buildCsv, CSV_SECTIONS, type CsvSection } from "@/lib/pricing/csv";
 
 /**
@@ -27,7 +27,7 @@ export async function GET(request: Request): Promise<Response> {
 
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
-  const body = buildCsv(section as CsvSection, COMMITTED, analyse(COMMITTED, now), today);
+  const body = buildCsv(section as CsvSection, COMMITTED, analyseV2(COMMITTED, now), today);
   return new Response(body, {
     status: 200,
     headers: {

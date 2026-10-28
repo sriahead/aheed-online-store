@@ -1,13 +1,18 @@
 import { z } from "zod";
 import type { CostItem } from "@/lib/running-costs";
-import type { PricingAnalysis } from "@/lib/pricing/analysis";
-import { analyse, COMMITTED, type Registries } from "@/lib/pricing/committed";
+import {
+  analyseV2,
+  COMMITTED,
+  type PricingAnalysisV2,
+  type Registries,
+} from "@/lib/pricing/committed";
+import type { BusinessModelId } from "@/lib/pricing/business-models";
 import type { Money } from "@/lib/pricing/money";
 
 /**
  * #1309 - the pure half of "Refresh Costs" / "Refresh Recommendations": which pages may be fetched,
  * how a model reply is validated, how it is compared against the committed registries, and what the
- * analysis would look like if the suggestions were accepted. No network and no AI here; the service
+ * analysis would look like if the suggestions were accepted (#1313: the volume model). No network and no AI here; the service
  * (`lib/pricing-refresh-service.ts`) does the I/O and calls these.
  *
  * SAFETY. Sources are an allow-list taken from the committed registries, never from a request, so the
@@ -257,43 +262,38 @@ export function applySuggestions(
   return { ...registries, costItems, assumptions };
 }
 
-export interface PlanDelta {
-  planId: string;
-  committed: { breakEvenVendors: number | null; breakEvenGmvPence: number | null };
-  ifAccepted: { breakEvenVendors: number | null; breakEvenGmvPence: number | null };
+export interface ModelDelta {
+  modelId: BusinessModelId;
+  committed: { marginPence: number | null; shopPaysPence: number };
+  ifAccepted: { marginPence: number | null; shopPaysPence: number };
 }
 
 export interface AnalysisDeltas {
-  plans: PlanDelta[];
-  rankingChanged: boolean;
+  /** Models whose reference-scenario margin or shop total would change (#1313). */
+  models: ModelDelta[];
   recommendationDisagreesChanged: boolean;
 }
 
-export function compareAnalyses(committed: PricingAnalysis, next: PricingAnalysis): AnalysisDeltas {
-  const plans: PlanDelta[] = [];
-  for (const before of committed.plans) {
-    const after = next.plans.find((p) => p.planId === before.planId);
+export function compareAnalyses(
+  committed: PricingAnalysisV2,
+  next: PricingAnalysisV2,
+): AnalysisDeltas {
+  const models: ModelDelta[] = [];
+  for (const before of committed.models) {
+    const after = next.models.find((m) => m.modelId === before.modelId);
     if (!after) continue;
-    if (
-      before.breakEvenVendors !== after.breakEvenVendors ||
-      before.breakEvenGmvPence !== after.breakEvenGmvPence
-    ) {
-      plans.push({
-        planId: before.planId,
-        committed: {
-          breakEvenVendors: before.breakEvenVendors,
-          breakEvenGmvPence: before.breakEvenGmvPence,
-        },
-        ifAccepted: {
-          breakEvenVendors: after.breakEvenVendors,
-          breakEvenGmvPence: after.breakEvenGmvPence,
-        },
-      });
+    const pick = (m: typeof before) => ({
+      marginPence: m.reference.marginPence,
+      shopPaysPence: m.reference.shopPays.totalPence,
+    });
+    const a = pick(before);
+    const b = pick(after);
+    if (a.marginPence !== b.marginPence || a.shopPaysPence !== b.shopPaysPence) {
+      models.push({ modelId: before.modelId, committed: a, ifAccepted: b });
     }
   }
   return {
-    plans,
-    rankingChanged: JSON.stringify(committed.ranking) !== JSON.stringify(next.ranking),
+    models,
     recommendationDisagreesChanged:
       committed.recommendationDisagrees !== next.recommendationDisagrees,
   };
@@ -312,8 +312,8 @@ function targetLabel(target: DiffTarget): string {
 
 /** Fixed rules, in a fixed order. Never AI-written. */
 export function recommendedActions(
-  committed: PricingAnalysis,
-  ifAccepted: PricingAnalysis,
+  committed: PricingAnalysisV2,
+  ifAccepted: PricingAnalysisV2,
   sources: readonly SourceResult[],
 ): string[] {
   const actions: string[] = [];
@@ -345,7 +345,7 @@ export interface RefreshResult {
   sources: SourceResult[];
   /** Only for scope `all`. */
   recommendations: {
-    ifAccepted: PricingAnalysis;
+    ifAccepted: PricingAnalysisV2;
     deltas: AnalysisDeltas;
     actions: string[];
   } | null;
@@ -361,8 +361,8 @@ export function summariseRefresh(
   if (scope === "costs") {
     return { scope, ranAt: now.toISOString(), sources, recommendations: null };
   }
-  const committed = analyse(registries, now);
-  const ifAccepted = analyse(
+  const committed = analyseV2(registries, now);
+  const ifAccepted = analyseV2(
     applySuggestions(
       sources.flatMap((s) => s.rows),
       registries,

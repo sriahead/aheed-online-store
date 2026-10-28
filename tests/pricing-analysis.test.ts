@@ -1,234 +1,180 @@
 import { describe, expect, it } from "vitest";
-import { buildPricingAnalysis, type PricingAnalysisInput } from "@/lib/pricing/analysis";
-import type { Assumption, AssumptionId } from "@/lib/pricing/assumptions";
-import type { BusinessModel, Recommendation } from "@/lib/pricing/business-models";
-import type { Competitor } from "@/lib/pricing/competitors";
-import type { ProposedPlan } from "@/lib/pricing/proposed-plans";
-import type { CostReport } from "@/lib/running-costs";
+import {
+  analyseV2,
+  COMMITTED,
+  recommendationDisagrees,
+  type ModelResult,
+  type Registries,
+} from "@/lib/pricing/committed";
+import type { CostDriver } from "@/lib/pricing/cost-drivers";
+import { gbp, usd } from "@/lib/pricing/money";
+import { evaluate, type ModelInputs, type PricingModelParams } from "@/lib/pricing/volume-model";
 
-/** #1309 R11-R16. The R15 fixture is reproduced verbatim from requirements.md. */
+/** #1313 R21-R22: `analyseV2` over the committed registries, the disagreement rule and staleness. */
 
-const NOW = new Date("2026-10-27T12:00:00Z");
+const NOW = new Date("2026-10-28T12:00:00Z");
 
-function costs(monthlyCents: number, stale: string[] = []): CostReport {
-  const totals = { annualCents: monthlyCents * 12, monthlyCents };
-  return {
-    current: totals,
-    withPlanned: totals,
-    atRenewal: totals,
-    attention: [],
-    renewals: [],
-    unpriced: [],
-    byGroup: {
-      "platform-fixed": totals,
-      "platform-usage": { annualCents: 0, monthlyCents: 0 },
-      "dev-tools": { annualCents: 0, monthlyCents: 0 },
-    },
-    stale,
-    ownerToConfirm: [],
-  };
-}
+describe("analyseV2 shape (R21)", () => {
+  const a = analyseV2(COMMITTED, NOW);
 
-function assumption(id: AssumptionId, value: number | null, asOf = "2026-10-27"): Assumption {
-  return {
-    id,
-    label: id,
-    value,
-    unit: "",
-    basis: value === null ? "missing" : "published-source",
-    sourceUrl: value === null ? null : "https://example.org",
-    asOf,
-    derivedFrom: null,
-    note: null,
-  };
-}
-
-function plan(id: string, monthlyFeePence: number, commissionBps: number): ProposedPlan {
-  return {
-    id,
-    name: id,
-    model: "hybrid",
-    status: "proposal",
-    monthlyFeePence,
-    commissionBps,
-    includes: [],
-    addOns: [],
-    positioning: "",
-    vatNote: "",
-  };
-}
-
-function model(id: string, representativePlanId: string): BusinessModel {
-  return {
-    id: id as BusinessModel["id"],
-    name: id,
-    description: "",
-    advantages: [],
-    disadvantages: [],
-    risks: [],
-    representativePlanId,
-  };
-}
-
-const recommendation: Recommendation = {
-  modelId: "hybrid",
-  reasoning: [],
-  reviewedOn: "2026-10-27",
-  nextReviewDue: "2027-01-27",
-};
-
-/**
- * R15, verbatim: costs.withPlanned.monthlyCents 1000, usd-cents-per-gbp 125, card-fee-bps 150,
- * plans S (fee 2000, commission 0), C (fee 0, commission 500), H (fee 1000, commission 200),
- * F (fee 0, commission 100), scenarios [5], recommendation representative plan H.
- */
-function fixture(overrides: Partial<PricingAnalysisInput> = {}): PricingAnalysisInput {
-  return {
-    costs: costs(1000),
-    assumptions: [assumption("usd-cents-per-gbp", 125), assumption("card-fee-bps", 150)],
-    plans: [plan("S", 2000, 0), plan("C", 0, 500), plan("H", 1000, 200), plan("F", 0, 100)],
-    scenarioVendorCounts: [5],
-    recommendation,
-    models: [model("hybrid", "H")],
-    competitors: [],
-    ...overrides,
-  };
-}
-
-const planResult = (a: ReturnType<typeof buildPricingAnalysis>, id: string) =>
-  a.plans.find((p) => p.planId === id)!;
-
-describe("the R15 fixture", () => {
-  const a = buildPricingAnalysis(fixture(), NOW);
-
-  it("converts the cost: costPence 800", () => {
-    expect(a.costPence).toBe(800);
+  it("evaluates every model at the reference scenario", () => {
+    expect(a.referenceScenario).toEqual({ shops: 10, ordersPerShop: 500, basketPence: 2500 });
+    expect(a.models.map((m) => m.modelId)).toEqual(COMMITTED.models.map((m) => m.id));
+    for (const m of a.models) {
+      const model = COMMITTED.models.find((x) => x.id === m.modelId)!;
+      expect(m.reference).toEqual(evaluate(a.referenceScenario, model.pricing, a.inputs));
+    }
   });
 
-  it("break-even: S 1 vendor, H 1 vendor, C 22858 pence at 350 bps net, F null at -50 bps", () => {
-    expect(planResult(a, "S").breakEvenVendors).toBe(1);
-    expect(planResult(a, "H").breakEvenVendors).toBe(1);
-    expect(planResult(a, "C").breakEvenGmvPence).toBe(22858);
-    expect(planResult(a, "C").netVariableBps).toBe(350);
-    expect(planResult(a, "F").netVariableBps).toBe(-50);
-    expect(planResult(a, "F").breakEvenGmvPence).toBeNull();
+  it("builds the full grid and comparison set", () => {
+    expect(a.grid).toHaveLength(4 * 6 * 3 * 3);
+    expect(a.comparisons).toHaveLength(7 * 3 * 3);
+    expect(a.firstLimits.map((l) => l.ordersPerShop)).toEqual([100, 500, 2000]);
   });
 
-  it("S at 5 vendors: revenue 10000, profit 9200, marginBps 9200", () => {
-    const row = a.scenarios.find((s) => s.planId === "S" && s.vendors === 5)!;
-    expect([row.revenuePence, row.profitPence, row.marginBps]).toEqual([10000, 9200, 9200]);
+  it("reports start-up costs, partner rates and a missing pay target", () => {
+    expect(a.startupPence).toBe(60000);
+    expect(a.partnerRates).toEqual([2500, null, null]);
+    expect(a.payTargetPence).toBeNull();
+    for (const m of a.models) expect(m.breakEvenForPayTarget).toBeNull();
   });
 
-  it('ranking byVendors ["H", "S"], byGmv ["C", "F"], recommendationDisagrees false', () => {
-    expect(a.ranking).toEqual({ byVendors: ["H", "S"], byGmv: ["C", "F"] });
+  it("the committed recommendation agrees with the committed numbers and is not overdue", () => {
     expect(a.recommendationDisagrees).toBe(false);
+    expect(a.recommendationOverdue).toBe(false);
   });
 
-  it("with usd-cents-per-gbp null: costPence, every break-even, profit and margin are null", () => {
-    const n = buildPricingAnalysis(
-      fixture({
-        assumptions: [assumption("usd-cents-per-gbp", null), assumption("card-fee-bps", 150)],
-      }),
-      NOW,
+  it("is overdue the day after nextReviewDue", () => {
+    expect(analyseV2(COMMITTED, new Date("2027-01-28T23:00:00Z")).recommendationOverdue).toBe(
+      false,
     );
-    expect(n.costPence).toBeNull();
-    for (const p of n.plans) {
-      expect(p.breakEvenVendors).toBeNull();
-      expect(p.breakEvenGmvPence).toBeNull();
-    }
-    for (const s of n.scenarios) {
-      expect(s.profitPence).toBeNull();
-      expect(s.marginBps).toBeNull();
-    }
-    expect(n.recommendationDisagrees).toBe(false);
+    expect(analyseV2(COMMITTED, new Date("2027-01-29T00:00:00Z")).recommendationOverdue).toBe(true);
   });
 });
 
-describe("plan results (R12)", () => {
-  it("every plan result excludes the per-order fee", () => {
-    for (const p of buildPricingAnalysis(fixture(), NOW).plans)
-      expect(p.excludesPerOrderFee).toBe(true);
+describe("recommendationDisagrees (R21), with the R13 fixture", () => {
+  const D1: CostDriver = {
+    id: "D1",
+    name: "D1",
+    provider: "t",
+    group: "infrastructure",
+    fixed: { amount: usd(500), period: "month" },
+    oneOff: null,
+    usage: [
+      {
+        unit: "u",
+        baseUnits: 0,
+        perShopUnits: 0,
+        perOrderUnits: 10,
+        freeUnits: 10000,
+        price: { minor: 50, perUnits: 1000, currency: "USD" },
+      },
+    ],
+    basis: "estimate",
+    sourceUrl: null,
+    asOf: "2026-10-28",
+    note: "estimate",
+  };
+  const D2: CostDriver = {
+    ...D1,
+    id: "D2",
+    fixed: { amount: gbp(12000), period: "year" },
+    usage: null,
+  };
+  const inputs = (fx: number | null): ModelInputs => ({
+    usdCentsPerGbp: fx,
+    cardFeeBps: 150,
+    cardFeeFixedPence: 20,
+    disputeRateBps: 10,
+    disputeFeePence: 2000,
+    partnerHourlyRatePence: 2500,
+    partnerMinutesPerShopMonth: 120,
+    onboardingMinutesPerShop: 720,
+    onboardingAmortisationMonths: 12,
+    payoutsPerShopMonth: 4,
+    currentFixed: usd(0),
+    drivers: [D1, D2],
+    connectFee: null,
   });
+  const scenario = { shops: 2, ordersPerShop: 1000, basketPence: 2000 };
+  const A: PricingModelParams = {
+    kind: "allowance-per-order",
+    monthlyFeePence: 1000,
+    includedOrders: 300,
+    perOrderPence: 5,
+  };
+  const B: PricingModelParams = {
+    kind: "customer-fee",
+    monthlyFeePence: 500,
+    customerFeePerOrderPence: 50,
+  };
+  const results = (fx: number | null): ModelResult[] => [
+    {
+      modelId: "allowance-per-order",
+      reference: evaluate(scenario, A, inputs(fx)),
+      breakEvenForPayTarget: null,
+      breakEvenIncludingTime: null,
+      vatThresholdShops: null,
+    },
+    {
+      modelId: "customer-fee",
+      reference: evaluate(scenario, B, inputs(fx)),
+      breakEvenForPayTarget: null,
+      breakEvenIncludingTime: null,
+      vatThresholdShops: null,
+    },
+  ];
 
-  it("uses the withPlanned monthly cost", () => {
-    const report = { ...costs(1000), current: { annualCents: 0, monthlyCents: 0 } };
-    expect(buildPricingAnalysis(fixture({ costs: report }), NOW).costUsdCents).toBe(1000);
+  it("recommending A disagrees: it loses money and B dominates it", () => {
+    expect(recommendationDisagrees(results(125), "allowance-per-order")).toBe(true);
+  });
+  it("recommending B agrees", () => {
+    expect(recommendationDisagrees(results(125), "customer-fee")).toBe(false);
+  });
+  it("is false when the recommended margin is unknown", () => {
+    expect(recommendationDisagrees(results(null), "allowance-per-order")).toBe(false);
+  });
+  it("is true for a profitable model that another model dominates", () => {
+    const rich: PricingModelParams = {
+      kind: "customer-fee",
+      monthlyFeePence: 100,
+      customerFeePerOrderPence: 60,
+    };
+    const r = [
+      { ...results(125)[1] },
+      {
+        ...results(125)[1],
+        modelId: "order-bands" as const,
+        reference: evaluate(scenario, rich, inputs(125)),
+      },
+    ];
+    // order-bands here: revenue 120200 > 101000 and shop pays 53055 < 53250.
+    expect(r[1].reference.marginPence! > r[0].reference.marginPence!).toBe(true);
+    expect(r[1].reference.shopPays.totalPence < r[0].reference.shopPays.totalPence).toBe(true);
+    expect(recommendationDisagrees(r, "customer-fee")).toBe(true);
   });
 });
 
-describe("scenarios (R13)", () => {
-  it("a loss gives a negative margin and zero revenue gives null", () => {
-    const a = buildPricingAnalysis(
-      fixture({ plans: [plan("L", 100, 0), plan("Z", 0, 500)], scenarioVendorCounts: [1] }),
-      NOW,
+describe("stale (R22)", () => {
+  it("is empty on the Build date", () => {
+    expect(analyseV2(COMMITTED, NOW).stale).toEqual([]);
+  });
+
+  it("names every new registry 93 days after the Build date", () => {
+    const later = new Date("2027-01-29T12:00:00Z");
+    const registries: Registries = COMMITTED;
+    const stale = analyseV2(registries, later).stale;
+    const by = (registry: string) => stale.filter((s) => s.registry === registry).map((s) => s.id);
+    expect(by("cost-drivers").sort()).toEqual(COMMITTED.drivers.map((d) => d.id).sort());
+    expect(by("risks").sort()).toEqual(COMMITTED.risks.map((r) => r.id).sort());
+    expect(by("connect").sort()).toEqual(["platform-pricing", "stripe-pricing"]);
+    // Only add-ons priced from a (now stale) driver.
+    expect(by("add-ons").sort()).toEqual(
+      COMMITTED.addOns
+        .filter((x) => x.runCost.basis === "published-source" && x.runCost.driverId !== null)
+        .map((x) => x.id)
+        .sort(),
     );
-    const loss = a.scenarios.find((s) => s.planId === "L")!;
-    expect([loss.revenuePence, loss.profitPence, loss.marginBps]).toEqual([100, -700, -70000]);
-    const zero = a.scenarios.find((s) => s.planId === "Z")!;
-    expect(zero.marginBps).toBeNull();
-    expect(zero.atZeroGmv).toBe(true);
-  });
-});
-
-describe("ranking and disagreement (R14)", () => {
-  it("ties break by id", () => {
-    const a = buildPricingAnalysis(
-      fixture({ plans: [plan("b", 1000, 0), plan("a", 1000, 0)] }),
-      NOW,
-    );
-    expect(a.ranking.byVendors).toEqual(["a", "b"]);
-  });
-
-  it("disagrees when the representative plan is not first in its list", () => {
-    const a = buildPricingAnalysis(fixture({ models: [model("hybrid", "S")] }), NOW);
-    // S and H both need 1 vendor; H wins the tie by id, so S is second.
-    expect(a.recommendationDisagrees).toBe(true);
-  });
-});
-
-describe("staleness and overdue (R16)", () => {
-  const competitor = (researchedOn: string): Competitor => ({
-    id: `c-${researchedOn}`,
-    name: "c",
-    segment: "store-builder",
-    website: "https://example.org",
-    researchStatus: "not-published",
-    researchedOn,
-    note: null,
-    plans: [],
-  });
-
-  it("a competitor 93 days old is stale and 92 days old is not", () => {
-    const a = buildPricingAnalysis(
-      fixture({ competitors: [competitor("2026-07-26"), competitor("2026-07-27")] }),
-      NOW,
-    );
-    expect(a.stale).toEqual([{ registry: "competitors", id: "c-2026-07-26" }]);
-  });
-
-  it("includes stale assumptions and the cost report's stale ids", () => {
-    const a = buildPricingAnalysis(
-      fixture({
-        costs: costs(1000, ["neon"]),
-        assumptions: [
-          assumption("usd-cents-per-gbp", 125, "2026-01-01"),
-          assumption("card-fee-bps", 150),
-        ],
-      }),
-      NOW,
-    );
-    expect(a.stale).toEqual([
-      { registry: "costs", id: "neon" },
-      { registry: "assumptions", id: "usd-cents-per-gbp" },
-    ]);
-  });
-
-  it("the recommendation is not overdue on its due date and is the day after", () => {
-    expect(
-      buildPricingAnalysis(fixture(), new Date("2027-01-27T23:00:00Z")).recommendationOverdue,
-    ).toBe(false);
-    expect(
-      buildPricingAnalysis(fixture(), new Date("2027-01-28T00:00:00Z")).recommendationOverdue,
-    ).toBe(true);
+    expect(by("add-ons").length).toBeGreaterThan(0);
   });
 });

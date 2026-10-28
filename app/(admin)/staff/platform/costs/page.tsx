@@ -16,19 +16,20 @@ import {
   type CostItem,
   type CostStatus,
 } from "@/lib/running-costs";
-import { ASSUMPTIONS } from "@/lib/pricing/assumptions";
-import { BUSINESS_MODELS, RECOMMENDATION } from "@/lib/pricing/business-models";
-import { analyse, COMMITTED, newestDate } from "@/lib/pricing/committed";
-import { PROPOSED_PLANS } from "@/lib/pricing/proposed-plans";
+import { assumptionValue } from "@/lib/pricing/assumptions";
+import { analyseV2, COMMITTED, newestDate, type StaleRegistry } from "@/lib/pricing/committed";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PricingReviewPanel } from "@/components/staff/PricingReviewPanel";
+import { PricingWhatIf } from "@/components/staff/PricingWhatIf";
 import { PrintButton } from "@/components/staff/PrintButton";
 import {
+  AddOnsSection,
   CompetitorsSection,
   ModelsSection,
-  PricingSection,
-  ProfitabilitySection,
+  ProductionSection,
+  RecommendationSection,
+  RisksSection,
   SectionHeader,
 } from "@/components/staff/PricingDashboardSections";
 
@@ -227,10 +228,12 @@ export default async function PlatformCostsPage() {
   const items = COMMITTED.costItems;
   const report = buildCostReport(items, now);
   const byId = new Map(items.map((item) => [item.id, item]));
-  const analysis = analyse(COMMITTED, now);
-  const staleIn = (registry: "competitors" | "assumptions") =>
-    analysis.stale.filter((entry) => entry.registry === registry).length;
+  const analysis = analyseV2(COMMITTED, now);
+  const staleIn = (...registries: StaleRegistry[]) =>
+    analysis.stale.filter((entry) => registries.includes(entry.registry)).length;
   const overdue = analysis.recommendationOverdue ? 1 : 0;
+  const recommendation = COMMITTED.recommendation;
+  const a = COMMITTED.assumptions;
 
   // A failed read is "unavailable", never zero: a zero would read as "nothing used".
   let usage: AiUsage = null;
@@ -267,7 +270,10 @@ export default async function PlatformCostsPage() {
       >
         Everything on this page is advisory. No figure here is realised revenue: the platform has
         not traded yet, so revenue and profit are projections from the stated assumptions. Nothing
-        on this page changes live prices, subscriptions or any store&apos;s settings.
+        on this page changes live prices, subscriptions or any store&apos;s settings. Prices are in
+        pounds excluding VAT unless marked in US dollars. Stripe Connect, with each shop as the
+        seller paying its own card fees, is a planning assumption: payments still run through one
+        platform account today.
       </p>
 
       <section data-section="costs" className="mb-10">
@@ -427,9 +433,26 @@ export default async function PlatformCostsPage() {
         </div>
       </section>
 
+      <ProductionSection
+        analysis={analysis}
+        drivers={COMMITTED.drivers}
+        connect={COMMITTED.connect}
+        header={
+          <SectionHeader
+            title="Production costs as we grow"
+            intro="What the platform will cost in production at different numbers of shops and orders."
+            lastUpdated={newestDate([
+              ...COMMITTED.drivers.map((d) => d.asOf),
+              ...COMMITTED.connect.map((c) => c.retrievedOn),
+            ])}
+            staleCount={staleIn("cost-drivers", "connect")}
+            csv="production"
+          />
+        }
+      />
+
       <CompetitorsSection
         competitors={COMMITTED.competitors}
-        plans={PROPOSED_PLANS}
         header={
           <SectionHeader
             title="Competitors"
@@ -441,44 +464,81 @@ export default async function PlatformCostsPage() {
         }
       />
 
-      <PricingSection
-        plans={PROPOSED_PLANS}
-        header={
-          <SectionHeader
-            title="Proposed pricing"
-            intro="Candidate plans for selling the platform to stores. Proposals only; nothing uses them."
-            lastUpdated={RECOMMENDATION.reviewedOn}
-            staleCount={overdue}
-            csv="plans"
-          />
-        }
-      />
-
-      <ProfitabilitySection
-        analysis={analysis}
-        plans={PROPOSED_PLANS}
-        fx={ASSUMPTIONS.find((a) => a.id === "usd-cents-per-gbp")}
-        header={
-          <SectionHeader
-            title="Profitability"
-            intro="Whether each plan covers the platform's costs, and at what scale. Projections, not results."
-            lastUpdated={newestDate(COMMITTED.assumptions.map((a) => a.asOf))}
-            staleCount={staleIn("assumptions")}
-            csv="scenarios"
-          />
-        }
-      />
-
       <ModelsSection
-        models={BUSINESS_MODELS}
-        recommendation={RECOMMENDATION}
+        models={COMMITTED.models}
+        recommendation={recommendation}
         analysis={analysis}
-        plans={PROPOSED_PLANS}
+        assumptions={a}
         header={
           <SectionHeader
             title="Business models"
-            intro="The models considered, their trade-offs, and the current recommendation."
-            lastUpdated={RECOMMENDATION.reviewedOn}
+            intro="Four ways to charge that grow with a shop's orders, and what each costs a shop against the alternatives."
+            lastUpdated={recommendation.reviewedOn}
+            staleCount={staleIn("assumptions") + overdue}
+            csv="models"
+          />
+        }
+      />
+
+      <section data-section="what-if" className="mb-10 print:hidden">
+        <h2 className="mb-1 text-xl font-bold text-slate-900">What if</h2>
+        <p className="mb-4 text-sm text-slate-500">
+          Try other rates, hours, baskets and volumes. The committed figures above do not change.
+        </p>
+        <PricingWhatIf
+          inputs={analysis.inputs}
+          models={COMMITTED.models.map((m) => ({ id: m.id, name: m.name, pricing: m.pricing }))}
+          defaults={{
+            ratePence: assumptionValue(a, "partner-hourly-rate-pence"),
+            increaseBps: assumptionValue(a, "partner-rate-yearly-increase-bps"),
+            minutesPerShop: analysis.inputs.partnerMinutesPerShopMonth,
+            onboardingMinutes: analysis.inputs.onboardingMinutesPerShop,
+            payTargetPence: analysis.payTargetPence,
+            basketPence: analysis.referenceScenario.basketPence,
+            ordersPerShop: analysis.referenceScenario.ordersPerShop,
+            shops: analysis.referenceScenario.shops,
+          }}
+        />
+      </section>
+
+      <AddOnsSection
+        addOns={COMMITTED.addOns}
+        launchIds={recommendation.launchAddOnIds}
+        models={COMMITTED.models}
+        header={
+          <SectionHeader
+            title="Add-ons"
+            intro="Paid extras, what each costs us to run, and whether it is bundled or sold separately."
+            lastUpdated={newestDate(COMMITTED.addOns.map((x) => x.asOf))}
+            staleCount={staleIn("add-ons")}
+            csv="add-ons"
+          />
+        }
+      />
+
+      <RisksSection
+        risks={COMMITTED.risks}
+        header={
+          <SectionHeader
+            title="Risks and gaps"
+            intro="What will cost money or create risk as we grow and is not priced elsewhere. Not legal or tax advice."
+            lastUpdated={newestDate(COMMITTED.risks.map((r) => r.asOf))}
+            staleCount={staleIn("risks")}
+            csv="risks"
+          />
+        }
+      />
+
+      <RecommendationSection
+        recommendation={recommendation}
+        models={COMMITTED.models}
+        addOns={COMMITTED.addOns}
+        analysis={analysis}
+        header={
+          <SectionHeader
+            title="Recommendation"
+            intro="One model and add-on set for launch, the founding-partner offer, and when to re-price."
+            lastUpdated={recommendation.reviewedOn}
             staleCount={overdue}
             csv="models"
           />
@@ -492,7 +552,7 @@ export default async function PlatformCostsPage() {
           Reviews are recommended monthly for costs and quarterly for subscriptions, competitors and
           pricing; a GitHub issue opens each quarter as a reminder.
         </p>
-        <PricingReviewPanel lastAnalysis={RECOMMENDATION.reviewedOn} />
+        <PricingReviewPanel lastAnalysis={recommendation.reviewedOn} />
       </section>
     </PageContainer>
   );

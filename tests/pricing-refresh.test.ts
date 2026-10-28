@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/ai-meter-service", () => ({ getVendorAiMeter: vi.fn() }));
 vi.mock("@/lib/config", () => ({ getAiEnv: vi.fn(() => ({})) }));
 
-import { COMMITTED, analyse, type Registries } from "@/lib/pricing/committed";
+import { COMMITTED, analyseV2, type Registries } from "@/lib/pricing/committed";
 import type { Competitor } from "@/lib/pricing/competitors";
 import {
   MAX_REFRESH_SOURCES,
@@ -16,7 +16,7 @@ import {
 import { runPricingRefreshWith, type RefreshDeps } from "@/lib/pricing-refresh-service";
 
 /**
- * #1309 R17-R20. The service is driven through `runPricingRefreshWith`, whose fetch, model call and
+ * #1309 R17-R20, and #1313 R23 (the "if accepted" analysis is now the volume model). The service is driven through `runPricingRefreshWith`, whose fetch, model call and
  * meter are injected: that is the injection mechanism the validation row refers to.
  */
 
@@ -75,6 +75,27 @@ describe("refreshSources (R17)", () => {
     expect(all).toContain(STRIPE);
     expect(all).toContain(SHOPIFY);
     expect(new Set(all).size).toBe(all.length);
+  });
+
+  it("#1313 R23: the source list is the same as before the volume model", () => {
+    expect(refreshSources("costs")).toEqual([
+      "https://developers.cloudflare.com/workers/platform/pricing/",
+      "https://neon.com/pricing",
+      "https://developers.cloudflare.com/r2/pricing/",
+      "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+    ]);
+    expect(refreshSources("all")).toEqual([
+      "https://developers.cloudflare.com/workers/platform/pricing/",
+      "https://neon.com/pricing",
+      "https://developers.cloudflare.com/r2/pricing/",
+      "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+      "https://www.shopify.com/uk/pricing",
+      "https://squareup.com/gb/en/online-store/plans",
+      "https://www.ecwid.com/pricing",
+      "https://merchants.ubereats.com/gb/en/pricing/",
+      "https://stripe.com/gb/pricing",
+      "https://www.sumup.com/en-gb/pricing/",
+    ]);
   });
 
   it("is capped at 25", () => {
@@ -376,16 +397,28 @@ describe("if accepted and actions (R20)", () => {
   it("a changed Workers fee and a changed Stripe card fee move the analysis", async () => {
     const result = await workersChanged(false);
     const rec = result.recommendations!;
-    expect(rec.ifAccepted.costUsdCents).not.toBe(analyse(COMMITTED, NOW).costUsdCents);
-    expect(rec.ifAccepted.cardFeeBps).toBe(190);
-    expect(rec.deltas.plans.length).toBeGreaterThan(0);
+    const committed = analyseV2(COMMITTED, NOW);
+    expect(rec.ifAccepted.inputs.currentFixed.minor).not.toBe(committed.inputs.currentFixed.minor);
+    expect(rec.ifAccepted.inputs.cardFeeBps).toBe(190);
+    expect(rec.deltas.models.length).toBe(COMMITTED.models.length);
+  });
+
+  it("R23: a suggested card-fee change moves every model's reference card fees", async () => {
+    const rec = (await workersChanged(false)).recommendations!;
+    const committed = analyseV2(COMMITTED, NOW);
+    for (const before of committed.models) {
+      const after = rec.ifAccepted.models.find((m) => m.modelId === before.modelId)!;
+      expect(after.reference.shopPays.cardFeesPence, before.modelId).toBeGreaterThan(
+        before.reference.shopPays.cardFeesPence,
+      );
+    }
   });
 
   it("a changed competitor fee alone changes no analysis figure but is listed for review", async () => {
     const base = await workersChanged(false);
     const withShopify = await workersChanged(true);
-    expect(withShopify.recommendations!.ifAccepted.plans).toEqual(
-      base.recommendations!.ifAccepted.plans,
+    expect(withShopify.recommendations!.ifAccepted.models).toEqual(
+      base.recommendations!.ifAccepted.models,
     );
     expect(
       withShopify.recommendations!.actions.some((a) =>
@@ -395,7 +428,7 @@ describe("if accepted and actions (R20)", () => {
   });
 
   it("actions follow the fixed rules in order, or say no action is needed", () => {
-    const committed = analyse(COMMITTED, NOW);
+    const committed = analyseV2(COMMITTED, NOW);
     expect(
       recommendedActions(committed, committed, [{ sourceUrl: STRIPE, status: "read", rows: [] }]),
     ).toEqual(["No action needed"]);

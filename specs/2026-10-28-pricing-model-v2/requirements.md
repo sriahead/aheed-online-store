@@ -59,13 +59,16 @@ R2. `lib/pricing/assumptions.ts` exports `SCENARIO_SHOPS = [1, 5, 10, 25, 50, 10
 R3. `lib/pricing/cost-drivers.ts` (pure) exports `COST_DRIVERS`. Each driver has `id`, `name`,
     `provider`, `group` (`"infrastructure" | "messaging" | "operations" | "business"`), `fixed`
     (`{ amount: Money, period: "month" | "year" }` or `null`), `oneOff` (`Money` or `null`), `usage`
-    (`null` or `{ unit, baseUnits, perShopUnits, perOrderUnits, freeUnits, price: { minor,
-    perUnits, currency } }`, where every number is at least 0, `perUnits` is a positive integer, and
-    `minor` is an integer), `basis` (`"published-source" | "estimate"`), `sourceUrl`, `asOf` and
+    (`null` or an array of parts `{ unit, baseUnits, perShopUnits, perOrderUnits, freeUnits, price: {
+    minor, perUnits, currency } }`, where every number is at least 0, `perUnits` is a positive
+    integer, and `minor` is an integer; amended at Build: Neon bills compute and storage separately
+    and R2 two operation classes, so one driver can have more than one part, each costed by R9 and
+    summed), `basis` (`"published-source" | "estimate"`), `sourceUrl`, `asOf` and
     `note`. At least one of `fixed`, `oneOff` or `usage` is non-null. A driver with non-null `usage`
     has a `note` stating that its usage quantities are estimates.
 
-R4. `COST_DRIVERS` holds exactly these 17 ids, in these groups:
+R4. `COST_DRIVERS` holds exactly these 18 ids (amended at Build: the list below always named 18;
+    "17" was a counting error), in these groups:
     - `infrastructure`: `neon-production`, `neon-dev-staging`, `workers-requests`, `workers-cpu`,
       `r2-storage`, `r2-operations`, `workers-ai`
     - `messaging`: `email-transactional`, `sms`
@@ -74,8 +77,9 @@ R4. `COST_DRIVERS` holds exactly these 17 ids, in these groups:
       `insurance-professional-indemnity`, `legal-templates`
 
     The 7 `infrastructure` drivers and `email-transactional` are published-source.
-    `company-formation` and `ico-fee` are published-source with a `sourceUrl` on `gov.uk` or
-    `ico.org.uk` respectively. `company-formation` and `legal-templates` have a non-null `oneOff` and
+    `company-formation` is published-source with a `sourceUrl` on `gov.uk`. (Amended at Build:
+    `ico-fee` was to be published-source on `ico.org.uk`, but on 2026-10-28 one ICO fee page returned
+    404 and the other showed no amounts, so by the rule in the next sentence it is an `estimate`.) `company-formation` and `legal-templates` have a non-null `oneOff` and
     a `null` `fixed`. Any driver whose price could not be read from a provider page is `estimate`
     with a `null` `sourceUrl` and a note saying why.
 
@@ -226,11 +230,13 @@ R17. `lib/pricing/add-ons.ts` (pure) exports `ADD_ONS` with exactly these 12 ids
      `multi-branch`. Each has:
      - `name` and a `price` (`{ pence, billing: "month" | "one-off" | "per-use", unit }`, where `pence`
        is a positive integer);
-     - a `runCost` (`{ pence, basis: "published-source" | "estimate", derivation }`), where
-       `derivation` is a string naming the driver id or the partner minutes it is computed from;
+     - a `runCost` (`{ pence, basis: "published-source" | "estimate", driverId, derivation }`),
+       where `derivation` is a string naming what it is computed from and `driverId` is the cost
+       driver it comes from, or `null` (amended at Build: R22's add-on staleness needs the id);
      - `packaging` (`"separate"`, or `{ includedIn: <a BUSINESS_MODELS id or band label> }`);
      - `available` (boolean), and a `note` that is non-empty when `available` is `false`;
-     - `marginClass`.
+     - `marginClass`;
+     - `asOf`, a date (amended at Build: R26's "newest `asOf`" for this section needs one).
 
      `catalogue-setup` has `billing: "one-off"`.
 
@@ -461,7 +467,7 @@ R37. Every published-source entry added or changed by this slice (assumptions, c
 R38. Under `npm run preview`, signed in as a platform admin, `GET /staff/platform/costs` returns 200.
      The HTML contains:
      - all nine `data-section` values;
-     - 17 `data-costs-item`, 17 `data-cost-driver`, 4 `data-model`, 12 `data-add-on` and 3
+     - 17 `data-costs-item`, 18 `data-cost-driver`, 4 `data-model`, 12 `data-add-on` and 3
        `data-track` elements;
      - at least 11 `data-risk` elements, and 10 `data-competitor` elements;
      - `data-costs="advisory"`.

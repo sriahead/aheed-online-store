@@ -113,7 +113,7 @@ costs" instead of the monthly figure. USD is converted to pounds per driver at t
 rate. Usage quantities (requests per order, MB per shop, emails per order and so on) are always our
 estimates. The note on each driver says so, even when the unit price is published.
 
-Seventeen drivers, in five groups:
+Eighteen drivers, in four groups ("seventeen in five" in the first draft was a counting error, corrected at Build):
 
 - **infrastructure**: Neon production, Neon dev and staging, Workers requests, Workers CPU, R2
   storage, R2 operations, Workers AI;
