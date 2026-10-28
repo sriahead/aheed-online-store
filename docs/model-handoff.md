@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.147.0"
-updated: 2026-10-27
+version: "1.148.0"
+updated: 2026-10-28
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -38,6 +38,23 @@ Build Notes across the pre-validation Clear. Remove or replace stale information
 reconciliation. If overall project state did not materially change, leave this file untouched.
 
 ## Last Verified
+
+- **2026-10-28 (`#1313` Build): pricing model v2 is BUILT, NOT VALIDATED AND NOT PUSHED**, on local branch
+  `feature/1313-pricing-model-v2`. That branch was cut from `docs/carry-forward-1309`, so it also carries the
+  unpushed `#1295`/`#1305`/`#1309` Document commits. Its PR to `staging` therefore lands them too.
+  - **Spec and build notes:** `specs/2026-10-28-pricing-model-v2/`. Validation is next, from a fresh
+    context.
+  - **Production was still down at the 2026-10-27 Orient** (`/api/health` 503, Neon HTTP 402, `#1289`).
+    Staging was healthy at `01af208`.
+  - **The dashboard's launch recommendation is now the customer service fee** (`#1313`'s numbers: with
+    partner time at 2 hours a month per shop and £25 an hour, every shop-paid model loses money at
+    10 shops × 500 orders).
+  - **The recommended model cannot be collected yet:** `#1314` (checkout fee) depends on the Connect
+    decision `#1310`.
+  - **Filed:** `#1315` (authorise-then-capture), `#1316` (allergens) and `#1317` (owner: replace the
+    estimates, including an unverified ICO fee; set the pay target and yearly rate increase).
+  - **Branch count was 60 local and 61 origin at Orient**, double the reminder threshold.
+    `/prune-branches` has not been run.
 
 - **2026-10-27 (Orient for `#1288`): PRODUCTION IS DOWN — Neon production project over quota (`#1289`).**
   Both vendor hosts' `/api/health` return 503 `degraded` at `2ffcb41` with Neon `HTTP 402 … exceeded the
