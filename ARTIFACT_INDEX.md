@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-28T01:52:29.082Z` · commit `98e5678` · `293` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-28T09:15:30.480Z` · commit `9a32058` · `293` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -45,7 +45,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Phase 6.5 Validation & Test Results](docs/developer-portal/sdd/self-review/VALIDATION-RESULTS.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Verification log of test runs, build checks, and validation evidence for Phase 6.5 audit loop. |
 | [Walking-Skeleton Runbook (M0)](docs/developer-portal/walking-skeleton-runbook.md) | runbook | 1.0.0 | 2026-08-06 | approved | internal | Step-by-step runbook to stand up the M0 walking skeleton — Cloudflare, R2, Neon, and GitHub environment provisioning through to a green production health check. |
 | [Marketing & Analytics Data Guide](docs/marketing-analytics/marketing-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for marketing analysts on how to track user behavior, promotions, and campaign performance. |
-| [Model handoff: repository orientation snapshot](docs/model-handoff.md) | doc | 1.148.0 | 2026-10-28 | approved | internal | Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live. |
+| [Model handoff: repository orientation snapshot](docs/model-handoff.md) | doc | 1.149.0 | 2026-10-28 | approved | internal | Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live. |
 | [Source-to-Destination Ledger: Orders & Fulfilment Pilot](docs/operations-research/order-fulfilment-ledger.md) | doc | 1.0.0 | 2026-09-22 | approved | internal | Ledger mapping original SDLC artifacts to the synthesized canonical Order Fulfilment Operations document. |
 | [Research & retrospectives — what lives here](docs/research/README.md) | doc | 1.0.0 | 2026-09-02 | approved | internal | Explains what the Discover and Learn phases write into this directory, what belongs in a canonical project document instead, and the rule that nothing here is approved scope until it passes through /propose. |
 | [Discovery log](docs/research/discovery-log.md) | doc | 1.11.0 | 2026-10-21 | approved | internal | Append-only record of Discover-phase findings — customer problems, opportunities, friction, gaps, risks and assumptions — each separating observed evidence from interpretation, and each ending in exactly one governance next action. |

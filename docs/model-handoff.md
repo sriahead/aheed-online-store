@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.148.0"
+version: "1.149.0"
 updated: 2026-10-28
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,13 +39,15 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-28 (`#1313` Build): pricing model v2 is BUILT, NOT VALIDATED AND NOT PUSHED**, on local branch
-  `feature/1313-pricing-model-v2`. That branch was cut from `docs/carry-forward-1309`, so it also carries the
-  unpushed `#1295`/`#1305`/`#1309` Document commits. Its PR to `staging` therefore lands them too.
-  - **Spec and build notes:** `specs/2026-10-28-pricing-model-v2/`. Validation is next, from a fresh
-    context.
+- **2026-10-28 (`#1313` Document): pricing model v2 is MERGED TO STAGING (PR #1318, `9a32058`), not
+  promoted.** `deploy-staging` succeeded; staging `/api/health` reports `9a32058` with `db.ok` and
+  `reference.reachable` true. The PR also landed the `#1295`/`#1305`/`#1309` Document commits.
+  - **Spec, build notes and validation record:** `specs/2026-10-28-pricing-model-v2/`. Validation ran in
+    the building session (not independent). R39 passed on staging (signed out: page 307 to `/login`, CSV 401).
+    **Unverified:** typing into the What if panel in a real browser. `#1313` is `In Review`.
   - **Production was still down at the 2026-10-27 Orient** (`/api/health` 503, Neon HTTP 402, `#1289`).
-    Staging was healthy at `01af208`.
+  - **This Document pass is on the local branch `docs/carry-forward-1313`** (cut from `origin/staging`
+    after the merge). **The next slice branches from it, not from `origin/staging`.**
   - **The dashboard's launch recommendation is now the customer service fee** (`#1313`'s numbers: with
     partner time at 2 hours a month per shop and £25 an hour, every shop-paid model loses money at
     10 shops × 500 orders).
@@ -61,7 +63,7 @@ reconciliation. If overall project state did not materially change, leave this f
   quota`; the storefront home page returns 500. Staging is healthy (separate Neon project). Began ~2026-10-26
   (the daily `fill-product-images` run on `main` first failed then). Owner action in the Neon console; no
   alert exists. **No promotion can succeed until it is fixed** (`deploy-production` migrates).
-  - **Staging is ahead of `main`** (`#1272`–`#1309`) including three migrations,
+  - **Staging is ahead of `main`** (`#1272`–`#1313`) including three migrations,
     `20261026150000_category_image_key`, `20261027080000_category_and_system_assets` and
     `20261027120000_ai_feature_pricing_review`.
   - **`#1288` (icon deactivate + circular `IconMedallion` + AI-replaceable icon inventory) is MERGED TO
@@ -96,10 +98,6 @@ reconciliation. If overall project state did not materially change, leave this f
     Open: R39 (refresh usage showing as "Pricing review" on `/staff/ai-usage`; **the dev database still
     lacks the `PRICING_REVIEW` migration**, while staging has it), and the quarterly `pricing-review`
     workflow, which does nothing until it reaches `main`. Follow-ups: `#1310` (owner decision, ADR-005 Connect trigger), `#1312` (refresh suggestion quality).
-  - **Document commits carry forward on the local branch `docs/carry-forward-1309`**, which holds the
-    unpushed Document passes for `#1295`, `#1305` and `#1309`. Until 2026-10-27 the `#1295`/`#1305`
-    passes sat only on the local `feature/1305` branch and were missed when `#1309` branched from
-    `origin/staging`. **The next slice branches from `docs/carry-forward-1309`, not `origin/staging`.**
   - **`deploy-staging` can fail on a transient `npm ci`** (Prisma engine postinstall `ECONNRESET`, hit at
     `#1295`): every later step is skipped, so nothing deployed and no migration ran. After checking
     githubstatus.com, `gh run rerun <id> --failed` is enough.

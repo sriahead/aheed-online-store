@@ -279,7 +279,12 @@ the owner chose to validate in place rather than `/clear`. Commit under test: `6
   real React change events (defaults, the empty optional inputs, recalculation equal to `evaluate`,
   the invalid-entry error and recovery), and the source grep shows no request or storage API. A
   manual check on staging is cheap.
-- **R39: pending until Ship.** It needs `deploy-staging` first.
+- **R39: pass at Ship (2026-10-28), against staging at `9a32058`** after `deploy-staging` succeeded.
+  Unauthenticated, `/staff/platform/costs` returns 307 to `/login` with zero `data-section`, and
+  `/staff/platform/costs/export?section=models` returns 401 "Sign in required". Git Bash `curl` gave
+  error 43 / HTTP `000` on the first two tries (the `CLAUDE.md` path-conversion trap). PowerShell
+  `Invoke-WebRequest` gave the real answer.
+- **R42 in CI:** the PR's `docs-gates`, `quality / kms` and `quality / quality` checks all passed.
 
-**Verdict: pass, with R39 pending and R30's live check unverified.** The spec-wording issues in R2,
-R34 and R36 are recorded above rather than patched under `/fix`. None hides a defect in the artifact.
+**Verdict: pass, with R30's live check unverified.** The spec-wording issues in R2, R34 and R36 are
+recorded above rather than patched under `/fix`. None hides a defect in the artifact.
