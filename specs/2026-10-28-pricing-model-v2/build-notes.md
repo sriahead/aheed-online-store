@@ -217,3 +217,69 @@ None of the following is an amendment, but it is worth knowing:
   assertions.
 - **`kms/site-internal` build (R42)** was not run in this context; the two-command check is
   Validate's.
+
+## Validation record
+
+**Pass 1, 2026-10-28, NOT independent.** It ran in the same Opus 5.5 context that built the slice:
+the owner chose to validate in place rather than `/clear`. Commit under test: `692ed20`.
+
+- **Pre-flight:** `npm run lint`, `npm run format:check` and `npx tsc --noEmit` exit 0.
+  `npx vitest run --maxWorkers=4` gives 356 files and 5,046 tests passed. `npm run build` exits 0.
+- **R1-R33, R35, R40 (unit and integration):** every named test file passes inside the full run
+  above. The rows' extra reads and greps were done:
+  - R7: the `Bps` matches are `ModelInputs` and comment lines only; `PricingModelParams` has none.
+  - R14: both v1 files are absent, and nothing imports them.
+  - R20: no `publicPrice` in `lib/pricing/business-models.ts`.
+  - R25: the script exits 0, the body contains both "not set" lines, and stderr carries one progress
+    line. The workflow has no diff against `origin/staging`.
+  - R30's grep prints nothing.
+  - R41: one `#1313` entry, and the backspace count is 0.
+- **R2 and R36: pass in substance; spec-check defect.** Both rows grep `app/`, which includes the
+  generated `app/(admin)/staff/runbook/docs.ts`.
+  - That file embeds spec and handoff prose, so R2 matches the plan's own sentence about
+    `SCENARIO_VENDOR_COUNTS`, plus the test that asserts its absence.
+  - R36's count of added `fetch(` is 2: both lines are the handoff and roadmap prose inside
+    `docs.ts`.
+  - Excluding `docs.ts`, both are 0. This is the absence-grep trap `specs/sdd-workflow.md` already
+    describes (the `#539` instance). The fix belongs in the spec's wording (exclude the generated
+    file), not in the code.
+- **R34: pass.** Measured under `npm run preview`, signed in as `demo-admin` through the script's own
+  `--sign-in`, at 360 px:
+  - `documentScrollWidth` is 360;
+  - `[data-comparison]` height is 660 (limit 1,600);
+  - `[data-section="competitors"]` height is 4,150, which is below 4,200 but only just.
+  - **The third clause is weak.** The 4,200 px it compares against was `#1312`'s measurement of the
+    comparison table alone, and the competitors section is now 4,150 px from its 10 cards without
+    that table. The real improvement is the comparison block, roughly 4,200 to 660.
+  - A `--header "cookie:..."` attempt silently measured `/login` (every selector `null`), the trap
+    the script's own header comment describes. `--sign-in` is the working route.
+- **R37: pass.** Both tables exist. Six published rows were re-read on 2026-10-28 and each figure was
+  found as stated:
+  - Neon (all five figures);
+  - Workers (requests and CPU);
+  - R2 (storage and Classes A/B);
+  - Resend (Pro and Free);
+  - Stripe Connect (both labels and the £2 / 0.25% + 10p figures);
+  - Companies House (£100).
+  - Companies House replaced the ICO row, because `ico-fee` is an estimate after the R4 amendment.
+- **R38: pass**, under `npm run preview`. `demo-admin` gets 200 with all 9 `data-section` values, 17
+  `data-costs-item`, 18 `data-cost-driver`, 4 `data-model`, 12 `data-add-on`, 3 `data-track`, 11
+  `data-risk` and 10 `data-competitor` elements, and the advisory banner. `demo-store-admin` (a store
+  ADMIN who is not a platform admin):
+  - the page is 200 with "Platform admin only" and zero `data-section`/`data-model`;
+  - the CSV gets 403 "Platform admin only".
+  Unauthenticated: the page is 307 to `/login` with zero matches, and the CSV is 401. The admin's
+  `models` CSV has 217 lines (a header plus 216). The preview log has no serialisation or render
+  error.
+- **R42: pass locally.** `npm run kms:assemble:internal` and
+  `(cd kms/site-internal && npx next build --webpack)` both exit 0. `kms:validate` and
+  `kms:check-generated` exit 0. The PR's `gates` result is still to come.
+- **R30, live part: unverified.** Typing into the What if panel in a real browser, and watching the
+  network panel, was not done; it would need a signed-in browser session. The component test drives
+  real React change events (defaults, the empty optional inputs, recalculation equal to `evaluate`,
+  the invalid-entry error and recovery), and the source grep shows no request or storage API. A
+  manual check on staging is cheap.
+- **R39: pending until Ship.** It needs `deploy-staging` first.
+
+**Verdict: pass, with R39 pending and R30's live check unverified.** The spec-wording issues in R2,
+R34 and R36 are recorded above rather than patched under `/fix`. None hides a defect in the artifact.
