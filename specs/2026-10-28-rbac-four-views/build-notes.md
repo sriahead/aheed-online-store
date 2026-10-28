@@ -109,3 +109,101 @@ also carries `ef1c182`, the unpushed `#1313` Document pass. Its PR to `staging` 
   suite alone at Validate, ideally with a lower worker count.
 - **Production:** production's `demo-admin` stays a platform admin until the owner runs the tool
   there, after `#1289`.
+
+## Validation record
+
+**Pass 1, 2026-10-28, NOT independent.** It ran in the same Opus 5.5 context that built the slice:
+the owner continued without `/clear` (the standing "validate in place under 60% context" preference).
+Commit under test: `2243291`.
+
+### Pre-flight
+
+- `npm run lint`, `npm run format:check` and `npx tsc --noEmit` exit 0.
+- `npx vitest run --maxWorkers=2`, run alone, passes 359 files and 5,158 tests. This clears the
+  loaded-machine failures noted above.
+- `npm run build` (run by `npm run preview`) exits 0. `/signed-in` and `/staff/platform` are listed
+  as dynamic routes.
+- The internal KMS site build passed at Build Notes, and no `docs/` file has changed since.
+
+### Rows R1-R21 and R26-R29
+
+- **R1, R2, R4:** `tests/auth-landing.test.ts` passes, covering every listed input including `/a`
+  plus a newline plus `b`, and DEL.
+- **R3:** the grep prints nothing.
+- **R5:** the route handler matches the amended R5.
+- **R6, R7: pass in substance; spec-wording defect.**
+  - `router.push` and `callbackURL` both call `signedInPath(next)` from
+    `features/auth/signed-in-path.ts`, which builds `/signed-in` and `?next=`.
+  - The "no `/account`" counts are 0.
+  - The rows' greps expect the `/signed-in` literal in the component files, but it lives in the
+    shared helper. The behaviour is proved by R22.
+- **R8:** `next` is passed to both components, and `/register` has no diff.
+- **R9, R10:** `tests/demo-accounts.test.ts` passes. **R11:** the roster comment and `env-setup.md`
+  are correct.
+- **R12 and R27: pass in substance; spec-check defect.** Each grep matches only the added
+  `requirements.md` and `validation.md` lines that quote the grep itself. No code line matches.
+  This is the absence-grep self-match trap again, as at `#1313` (R2/R36). The fix is to exclude
+  `specs/` in the row, not to change code.
+- **R13-R16:** the page source, the nav entry and `isRouteActive` are correct. Their tests and
+  `operator-doc-coverage` pass, and the guide is at 1.6.0.
+- **R17-R20:** `tests/rbac-gate-matrix.test.ts` passes 91/91, and no code fix was needed.
+- **R21:** all four mutations fail, each in its own `describe` (R17a, b, c, d). The restored tree
+  passes 91/91. Re-run here, with the same results as at Build.
+- **R26:** no `prisma/` diff. **R28:** one `#1319` entry in `[Unreleased]`. **R29:** see Pre-flight.
+
+### Live walk, under `npm run preview` (R22-R24)
+
+- **Setup:** `npm run demo:accounts -- add` ran against the dev database after the owner approved
+  it (auto mode had blocked it). The host was checked first: `ep-dry-morning`, not staging's
+  `ep-empty-scene` or production's `ep-young-glitter`, and no database variable was exported. The
+  output shows `demo-admin` as platform CUSTOMER with vendor ADMIN, and `demo-platform-admin` as
+  platform ADMIN.
+- **Before the roster ran,** the same walk showed dev's still-platform-admin `demo-admin` landing on
+  `/staff/platform`. That confirms the landing reads the role live from the database, with no cached
+  session role.
+- **R22: pass.** `/signed-in` answers 307 to:
+  - `demo-customer`: `/account`;
+  - `demo-staff`, `demo-admin` and `demo-store-admin`: `/staff`;
+  - `demo-platform-admin`: `/staff/platform`.
+
+  `demo-admin` with `next=%2Fcheckout` goes to `/checkout`, and with `next=%2F%2Fevil.example` to
+  `/staff`. Signed out, it goes to `/login`.
+- **R23: pass, except one link target, which fails on a defect outside this slice.**
+  - **Refusals:**
+    - `demo-customer`: `/staff` is a staff refusal, and the admin API answers 403.
+    - `demo-staff`: `/staff` is 200 with no refusal, `/staff/team` an admin refusal and
+      `/staff/platform` a platform refusal. The deactivate POST answers 403.
+    - `demo-admin`: `/staff/team` is 200 with no refusal. `/staff/platform`, `/vendors`, `/costs`
+      and `/staff/errors` are each a platform refusal with zero `data-platform-home`. The CSV export
+      answers 403, and `/dev` shows `Administrators only`.
+    - `demo-platform-admin`: `/dev` is 200 with no refusal.
+  - **The platform home** is 200 with **1 `data-platform-home`, 7 `data-platform-metric` and 7
+    `data-platform-link` elements.** The raw substring counts are 2/14/14, because the RSC payload in
+    the page's `<script>` repeats each attribute. Counted as elements, the figures match R23. A
+    validator using raw `grep -c` will see double; count elements.
+  - **Link targets:** 6 of 7 are 200 with no refusal. **`/staff/platform/onboarding` answers 500
+    after about 83 s**, reproduced twice. `git diff origin/staging` is empty for that page,
+    `lib/platform-admin-service.ts`, `lib/repositories/platform-admin.ts` and
+    `lib/vendor-readiness-service.ts`, so this slice did not cause it. Tracked as **`#1321`** (P10,
+    on the board); it is to be checked on staging at Ship.
+  - Signed out, `/staff/platform` answers 307 to `/login`.
+- **R24: pass.** On the SriMart host (`srimart.localhost:8787` with `x-forwarded-proto: http`),
+  `demo-admin` signs in; `/staff` is a staff refusal, the assets API answers 403, and `/signed-in`
+  goes to `/account`. `demo-platform-admin` gets `/staff` with 200 and no refusal.
+- **Out of the required rows:** `demo-platform-admin`'s assets API answers 500 on both hosts with
+  `relation "public.CategoryAsset" does not exist`. The dev database lacks migration
+  `20261027080000_category_and_system_assets`, which staging has. This is a known dev-data gap, not
+  this slice. The R23 assets rows that are required (403 for customer and staff) refuse before any
+  database read.
+
+### Not yet verified
+
+- **R25 (staging): pending until Ship.** It needs `deploy-staging` and the owner's
+  `npm run demo:accounts -- add` against staging. Also check `/staff/platform/onboarding` there
+  for `#1321`.
+- **Google sign-in through `/signed-in`:** not exercised, because Google is not configured in
+  preview. No numbered row requires it.
+
+**Verdict: pass, with R25 pending.** R23 has one link target that fails on a defect outside this
+slice (`#1321`). Spec-wording defects are recorded for R6, R7, R12 and R27, and R23's marker counts
+are recorded as elements. None hides a defect in the artifact.
