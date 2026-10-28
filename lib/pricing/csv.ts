@@ -1,24 +1,27 @@
 import type { CostItem } from "@/lib/running-costs";
-import type { PricingAnalysis } from "@/lib/pricing/analysis";
-import { BUSINESS_MODELS, RECOMMENDATION } from "@/lib/pricing/business-models";
-import type { Registries } from "@/lib/pricing/committed";
+import { addOnMarginBps } from "@/lib/pricing/add-ons";
+import type { PricingAnalysisV2, Registries } from "@/lib/pricing/committed";
 import type { Money } from "@/lib/pricing/money";
-import { PROPOSED_PLANS } from "@/lib/pricing/proposed-plans";
 import type { SourceResult } from "@/lib/pricing/refresh";
+import { roundHalfUp } from "@/lib/pricing/money";
 
 /**
- * #1309 - CSV for the costs dashboard. Pure. RFC 4180 quoting, and any cell starting with `=`, `+`,
- * `-` or `@` gets a leading `'` so a spreadsheet does not run it as a formula. Money columns are minor
- * units plus a currency column, never a formatted string, so a spreadsheet never re-parses an amount.
+ * #1309, #1313 - CSV for the costs dashboard. Pure. RFC 4180 quoting, and any text cell starting with
+ * `=`, `+`, `-` or `@` gets a leading `'` so a spreadsheet does not run it as a formula. Money columns
+ * are minor units plus a currency column, never a formatted string, so a spreadsheet never re-parses
+ * an amount.
  */
 
-export type CsvSection = "costs" | "competitors" | "plans" | "scenarios" | "models";
+export type CsvSection =
+  "costs" | "competitors" | "production" | "models" | "comparison" | "add-ons" | "risks";
 export const CSV_SECTIONS: readonly CsvSection[] = [
   "costs",
   "competitors",
-  "plans",
-  "scenarios",
+  "production",
   "models",
+  "comparison",
+  "add-ons",
+  "risks",
 ];
 
 type Cell = string | number | boolean | null;
@@ -62,7 +65,7 @@ function costRows(items: readonly CostItem[]): Cell[][] {
 export function buildCsv(
   section: CsvSection,
   registries: Registries,
-  analysis: PricingAnalysis,
+  analysis: PricingAnalysisV2,
   asOf: string,
 ): string {
   switch (section) {
@@ -143,79 +146,153 @@ export function buildCsv(
               ]),
         ),
       );
-    case "plans":
-      return toCsv(
-        [
-          "plan_id",
-          "name",
-          "model",
-          "status",
-          "monthly_fee_minor",
-          "currency",
-          "commission_bps",
-          "as_of",
-        ],
-        PROPOSED_PLANS.map((p) => [
-          p.id,
-          p.name,
-          p.model,
-          p.status,
-          p.monthlyFeePence,
+    case "production": {
+      const seen = new Set<string>();
+      const rows: Cell[][] = [];
+      for (const row of analysis.grid) {
+        const key = `${row.shops}-${row.ordersPerShop}-${row.basketPence}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const cost = row.evaluation.cost;
+        const nonPeople =
+          cost.currentFixedPence === null || cost.driversPence === null
+            ? null
+            : cost.currentFixedPence + cost.driversPence + cost.connectPence;
+        const orders = row.shops * row.ordersPerShop;
+        rows.push([
+          row.shops,
+          row.ordersPerShop,
+          row.basketPence,
+          cost.currentFixedPence,
+          cost.driversPence,
+          cost.connectPence,
+          cost.partnerTimePence,
+          cost.totalPence,
+          nonPeople === null || orders === 0 ? null : roundHalfUp(nonPeople / orders),
           "GBP",
-          p.commissionBps,
-          RECOMMENDATION.reviewedOn,
-        ]),
-      );
-    case "scenarios":
-      return toCsv(
-        [
-          "plan_id",
-          "vendors",
-          "revenue_minor",
-          "cost_minor",
-          "profit_minor",
-          "margin_bps",
-          "currency",
-          "at_zero_gmv",
-          "as_of",
-        ],
-        analysis.scenarios.map((s) => [
-          s.planId,
-          s.vendors,
-          s.revenuePence,
-          s.costPence,
-          s.profitPence,
-          s.marginBps,
-          "GBP",
-          s.atZeroGmv,
           asOf,
-        ]),
+        ]);
+      }
+      return toCsv(
+        [
+          "shops",
+          "orders_per_shop",
+          "basket_pence",
+          "current_fixed_pence",
+          "drivers_pence",
+          "connect_pence",
+          "partner_time_pence",
+          "total_cost_pence",
+          "cost_per_order_excl_partner_time_pence",
+          "currency",
+          "as_of",
+        ],
+        rows,
       );
+    }
     case "models":
       return toCsv(
         [
-          "model_id",
-          "name",
-          "recommended",
-          "representative_plan_id",
-          "break_even_vendors",
-          "break_even_gmv_minor",
+          "model",
+          "shops",
+          "orders_per_shop",
+          "basket_pence",
+          "shop_pays_pence",
+          "revenue_pence",
+          "cost_pence",
+          "partner_time_pence",
+          "margin_pence",
           "currency",
           "as_of",
         ],
-        BUSINESS_MODELS.map((m) => {
-          const plan = analysis.plans.find((p) => p.planId === m.representativePlanId) ?? null;
-          return [
-            m.id,
-            m.name,
-            m.id === RECOMMENDATION.modelId,
-            m.representativePlanId,
-            plan?.breakEvenVendors ?? null,
-            plan?.breakEvenGmvPence ?? null,
-            "GBP",
-            RECOMMENDATION.reviewedOn,
-          ];
-        }),
+        analysis.grid.map((row) => [
+          row.modelId,
+          row.shops,
+          row.ordersPerShop,
+          row.basketPence,
+          row.evaluation.shopPays.totalPence,
+          row.evaluation.revenuePence,
+          row.evaluation.cost.totalPence,
+          row.evaluation.cost.partnerTimePence,
+          row.evaluation.marginPence,
+          "GBP",
+          registries.recommendation.reviewedOn,
+        ]),
+      );
+    case "comparison":
+      return toCsv(
+        [
+          "comparator",
+          "orders_per_shop",
+          "basket_pence",
+          "shop_pays_monthly_pence",
+          "setup_pence",
+          "currency",
+          "as_of",
+        ],
+        analysis.comparisons.map((row) => [
+          row.comparatorId,
+          row.ordersPerShop,
+          row.basketPence,
+          row.monthlyPence,
+          row.setupPence,
+          "GBP",
+          asOf,
+        ]),
+      );
+    case "add-ons":
+      return toCsv(
+        [
+          "id",
+          "name",
+          "price_pence",
+          "billing",
+          "run_cost_pence",
+          "run_cost_basis",
+          "margin_bps",
+          "margin_class",
+          "available",
+          "currency",
+          "as_of",
+        ],
+        registries.addOns.map((a) => [
+          a.id,
+          a.name,
+          a.price.pence,
+          a.price.billing,
+          a.runCost.pence,
+          a.runCost.basis,
+          addOnMarginBps(a),
+          a.marginClass,
+          a.available,
+          "GBP",
+          registries.recommendation.reviewedOn,
+        ]),
+      );
+    case "risks":
+      return toCsv(
+        [
+          "id",
+          "title",
+          "who_bears",
+          "cost_pence",
+          "cost_period",
+          "cost_basis",
+          "currency",
+          "source_url",
+          "as_of",
+        ],
+        registries.risks.map((r) => [
+          r.id,
+          r.title,
+          r.whoBears,
+          r.cost?.pence ?? null,
+          r.cost?.period ?? null,
+          r.cost?.basis ?? null,
+          r.cost ? "GBP" : null,
+          r.sourceUrl,
+          r.asOf,
+        ]),
       );
   }
 }

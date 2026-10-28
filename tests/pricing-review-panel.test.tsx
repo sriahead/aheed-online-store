@@ -45,14 +45,13 @@ const result: RefreshResult = {
   recommendations: {
     ifAccepted: {} as never,
     deltas: {
-      plans: [
+      models: [
         {
-          planId: "commission",
-          committed: { breakEvenVendors: null, breakEvenGmvPence: 21480 },
-          ifAccepted: { breakEvenVendors: null, breakEvenGmvPence: 20654 },
+          modelId: "customer-fee",
+          committed: { marginPence: 63302, shopPaysPence: 31475 },
+          ifAccepted: { marginPence: 63302, shopPaysPence: 30850 },
         },
       ],
-      rankingChanged: false,
       recommendationDisagreesChanged: false,
     },
     actions: ["Review stripe-payments Standard cardFee.bps and update the registry by PR"],
@@ -76,7 +75,9 @@ describe("PricingReviewPanel", () => {
     expect(text).toContain("www.shopify.com: Page could not be fetched");
     expect(text).toContain("Unconfirmed suggestion");
     expect(text).toContain("stripe-payments: Standard cardFee.bps: 150 → 140");
-    expect(text).toContain("£214.80 sales → £206.54 sales");
+    expect(text).toContain(
+      "customer-fee: margin £633.02, shop pays £314.75 → margin £633.02, shop pays £308.50",
+    );
     expect(text).toContain("Review stripe-payments Standard");
     expect(text).toContain("Last analysis: 2026-10-27");
     expect(view.getByText("Download suggestions (CSV)")).toBeTruthy();

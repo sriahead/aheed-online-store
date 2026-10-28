@@ -37,6 +37,16 @@ export function usd(minor: number): Money {
   return { minor, currency: "USD" };
 }
 
+/**
+ * #1313 - `money` in pence. GBP passes through; USD converts at the dated rate (US cents per £1) and
+ * rounds half up. `null` when a USD amount has no usable rate, so a missing rate is never read as 0.
+ */
+export function toPence(money: Money, usdCentsPerGbp: number | null): number | null {
+  if (money.currency === "GBP") return money.minor;
+  if (usdCentsPerGbp === null || usdCentsPerGbp <= 0) return null;
+  return roundHalfUp((money.minor * 100) / usdCentsPerGbp);
+}
+
 /** Basis points as a percentage string: 150 -> `1.5%`, 3000 -> `30%`. */
 export function formatBps(bps: number): string {
   return `${Number((bps / 100).toFixed(2))}%`;

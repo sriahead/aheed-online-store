@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.146.0"
-updated: 2026-10-27
+version: "1.148.0"
+updated: 2026-10-28
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,25 +39,70 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
+- **2026-10-28 (`#1313` Build): pricing model v2 is BUILT, NOT VALIDATED AND NOT PUSHED**, on local branch
+  `feature/1313-pricing-model-v2`. That branch was cut from `docs/carry-forward-1309`, so it also carries the
+  unpushed `#1295`/`#1305`/`#1309` Document commits. Its PR to `staging` therefore lands them too.
+  - **Spec and build notes:** `specs/2026-10-28-pricing-model-v2/`. Validation is next, from a fresh
+    context.
+  - **Production was still down at the 2026-10-27 Orient** (`/api/health` 503, Neon HTTP 402, `#1289`).
+    Staging was healthy at `01af208`.
+  - **The dashboard's launch recommendation is now the customer service fee** (`#1313`'s numbers: with
+    partner time at 2 hours a month per shop and £25 an hour, every shop-paid model loses money at
+    10 shops × 500 orders).
+  - **The recommended model cannot be collected yet:** `#1314` (checkout fee) depends on the Connect
+    decision `#1310`.
+  - **Filed:** `#1315` (authorise-then-capture), `#1316` (allergens) and `#1317` (owner: replace the
+    estimates, including an unverified ICO fee; set the pay target and yearly rate increase).
+  - **Branch count was 60 local and 61 origin at Orient**, double the reminder threshold.
+    `/prune-branches` has not been run.
+
 - **2026-10-27 (Orient for `#1288`): PRODUCTION IS DOWN — Neon production project over quota (`#1289`).**
   Both vendor hosts' `/api/health` return 503 `degraded` at `2ffcb41` with Neon `HTTP 402 … exceeded the
   quota`; the storefront home page returns 500. Staging is healthy (separate Neon project). Began ~2026-10-26
   (the daily `fill-product-images` run on `main` first failed then). Owner action in the Neon console; no
   alert exists. **No promotion can succeed until it is fixed** (`deploy-production` migrates).
-  - **Staging is 9 commits ahead of `main`** (`#1272`–`#1287`) including two migrations,
-    `20261026150000_category_image_key` and `20261027080000_category_and_system_assets`.
+  - **Staging is ahead of `main`** (`#1272`–`#1309`) including three migrations,
+    `20261026150000_category_image_key`, `20261027080000_category_and_system_assets` and
+    `20261027120000_ai_feature_pricing_review`.
   - **`#1288` (icon deactivate + circular `IconMedallion` + AI-replaceable icon inventory) is MERGED TO
     STAGING (PR #1292, `204d86a`), not promoted.** Spec and build notes:
     `specs/2026-10-27-icon-asset-activation-and-medallion/`. ADR-008 is now v1.3.0 (Decision 6). Validated
     except R6, R29 and the R28 visual check (dev DB lacked the `#1285` migration); those are tracked in
     the follow-up issue, and the issue is `In Review`, not `Done`.
-  - **`#1295` (platform-admin running costs report at `/staff/platform/costs`) is BUILT on
-    `feature/1295-running-costs-report`, not validated or shipped.** Spec and build notes:
-    `specs/2026-10-27-running-costs-report/`. Platform-admin pages live under
-    `app/(admin)/staff/platform/*` and register once in `components/staff/platform-nav-items.ts`
-    (`/staff/errors` is the only special case). The branch also carries the unpushed `#1288` Document
-    commit. Follow-ups: `#1296` alerts, `#1297` provider usage APIs, `#1298` owner data updates after the
-    domain purchases, `#1299` Resend config and `WORKERS_AI_PLAN` mismatch with Workers Paid.
+  - **`#1295` (platform-admin running costs report at `/staff/platform/costs`) is MERGED TO STAGING
+    (PR #1300, `9092b24`), not promoted.** Spec and build notes: `specs/2026-10-27-running-costs-report/`.
+    Validated except the phone-width visual, the R2/R16 mutation proofs and the `kms/site-internal` build;
+    the issue is `In Review`. The page is registry-driven: **figures are edited in `lib/running-costs.ts`**,
+    only Workers AI usage is read live. The PR also carried the `#1288` Document commit. Platform-admin
+    pages live under `app/(admin)/staff/platform/*` and register once in
+    `components/staff/platform-nav-items.ts` (`/staff/errors` is the only special case). Follow-ups:
+    `#1296` alerts, `#1297` provider usage APIs, `#1298` owner data updates after the domain purchases,
+    `#1299` Resend config and `WORKERS_AI_PLAN` mismatch with Workers Paid.
+  - **`#1302` and `#1305` (storefront layout follow-ups) are MERGED TO STAGING (PRs #1304 `57d52c5`,
+    #1307 `8626962`), not promoted.** Specs: `specs/2026-10-27-orders-grid-quickshop-cart/`,
+    `specs/2026-10-27-checkout-width-and-slot-grid/`. Orders list is a 2-per-row card grid with Reorder /
+    Save as list on each card; Quick Shop has a "Your orders" tile; `/cart` and checkout carry Continue
+    shopping beside the primary button (the cart drawer is deliberately unchanged); cart, checkout and
+    orders share `PageContainer width="standard"` (`specs/design-system.md` updated); the checkout slot
+    picker is a 7-day grid fed by `getAvailableSlotsForWeek`. **Both ran validation in the building
+    session and left the browser checks and a real later-day booking unverified** (signed-in only), so
+    they are worth one staging pass by the owner. Follow-ups: `#1303` (detail page shows no
+    empty-save message), `#1306` (Super Saver tab and slot markers need a slot length/type in the
+    schema). Both issues are `In Review`.
+  - **`#1309` (`/staff/platform/costs` becomes the advisory Costs, Pricing & Business Model dashboard) is
+    MERGED TO STAGING (PR #1311, `01af208`), not promoted.** Spec, build notes and validation record:
+    `specs/2026-10-27-pricing-business-model/`. The registries are files edited by PR (`lib/running-costs.ts`,
+    `lib/pricing/*`), and the refresh buttons only *suggest*; the guide is the platform admin guide 1.4.0.
+    Open: R39 (refresh usage showing as "Pricing review" on `/staff/ai-usage`; **the dev database still
+    lacks the `PRICING_REVIEW` migration**, while staging has it), and the quarterly `pricing-review`
+    workflow, which does nothing until it reaches `main`. Follow-ups: `#1310` (owner decision, ADR-005 Connect trigger), `#1312` (refresh suggestion quality).
+  - **Document commits carry forward on the local branch `docs/carry-forward-1309`**, which holds the
+    unpushed Document passes for `#1295`, `#1305` and `#1309`. Until 2026-10-27 the `#1295`/`#1305`
+    passes sat only on the local `feature/1305` branch and were missed when `#1309` branched from
+    `origin/staging`. **The next slice branches from `docs/carry-forward-1309`, not `origin/staging`.**
+  - **`deploy-staging` can fail on a transient `npm ci`** (Prisma engine postinstall `ECONNRESET`, hit at
+    `#1295`): every later step is skipped, so nothing deployed and no migration ran. After checking
+    githubstatus.com, `gh run rerun <id> --failed` is enough.
   - **Board drift found:** `#1283` and `#1285` are closed and `Done` though staging-only; `#1272`–`#1280`
     are open in `Backlog` though merged to staging. KMS slices `#1272/#1274/#1276` merged with no `specs/`
     folder (recorded in the roadmap change log). Reconciling the board is an owner call.

@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.51.0"
-updated: 2026-10-23
+version: "2.52.0"
+updated: 2026-10-27
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -1132,6 +1132,17 @@ see "Why the switch sits after Document, not before" above.
 branch, not a PR of their own. Gate 4 requires a CHANGELOG diff on every branch, so a doc-only PR
 needs its own CHANGELOG entry to be pushable at all — worth it for a real correction, wasteful for
 an index footer.
+
+**The carry-forward rule and Ship's "branch from a fresh `origin/staging`" pull in opposite
+directions, and the fresh branch wins silently.** Carried Document commits are local and unpushed,
+so a new slice branched from `origin/staging` simply does not have them. Nothing fails: no test, no
+CI job, and `sdd:audit` only notices a missing roadmap row later. At `#1309` (2026-10-27) the
+Document passes for `#1295` and `#1305` sat only on the local `feature/1305` branch and were left
+out of the `#1309` merge; they were recovered by cherry-pick. **Before branching a new slice, run
+`git log --oneline origin/staging..<previous slice branch>`** and carry any `docs(...): Document`
+commits it lists onto the new branch, by cherry-picking them or by branching from that commit. The
+generated `ARTIFACT_INDEX.md` and runbook `docs.ts` conflict on every such cherry-pick: take either
+side and run `kms:build-index` afterwards.
 
 **A Document (final) closeout for a promotion, committed right after `main` and `staging`
 converge, false-positives on `hooks/pre-commit`'s local Gate 2 check.** That hook (`git commit`

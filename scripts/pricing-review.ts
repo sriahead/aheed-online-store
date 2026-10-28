@@ -11,20 +11,19 @@
  * Progress and errors go to stderr only, so stdout is exactly the issue body.
  */
 import { buildCostReport } from "@/lib/running-costs";
-import { analyse, COMMITTED } from "@/lib/pricing/committed";
-import { RECOMMENDATION } from "@/lib/pricing/business-models";
-import { PROPOSED_PLANS } from "@/lib/pricing/proposed-plans";
+import { analyseV2, COMMITTED } from "@/lib/pricing/committed";
+import { BUSINESS_MODELS, RECOMMENDATION } from "@/lib/pricing/business-models";
 import { formatMoney, gbp } from "@/lib/pricing/money";
 
 export const DASHBOARD_URL = "https://staging.aheedfoodcentre.nocaped.com/staff/platform/costs";
 
 export function reviewBody(now: Date): string {
   const report = buildCostReport(COMMITTED.costItems, now);
-  const analysis = analyse(COMMITTED, now);
+  const analysis = analyseV2(COMMITTED, now);
   const lines: string[] = [];
 
   lines.push(
-    `Quarterly review of platform costs, competitor pricing and the business model (#1309).`,
+    `Quarterly review of platform costs, competitor pricing and the business model (#1309, #1313).`,
   );
   lines.push("");
   lines.push(`- Committed analysis date: ${RECOMMENDATION.reviewedOn}`);
@@ -45,22 +44,20 @@ export function reviewBody(now: Date): string {
   for (const id of report.ownerToConfirm) lines.push(`- ${id}`);
   lines.push("");
 
-  lines.push("## Break-even (committed figures)");
-  if (analysis.costPence === null) {
-    lines.push("No exchange rate: GBP figures unavailable");
-  } else {
-    lines.push(`Platform cost: ${formatMoney(gbp(analysis.costPence))} per month.`);
-    for (const plan of PROPOSED_PLANS) {
-      const r = analysis.plans.find((p) => p.planId === plan.id);
-      const text =
-        r?.breakEvenVendors != null
-          ? `${r.breakEvenVendors} vendor(s) at zero sales`
-          : r?.breakEvenGmvPence != null
-            ? `${formatMoney(gbp(r.breakEvenGmvPence))} of vendor sales per month`
-            : "does not break even on commission (does not cover card fees)";
-      lines.push(`- ${plan.name} (${plan.model}): ${text}`);
-    }
+  const ref = analysis.referenceScenario;
+  lines.push(
+    `## Reference scenario (${ref.shops} shops, ${ref.ordersPerShop} orders a month each, ${formatMoney(gbp(ref.basketPence))} basket)`,
+  );
+  for (const model of BUSINESS_MODELS) {
+    const r = analysis.models.find((m) => m.modelId === model.id)?.reference;
+    if (!r) continue;
+    const margin = r.marginPence === null ? "No exchange rate" : formatMoney(gbp(r.marginPence));
+    lines.push(
+      `- ${model.name}: our margin ${margin} a month; the shop pays ${formatMoney(gbp(r.shopPays.totalPence))} a month`,
+    );
   }
+  if (analysis.payTargetPence === null) lines.push("- Partner pay target not set");
+  if (analysis.partnerRates[1] === null) lines.push("- Yearly rate increase not set");
   lines.push("");
 
   lines.push("## What to do");

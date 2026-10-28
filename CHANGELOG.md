@@ -8,6 +8,15 @@ every branch merges.
 
 ### Added
 
+- **Pricing model v2 on `/staff/platform/costs`**:
+  - **Production costs as we grow**: 18 cost lines (Neon, Workers, R2, Workers AI, Resend, Twilio, Sentry, uptime, backups, company, accountant, ICO, insurance, legal) at 1-100 shops × 100-2,000 orders. Shows which free allowance runs out first, the one-off start-up costs, and both Stripe Connect options.
+  - **Partner time** as a cost, at the owner's £25 an hour.
+  - **Business models**: four that grow with orders and take no percentage of sales. Each shows what the shop pays (its own 1.5% + 20p under Connect, and disputes) beside Shopify, Square, Ecwid, Uber Eats and doing nothing at £15, £25 and £40 baskets.
+  - **What if**: inputs that recalculate in the browser and save nothing.
+  - **Add-ons, risks and recommendation**: 12 add-ons, a risks register, and a recommendation (customer service fee) with a dated founding-partner offer.
+
+  The v1 proposed plans and break-even engine are removed. CSV sections become production, models, comparison, add-ons and risks. Advisory only: no payment code or price changes (issue `#1313`, spec `specs/2026-10-28-pricing-model-v2/`).
+
 - **`/staff/platform/costs` becomes "Costs, Pricing & Business Model"**:
   - **Costs**: 17 items grouped as fixed, usage-based and development tools, with an Owner to confirm list.
   - **Competitors**: 10 competitors read from their own pricing pages on 2026-10-27, with source links. Unreadable or unpublished ones show no figures.

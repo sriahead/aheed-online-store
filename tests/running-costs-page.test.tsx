@@ -239,22 +239,31 @@ describe("each item row (R14)", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// #1309 R23, R25, R28-R33: the dashboard sections.
+// #1309 R23, R25 and #1313 R26-R33: the dashboard sections.
 // ---------------------------------------------------------------------------------------------
 
+const BUILD_DAY = new Date("2026-10-28T12:00:00Z");
+
 async function analysisNow() {
-  const { analyse, COMMITTED } = await import("@/lib/pricing/committed");
-  return analyse(COMMITTED, new Date());
+  const { analyseV2, COMMITTED } = await import("@/lib/pricing/committed");
+  return { analysis: analyseV2(COMMITTED, new Date()), COMMITTED };
 }
 
-describe("heading, advisory banner and print (R25, R28)", () => {
-  it("titles the page and states that it is advisory", async () => {
+async function money(value: number | null) {
+  const { pence } = await import("@/components/staff/PricingDashboardSections");
+  return pence(value);
+}
+
+describe("heading, advisory banner and print (#1309 R25, #1313 R26)", () => {
+  it("titles the page and states that it is advisory, excludes VAT and assumes Connect", async () => {
     const container = await renderPage();
     expect(text(container, "h1")).toBe("Costs, Pricing & Business Model");
     const banner = text(container, '[data-costs="advisory"]');
     expect(banner).toMatch(/advisory/);
     expect(banner).toMatch(/not traded/);
     expect(banner).toMatch(/changes live prices/);
+    expect(banner).toMatch(/excluding VAT/);
+    expect(banner).toMatch(/Stripe Connect[\s\S]*planning assumption/);
   });
 
   it("offers Print / Save as PDF and hides controls when printing", async () => {
@@ -273,172 +282,224 @@ describe("heading, advisory banner and print (R25, R28)", () => {
   });
 });
 
-describe("sections (R29)", () => {
-  it("renders the six sections in order, each of the first five with date, stale count and CSV", async () => {
+describe("sections (R26)", () => {
+  it("renders the nine sections in order, each with date, stale count and CSV", async () => {
+    vi.setSystemTime(BUILD_DAY);
     const container = await renderPage();
     const sections = [...container.querySelectorAll("[data-section]")].map((s) =>
       s.getAttribute("data-section"),
     );
     expect(sections).toEqual([
       "costs",
+      "production",
       "competitors",
-      "pricing",
-      "profitability",
       "models",
+      "what-if",
+      "add-ons",
+      "risks",
+      "recommendation",
       "review",
     ]);
-    const csv: Record<string, string> = {
-      costs: "costs",
-      competitors: "competitors",
-      pricing: "plans",
-      profitability: "scenarios",
-      models: "models",
+    const expected: Record<string, [string, string]> = {
+      costs: ["costs", "2026-10-27"],
+      production: ["production", "2026-10-28"],
+      competitors: ["competitors", "2026-10-27"],
+      models: ["models", "2026-10-28"],
+      "add-ons": ["add-ons", "2026-10-28"],
+      risks: ["risks", "2026-10-28"],
+      recommendation: ["models", "2026-10-28"],
     };
-    for (const [section, file] of Object.entries(csv)) {
+    for (const [section, [csv, date]] of Object.entries(expected)) {
       const el = container.querySelector(`[data-section="${section}"]`)!;
       expect(el.querySelector("[data-section-updated]")?.textContent, section).toBe(
-        "Last updated 2026-10-27",
+        `Last updated ${date}`,
       );
-      expect(el.querySelector("[data-section-stale]")?.getAttribute("data-section-stale")).toBe(
-        "0",
+      expect(
+        el.querySelector("[data-section-stale]")?.getAttribute("data-section-stale"),
+        section,
+      ).toBe("0");
+      expect(el.querySelector("[data-csv-link]")?.getAttribute("href"), section).toBe(
+        `/staff/platform/costs/export?section=${csv}`,
       );
-      expect(el.querySelector("[data-csv-link]")?.getAttribute("href")).toBe(
-        `/staff/platform/costs/export?section=${file}`,
-      );
+    }
+    for (const section of ["what-if", "review"]) {
+      expect(
+        container.querySelector(`[data-section="${section}"] [data-section-updated]`),
+      ).toBeNull();
     }
   });
 });
 
-describe("costs section (R30)", () => {
+describe("costs section unchanged (R27)", () => {
   it("groups the items with their group totals", async () => {
     const container = await renderPage();
-    expect(container.textContent).toContain("Platform running costs (fixed)");
-    expect(container.textContent).toContain("Platform running costs (usage-based)");
-    expect(container.textContent).toContain("Development tools");
+    expect(container.querySelectorAll("[data-costs-item]").length).toBe(17);
     expect(text(container, '[data-cost-group-total="platform-fixed"]')).toContain("$5.87/month");
     expect(text(container, '[data-cost-group-total="platform-fixed"]')).toContain("$70.46/year");
     expect(text(container, '[data-cost-group-total="dev-tools"]')).toContain("$0.00/month");
-    expect(
-      container.querySelectorAll('[data-cost-group="dev-tools"] [data-costs-item]').length,
-    ).toBe(4);
-  });
-
-  it("lists the four owner-to-confirm items", async () => {
-    const container = await renderPage();
     const ids = [...container.querySelectorAll("[data-owner-to-confirm]")].map((li) =>
       li.getAttribute("data-owner-to-confirm"),
     );
     expect(ids.sort()).toEqual(["claude", "cloudflare-email", "gemini-pro", "stripe"]);
-  });
-
-  it("shows an open-licence item as free with a licence link", async () => {
-    const container = await renderPage();
     const card = container.querySelector('[data-costs-item="open-food-facts"]')!;
     expect(card.textContent).toContain("Free (open licence)");
+  });
+});
+
+describe("production section (R28)", () => {
+  it("renders the cost grid, partner time, first limits, start-up costs, Connect and drivers", async () => {
+    vi.setSystemTime(BUILD_DAY);
+    const container = await renderPage();
+    const { analysis, COMMITTED } = await analysisNow();
+    expect(container.querySelectorAll("[data-production-cell]").length).toBe(18);
+    const first = analysis.grid.find(
+      (g) =>
+        g.modelId === COMMITTED.models[0].id &&
+        g.shops === 10 &&
+        g.ordersPerShop === 500 &&
+        g.basketPence === 2500,
+    )!.evaluation.cost;
+    expect(text(container, '[data-production-cell="10-500"]')).toContain(
+      await money(first.currentFixedPence! + first.driversPence! + first.connectPence),
+    );
+    expect(container.querySelectorAll("[data-partner-time]").length).toBe(6);
+    expect(text(container, '[data-partner-time="10"]')).toContain(
+      await money(first.partnerTimePence),
+    );
+    expect(container.querySelectorAll("[data-first-limit]").length).toBe(3);
+    expect(text(container, '[data-first-limit="2000"]')).toMatch(/at \d+ shops?/);
+    expect(text(container, '[data-costs="startup"]')).toContain(await money(analysis.startupPence));
+    expect(container.querySelectorAll("[data-connect-option]").length).toBe(2);
     expect(
-      card.querySelector('a[href="https://world.openfoodfacts.org/terms-of-use"]'),
+      container.querySelector(
+        '[data-connect-option="stripe-pricing"] [data-costs="connect-modelled"]',
+      ),
+    ).not.toBeNull();
+    expect(text(container, '[data-connect-option="stripe-pricing"]')).toContain("No platform fees");
+    expect(container.querySelectorAll("[data-cost-driver]").length).toBe(COMMITTED.drivers.length);
+    expect(text(container, '[data-cost-driver="accountant"]')).toContain("Estimate");
+    expect(
+      container.querySelector(
+        '[data-cost-driver="neon-production"] a[href="https://neon.com/pricing"]',
+      ),
     ).not.toBeNull();
   });
 });
 
-describe("competitors section (R31)", () => {
-  it("renders one element per competitor with sources, and no figures for unread ones", async () => {
+describe("competitors section (R33)", () => {
+  it("keeps one element per competitor and drops the v1 comparison table", async () => {
     const container = await renderPage();
     expect(container.querySelectorAll("[data-competitor]").length).toBe(10);
-    const shopify = container.querySelector('[data-competitor="shopify"]')!;
-    expect(shopify.textContent).toContain("£25.00");
-    expect(shopify.textContent).toContain("2%");
-    expect(shopify.querySelector('a[href="https://www.shopify.com/uk/pricing"]')).not.toBeNull();
-    expect(shopify.textContent).toContain("2026-10-27");
-    expect(text(container, '[data-competitor="just-eat"]')).toContain(
-      "Not published by the provider",
-    );
     expect(text(container, '[data-competitor="wix"]')).toContain("Pricing page could not be read");
-    for (const id of ["just-eat", "wix", "deliveroo", "snappy-shopper"]) {
-      const body = text(container, `[data-competitor="${id}"]`);
-      expect(body, id).not.toMatch(/[£$]\d|\d%/);
-    }
-  });
-
-  it("compares every proposed plan with every published competitor plan", async () => {
-    const container = await renderPage();
-    const { PROPOSED_PLANS } = await import("@/lib/pricing/proposed-plans");
-    const { COMPETITORS } = await import("@/lib/pricing/competitors");
-    const published = COMPETITORS.flatMap((c) => c.plans).length;
-    expect(container.querySelectorAll("[data-comparison-row]").length).toBe(
-      PROPOSED_PLANS.length * published,
-    );
-  });
-});
-
-describe("pricing and profitability sections (R32)", () => {
-  it("labels each proposed plan a proposal and shows its VAT note", async () => {
-    const container = await renderPage();
-    const plans = container.querySelectorAll("[data-plan]");
-    expect(plans.length).toBe(4);
-    for (const plan of plans) {
-      expect(plan.textContent).toContain("Proposal");
-      expect(plan.textContent).toContain("exclude VAT");
-    }
-  });
-
-  it("every break-even and scenario figure equals buildPricingAnalysis", async () => {
-    const container = await renderPage();
-    const analysis = await analysisNow();
-    const { formatMoney, gbp, formatBps } = await import("@/lib/pricing/money");
-    const fx = text(container, '[data-costs="fx"]');
-    expect(fx).toContain(formatMoney(gbp(analysis.costPence!)));
-    expect(fx).toContain("bankofengland.co.uk");
-    for (const s of analysis.scenarios) {
-      const row = text(container, `[data-scenario="${s.planId}-${s.vendors}"]`);
-      expect(row).toContain(formatMoney(gbp(s.revenuePence)));
-      expect(row).toContain(formatMoney(gbp(s.profitPence!)));
-      expect(row).toContain(s.marginBps === null ? "n/a" : formatBps(s.marginBps));
-    }
-    for (const p of analysis.plans) {
-      const row = text(container, `[data-break-even="${p.planId}"]`);
-      if (p.breakEvenVendors !== null) expect(row).toContain(`${p.breakEvenVendors} vendor`);
-      if (p.breakEvenGmvPence !== null) {
-        expect(row).toContain(formatMoney(gbp(p.breakEvenGmvPence)));
-      }
-    }
-    expect(container.textContent).toContain("At zero sales");
-    expect(container.textContent).toContain("Excludes the per-order card fee");
-    expect(text(container, '[data-break-even="freemium"]')).toContain(
-      "Commission does not cover card fees",
-    );
-    expect(container.querySelector('[data-ranking="vendors"]')).not.toBeNull();
-    expect(container.querySelector('[data-ranking="gmv"]')).not.toBeNull();
-  });
-
-  it("says GBP figures are unavailable with no exchange rate", async () => {
-    vi.doMock("@/lib/pricing/assumptions", async (importOriginal) => {
-      const real = await importOriginal<typeof import("@/lib/pricing/assumptions")>();
-      return {
-        ...real,
-        ASSUMPTIONS: real.ASSUMPTIONS.map((a) =>
-          a.id === "usd-cents-per-gbp"
-            ? { ...a, value: null, basis: "missing" as const, sourceUrl: null }
-            : a,
-        ),
-      };
-    });
-    const container = await renderPage();
-    expect(text(container, '[data-costs="fx"]')).toBe("No exchange rate: GBP figures unavailable");
-    expect(text(container, '[data-break-even="subscription"]')).toContain("No exchange rate");
-  });
-});
-
-describe("business models section (R33)", () => {
-  it("renders six models, marks the recommendation, and shows Not modelled where there is no plan", async () => {
-    const container = await renderPage();
-    expect(container.querySelectorAll("[data-model]").length).toBe(6);
+    expect(container.querySelector('[data-costs="comparison"]')).toBeNull();
     expect(
-      container.querySelector('[data-model="hybrid"] [data-costs="recommended"]'),
-    ).not.toBeNull();
-    expect(text(container, '[data-model="transaction-fee"]')).toContain("Not modelled");
-    expect(text(container, '[data-model="usage-based"]')).toContain("Not modelled");
-    expect(text(container, '[data-model="hybrid"]')).toContain("2027-01-27");
+      container.querySelector('[data-section="competitors"] [data-comparison-row]'),
+    ).toBeNull();
+  });
+});
+
+describe("models section (R29)", () => {
+  it("shows every model's reference figures equal to analyseV2", async () => {
+    vi.setSystemTime(BUILD_DAY);
+    const container = await renderPage();
+    const { analysis } = await analysisNow();
+    expect(container.querySelectorAll("[data-model]").length).toBe(4);
+    for (const m of analysis.models) {
+      const el = (fig: string) =>
+        text(container, `[data-model="${m.modelId}"] [data-model-figure="${fig}"]`);
+      expect(el("shop-pays")).toBe(await money(m.reference.shopPays.totalPence));
+      expect(el("revenue")).toBe(await money(m.reference.revenuePence));
+      expect(el("cost")).toBe(await money(m.reference.cost.totalPence));
+      expect(el("margin")).toBe(await money(m.reference.marginPence));
+      expect(el("margin-per-shop")).toBe(await money(m.reference.marginPerShopPence));
+      expect(el("pay-target")).toBe("Enter a pay target in What if");
+    }
+    expect(text(container, '[data-costs="card-fee-note"]')).toBe(
+      "Includes the shop's own card fees (1.5% + 20p per order, UK cards)",
+    );
+  });
+
+  it("compares every model and comparator, with the £15 and £40 tables closed", async () => {
+    vi.setSystemTime(BUILD_DAY);
+    const container = await renderPage();
+    const { analysis } = await analysisNow();
+    const block = container.querySelector("[data-comparison]")!;
+    expect(block.querySelectorAll("table").length).toBe(3);
+    const details = block.querySelectorAll("details");
+    expect(details.length).toBe(2);
+    for (const d of details) expect(d.hasAttribute("open")).toBe(false);
+    for (const row of analysis.comparisons) {
+      const cell = text(
+        container,
+        `[data-comparison-cell="${row.comparatorId}-${row.ordersPerShop}-${row.basketPence}"]`,
+      );
+      expect(cell).toContain(await money(row.monthlyPence));
+      if (row.setupPence) expect(cell).toContain("one-off");
+    }
+    for (const g of analysis.grid.filter((x) => x.shops === analysis.referenceScenario.shops)) {
+      const cell = text(
+        container,
+        `[data-comparison-cell="${g.modelId}-${g.ordersPerShop}-${g.basketPence}"]`,
+      );
+      expect(cell).toBe(await money(g.evaluation.shopPays.totalPence));
+    }
+  });
+});
+
+describe("what-if section (R30)", () => {
+  it("renders the panel with its not-saved sentence and committed defaults", async () => {
+    vi.setSystemTime(BUILD_DAY);
+    const container = await renderPage();
+    const section = container.querySelector('[data-section="what-if"]')!;
+    expect(section.textContent).toContain("These figures are not saved");
+    const input = (id: string) =>
+      (section.querySelector(`[data-what-if-input="${id}"]`) as HTMLInputElement).value;
+    expect(input("ratePence")).toBe("25");
+    expect(input("payTargetPence")).toBe("");
+    expect(input("increaseBps")).toBe("");
+  });
+});
+
+describe("add-ons section (R31)", () => {
+  it("renders every add-on with its class, packaging and launch label", async () => {
+    vi.setSystemTime(BUILD_DAY);
+    const container = await renderPage();
+    const { COMMITTED } = await analysisNow();
+    expect(container.querySelectorAll("[data-add-on]").length).toBe(12);
+    for (const a of COMMITTED.addOns) {
+      const el = container.querySelector(`[data-add-on="${a.id}"]`)!;
+      expect(el.querySelector(`[data-add-on-class="${a.marginClass}"]`), a.id).not.toBeNull();
+      expect(el.textContent).toContain(
+        a.marginClass === "cheap-high-margin"
+          ? "Cheap to run, high margin"
+          : "Usage-heavy: priced to cover use",
+      );
+      expect(el.textContent).toContain(
+        a.packaging === "separate" ? "Sold separately" : "Included in",
+      );
+      expect(el.querySelector("[data-add-on-launch]") !== null, a.id).toBe(
+        COMMITTED.recommendation.launchAddOnIds.includes(a.id),
+      );
+      if (!a.available) expect(el.textContent).toContain("Not available yet");
+    }
+  });
+});
+
+describe("risks and recommendation sections (R32)", () => {
+  it("renders every risk and the recommendation with its founding offer and three metrics", async () => {
+    vi.setSystemTime(BUILD_DAY);
+    const container = await renderPage();
+    const { COMMITTED } = await analysisNow();
+    expect(container.querySelectorAll("[data-risk]").length).toBe(COMMITTED.risks.length);
+    expect(text(container, '[data-risk="vat-registration-threshold"]')).toContain("£90,000");
+    expect(container.querySelectorAll("[data-track]").length).toBe(3);
+    const offer = text(container, "[data-founding-offer]");
+    expect(offer).toContain(COMMITTED.recommendation.foundingOffer.startsOn);
+    expect(offer).toContain(COMMITTED.recommendation.foundingOffer.reviewOn);
+    expect(offer).toContain(COMMITTED.recommendation.foundingOffer.reviewClause);
+    expect(container.querySelectorAll("[data-launch-add-on]").length).toBe(
+      COMMITTED.recommendation.launchAddOnIds.length,
+    );
     expect(container.querySelector('[data-costs="recommendation-disagrees"]')).toBeNull();
     expect(container.querySelector('[data-costs="recommendation-overdue"]')).toBeNull();
   });
@@ -449,23 +510,28 @@ describe("business models section (R33)", () => {
     expect(container.querySelector('[data-costs="recommendation-overdue"]')).not.toBeNull();
   });
 
-  it("warns when the numbers no longer put the recommended plan first", async () => {
+  it("warns when the numbers no longer support the recommended model", async () => {
+    vi.setSystemTime(BUILD_DAY);
     vi.doMock("@/lib/pricing/business-models", async (importOriginal) => {
       const real = await importOriginal<typeof import("@/lib/pricing/business-models")>();
-      return { ...real, RECOMMENDATION: { ...real.RECOMMENDATION, modelId: "subscription" } };
+      return {
+        ...real,
+        RECOMMENDATION: { ...real.RECOMMENDATION, modelId: "allowance-per-order" as const },
+      };
     });
     const container = await renderPage();
     expect(container.querySelector('[data-costs="recommendation-disagrees"]')).not.toBeNull();
   });
 });
 
-describe("review panel (R23)", () => {
+describe("review panel (#1309 R23)", () => {
   it("renders both buttons, the last analysis date and the not-saved sentence", async () => {
+    vi.setSystemTime(BUILD_DAY);
     const container = await renderPage();
     const panel = container.querySelector('[data-costs="review-panel"]')!;
     const labels = [...panel.querySelectorAll("button")].map((b) => b.textContent);
     expect(labels).toEqual(["Refresh Costs", "Refresh Recommendations"]);
-    expect(panel.textContent).toContain("Last analysis: 2026-10-27");
+    expect(panel.textContent).toContain("Last analysis: 2026-10-28");
     expect(panel.textContent).toContain(
       "Suggestions are not saved. Accept one by updating the registry in a pull request.",
     );

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DASHBOARD_URL, reviewBody } from "@/scripts/pricing-review";
 
 /**
- * #1309 R26-R27: the quarterly review script and its workflow. The workflow file is checked as text:
+ * #1309 R26-R27 and #1313 R25: the quarterly review script and its workflow. The workflow file is checked as text:
  * no YAML parser is a declared dependency, and adding one for a test would break R36.
  */
 
@@ -11,15 +11,17 @@ const WORKFLOW = readFileSync(".github/workflows/pricing-review.yml", "utf8");
 const SCRIPT = readFileSync("scripts/pricing-review.ts", "utf8");
 
 describe("scripts/pricing-review.ts (R26)", () => {
-  const body = reviewBody(new Date("2026-10-27T12:00:00Z"));
+  const body = reviewBody(new Date("2026-10-28T12:00:00Z"));
 
-  it("states the analysis date, staleness, owner confirmations, break-even and both flags", () => {
-    expect(body).toContain("Committed analysis date: 2026-10-27");
+  it("states the analysis date, staleness, owner confirmations, reference figures and both flags", () => {
+    expect(body).toContain("Committed analysis date: 2026-10-28");
     expect(body).toContain("Nothing stale");
     expect(body).toContain("## Owner to confirm");
     expect(body).toContain("- claude");
-    expect(body).toMatch(/Break-even/);
-    expect(body).toMatch(/vendor\(s\) at zero sales/);
+    expect(body).toMatch(/## Reference scenario/);
+    expect(body).toMatch(/Customer service fee: our margin £[\d,.]+ a month; the shop pays £/);
+    expect(body).toContain("Partner pay target not set");
+    expect(body).toContain("Yearly rate increase not set");
     expect(body).toContain("Recommendation overdue: no");
     expect(body).toContain("Recommendation disagrees with the current numbers: no");
   });

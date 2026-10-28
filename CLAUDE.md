@@ -148,7 +148,10 @@ Turbopack cannot resolve `@prisma/client/wasm`) · `preview` · `db:generate` (a
 slice's `plan.md` without front-matter fails it, and so does any new top-level directory containing
 a file without front-matter, e.g. a plain `README.md` — run it locally once per new directory rather
 than waiting for CI to catch it; the fix is `kms:coverage -- --update`, kept scoped to only the
-directory you actually added — `#490`/`#1197`'s `prisma/manifests/` found this) · `sdd:audit` ·
+directory you actually added — `#490`/`#1197`'s `prisma/manifests/` found this; **a local-only
+`misc: baseline 0, measured 1` is the gitignored scratch note under `misc/`, which CI never sees —
+`ls misc` before calling it a regression**, `local-dev-playbook.md` `#1045`, misdiagnosed as a stray
+root file at `#1305`) · `sdd:audit` ·
 `sdd:preclear` ·
 `branches:count` · `branches:prune` (dry run; `-- --apply` deletes — see `/prune-branches`).
 After editing `docs/` or `specs/`, also run `kms:assemble:internal` **and** a real Next build in
