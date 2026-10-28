@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.149.0"
+version: "1.150.0"
 updated: 2026-10-28
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -38,6 +38,21 @@ Build Notes across the pre-validation Clear. Remove or replace stale information
 reconciliation. If overall project state did not materially change, leave this file untouched.
 
 ## Last Verified
+
+- **2026-10-28 (`#1319` Build): the RBAC four-views slice is BUILT, NOT VALIDATED AND NOT PUSHED**, on
+  local branch `feature/1319-rbac-four-views`. It is cut from `docs/carry-forward-1313`, so its PR
+  also lands the `#1313` Document pass. Spec and build notes: `specs/2026-10-28-rbac-four-views/`.
+  - **`demo-admin` is no longer a platform admin.** It is a store admin only;
+    **`demo-platform-admin@example.com` is the only platform admin**, with the same
+    `DEMO_ACCOUNT_PASSWORD`. Use it, not `demo-admin`, for any `/staff/platform/*` or `/staff/errors`
+    check. The change reaches a database only when `npm run demo:accounts -- add` runs against it:
+    dev before Validate, staging after deploy (owner), and production after `#1289` (owner).
+  - **After sign-in, `/signed-in` lands each role:** platform admin to `/staff/platform` (a new
+    overview page), staff and store admins to `/staff`, everyone else to `/account`.
+  - **`tests/rbac-gate-matrix.test.ts` now fails CI** for any staff page, `app/api/admin` route or
+    staff server action without a server-side role gate. It also fails any platform-only file that
+    lacks the `via !== "platform-admin"` refusal.
+  - Follow-up: `#1320` (platform Users page, all stores).
 
 - **2026-10-28 (`#1313` Document): pricing model v2 is MERGED TO STAGING (PR #1318, `9a32058`), not
   promoted.** `deploy-staging` succeeded; staging `/api/health` reports `9a32058` with `db.ok` and

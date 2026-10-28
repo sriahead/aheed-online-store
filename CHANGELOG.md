@@ -8,6 +8,14 @@ every branch merges.
 
 ### Added
 
+- **Four separated views (Shopper, Staff, Store Admin, Platform Admin)** on the existing role checks:
+  - **Landing after sign-in**: `/login` and Google sign-in now go through `/signed-in`, which sends a platform admin to `/staff/platform`, staff and store admins of the host's store to `/staff`, and everyone else to `/account`. A same-site `next` wins; an off-site one is ignored.
+  - **Demo accounts**: `demo-admin` is a store admin only. The new `demo-platform-admin@example.com` is the only platform admin, using the existing `DEMO_ACCOUNT_PASSWORD`. Re-run `npm run demo:accounts -- add` to apply this to a database.
+  - **Platform home**: `/staff/platform` shows seven platform-wide figures and links to every platform page. Store admins are refused.
+  - **Role-check test**: `tests/rbac-gate-matrix.test.ts` fails CI when a staff page, admin API route or staff server action has no server-side role check, or when a platform-only one does not refuse store admins.
+
+  No schema change (issue `#1319`, spec `specs/2026-10-28-rbac-four-views/`). Platform-wide user management is `#1320`.
+
 - **Pricing model v2 on `/staff/platform/costs`**:
   - **Production costs as we grow**: 18 cost lines (Neon, Workers, R2, Workers AI, Resend, Twilio, Sentry, uptime, backups, company, accountant, ICO, insurance, legal) at 1-100 shops × 100-2,000 orders. Shows which free allowance runs out first, the one-off start-up costs, and both Stripe Connect options.
   - **Partner time** as a cost, at the owner's £25 an hour.
