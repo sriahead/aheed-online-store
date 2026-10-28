@@ -491,7 +491,7 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   the rewrite of a `/staff/...` argument passed to `python`; `MSYS_NO_PATHCONV=1` did).
   This relaxes the "cannot sign in as a second vendor locally" limit in the bullet above for the
   seeded SriMart host; it was measured here for a customer account only. At `#1135`'s Validate
-  (2026-10-19) `demo-admin` (a platform admin) signed in the same way and read SriMart's
+  (2026-10-19) `demo-admin` (then a platform admin; since `#1319` use `demo-platform-admin`) signed in the same way and read SriMart's
   `/staff/ai-usage`. `demo-srimart-admin` answered 401: its dev password is not
   `DEMO_ACCOUNT_PASSWORD`, so a SriMart **store-admin** sign-in is still unproven on dev.
 - **A server action that a client component calls from JavaScript (no `<form>`) is still drivable

@@ -14,9 +14,12 @@ export interface PanelNavProps {
   isPlatformAdmin?: boolean;
 }
 
-/** Exact match for the overview, prefix match elsewhere so /staff/orders/123 stays active. */
-function isRouteActive(href: string, pathname: string): boolean {
-  return href === "/staff" ? pathname === href : pathname.startsWith(href);
+/** The two section homes match exactly; every other link prefix-matches so /staff/orders/123 stays
+ *  active. `/staff/platform` joined `/staff` at #1319, or it would light up on every platform page. */
+const EXACT_MATCH_HREFS = new Set(["/staff", "/staff/platform"]);
+
+export function isRouteActive(href: string, pathname: string): boolean {
+  return EXACT_MATCH_HREFS.has(href) ? pathname === href : pathname.startsWith(href);
 }
 
 /**

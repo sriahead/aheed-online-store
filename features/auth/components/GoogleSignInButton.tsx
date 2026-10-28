@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { signIn } from "../api-client";
+import { signedInPath } from "../signed-in-path";
 
 /**
  * Shared by /login and /register — Better Auth's social sign-in creates an
  * account on first use, so both pages need the same control, not two.
+ * Returns through `/signed-in`, which lands each role on its own home (#1319).
  */
-export function GoogleSignInButton() {
+export function GoogleSignInButton({ next }: { next?: string } = {}) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -17,7 +19,7 @@ export function GoogleSignInButton() {
 
     const { error: signInError } = await signIn.social({
       provider: "google",
-      callbackURL: "/account",
+      callbackURL: signedInPath(next),
     });
     setSubmitting(false);
 

@@ -45,8 +45,10 @@ const STAFF_ROUTES_DIR = join(REPO_ROOT, "app/(admin)/staff");
  * `/staff` is the hub itself: PanelNav links to it as "Overview" and the hub cannot link to itself.
  * `/staff/errors` is platform-admin-only, and PanelNav's `currentTier` prop cannot express that
  * distinction, so the hub carries it alone behind its own `auth.via` check.
+ * `/staff/platform` is the platform admin's home (#1319). Like every `/staff/platform/*` page it is
+ * registered in `platform-nav-items.ts`, not this vendor-scoped module.
  */
-const EXCLUDED = new Set(["/staff", "/staff/errors"]);
+const EXCLUDED = new Set(["/staff", "/staff/errors", "/staff/platform"]);
 
 /** Every `/staff/<dir>` on disk that has a `page.tsx`, minus the two excluded routes. */
 function routesOnDisk(): Set<string> {
@@ -173,8 +175,9 @@ describe("neither surface hand-writes links any more (R5)", () => {
    * removed — and nothing else would notice.
    */
   const SURFACES: ReadonlyArray<{ file: string; allowed: readonly string[] }> = [
-    // The Overview link; the hub cannot link to itself, so only the bar carries it.
-    { file: "components/staff/PanelNav.tsx", allowed: ["/staff"] },
+    // The Overview link; the hub cannot link to itself, so only the bar carries it. `/staff/platform`
+    // appears only in isRouteActive's exact-match set (#1319), not as a link.
+    { file: "components/staff/PanelNav.tsx", allowed: ["/staff", "/staff/platform"] },
     // Platform-admin-only, and outside the vendor-scoped module by design.
     { file: "app/(admin)/staff/page.tsx", allowed: ["/staff/errors"] },
   ];

@@ -77,8 +77,13 @@ describe("DEMO_ACCOUNTS roster", () => {
       {
         email: "demo-admin@example.com",
         name: "Demo Admin",
-        platformRole: "ADMIN",
+        platformRole: "CUSTOMER",
         vendorRole: "ADMIN",
+      },
+      {
+        email: "demo-platform-admin@example.com",
+        name: "Demo Platform Admin",
+        platformRole: "ADMIN",
       },
       {
         email: "demo-staff@example.com",
@@ -103,16 +108,25 @@ describe("DEMO_ACCOUNTS roster", () => {
     ]);
   });
 
-  it("includes a store admin that is not also a platform admin", () => {
+  it("has six accounts and exactly one platform admin, which is not demo-admin (#1319)", () => {
+    expect(DEMO_ACCOUNTS).toHaveLength(6);
+    const platformAdmins = DEMO_ACCOUNTS.filter((a) => a.platformRole === "ADMIN");
+    expect(platformAdmins.map((a) => a.email)).toEqual(["demo-platform-admin@example.com"]);
+    // A platform admin needs no membership: requireVendorRole() admits it at every store.
+    expect(platformAdmins[0].vendorRole).toBeUndefined();
+  });
+
+  it("includes store admins that are not also platform admins", () => {
     // requireVendorRole() short-circuits to via:"platform-admin" for any User.role ADMIN
-    // (lib/auth-rbac.ts), so demo-admin's vendorRole is never read and it cannot exercise
-    // the store-admin guards in lib/repositories/roles.ts. Both accounts below resolve as
-    // via:"ADMIN" (#190); demo-srimart-admin is the second-vendor counterpart needed to
-    // test a cross-vendor write refusal in the reverse direction too (#141).
+    // (lib/auth-rbac.ts), so only a non-platform account can exercise the store-admin
+    // guards in lib/repositories/roles.ts. All three resolve as via:"ADMIN" (#190, #1319);
+    // demo-srimart-admin is the second-vendor counterpart needed to test a cross-vendor
+    // write refusal in the reverse direction too (#141).
     const storeAdmins = DEMO_ACCOUNTS.filter(
       (a) => a.vendorRole === "ADMIN" && a.platformRole !== "ADMIN",
     );
     expect(storeAdmins.map((a) => a.email).sort()).toEqual([
+      "demo-admin@example.com",
       "demo-srimart-admin@example.com",
       "demo-store-admin@example.com",
     ]);
@@ -144,6 +158,10 @@ describe("addDemoAccounts", () => {
 
     expect(signedUp.map((a) => a.email)).toEqual(DEMO_ACCOUNTS.map((a) => a.email));
     expect(prisma.users.get("demo-admin@example.com")).toMatchObject({
+      role: "CUSTOMER",
+      emailVerified: true,
+    });
+    expect(prisma.users.get("demo-platform-admin@example.com")).toMatchObject({
       role: "ADMIN",
       emailVerified: true,
     });
@@ -177,6 +195,27 @@ describe("addDemoAccounts", () => {
     expect(signedUp).toEqual([]);
     // One membership per account with a vendorRole, no dupes across the two runs.
     expect(prisma.memberships).toHaveLength(DEMO_ACCOUNTS.filter((a) => a.vendorRole).length);
+  });
+
+  it("demotes an existing platform-admin demo-admin to a store admin and keeps its membership (#1319)", async () => {
+    const prisma = makeFakePrisma(DEMO_ACCOUNTS.map((a) => a.email));
+    const demoAdmin = prisma.users.get("demo-admin@example.com")!;
+    demoAdmin.role = "ADMIN"; // the pre-#1319 state of every existing database
+    prisma.memberships.push({ userId: demoAdmin.id, vendorId: "vendor-aheed", role: "ADMIN" });
+    const updates: { email: string; role: string }[] = [];
+    const realUpdate = prisma.user.update.bind(prisma.user);
+    prisma.user.update = async (args) => {
+      updates.push({ email: args.where.email, role: args.data.role });
+      return realUpdate(args);
+    };
+
+    await addDemoAccounts(prisma, async () => {}, "demo-pass-123");
+
+    expect(updates).toContainEqual({ email: "demo-admin@example.com", role: "CUSTOMER" });
+    expect(prisma.users.get("demo-admin@example.com")?.role).toBe("CUSTOMER");
+    expect(
+      prisma.memberships.filter((m) => m.userId === demoAdmin.id && m.vendorId === "vendor-aheed"),
+    ).toEqual([{ userId: demoAdmin.id, vendorId: "vendor-aheed", role: "ADMIN" }]);
   });
 });
 
