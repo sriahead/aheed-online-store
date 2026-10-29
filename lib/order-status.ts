@@ -317,3 +317,36 @@ export function formatOrderDateTime(date: Date): string {
     minute: "2-digit",
   }).format(date);
 }
+
+/**
+ * The statuses of an order that has been paid (#1324): every status reachable
+ * from `CONFIRMED`. "Resend confirmation email" is offered only for these — an
+ * unpaid or cancelled order must never receive an "order confirmed" email.
+ */
+export const PAID_STATUSES: readonly OrderStatusValue[] = [
+  "CONFIRMED",
+  "OUT_FOR_DELIVERY",
+  "DELIVERED",
+  "READY_FOR_COLLECTION",
+  "COLLECTED",
+];
+
+export function isPaidStatus(status: string): boolean {
+  return (PAID_STATUSES as readonly string[]).includes(status);
+}
+
+/**
+ * Which payment controls the staff order page shows (#1324). Store-admin only,
+ * matching Retry and Recover on `/staff/payments`; each action re-checks the
+ * role itself, so this decides what is SHOWN, never what is allowed.
+ */
+export function paymentControlsFor(
+  role: string,
+  status: OrderStatusValue,
+): { checkPayment: boolean; resendEmail: boolean } {
+  const admin = role === "ADMIN";
+  return {
+    checkPayment: admin && status === "PENDING_PAYMENT",
+    resendEmail: admin && isPaidStatus(status),
+  };
+}

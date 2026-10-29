@@ -17,14 +17,35 @@ const paymentStub = vi.hoisted(() => {
     providerReference: null,
     redirectUrl: null,
   });
-  return { succeed, createPayment: succeed as () => Promise<unknown> };
+  return {
+    succeed,
+    createPayment: succeed as () => Promise<unknown>,
+    // #1324 — the last input placeOrder handed the provider, for the expiresAt assertion.
+    lastInput: null as unknown,
+  };
 });
 vi.mock("@/lib/payments", () => ({
-  getPaymentService: () => ({ createPayment: () => paymentStub.createPayment() }),
+  // The real value, restated: the mock replaces the whole module.
+  CHECKOUT_SESSION_TTL_MS: 35 * 60 * 1000,
+  getPaymentService: () => ({
+    createPayment: (input: unknown) => {
+      paymentStub.lastInput = input;
+      return paymentStub.createPayment();
+    },
+  }),
 }));
 
-const { placeOrder, CheckoutError, toProvenance, findOrderForViewer, cancelConfirmedOrder } =
-  await import("@/lib/repositories/orders");
+/** What the fake `order.create` stamps, standing in for the column default (#1324). */
+const ORDER_CREATED_AT = new Date("2026-10-28T12:00:00.000Z");
+
+const {
+  placeOrder,
+  CheckoutError,
+  toProvenance,
+  findOrderForViewer,
+  cancelConfirmedOrder,
+  findNextPaymentSweepDueAt,
+} = await import("@/lib/repositories/orders");
 
 const VENDOR = "v-aheed";
 
@@ -126,7 +147,7 @@ function fakePrisma() {
       findUnique: async () => null, // no order-number collision
       create: async ({ data }: { data: { orderNumber: string } }) => {
         created.order.push(data);
-        return { id: "order-1", orderNumber: data.orderNumber };
+        return { id: "order-1", orderNumber: data.orderNumber, createdAt: ORDER_CREATED_AT };
       },
       // P7.5a — releaseOrder's guarded cancel. count 0 means someone already
       // handled it, which is how the real path stays idempotent.
@@ -868,6 +889,29 @@ describe("placeOrder — custom item notes", () => {
     expect(created.cartRestored).toEqual([
       { cartId: "cart-1", vendorId: VENDOR, productId: "p1", quantity: 2, customNote: "curry cut" },
     ]);
+  });
+});
+
+describe("placeOrder — Checkout Session lifetime (#1324 R19)", () => {
+  it("asks the provider to expire the session 35 minutes after the order's own createdAt", async () => {
+    await placeOrder(fakePrisma(), VENDOR, input());
+    const sent = paymentStub.lastInput as { expiresAt: Date };
+    expect(sent.expiresAt.toISOString()).toBe("2026-10-28T12:35:00.000Z");
+  });
+
+  it("sends the same expiresAt for the same order whenever it is called", async () => {
+    // Anchored on the stored createdAt, not on the call's clock, so a retried
+    // session creation carries identical parameters under its idempotency key.
+    await placeOrder(fakePrisma(), VENDOR, input());
+    const first = (paymentStub.lastInput as { expiresAt: Date }).expiresAt.getTime();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-28T12:04:00.000Z"));
+    try {
+      await placeOrder(fakePrisma(), VENDOR, input());
+    } finally {
+      vi.useRealTimers();
+    }
+    expect((paymentStub.lastInput as { expiresAt: Date }).expiresAt.getTime()).toBe(first);
   });
 });
 
@@ -1639,5 +1683,88 @@ describe("cancelConfirmedOrder (#696)", () => {
     await cancelConfirmedOrder(db, VENDOR, ORDER_ID, "reason", null);
 
     expect(calls.events[0]).toMatchObject({ createdByUserId: null });
+  });
+});
+
+/**
+ * #1324 R15 — when the sweep next has work. The fake answers the two `take: 1`
+ * reads the way Postgres would: the oldest never-swept order, and the earliest
+ * non-exhausted reconciliation on a still-pending order. Each fake asserts the
+ * `where` it was given, so a dropped vendor or status filter fails here.
+ */
+describe("findNextPaymentSweepDueAt (#1324 R15)", () => {
+  const CUTOFF = 30 * 60 * 1000;
+  type Row = { createdAt: Date } | null;
+  type Recon = { nextAttemptAt: Date } | null;
+
+  function duePrisma(neverSwept: Row, scheduled: Recon) {
+    return {
+      order: {
+        findFirst: vi.fn(async (args: { where: Record<string, unknown> }) => {
+          expect(args.where).toMatchObject({
+            vendorId: VENDOR,
+            status: "PENDING_PAYMENT",
+            reconciliation: { is: null },
+          });
+          return neverSwept;
+        }),
+      },
+      paymentReconciliation: {
+        findFirst: vi.fn(async (args: { where: Record<string, unknown> }) => {
+          expect(args.where).toMatchObject({
+            vendorId: VENDOR,
+            exhaustedAt: null,
+            order: { status: "PENDING_PAYMENT" },
+          });
+          return scheduled;
+        }),
+      },
+    } as unknown as Parameters<typeof findNextPaymentSweepDueAt>[0];
+  }
+
+  const T = (iso: string) => new Date(iso);
+
+  it("returns null when nothing is pending", async () => {
+    await expect(findNextPaymentSweepDueAt(duePrisma(null, null), VENDOR, CUTOFF)).resolves.toBe(
+      null,
+    );
+  });
+
+  it("a never-swept order is due at createdAt + the candidate cutoff", async () => {
+    const due = await findNextPaymentSweepDueAt(
+      duePrisma({ createdAt: T("2026-10-28T12:00:00Z") }, null),
+      VENDOR,
+      CUTOFF,
+    );
+    expect(due?.toISOString()).toBe("2026-10-28T12:30:00.000Z");
+  });
+
+  it("a scheduled retry is due at its nextAttemptAt", async () => {
+    const due = await findNextPaymentSweepDueAt(
+      duePrisma(null, { nextAttemptAt: T("2026-10-29T04:00:00Z") }),
+      VENDOR,
+      CUTOFF,
+    );
+    expect(due?.toISOString()).toBe("2026-10-29T04:00:00.000Z");
+  });
+
+  it("returns the earlier of the two", async () => {
+    const due = await findNextPaymentSweepDueAt(
+      duePrisma(
+        { createdAt: T("2026-10-28T12:00:00Z") },
+        { nextAttemptAt: T("2026-10-28T12:10:00Z") },
+      ),
+      VENDOR,
+      CUTOFF,
+    );
+    expect(due?.toISOString()).toBe("2026-10-28T12:10:00.000Z");
+  });
+
+  it("ignores an exhausted reconciliation: its query filters exhaustedAt null", async () => {
+    // The filter itself is asserted inside the fake; an exhausted row is never
+    // returned by that query, so with no other pending order the answer is null.
+    await expect(findNextPaymentSweepDueAt(duePrisma(null, null), VENDOR, CUTOFF)).resolves.toBe(
+      null,
+    );
   });
 });

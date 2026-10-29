@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.150.0"
+version: "1.151.0"
 updated: 2026-10-28
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,9 +39,59 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-28 (`#1319` Build): the RBAC four-views slice is BUILT, NOT VALIDATED AND NOT PUSHED**, on
-  local branch `feature/1319-rbac-four-views`. It is cut from `docs/carry-forward-1313`, so its PR
-  also lands the `#1313` Document pass. Spec and build notes: `specs/2026-10-28-rbac-four-views/`.
+- **2026-10-29 (`#1324` Ship, paused): PR #1327 into `staging` is OPEN, CI GREEN, NOT MERGED.** Branch
+  `feature/event-gated-jobs` (pushed), rebased onto `docs/carry-forward-1319`, so the PR also lands that
+  handoff. Spec, build notes and validation record: `specs/2026-10-28-event-gated-jobs/`.
+  - **Validated in-session (not independent).** Every row passes except **R25 (unverified)**: a
+    browser-paid Stripe Checkout must flip the return page to confirmed. No Chrome extension was
+    connected.
+  - **Merge is the owner's call** (`gh pr merge 1327 --squash`; auto mode blocks merges). After it:
+    move `#1324` to In Review, check `deploy-staging`, then `/document`. **`deploy-staging` will fail
+    until `#1323`**, and promotion to `main` waits for `#1289` and `#1323`.
+  - **Why it matters:** the 15-minute `workers/scheduler` tick woke each Neon database 96 times a day
+    with zero traffic (about 8 h of compute, ~61 CU-hours a month at 0.25 CU). That is a likely large
+    share of production's quota breach (`#1289`).
+  - **The scheduler is now gated** on two `JOB_SIGNALS` KV markers, with a daily ungated `0 3 * * *`
+    run. **The KV namespaces do not exist yet (owner, `#1325`)**, and until they do every tick runs
+    every job, as before.
+  - **Stripe sessions now expire 35 minutes after the order is created**, and a shopper's return page
+    can confirm a paid order whose webhook was lost.
+  - **The scheduler uses 4 of the Free plan's 5 Cron Triggers.** Check this against the new Cloudflare
+    account's plan (`#1323`).
+  - Follow-ups: `#1325` (owner: namespaces + live check; also holds the constraint on `#946`'s
+    heartbeat), `#1326` (attribution).
+
+- **2026-10-28 (paused at `#1319` Ship): DEPLOYS ARE BLOCKED, AND HOSTING IS MOVING TO A NEW CLOUDFLARE
+  ACCOUNT.**
+  - **`#1319` is MERGED TO STAGING (PR #1322, `09e9aa0`) but NOT DEPLOYED.**
+    - `deploy-staging` run 40766803727 failed three times at **Deploy to Workers**. First came R2
+      `code 10136` ("enable R2"). After the owner's dashboard change, the plan error `code 100328`
+      followed: "CPU limits are not supported for the Free plan".
+    - The current Cloudflare account has dropped to the **Free plan**. **Do not remove
+      `[limits] cpu_ms`** to get past it: the Free plan's roughly 10 ms of CPU per request cannot
+      serve the app.
+    - Staging still serves `9a32058` (`#1313`), and its R2 images return 403.
+    - Tracked in **`#1323`**, which also holds the owner's decision and the **full migration
+      checklist**.
+  - **Owner decision: move to a NEW Cloudflare account** with Workers Paid and the client's new
+    domain, instead of restoring the old account. Its own slice comes next: `/propose` once the
+    owner has created the account and chosen the hostnames. Neon does not move.
+  - **Still owed for `#1319`, after the move:**
+    - its R25 staging walk, after `npm run demo:accounts -- add` against staging (owner-run; the
+      staging demo password is not in `secrets/staging.vars`);
+    - the `#1321` onboarding check on staging;
+    - its `/document` (roadmap staging row, board to `In Review`).
+
+    `#1319` stays `In Progress` until then. **`sdd:audit` will report its missing roadmap row;**
+    that is expected until the deploy succeeds.
+  - **Validated in the building session (not independent).** The record is in
+    `specs/2026-10-28-rbac-four-views/build-notes.md`. The dev database has the new demo roster.
+    New issue: `#1321` (platform onboarding page returns 500 after about 83 s on dev).
+  - **This note is on the local branch `docs/carry-forward-1319`** (cut from `origin/staging` after
+    the merge). **The next slice branches from it, not from `origin/staging`.**
+
+- **2026-10-28 (`#1319` Build), kept for its standing facts.** Spec and build notes:
+  `specs/2026-10-28-rbac-four-views/`.
   - **`demo-admin` is no longer a platform admin.** It is a store admin only;
     **`demo-platform-admin@example.com` is the only platform admin**, with the same
     `DEMO_ACCOUNT_PASSWORD`. Use it, not `demo-admin`, for any `/staff/platform/*` or `/staff/errors`
@@ -61,8 +111,7 @@ reconciliation. If overall project state did not materially change, leave this f
     the building session (not independent). R39 passed on staging (signed out: page 307 to `/login`, CSV 401).
     **Unverified:** typing into the What if panel in a real browser. `#1313` is `In Review`.
   - **Production was still down at the 2026-10-27 Orient** (`/api/health` 503, Neon HTTP 402, `#1289`).
-  - **This Document pass is on the local branch `docs/carry-forward-1313`** (cut from `origin/staging`
-    after the merge). **The next slice branches from it, not from `origin/staging`.**
+  - Its Document pass reached `staging` with PR #1322.
   - **The dashboard's launch recommendation is now the customer service fee** (`#1313`'s numbers: with
     partner time at 2 hours a month per shop and £25 an hour, every shop-paid model loses money at
     10 shops × 500 orders).

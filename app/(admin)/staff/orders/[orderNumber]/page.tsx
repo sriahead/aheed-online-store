@@ -4,7 +4,14 @@ import { notFound, redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
 import { getPaymentReconciliationService } from "@/lib/payment-reconciliation-service";
-import { canCancel, formatOrderDate, nextStatus, orderStatusLabel } from "@/lib/order-status";
+import {
+  canCancel,
+  formatOrderDate,
+  isOrderStatus,
+  nextStatus,
+  orderStatusLabel,
+  paymentControlsFor,
+} from "@/lib/order-status";
 import { OrderItemsCard } from "@/components/orders/OrderItemsCard";
 import { OrderAddressCard } from "@/components/orders/OrderAddressCard";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
@@ -14,6 +21,10 @@ import { advanceStatus } from "@/features/orders/advance-status";
 import { cancelOrderStaff } from "@/features/orders/cancel-order-staff";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Icon } from "@/components/icons/Icon";
+import {
+  CheckPaymentControl,
+  ResendConfirmationControl,
+} from "@/components/staff/OrderPaymentControls";
 
 // Reads the session and one of this vendor's orders — must render per-request.
 export const dynamic = "force-dynamic";
@@ -52,6 +63,10 @@ export default async function StaffOrderDetailPage({
   const reconciliationOutcome = await getPaymentReconciliationService().outcomeFor(orderNumber);
 
   const next = nextStatus(order.status, order.fulfilmentMethod);
+  // #1324 — a platform admin passes requireVendorRole("ADMIN") too, so it counts as ADMIN here.
+  const controls = isOrderStatus(order.status)
+    ? paymentControlsFor(auth.via === "platform-admin" ? "ADMIN" : auth.via, order.status)
+    : { checkPayment: false, resendEmail: false };
 
   return (
     <PageContainer width="narrow">
@@ -89,6 +104,10 @@ export default async function StaffOrderDetailPage({
           </button>
         </form>
       )}
+
+      {/* #1324 — store-admin payment controls. Each action re-checks the role. */}
+      {controls.checkPayment && <CheckPaymentControl orderNumber={order.orderNumber} />}
+      {controls.resendEmail && <ResendConfirmationControl orderNumber={order.orderNumber} />}
 
       <StaffOrderTimeline timeline={order.timeline} />
 

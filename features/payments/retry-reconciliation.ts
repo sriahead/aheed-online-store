@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getPaymentReconciliationService } from "@/lib/payment-reconciliation-service";
+import { markPaymentSweepDue } from "@/lib/job-signals";
 
 /**
  * Staff's Retry on `/staff/payments`' stopped-retrying list (#945).
@@ -28,5 +29,8 @@ export async function retryReconciliation(formData: FormData) {
   if (typeof orderNumber !== "string" || orderNumber.length === 0) return;
 
   await getPaymentReconciliationService().rearm(orderNumber);
+  // #1324 — the re-armed order is due now, so the scheduler's next tick must run
+  // the sweep rather than skip it on a marker written before the retry.
+  await markPaymentSweepDue(new Date());
   revalidatePath("/staff/payments");
 }

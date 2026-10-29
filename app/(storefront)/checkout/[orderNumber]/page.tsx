@@ -9,6 +9,7 @@ import { OrderAddressCard } from "@/components/orders/OrderAddressCard";
 import { OrderPointsNote } from "@/components/orders/OrderPointsNote";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { IconMedallion } from "@/components/icons/IconMedallion";
+import { PaymentStatusCheck } from "@/components/checkout/PaymentStatusCheck";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,12 @@ export default async function OrderConfirmationPage({
           </p>
         </div>
       </div>
+
+      {/* #1324 — asks the provider once, via a POST, whether this order was in fact
+          paid; the page's own render stays read-only (#428). */}
+      {order.status === "PENDING_PAYMENT" && (
+        <PaymentStatusCheck orderNumber={order.orderNumber} token={t ?? null} />
+      )}
 
       {order.status === "PENDING_PAYMENT" && (
         <p className="mb-5 rounded-2xl bg-accent-tint px-4 py-3 text-sm text-primary">

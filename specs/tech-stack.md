@@ -122,6 +122,10 @@ environment-configured seam.
   front of the Worker).
 - Optional edge KV for hot reads behind a `CacheService` port (KV ↔ Redis swap); DB remains source
   of truth.
+- **Cloudflare KV holds the job activity markers** (`#1324`): the `JOB_SIGNALS` namespace lets the
+  scheduler skip a job, and so skip waking Neon, when there is nothing to do. It is reached only
+  through `lib/job-signals.ts`, and an absent or failing KV fails open to running the job. It is not a
+  cache and holds no domain data. See `specs/architecture.md` §3.4.
 - **Keyset (cursor) pagination** for all growable lists; composite indexes shipped with each
   query-heavy feature; explicit `select`/`include`; transactions for multi-table writes.
 - Targets (Gate-3 criteria): storefront LCP < 2.5s on 4G, API p95 < 400ms, ~1,000 orders/day.

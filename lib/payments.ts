@@ -17,6 +17,19 @@ import { getPaymentEnv } from "./config";
 
 export type PaymentIntentStatus = "PENDING" | "SUCCEEDED" | "FAILED";
 
+/**
+ * How long a shopper has to pay, measured from the ORDER's creation (#1324).
+ *
+ * Short so an abandoned checkout gives the scheduled sweep a definitive answer
+ * (paid, or expired and released) within minutes, not after Stripe's 24-hour
+ * default. 35 rather than Stripe's 30-minute minimum because it is anchored on
+ * `createdAt`, not on the request: the session-creation call carries an
+ * idempotency key, Stripe refuses a retry whose parameters differ, and a value
+ * derived from the order is the same on every retry. The extra 5 minutes absorbs
+ * a slow order transaction before the first call.
+ */
+export const CHECKOUT_SESSION_TTL_MS = 35 * 60 * 1000;
+
 export interface CreatePaymentInput {
   orderNumber: string;
   amountPence: number;
@@ -34,6 +47,10 @@ export interface CreatePaymentInput {
    *  refused by `findOrderForViewer`, so an adapter that forgot to include it
    *  would lock every guest out of their own confirmation. */
   confirmationToken: string;
+  /** #1324 — when the provider's session stops accepting payment. Derived from the
+   *  order's `createdAt` (+ `CHECKOUT_SESSION_TTL_MS`) by the caller, so it is
+   *  identical on every retry for the same order. */
+  expiresAt: Date;
 }
 
 export interface CreatePaymentResult {
@@ -150,6 +167,8 @@ export function createStripePaymentService(secretKey: string): PaymentService {
         // unfurler that touches the URL. The page asks; a POST server action
         // acts (#428).
         cancel_url: `${input.returnOrigin}/checkout/${input.orderNumber}/cancel?t=${token}`,
+        // #1324 — see CHECKOUT_SESSION_TTL_MS. Unix seconds, as Stripe expects.
+        expires_at: String(Math.floor(input.expiresAt.getTime() / 1000)),
         // Traceable from the Stripe dashboard back to an order without a query.
         client_reference_id: input.orderNumber,
         "metadata[orderNumber]": input.orderNumber,

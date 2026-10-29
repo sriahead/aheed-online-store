@@ -164,8 +164,15 @@ export interface SweepConfig {
 export const DEFAULT_CANDIDATE_CUTOFF_MS = 30 * 60 * 1000;
 
 /**
- * Comfortably past Stripe's default 24-hour Checkout Session expiry — this app
- * sets no `expires_at` — so nothing behind it can still be paid.
+ * The backstop for the two cases a session's own state cannot settle: a
+ * `complete`-but-unpaid session (an async method whose outcome event was lost)
+ * and an order that never got a session at all.
+ *
+ * Since #1324 the app sets `expires_at` 35 minutes after the order is created
+ * (`CHECKOUT_SESSION_TTL_MS`), so an ordinary abandoned checkout is released as
+ * `expired` within the hour and never reaches this cutoff. Seven days stays
+ * because neither backstop case is about the session's lifetime: a settling
+ * payment can take days, and a no-session order has nothing to ask about.
  */
 export const DEFAULT_LONG_CUTOFF_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -174,7 +181,12 @@ export const DEFAULT_BATCH_CAP = 50;
 
 /**
  * Shorter than the 15-minute scheduler tick, so an attempt interrupted by a
- * Worker dying is picked up again by the very next tick.
+ * Worker dying is picked up again by the very next tick. Since #1324 that tick
+ * is gated, and that still holds for a tick-called run: it was called because
+ * its marker was already due, and a run that dies never reaches the end-of-run
+ * rewrite, so the marker stays due and the next tick calls the sweep again. (A
+ * dying DAILY run with no marker set waits for the next day or the next
+ * checkout — the backstop's own backstop is the following backstop.)
  */
 export const DEFAULT_LEASE_MS = 10 * 60 * 1000;
 

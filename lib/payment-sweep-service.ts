@@ -1,14 +1,27 @@
 import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getPaymentService, STRIPE_PAYMENT_PROVIDER } from "@/lib/payments";
 import { getWebhookOrderService } from "@/lib/orders-service";
-import { cancelUnpaidOrder, listStalePendingOrders } from "@/lib/repositories/orders";
+import {
+  cancelUnpaidOrder,
+  findNextPaymentSweepDueAt,
+  listStalePendingOrders,
+} from "@/lib/repositories/orders";
 import {
   claimPaymentReconciliation,
   recordPaymentReconciliationOutcome,
 } from "@/lib/repositories/payment-reconciliations";
 import { listActiveVendorIds } from "@/lib/repositories/vendor";
 import { sendOrderConfirmationEmail } from "@/features/checkout/send-confirmation";
-import { runPaymentSweep, type SweepConfig, type SweepSummary } from "@/lib/payment-sweep";
+import {
+  DEFAULT_CANDIDATE_CUTOFF_MS,
+  runPaymentSweep,
+  type SweepConfig,
+  type SweepSummary,
+} from "@/lib/payment-sweep";
+import { setPaymentSweepDue } from "@/lib/job-signals";
+
+/** A run's summary plus when the sweep next has work (#1324), as the route returns it. */
+export type SweepRunResult = SweepSummary & { nextDueAt: string | null };
 
 /**
  * The request-scoped facade for the stranded payment sweep (P9.2, #618).
@@ -31,7 +44,7 @@ import { runPaymentSweep, type SweepConfig, type SweepSummary } from "@/lib/paym
  */
 export function getPaymentSweepService() {
   return {
-    run: (config?: SweepConfig): Promise<SweepSummary> => {
+    run: async (config?: SweepConfig): Promise<SweepRunResult> => {
       const prisma = getPrisma();
       // Always the WEBSOCKET client for writes: confirmPayment runs an
       // interactive transaction, and releaseOrder uses updateMany, which
@@ -40,7 +53,7 @@ export function getPaymentSweepService() {
       const prismaWs = getPrismaWs();
       const orders = getWebhookOrderService();
 
-      return runPaymentSweep(
+      const summary = await runPaymentSweep(
         {
           payments: getPaymentService(),
           orders: {
@@ -67,6 +80,20 @@ export function getPaymentSweepService() {
         },
         config,
       );
+
+      // #1324 — the scheduler calls the sweep only when this says there is work.
+      // Computed AFTER the run, from the database, so it reflects everything the
+      // run just deferred, backed off or resolved; it is the value every earlier
+      // marker race converges to. `null` deletes the key: nothing is pending.
+      const cutoffMs = config?.candidateCutoffMs ?? DEFAULT_CANDIDATE_CUTOFF_MS;
+      let nextDue: Date | null = null;
+      for (const vendorId of await listActiveVendorIds(prisma)) {
+        const due = await findNextPaymentSweepDueAt(prisma, vendorId, cutoffMs);
+        if (due && (!nextDue || due < nextDue)) nextDue = due;
+      }
+      await setPaymentSweepDue(nextDue);
+
+      return { ...summary, nextDueAt: nextDue ? nextDue.toISOString() : null };
     },
   };
 }

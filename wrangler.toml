@@ -38,6 +38,15 @@ head_sampling_rate = 1
 directory = ".open-next/assets"
 binding = "ASSETS"
 
+# #1324 — job activity markers, written here and read by workers/scheduler so an
+# idle store's 15-minute tick never wakes the database. LOCAL SIMULATION ONLY:
+# `npm run preview` simulates this namespace on disk; no deploy reads it, because
+# both deploy workflows pass `--env` and kv_namespaces is not inherited by an
+# environment. The id is a placeholder, not a real namespace.
+[[kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "local-job-signals"
+
 # ---- Staging -------------------------------------------------------------
 [env.staging]
 name = "aheed-store-staging"
@@ -60,6 +69,15 @@ custom_domain = true
 [[env.staging.r2_buckets]]
 binding = "IMAGES"
 bucket_name = "aheed-images-staging"
+
+# #1324 — JOB_SIGNALS for staging: NOT YET CREATED — owner action. Until it exists
+# this Worker deploys without the binding and every marker write is skipped,
+# which leaves the scheduler running every job on every tick, as before #1324.
+# To enable gating, `wrangler kv namespace create aheed-jobs-staging`, then put the
+# printed id in BOTH this file and workers/scheduler/wrangler.toml:
+#   [[env.staging.kv_namespaces]]
+#   binding = "JOB_SIGNALS"
+#   id = "<the id wrangler printed>"
 
 # #767/#771 — NOT a secret, just non-sensitive config, so it belongs in committed config rather
 # than a dashboard-only binding. A dashboard-added plain-text var (no `[vars]` entry, no
@@ -89,6 +107,15 @@ custom_domain = true
 [[env.production.r2_buckets]]
 binding = "IMAGES"
 bucket_name = "aheed-images-production"
+
+# #1324 — JOB_SIGNALS for production: NOT YET CREATED — owner action. Until it exists
+# this Worker deploys without the binding and every marker write is skipped,
+# which leaves the scheduler running every job on every tick, as before #1324.
+# To enable gating, `wrangler kv namespace create aheed-jobs-production`, then put the
+# printed id in BOTH this file and workers/scheduler/wrangler.toml:
+#   [[env.production.kv_namespaces]]
+#   binding = "JOB_SIGNALS"
+#   id = "<the id wrangler printed>"
 
 # See the identical [env.staging.vars] block above for why this is committed config rather than
 # a dashboard binding.

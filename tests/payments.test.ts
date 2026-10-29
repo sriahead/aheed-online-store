@@ -24,6 +24,7 @@ const INPUT = {
   vendorId: "v-aheed",
   returnOrigin: "https://staging.aheedfoodcentre.nocaped.com",
   confirmationToken: "6f1d1c2e-9b4a-4a7e-8f2b-0d3c5e7a9b11",
+  expiresAt: new Date("2026-08-10T12:35:00.000Z"),
 };
 
 beforeEach(() => getEnvMock.mockReset());
@@ -97,6 +98,15 @@ describe("Stripe adapter — session payload", () => {
     const fetchMock = mockStripeOk();
     await createStripePaymentService("sk_test_123").createPayment({ ...INPUT, currency: "EUR" });
     expect(bodyOf(fetchMock).get("line_items[0][price_data][currency]")).toBe("eur");
+  });
+
+  // #1324 R18 — Unix seconds from the caller's expiresAt, never from this call's clock.
+  it("sends expires_at as the input's expiresAt in Unix seconds", async () => {
+    const fetchMock = mockStripeOk();
+    await createStripePaymentService("sk_test_123").createPayment(INPUT);
+    expect(bodyOf(fetchMock).get("expires_at")).toBe(
+      String(Math.floor(INPUT.expiresAt.getTime() / 1000)),
+    );
   });
 
   it("carries the order number so the webhook and dashboard can find it", async () => {
