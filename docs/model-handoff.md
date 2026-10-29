@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.152.0"
+version: "1.153.0"
 updated: 2026-10-29
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,6 +39,44 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
+- **2026-10-29 (`#1323` Build, before Validate): the hosting move is BUILT, NOT VALIDATED and NOT
+  MERGED.** Branch `feature/merqify-platform-move` (local; spec `418235b`, implementation `2c16f31`)
+  was cut from `docs/carry-forward-1324`, so it carries `#1324`'s Document commit too. Spec and build
+  notes: `specs/2026-10-29-merqify-platform-move/`. Runbook: `docs/developer-portal/env-setup.md`,
+  "Merqify account". `#1323` is `In Progress`.
+  - **Owner direction:**
+    - **Merqify is the new Cloudflare account** (it holds `merqify.com` and no Workers yet), and
+      **Neon is a fresh account**.
+    - The new databases are **filled from old staging**: 10% of products, no test orders, no demo
+      logins in production.
+    - **Aheed Superstore is retired.**
+    - Hosts are flat on `merqify.com`: `aheed[-staging]`, `srimart[-staging]`,
+      `images[-staging]`, and `docs`.
+    - **Old production (`#1289`) is never read.** The new Neon account makes `#1289` moot for
+      deploys.
+  - **Four Cloudflare accounts:**
+    - **Nocaped:** old; Free plan, cannot deploy.
+    - **Merqify:** the target.
+    - **Aheed Food Centre:** `aheedfoodcentre.co.uk` with no DNS records. It is under the Nocaped
+      login **temporarily** and moves under the Merqify login after Cloudflare's 7-day wait.
+    - **Cobrasmash:** what this machine's `wrangler login` points at. It is **not this project's**,
+      so run `npx wrangler whoami` before any manual wrangler command.
+  - **Security findings:**
+    - **The shared `CLOUDFLARE_API_TOKEN`** in `.dev.vars` and `secrets/*.vars` can read the Nocaped
+      **and** Aheed accounts. It is replaced by per-environment tokens scoped to the Merqify account.
+    - **On old staging, `demo-admin` is still a platform ADMIN**, because `#1319`'s demotion never
+      reached it.
+    - **Every role on old staging belongs to an `@example.com` account**, so the new databases need
+      `scripts/grant-role.ts` for a first admin.
+  - **Next:** `/clear`, then Validate on Sonnet 5.
+    - The migration's `--apply` has **never run**, so validate it against a disposable database
+      first.
+    - R24–R27 (live staging) wait for the owner's setup, which must create the **Access application
+      for `docs.merqify.com` before the staging secrets move** (`#1328`).
+  - **Follow-ups:** `#1328` (docs Access guard), `#1329` (`www.aheedfoodcentre.co.uk` through
+    Cloudflare for SaaS), `#1330` (the client's real catalogue and details, waiting on the client's
+    files). Investigation page: https://claude.ai/artifact/XLdwB3PjYGMFmjYHZUtKYw (private).
+
 - **2026-10-29 (`#1324` Document): `#1324` is MERGED TO STAGING (PR #1327, `57ede8f`) but NOT
   DEPLOYED.** `deploy-staging` run 40814195702 passed quality and failed at Deploy to Workers with the
   same Free-plan refusal as `#1319` (`code 100328`, `#1323`). Staging still serves `9a32058`. Spec,
@@ -47,9 +85,8 @@ reconciliation. If overall project state did not materially change, leave this f
   - **Validated in-session (not independent).** Every row passes except **R25 (unverified)**: a
     browser-paid Stripe Checkout must flip the return page to confirmed. Check it on staging after
     the move.
-  - **This note is on the local branch `docs/carry-forward-1324`** (cut from `origin/staging` after
-    the merge). **The next slice branches from it, not from `origin/staging`.** Promotion to `main`
-    waits for `#1289` and `#1323`.
+  - Its Document commit (`237bd37`, carry-forward branch `docs/carry-forward-1324`) rides
+    `feature/merqify-platform-move` (`#1323`). Promotion to `main` waits for `#1323`.
   - **Why it matters:** the 15-minute `workers/scheduler` tick woke each Neon database 96 times a day
     with zero traffic (about 8 h of compute, ~61 CU-hours a month at 0.25 CU). That is a likely large
     share of production's quota breach (`#1289`).

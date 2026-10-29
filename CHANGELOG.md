@@ -8,6 +8,15 @@ every branch merges.
 
 ### Added
 
+- **Hosting moves to the Merqify Cloudflare account and a new Neon account** (issue `#1323`, spec `specs/2026-10-29-merqify-platform-move/`). The Nocaped account dropped to the Workers Free plan and can no longer deploy.
+  - **New hosts on `merqify.com`**: `aheed-staging`, `srimart-staging` and `images-staging` for staging; `aheed`, `srimart` and `images` for production; `docs` for the internal docs behind Access. The scheduler and the image security policy follow.
+  - **`scripts/migrate-to-new-neon.ts`** fills a new, empty database from the old staging one. It defaults to a dry run. It copies the two stores, real users and **10% of the products** (245 for Aheed, plus SriMart's 3). It leaves behind test orders, carts, payments, logs and every `@example.com` account. It keeps the original ids, copies the images and re-counts everything at the end.
+  - **`scripts/grant-role.ts`** gives an existing user platform or store admin rights. A freshly migrated database has no admin, because every role on old staging belonged to a demo account.
+  - **Aheed Superstore retired**: its route, provisioning script, manifest and test are gone.
+  - **Runbook**: `docs/developer-portal/env-setup.md`, "Merqify account": what the owner creates (the Access application for the docs site first), the `secrets/merqify-*.vars` files, the staging cut-over steps, production order and rollback.
+
+  Nothing changes until the owner's Merqify and Neon setup exists and the secrets move. No schema change.
+
 - **Background jobs only wake the database when there is work** (issue `#1324`, spec `specs/2026-10-28-event-gated-jobs/`):
   - **Gated scheduler**: the 15-minute tick reads two markers from a new `JOB_SIGNALS` KV namespace and calls the payment sweep or the error-rate check only when it is due. An idle store goes from 96 database wakes a day to one. Any KV doubt runs the job.
   - **Daily 03:00 UTC run** calls all three jobs ungated. The guest-cart reaper now runs only there, with its per-store cap raised from 500 to 5,000.
