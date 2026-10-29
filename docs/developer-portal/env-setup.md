@@ -101,8 +101,12 @@ environment.
    - The moment those secrets name Merqify, the next push publishes the internal docs. With no
      Access application in front, ADRs and `CLAUDE.md` are on the open internet.
 3. **R2 buckets `aheed-images-staging` and `aheed-images-production`** (the names `wrangler.toml`
-   binds), each with:
-   - a **custom domain**: `images-staging.merqify.com` and `images.merqify.com`;
+   binds), plus `aheed-images-dev` for local work. Each gets:
+   - a **custom domain**: `images-staging.merqify.com`, `images.merqify.com` and
+     `images-dev.merqify.com`;
+   - the **same hotlink pairing as before**: a referer rule on the staging and production image
+     hosts (allowing the `merqify.com` store hosts), and **none** on `images-dev.merqify.com`, so
+     images load under `localhost` (see "Development" below);
    - an **R2 S3 API token** limited to that bucket.
 4. **One API token per environment, scoped to the Merqify account only.**
    - Start from the "Edit Cloudflare Workers" template.
@@ -146,6 +150,10 @@ npm run configure-env -- staging --file secrets/merqify-staging.vars
   prints `Cloudflare target: account …<last 6>` first. Check that suffix against the Merqify
   account ID before letting it run. It also pushes `UK_LOCATION_REF_DIRECT_URL` (GitHub) and
   `UK_LOCATION_REF_DATABASE_URL` (Worker) when they are in the file.
+- **For `production` it also pushes `S3_*` and `CDN_BASE_URL` to the GitHub environment.**
+  `fill-product-images.yml` runs daily under `environment: production` and reads those six from
+  GitHub, not from the Worker. Without them it would keep writing images into the old Nocaped
+  bucket.
 - **Set by hand on the new Workers.** `configure-env` does not push these, and they need the same
   account override:
   `CLOUDFLARE_ACCOUNT_ID=<merqify id> CLOUDFLARE_API_TOKEN=<scoped token> npx wrangler secret put …`.
@@ -187,8 +195,8 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.
    `env -u DIRECT_URL -u DATABASE_URL npx tsx scripts/migrate-to-new-neon.ts --from secrets/staging.vars --to secrets/merqify-staging.vars --target staging`.
    - Expected: Aheed 245 products plus SriMart's 3, no orders, no `@example.com` users, and two
      generated `VendorDomain` rows.
-   - The source's S3 keys are needed in `secrets/staging.vars` for the image copy; today it has
-     none.
+   - The image copy reads the old bucket with the `S3_*` keys already in `secrets/staging.vars`
+     (bucket `aheed-images-staging` in the Nocaped account). Those keys must still work there.
 4. **Copy:** the same command with `--apply --copy-images`. It ends by re-counting every model; any
    `MISMATCH` or `MISSING` exits non-zero.
 5. **Push the secrets:** `npm run configure-env -- staging --file secrets/merqify-staging.vars`,
@@ -214,9 +222,21 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.
 
 ### Dev database
 
-Local development also leaves the old Neon account. Create a dev project in the Merqify Neon account
-(London), then point **both** `.env` and `.dev.vars` at it: `DATABASE_URL` pooled, `DIRECT_URL`
-direct, and the reference URLs from the shared reference project. Then:
+Local development also leaves the old Neon account **and** the Nocaped dev bucket
+(`aheed-images-dev`, served at `images.dev.aheedfoodcentre.nocaped.com`).
+- **Create** a dev project in the Merqify Neon account (London), and an `aheed-images-dev` R2 bucket
+  in the Merqify account with custom domain `images-dev.merqify.com` and its own S3 API token.
+- **Point both `.env` and `.dev.vars` at them:**
+  - `DATABASE_URL` (pooled) and `DIRECT_URL` (direct);
+  - the reference URLs from the shared reference project;
+  - `S3_*` for the new dev bucket, with `CDN_BASE_URL=https://images-dev.merqify.com`;
+  - in `.dev.vars`, the Merqify `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` for Workers AI;
+  - `RESEND_FROM_EMAIL` once `merqify.com` is verified.
+
+  Keep `.env` comments on their own line (`CLAUDE.md`): today's `S3_BUCKET` and `CDN_BASE_URL`
+  lines carry trailing comments.
+
+Then:
 
 ```bash
 # per-variable check first (CLAUDE.md): nothing exported may override the files
@@ -259,7 +279,7 @@ owner's approval, one item at a time**. Until then they are the rollback.
 | Where | What | Notes |
 |---|---|---|
 | Nocaped Cloudflare account | Workers `aheed-store-staging`, `aheed-store-production`, `aheed-scheduler-staging`, `aheed-scheduler-production`, `aheed-kms-internal` | The schedulers still fire their crons against the old hosts until deleted. |
-| Nocaped Cloudflare account | R2 buckets `aheed-images-staging`, `aheed-images-production` | Only after the image copy is verified on both environments. |
+| Nocaped Cloudflare account | R2 buckets `aheed-images-dev`, `aheed-images-staging`, `aheed-images-production` | Only after the image copy is verified on both environments and dev points at the Merqify dev bucket. |
 | Nocaped Cloudflare account | The Cloudflare Access application for `docs.internal.aheedfoodcentre.nocaped.com` | Delete the docs Worker's route first. |
 | Nocaped login | The login-wide `CLOUDFLARE_API_TOKEN` in the old `secrets/*.vars` and `.dev.vars` | It also reaches the Aheed Food Centre account. |
 | Old Neon account | Projects dev (`ep-dry-morning`), staging (`ep-empty-scene`), production (`ep-young-glitter`), reference | Production is unreadable (`#1289`); take a backup if the quota allows, or confirm nothing in it is wanted. |
@@ -631,11 +651,14 @@ case is a stale test image, not corrupted state, so a per-developer bucket isn't
 hotlink/referer rule** — that is what lets an image load under `npm run preview`, where the referer
 is `http://localhost:3000`. The three hosts and their buckets are strictly paired:
 
-| Environment | `S3_BUCKET` | `CDN_BASE_URL` | Hotlink rule |
-|---|---|---|---|
-| local dev | `aheed-images-dev` | `https://images.dev.aheedfoodcentre.nocaped.com` | none |
-| staging | `aheed-images-staging` | `https://images.staging.aheedfoodcentre.nocaped.com` | yes |
-| production | `aheed-images-production` | `https://images.aheedfoodcentre.nocaped.com` | yes |
+| Environment | `S3_BUCKET` | `CDN_BASE_URL` (Merqify account, #1323) | Was (Nocaped) | Hotlink rule |
+|---|---|---|---|---|
+| local dev | `aheed-images-dev` | `https://images-dev.merqify.com` | `images.dev.aheedfoodcentre.nocaped.com` | none |
+| staging | `aheed-images-staging` | `https://images-staging.merqify.com` | `images.staging.aheedfoodcentre.nocaped.com` | yes |
+| production | `aheed-images-production` | `https://images.merqify.com` | `images.aheedfoodcentre.nocaped.com` | yes |
+
+The Merqify hosts must repeat this pairing: a referer rule on the staging and production image
+hosts, and **none** on the dev host (`env-setup.md`, "Merqify account").
 
 ```bash
 S3_BUCKET="aheed-images-dev"

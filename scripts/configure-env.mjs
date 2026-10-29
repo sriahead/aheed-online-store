@@ -69,6 +69,20 @@ const OPTIONAL_WORKER_SECRETS = [
 // migrations. Optional so a file written before the reference database moved still pushes.
 const OPTIONAL_GITHUB_ENV_SECRETS = ["UK_LOCATION_REF_DIRECT_URL"];
 
+// #1323 — Worker secrets that a PRODUCTION GitHub workflow also reads: fill-product-images.yml
+// (daily, `environment: production`) writes images with these. Pushing them to the Worker only
+// would leave that job writing into the previous bucket after a move, silently. Already required
+// as Worker secrets, so this only adds a second destination, and only for production — no
+// staging workflow reads them.
+const PRODUCTION_GITHUB_ALSO = [
+  "S3_ENDPOINT",
+  "S3_BUCKET",
+  "S3_ACCESS_KEY",
+  "S3_SECRET_KEY",
+  "S3_REGION",
+  "CDN_BASE_URL",
+];
+
 const REQUIRED = [...GITHUB_ENV_SECRETS, ...WORKER_SECRETS];
 const KNOWN = [...REQUIRED, ...OPTIONAL_WORKER_SECRETS, ...OPTIONAL_GITHUB_ENV_SECRETS];
 const VALID_ENVS = ["staging", "production"];
@@ -124,6 +138,7 @@ if (extra.length) {
 const present = (k) => Boolean(values[k] && values[k].length > 0);
 const optionalPresent = OPTIONAL_WORKER_SECRETS.filter(present);
 const optionalGithubPresent = OPTIONAL_GITHUB_ENV_SECRETS.filter(present);
+const productionGithubAlso = env === "production" ? PRODUCTION_GITHUB_ALSO : [];
 const optionalAbsent = [...OPTIONAL_WORKER_SECRETS, ...OPTIONAL_GITHUB_ENV_SECRETS].filter(
   (k) => !present(k),
 );
@@ -155,6 +170,9 @@ if (dryRun) {
   for (const k of GITHUB_ENV_SECRETS) console.log(`  ${k} → github env secret (${env})`);
   for (const k of optionalGithubPresent) {
     console.log(`  ${k} → github env secret (${env}) [optional]`);
+  }
+  for (const k of productionGithubAlso) {
+    console.log(`  ${k} → github env secret (${env}) [also: fill-product-images.yml]`);
   }
   for (const k of WORKER_SECRETS) console.log(`  ${k} → cloudflare worker secret (${env})`);
   for (const k of optionalPresent) {
@@ -203,7 +221,7 @@ let ok = 0;
 let failed = 0;
 
 console.log(`\nSetting GitHub environment secrets (${env})…`);
-for (const k of [...GITHUB_ENV_SECRETS, ...optionalGithubPresent]) {
+for (const k of [...GITHUB_ENV_SECRETS, ...optionalGithubPresent, ...productionGithubAlso]) {
   const good = setSecret("gh", ["secret", "set", k, "--env", env], values[k], `${k} → github`);
   good ? ok++ : failed++;
 }

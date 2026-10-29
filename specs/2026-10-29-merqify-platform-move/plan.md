@@ -166,5 +166,8 @@ The Nocaped Workers keep serving their last build, and the old Neon projects and
   - a fresh `BETTER_AUTH_SECRET` per environment;
   - a Cloudflare Access application for `docs.merqify.com`;
   - the Stripe webhook and Google redirect URIs re-registered for the new hosts;
-  - the source bucket's S3 keys, which `secrets/staging.vars` lacks today, for `--copy-images`.
+  - working source-bucket S3 keys for `--copy-images`. Corrected 2026-10-29: `secrets/staging.vars`
+    already holds them; the earlier "lacks" came from a key listing that skipped names with digits;
+  - a dev R2 bucket and CDN host in Merqify (`images-dev.merqify.com`), replacing Nocaped's
+    `aheed-images-dev` (amendment 2).
 - **Revoking the shared token** happens after cut-over, by the owner.

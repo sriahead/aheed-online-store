@@ -166,6 +166,12 @@ R30. `scripts/configure-env.mjs` runs every `wrangler` command with `CLOUDFLARE_
      `CLOUDFLARE_API_TOKEN` set from the **file being pushed**, never from the local wrangler login
      or the shell. It prints the last six characters of that account ID, in both the dry run and the
      real run, before pushing anything.
+R30a. (Amendment 2, from the env audit.) For `production` only, `scripts/configure-env.mjs` also
+      pushes `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION` and
+      `CDN_BASE_URL` as GitHub environment secrets, in addition to the Worker secrets.
+      `.github/workflows/fill-product-images.yml` (daily, `environment: production`) reads those six
+      from GitHub, so without this it would keep writing to the old bucket. For `staging` they are
+      not pushed to GitHub.
 R31. The migration script's plan output lists, as warnings, every copied text value containing
      `nocaped`, with its model, field and count. The values are copied unchanged, and the runbook
      says where to replace them after the cut-over.
@@ -174,12 +180,15 @@ R32. `prisma/seed.ts` and `prisma/manifests/example.json` contain no `nocaped`.
      `merqify.com` domain.
 R33. The runbook has a "Dev database" step: a new dev project in the Merqify Neon account,
      `prisma migrate deploy` then `npm run db:seed` against it, and `.env` and `.dev.vars` both
-     pointed at it.
+     pointed at it. (Amendment 2) The step also replaces the dev images bucket: an
+     `aheed-images-dev` bucket in the Merqify account with `CDN_BASE_URL`
+     `https://images-dev.merqify.com`, and its `S3_*` values in both files.
 R34. The runbook has a "Freeing Nocaped" checklist. It names every resource in the Nocaped
      Cloudflare account and the old Neon account the platform used:
      - the Workers `aheed-store-staging`, `aheed-store-production`, `aheed-scheduler-staging`,
        `aheed-scheduler-production` and `aheed-kms-internal`;
-     - the R2 buckets, the Access application and the login-wide API token;
+     - the R2 buckets (`aheed-images-dev`, `-staging` and `-production`), the Access application
+       and the login-wide API token;
      - the dev, staging, production and reference Neon projects;
      - the Stripe webhook endpoints and Google redirect URIs on `nocaped.com` hosts;
      - the Resend domain;

@@ -94,6 +94,28 @@ it also carries `#1324`'s Document commit (`237bd37`: roadmap row 1.186.0, hando
     `secrets/staging.vars` and `secrets/production.vars`, so those files should eventually hold the
     Merqify values.
 
+### Amendment 2 (from the environment-variable audit): gaps 1–3
+
+- **Gap 1 (R30a).** `configure-env` now also pushes `S3_*` and `CDN_BASE_URL` to the GitHub
+  environment, for `production` only (`PRODUCTION_GITHUB_ALSO`).
+  - Why: `fill-product-images.yml` runs daily under `environment: production` and reads those six
+    from GitHub. GitHub production holds old Nocaped values today, so after the move it would have
+    kept writing into the old bucket.
+  - Checked: the production dry run lists all six as GitHub secrets, and the staging dry run lists
+    none.
+- **Gap 2 (R33, R34).** Dev also used Nocaped R2: bucket `aheed-images-dev` behind
+  `images.dev.aheedfoodcentre.nocaped.com`. The runbook now:
+  - creates a Merqify `aheed-images-dev` bucket at `images-dev.merqify.com`;
+  - lists the new dev keys for `.env`/`.dev.vars`;
+  - puts the old dev bucket in "Freeing Nocaped".
+
+  While editing, the runbook's Development section showed a pairing nobody had carried over:
+  **staging and production image hosts have a hotlink (referer) rule, and the dev host has none** so
+  images load under `localhost`. The owner list now asks for the same pairing on the Merqify hosts,
+  and the Development table shows old and new hosts side by side.
+- **Gap 3.** Corrected the false "`secrets/staging.vars` lacks the S3 keys" in `plan.md`, this file
+  and the runbook. All five are present (bucket `aheed-images-staging`).
+
 ## Decisions taken during the build
 
 - **The schema text is the source of foreign keys, not `Prisma.dmmf`.** With
@@ -155,9 +177,14 @@ it also carries `#1324`'s Document commit (`237bd37`: roadmap row 1.186.0, hando
 - **`createMany` on the Neon WebSocket adapter with original ids** is untested here. Values Prisma
   returns from `findMany` (DateTime, enums, Decimal if any) go straight back into `createMany`.
   Watch for a type complaint on the first real run.
-- **Image copy (R18) needs source S3 keys that `secrets/staging.vars` does not hold.** It also needs
-  the old Nocaped R2 to answer, and it returned 403 on public reads at `#1323`'s opening. If the
-  source reads fail, generated `webp` images are reported missing. Placeholders are restored.
+- **Image copy (R18) reads the old bucket with the `S3_*` keys already in `secrets/staging.vars`.**
+  - **Corrected 2026-10-29:** an earlier note here said the file lacked them. That came from a key
+    listing whose pattern skipped names containing a digit. The env-file audit shows all five
+    present, with bucket `aheed-images-staging`.
+  - It still needs the old Nocaped R2 to answer. R2 returned 403 on public reads when `#1323` was
+    opened, but the S3 API with these keys was not tested.
+  - If the source reads fail, generated `webp` images are reported missing, and placeholders are
+    restored.
 - **The image `contentType` comes from the key's extension.** The source's own `content-type` header
   is not carried over.
 - **`R24`–`R27` (live staging) cannot run until the owner's setup exists**: the Merqify account on
