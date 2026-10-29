@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.151.0"
-updated: 2026-10-28
+version: "1.152.0"
+updated: 2026-10-29
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,15 +39,17 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-29 (`#1324` Ship, paused): PR #1327 into `staging` is OPEN, CI GREEN, NOT MERGED.** Branch
-  `feature/event-gated-jobs` (pushed), rebased onto `docs/carry-forward-1319`, so the PR also lands that
-  handoff. Spec, build notes and validation record: `specs/2026-10-28-event-gated-jobs/`.
+- **2026-10-29 (`#1324` Document): `#1324` is MERGED TO STAGING (PR #1327, `57ede8f`) but NOT
+  DEPLOYED.** `deploy-staging` run 40814195702 passed quality and failed at Deploy to Workers with the
+  same Free-plan refusal as `#1319` (`code 100328`, `#1323`). Staging still serves `9a32058`. Spec,
+  build notes and validation record: `specs/2026-10-28-event-gated-jobs/`; roadmap row 1.186.0.
+  `#1324` is `In Review`.
   - **Validated in-session (not independent).** Every row passes except **R25 (unverified)**: a
-    browser-paid Stripe Checkout must flip the return page to confirmed. No Chrome extension was
-    connected.
-  - **Merge is the owner's call** (`gh pr merge 1327 --squash`; auto mode blocks merges). After it:
-    move `#1324` to In Review, check `deploy-staging`, then `/document`. **`deploy-staging` will fail
-    until `#1323`**, and promotion to `main` waits for `#1289` and `#1323`.
+    browser-paid Stripe Checkout must flip the return page to confirmed. Check it on staging after
+    the move.
+  - **This note is on the local branch `docs/carry-forward-1324`** (cut from `origin/staging` after
+    the merge). **The next slice branches from it, not from `origin/staging`.** Promotion to `main`
+    waits for `#1289` and `#1323`.
   - **Why it matters:** the 15-minute `workers/scheduler` tick woke each Neon database 96 times a day
     with zero traffic (about 8 h of compute, ~61 CU-hours a month at 0.25 CU). That is a likely large
     share of production's quota breach (`#1289`).
@@ -87,8 +89,7 @@ reconciliation. If overall project state did not materially change, leave this f
   - **Validated in the building session (not independent).** The record is in
     `specs/2026-10-28-rbac-four-views/build-notes.md`. The dev database has the new demo roster.
     New issue: `#1321` (platform onboarding page returns 500 after about 83 s on dev).
-  - **This note is on the local branch `docs/carry-forward-1319`** (cut from `origin/staging` after
-    the merge). **The next slice branches from it, not from `origin/staging`.**
+  - Its carry-forward branch `docs/carry-forward-1319` reached `staging` with PR #1327.
 
 - **2026-10-28 (`#1319` Build), kept for its standing facts.** Spec and build notes:
   `specs/2026-10-28-rbac-four-views/`.
