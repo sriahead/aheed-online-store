@@ -40,8 +40,10 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **2026-10-29 (`#1323` Build, before Validate): the hosting move is BUILT, NOT VALIDATED and NOT
-  MERGED.** Branch `feature/merqify-platform-move` (local; spec `418235b`, implementation `2c16f31`)
-  was cut from `docs/carry-forward-1324`, so it carries `#1324`'s Document commit too. Spec and build
+  MERGED.** Branch `feature/merqify-platform-move` is **pushed, with no PR yet**. The spec started at
+  `418235b` and the implementation at `2c16f31`; amendments 1–5 and the env-audit fixes followed, and
+  `git log` has the latest. It was cut from `docs/carry-forward-1324`, so it carries `#1324`'s
+  Document commit too. Spec and build
   notes: `specs/2026-10-29-merqify-platform-move/`. Runbook: `docs/developer-portal/env-setup.md`,
   "Merqify account". `#1323` is `In Progress`.
   - **Owner direction:**
@@ -91,14 +93,40 @@ reconciliation. If overall project state did not materially change, leave this f
       reached it.
     - **Every role on old staging belongs to an `@example.com` account**, so the new databases need
       `scripts/grant-role.ts` for a first admin.
+  - **Neon state, seen in the owner's console on 2026-10-29.**
+    - The Merqify organization holds `Shoplocal`, `Shoplocal Staging`, `uk-location-reference`,
+      `Aheed Food Centre` and `Aheed Food Centre Staging`, all in London.
+    - `Shoplocal Staging`'s default branch is named **`staging`**, with children **`dev`** and
+      **`scratch`**.
+    - **Both children auto-expire around 2026-11-28.** The owner cannot remove the expiry and asked
+      to be reminded (memory `project-neon-dev-branch-expiry`). `dev` is rebuilt from the seed if it
+      lapses.
+    - **The owner confirmed `scratch` and `public` have 0 tables.** "Reset from parent" on `scratch`
+      gives a clean slate only while `staging` is still empty, so validate **before** the real
+      staging fill.
+  - **The env files exist, with every secret blank, and git ignores them.** They are
+    `secrets/scratch-target.vars` (Validate only; two URLs), `secrets/merqify-staging.vars` and
+    `secrets/merqify-production.vars`. A blank required value makes `configure-env` and the copy
+    script refuse, which was checked. **The owner is filling them in.**
   - **Next:** `/clear`, then Validate on Sonnet 5.
-    - The migration's `--apply` has **never run**, so validate it against a disposable database
-      first.
-    - R24–R27 (live staging) wait for the owner's setup, which must create the **Access application
-      for `docs.merqify.com` before the staging secrets move** (`#1328`).
-  - **Follow-ups:** `#1328` (docs Access guard), `#1329` (`www.aheedfoodcentre.co.uk` through
-    Cloudflare for SaaS), `#1330` (the client's real catalogue and details, waiting on the client's
-    files). Investigation page: https://claude.ai/artifact/XLdwB3PjYGMFmjYHZUtKYw (private).
+    1. The owner fills in `secrets/scratch-target.vars` with the `scratch` direct and pooled URLs.
+    2. The owner runs `migrate status`, then `migrate deploy`, against `scratch` (auto mode blocks
+       migrations): `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<scratch direct> DATABASE_URL=<scratch direct> npx prisma migrate …`.
+    3. `/validate` runs the copy for real against `scratch`: R7–R20, R12a, the staging and
+       production targets, and a "Reset from parent" between runs. **`--apply` has never run.**
+    4. The live rows R24–R28 wait for the owner's Merqify setup: Workers Paid; **the Access
+       application for `docs.merqify.com` before any secret is pushed** (`#1328`); the three image
+       buckets with the hotlink rule on staging and production only; scoped tokens; the filled
+       `merqify-*.vars` files. Report them **unverified** until then.
+  - **Follow-ups (all `P10`/Backlog):**
+    - `#1328`: docs Access guard;
+    - `#1329`: `www.aheedfoodcentre.co.uk` through Cloudflare for SaaS;
+    - `#1330`: the client's real catalogue and details, waiting on the client's files;
+    - `#1331`: the Aheed dedicated cell;
+    - `#1332`: delete the demo accounts at go-live;
+    - `#1217`, now updated: Cloudflare Email Service, no Resend.
+
+    The next slices after `#1323`: `#1331` (Aheed cell), then `#1217` (email). Investigation page: https://claude.ai/artifact/XLdwB3PjYGMFmjYHZUtKYw (private).
 
 - **2026-10-29 (`#1324` Document): `#1324` is MERGED TO STAGING (PR #1327, `57ede8f`) but NOT
   DEPLOYED.** `deploy-staging` run 40814195702 passed quality and failed at Deploy to Workers with the
