@@ -149,3 +149,44 @@ own runs. CI is the ground truth.
   outcome).
 - **#946** needs the heartbeat constraint noted on the issue itself. Posting a comment there was not
   done from this session; the constraint is written in #1325 and in `plan.md`.
+
+## Validation record (2026-10-29): IN-SESSION, NOT INDEPENDENT
+
+The owner's standing preference (validate in place below ~60% context) applied: no Clear, no Sonnet
+switch, run by the same Opus context that built the slice. Treat this as a careful self-check, not
+an independent validation. CI on the PR remains the authority.
+
+**Pre-flight at `22855e8`:** `npm run lint` 0, `format:check` 0, `npx tsc --noEmit` 0,
+`npx vitest run --maxWorkers=4` 364 files / 5,244 tests passed, `npm run build` 0. Process env had
+neither `DIRECT_URL` nor `DATABASE_URL`; `.env` and `.dev.vars` both name the DEV Neon endpoint
+(`ep-dry-morning…`), distinct from `secrets/staging.vars` and `secrets/production.vars`.
+
+| Req | Result | Evidence |
+|---|---|---|
+| R1 | PASS | Six constants, no imports; no key literal in `workers/scheduler/src`; both scheduler files import `job-signal-keys`. |
+| R2 | PASS | `select-jobs.ts` pure; `index.ts` has exactly one export (`export default`). |
+| R3–R6 | PASS | Every branch case named in `validation.md` exists in `tests/scheduler.test.ts` and passes. |
+| R7 | PASS | Handler cases (absent binding, throwing first `get`, log-line shape with the amended `cron=.+` regex) pass. |
+| R8 | PASS | Three `crons = ["*/15 * * * *", "0 3 * * *"]` lines. |
+| R9 | PASS, case (b) | Local-simulation top-level block in both files; commented owner placeholders for both envs in both files. Owner-gated: #1325. |
+| R10 | PASS (substance) | The only code reading the binding is `lib/job-signals.ts`. **Spec-wording note:** the row's literal `grep -rln JOB_SIGNALS app lib …` also lists `app/(admin)/staff/runbook/docs.ts`, the generated KMS bundle that embeds `env-setup.md`'s prose. That is the #539 absence-grep trap, not a defect. Unit cases all pass. |
+| R11–R13 | PASS | `tests/job-signals.test.ts` cases pass. |
+| R14 | PASS (unit + live) | Under `npm run preview`, a curl/`fetch`-driven guest checkout (`AHE-20261029-Y94E82`, COLLECTION, Stripe test mode) wrote `payment-sweep:due-at = 2026-10-29T01:39:18.308Z`, 40 min after the order. The key was deleted first, because by design a later instant never overwrites an earlier stored one. |
+| R15 | PASS (unit + live, non-null branch) | `POST /api/jobs/reconcile-payments` returned `nextDueAt` and local KV held the identical value, which also ran `findNextPaymentSweepDueAt`'s relation filter against real Postgres. The `null`→delete branch is unit-only: the dev DB holds a backlog of hundreds of stale pending orders, and draining it stopped after 9 runs. **Side effect: those 9 runs released 450 stale DEV orders (all expired sessions)**, exactly what a deployed sweep would do. |
+| R16, R17 | PASS | Wiring tests pass. |
+| R18 | PASS (unit + live) | Stripe test mode accepted the session (303 to `checkout.stripe.com`); retrieving it shows `expires_at` `01:34:17Z`. |
+| R19 | PASS (unit + live) | The order's `createdAt` is `00:59:17.759Z`; +35 min floored to seconds equals Stripe's `expires_at`. |
+| R20, R31 | PASS | Read. |
+| R21, R22 | PASS | Six-outcome table passes; purity / client-injection tests pass. |
+| R23 | PASS (unit + live) | Direct `checkMyPayment` calls on the unpaid order returned `{"confirmed":false}` with the right token (593 ms, consistent with a provider call) and the wrong token (199 ms). The order stayed `PENDING_PAYMENT`. |
+| R24 | PASS (read + live render) | The component renders only in the pending branch, and the page has no server-side call. The live return page showed the pending heading. |
+| **R25** | **UNVERIFIED** | Needs the Stripe-hosted page to be **paid** in a browser. The Claude-in-Chrome extension was not connected, and no API pays a Checkout Session. To run: `npm run preview`, check out, pay with `4242 4242 4242 4242`, and confirm the heading flips within 10 s with exactly one `CONFIRMED` timeline transition. |
+| R26–R29 | PASS | Unit tests pass. |
+| R30 | PASS (live) | `demo-admin` and `demo-store-admin`: pending order shows only "Check payment now", confirmed order (`AHE-20260929-74F9X4`, `@example.com` buyer) shows only "Resend confirmation email". Pressing each (form replay): "…does not report this order as paid (session open, payment unpaid). Nothing was changed." and "Confirmation email sent…", plus log `confirmation email resent by staff order=AHE-20260929-74F9X4`; the pending order was unchanged. `demo-staff`: neither control on either order. |
+| R32–R34 | PASS | Read. |
+| R35 | PASS | Every listed requirement has its named tests. |
+| R36 | PASS | `CHANGELOG.md` entry names #1324. |
+| R37 | PASS locally | All local gates pass; `kms:validate`, `kms:check-generated`, `kms:assemble:internal` and the internal site build passed at the build-notes commit, with no doc change since. CI pending. |
+
+**Live check not run:** gated ticks on a deployed scheduler (needs #1325's namespaces). The test
+order `AHE-20261029-Y94E82` was left pending on dev; the sweep releases it once its session expires.
