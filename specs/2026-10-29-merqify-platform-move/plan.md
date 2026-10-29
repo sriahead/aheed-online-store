@@ -71,6 +71,23 @@ slice stops using.
 - **No demo logins in the new production database.** Staging gets its demo roster back from
   `npm run demo:accounts -- add`, which also lands `#1319`'s roles.
 
+## Amendment (owner, 2026-10-29, after Build)
+
+"Even `uk-location-reference` should be from the Merqify Neon account. The aim is to move
+everything to Merqify and free up Nocaped." So:
+
+- **The reference database is rebuilt** from the public datasets in a new project in the Merqify
+  Neon account, rather than copied. The repo's sync script is the documented bootstrap, and a fresh
+  primary also ends `#1123` (the old "direct" URL names a read replica).
+- **The dev database moves** too, seeded the normal way.
+- **`nocaped` addresses inside copied data are flagged, not rewritten**: two `VendorConfig`
+  addresses on old staging. Inventing replacement email addresses is not ours to do.
+- **`configure-env` pushes the two reference URLs, and runs wrangler against the file's own
+  account.** Before this, it ran wrangler under the machine's login, which on this machine is an
+  unrelated account (Cobrasmash): Worker secrets meant for Merqify would have landed there.
+- **A "Freeing Nocaped" checklist** lists what can be deleted once both environments are proven,
+  each item with owner approval. Requirements R28–R34; the gates are renumbered R35–R36.
+
 ## Scope (this slice)
 
 1. **Host configuration:**
@@ -144,8 +161,8 @@ The Nocaped Workers keep serving their last build, and the old Neon projects and
   - confirm Merqify is on Workers Paid; create the two R2 buckets with S3 keys and their custom
     domains;
   - per-environment scoped API tokens;
-  - the new Neon staging and production projects in London, with the reference database new or
-    kept;
+  - the new Neon staging, production, reference and dev projects in London (amendment: the
+    reference database moves too);
   - a fresh `BETTER_AUTH_SECRET` per environment;
   - a Cloudflare Access application for `docs.merqify.com`;
   - the Stripe webhook and Google redirect URIs re-registered for the new hosts;

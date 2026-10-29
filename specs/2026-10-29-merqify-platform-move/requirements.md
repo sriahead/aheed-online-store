@@ -143,7 +143,52 @@ R25. `https://srimart-staging.merqify.com/` serves SriMart's storefront, and
 R26. The new staging database holds 245 `aheed-food-centre` products and zero `Order` rows.
 R27. One product image URL under `https://images-staging.merqify.com/` returns HTTP 200.
 
+## Amendment (owner, 2026-10-29): everything moves to Merqify, Nocaped is freed
+
+The aim is that nothing the platform uses remains in the Nocaped Cloudflare account or the old Neon
+account, including the `uk-location-reference` database and the dev database.
+
+R28. The "Merqify account" section of `docs/developer-portal/env-setup.md` covers the reference
+     database:
+     - it is **rebuilt** in a new reference project in the Merqify Neon account (`eu-west-2`), one
+       project shared by staging and production as today;
+     - the steps are `npm run ref:migrate` against its direct URL, then
+       `scripts/sync-reference-data.ts --source code-point-open` and `--source os-open-names`;
+     - `UK_LOCATION_REF_DIRECT_URL` must name the project's **primary** (`pg_is_in_recovery()` is
+       false), which closes `#1123`'s replica problem.
+R29. `scripts/configure-env.mjs` pushes, when present and without requiring them (an old file
+     without them still works):
+     - `UK_LOCATION_REF_DIRECT_URL` as a GitHub environment secret;
+     - `UK_LOCATION_REF_DATABASE_URL` as a Worker secret.
+
+     `--dry-run` lists both when present.
+R30. `scripts/configure-env.mjs` runs every `wrangler` command with `CLOUDFLARE_ACCOUNT_ID` and
+     `CLOUDFLARE_API_TOKEN` set from the **file being pushed**, never from the local wrangler login
+     or the shell. It prints the last six characters of that account ID, in both the dry run and the
+     real run, before pushing anything.
+R31. The migration script's plan output lists, as warnings, every copied text value containing
+     `nocaped`, with its model, field and count. The values are copied unchanged, and the runbook
+     says where to replace them after the cut-over.
+R32. `prisma/seed.ts` and `prisma/manifests/example.json` contain no `nocaped`.
+     `secrets/example.vars` says `RESEND_FROM_EMAIL` is an address on a Resend-verified
+     `merqify.com` domain.
+R33. The runbook has a "Dev database" step: a new dev project in the Merqify Neon account,
+     `prisma migrate deploy` then `npm run db:seed` against it, and `.env` and `.dev.vars` both
+     pointed at it.
+R34. The runbook has a "Freeing Nocaped" checklist. It names every resource in the Nocaped
+     Cloudflare account and the old Neon account the platform used:
+     - the Workers `aheed-store-staging`, `aheed-store-production`, `aheed-scheduler-staging`,
+       `aheed-scheduler-production` and `aheed-kms-internal`;
+     - the R2 buckets, the Access application and the login-wide API token;
+     - the dev, staging, production and reference Neon projects;
+     - the Stripe webhook endpoints and Google redirect URIs on `nocaped.com` hosts;
+     - the Resend domain;
+     - the `nocaped.com` zone.
+
+     It states that each is removed only after both environments are validated on Merqify, and
+     only with the owner's approval.
+
 ## Gates
 
-R28. `CHANGELOG.md` updated (Gate 4).
-R29. `lint`, `typecheck`, `test` and `format:check` all remain green after this slice.
+R35. `CHANGELOG.md` updated (Gate 4).
+R36. `lint`, `typecheck`, `test` and `format:check` all remain green after this slice.
