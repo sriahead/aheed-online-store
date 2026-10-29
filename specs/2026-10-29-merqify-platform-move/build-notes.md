@@ -62,6 +62,38 @@ it also carries `#1324`'s Document commit (`237bd37`: roadmap row 1.186.0, hando
   reads the **real** `wrangler.toml`, scheduler and docs configs. The old tests only checked a
   fixture, so R1–R5 had no test against the real files before.
 
+### Amendment build (spec `51b8842`): everything moves, Nocaped is freed (R28–R34)
+
+- **`scripts/configure-env.mjs` (R29, R30).**
+  - New optional keys: `UK_LOCATION_REF_DIRECT_URL` (GitHub environment secret) and
+    `UK_LOCATION_REF_DATABASE_URL` (Worker secret). Both are optional so an old file still pushes.
+  - **Every `wrangler` spawn, including the `whoami` check, now runs with `CLOUDFLARE_ACCOUNT_ID`
+    and `CLOUDFLARE_API_TOKEN` from the file being pushed.** It prints
+    `Cloudflare target: account …<last 6>` in both the dry run and the real run.
+  - **Why this matters:** before the change it ran wrangler under the machine's stored login, which
+    on this machine is the unrelated Cobrasmash account, so Merqify's Worker secrets would have been
+    written there. The dry run was checked with dummy files, with and without the reference keys.
+- **`scripts/migrate-to-new-neon.ts` (R31).** The plan prints "WARNING: copied values still naming
+  nocaped". Against old staging that is `VendorConfig.senderEmail: 2`. The third sender address and
+  the one `contactEmail` hit belong to the retired superstore and are not copied.
+- **`prisma/seed.ts` and `prisma/manifests/example.json` (R32).** Sender emails are now
+  `orders@aheed.merqify.com` and `orders@srimart.merqify.com`, and the example host is
+  `example-grocer.merqify.com`. The invalid fixture and the test's replace regex follow.
+  `secrets/example.vars` explains `RESEND_FROM_EMAIL` and the two optional reference keys.
+- **Runbook (R28, R33, R34).** `env-setup.md` "Merqify account" gains:
+  - four Neon projects in the owner list;
+  - the account-override rule for `configure-env` and for hand-set secrets;
+  - a "Reference database (rebuilt, not copied)" section: `ref:migrate` with **both** reference
+    variables set to the new primary (the reference schema declares `url` and `directUrl`), the two
+    `sync-reference-data.ts` sources, `verify-reference-coverage.ts`, and the
+    `pg_is_in_recovery()` check for `#1123`;
+  - cut-over step 9, replacing the copied `nocaped` addresses;
+  - a "Dev database" section: migrate, `db:seed`, `demo:accounts`, and `.env` plus `.dev.vars`;
+  - the "Freeing Nocaped" table: every resource, each removed only after both environments are
+    validated and with owner approval. It also notes that `protected-hosts.ts` reads exactly
+    `secrets/staging.vars` and `secrets/production.vars`, so those files should eventually hold the
+    Merqify values.
+
 ## Decisions taken during the build
 
 - **The schema text is the source of foreign keys, not `Prisma.dmmf`.** With
@@ -139,5 +171,11 @@ it also carries `#1324`'s Document commit (`237bd37`: roadmap row 1.186.0, hando
   (`code 100328`). The docs deploy dropping its old `docs.internal…nocaped.com` route may tear down
   the old docs custom domain, or fail on a zone it cannot see. Either way nothing reaches a merqify
   host. Prefer moving the secrets (runbook steps 1–5) before merging.
+- **`wrangler secret put` against a Worker that does not exist yet in the Merqify account** may
+  prompt to create it, or fail, because `configure-env` pipes the value through stdin. If it
+  reports no such Worker, run `deploy-staging` once (it creates the Worker; the app will error
+  without its secrets, which is harmless on a new host), then re-run `configure-env`. Untested.
+- **The reference rebuild depends on the public dataset downloads** in `sync-reference-data.ts`
+  (Code-Point Open, OS Open Names) still being reachable. This was not exercised in this build.
 - **Old staging's `localhost` `VendorDomain` row** is deliberately not copied. Local preview against
   a new database has to add its own.

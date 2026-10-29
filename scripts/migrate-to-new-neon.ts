@@ -254,6 +254,24 @@ function printPlan(plan: Plan) {
   console.log(
     `${"VendorDomain (generated)".padEnd(28)}${String(plan.domains.length).padStart(6)}   ${plan.domains.map((d) => d.host).join(", ")}`,
   );
+  // R31 — the move frees the nocaped.com domain, so any copied value still naming it (store
+  // sender and contact emails on old staging) is listed for the owner to replace after cut-over
+  // at /staff/storefront. Copied unchanged: inventing replacement addresses is not ours to do.
+  const stale = new Map<string, number>();
+  for (const model of plan.order) {
+    for (const row of plan.rows.get(model)!) {
+      for (const [field, value] of Object.entries(row)) {
+        if (typeof value === "string" && value.toLowerCase().includes("nocaped")) {
+          stale.set(`${model}.${field}`, (stale.get(`${model}.${field}`) ?? 0) + 1);
+        }
+      }
+    }
+  }
+  if (stale.size > 0) {
+    console.log("\nWARNING: copied values still naming nocaped (replace after the cut-over):");
+    for (const [where, count] of stale) console.log(`  ${where}: ${count}`);
+  }
+
   const skipped = Object.entries(MODEL_PLAN).filter(([, p]) => p.class === "skip");
   console.log(`\nskipped models (${skipped.length}):`);
   for (const [model, p] of skipped) console.log(`  ${model}: ${p.reason}`);

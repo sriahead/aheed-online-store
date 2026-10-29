@@ -54,6 +54,13 @@ reconciliation. If overall project state did not materially change, leave this f
       `images[-staging]`, and `docs`.
     - **Old production (`#1289`) is never read.** The new Neon account makes `#1289` moot for
       deploys.
+    - **Amendment (spec `51b8842`): EVERYTHING moves and Nocaped is freed.**
+      - The `uk-location-reference` database is rebuilt from public data in the Merqify Neon
+        account; its new primary also fixes `#1123`. The dev database moves too.
+      - **`configure-env` now targets the account named in the file**, not the machine's
+        `wrangler login`.
+      - The "Freeing Nocaped" checklist in `env-setup.md` lists what to delete once both
+        environments are proven, each with owner approval.
   - **Four Cloudflare accounts:**
     - **Nocaped:** old; Free plan, cannot deploy.
     - **Merqify:** the target.

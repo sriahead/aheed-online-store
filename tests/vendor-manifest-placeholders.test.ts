@@ -27,7 +27,7 @@ function readyManifest(overrides: Record<string, unknown> = {}): Manifest {
     .replace(/"\[PHONE\]"/g, '"01234 567890"')
     .replace(/"\[EMAIL\]"/g, '"hello@shop.example.com"')
     .replace(/"\[NUMBER\]"/g, '"12345678"')
-    .replace(/example-grocer\.nocaped\.com/g, "shop.example.com");
+    .replace(/example-grocer\.merqify\.com/g, "shop.example.com");
   return manifestSchema.parse({ ...JSON.parse(text), ...overrides });
 }
 

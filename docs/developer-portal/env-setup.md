@@ -113,12 +113,14 @@ environment.
 5. **Optional:** `JOB_SIGNALS` KV namespaces (`#1325`). Until then every scheduler tick runs every
    job.
 
-**In the new Neon account:** two projects, staging and production, in **AWS London
-(`eu-west-2`)**.
-- Each gives a **direct** URL (`DIRECT_URL`) and a **pooled** one, the host with `-pooler`
-  (`DATABASE_URL`).
-- `pg_trgm` is created by a migration, so nothing is set up by hand.
-- The UK location reference database stays where it is: `UK_LOCATION_REF_*` is unchanged.
+**In the new Neon account (Merqify):** four projects, all in **AWS London (`eu-west-2`)**.
+- **Staging and production**: each gives a **direct** URL (`DIRECT_URL`) and a **pooled** one, the
+  host with `-pooler` (`DATABASE_URL`). `pg_trgm` is created by a migration, so nothing is set up by
+  hand.
+- **`uk-location-reference`**: one project shared by staging and production, as today. Its
+  **primary** direct URL is `UK_LOCATION_REF_DIRECT_URL` (never a read replica, `#1123`) and its
+  pooled URL is `UK_LOCATION_REF_DATABASE_URL`. Both go in **both** `merqify-*.vars` files.
+- **Dev**: for local work only (see "Dev database" below).
 
 **Elsewhere:**
 - **Stripe:** register a webhook endpoint for `https://<aheed host>/api/webhooks/stripe` per
@@ -139,16 +141,45 @@ npm run configure-env -- staging --file secrets/merqify-staging.vars
   - `BETTER_AUTH_URL` and `CDN_BASE_URL` for the new hosts;
   - the new Neon URLs, R2 values and scoped token.
 - **Carry over unchanged:** Resend, Google and Stripe keys (`STRIPE_WEBHOOK_SECRET` excepted).
-- **Set by hand on the new Workers** (after `wrangler whoami`). `configure-env` does not push these:
-  - `JOB_INVOCATION_TOKEN`, the same value on the app Worker and on
+- **`configure-env` pushes to the account the FILE names.** It runs every `wrangler` command with
+  that file's `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, never the machine's login, and
+  prints `Cloudflare target: account …<last 6>` first. Check that suffix against the Merqify
+  account ID before letting it run. It also pushes `UK_LOCATION_REF_DIRECT_URL` (GitHub) and
+  `UK_LOCATION_REF_DATABASE_URL` (Worker) when they are in the file.
+- **Set by hand on the new Workers.** `configure-env` does not push these, and they need the same
+  account override:
+  `CLOUDFLARE_ACCOUNT_ID=<merqify id> CLOUDFLARE_API_TOKEN=<scoped token> npx wrangler secret put …`.
+  - `JOB_INVOCATION_TOKEN`: the same value on the app Worker and on
     `--config workers/scheduler/wrangler.toml`;
-  - `UK_LOCATION_REF_DATABASE_URL`;
-  - `WORKERS_AI_PLAN` if used.
+  - `WORKERS_AI_PLAN`, if used.
+
+### Reference database (rebuilt, not copied)
+
+The reference data is public (Code-Point Open and OS Open Names), so the new project is filled
+from source by the repo's own sync, the same script the monthly workflow runs. Run it once, before
+the staging cut-over. Both environments share the project.
+
+```bash
+# host check first: the datasource line must name the NEW reference project
+# prisma/reference/schema.prisma reads BOTH variables, so set both to the new primary direct url
+env -u UK_LOCATION_REF_DIRECT_URL -u UK_LOCATION_REF_DATABASE_URL \
+  UK_LOCATION_REF_DIRECT_URL=<new primary direct url> UK_LOCATION_REF_DATABASE_URL=<same url> \
+  npm run ref:migrate
+npx tsx scripts/sync-reference-data.ts --env-file secrets/merqify-staging.vars --source code-point-open
+npx tsx scripts/sync-reference-data.ts --env-file secrets/merqify-staging.vars --source os-open-names
+npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.vars   # exits 0, missing=[]
+```
+
+- Confirm the direct URL names the **primary**: `SELECT pg_is_in_recovery()` returns `false`.
+  The old "direct" URL named a replica, so the monthly sync would have failed from 2026-11-03
+  (`#1123`).
+- `UK_LOCATION_REF_POSTCODE_AREAS` (`MK,RG`) is unchanged. It is a GitHub environment
+  **variable** and a `wrangler.toml` var, not a secret.
 
 ### Staging cut-over, in order
 
-1. **The owner's setup above**, the Access application included. Check it with `whoami` and in the
-   dashboard.
+1. **The owner's setup above**, the Access application and the reference database included. Check
+   it with `whoami` and in the dashboard.
 2. **Migrate the schema into the new staging database** from this branch:
    `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<new direct> DATABASE_URL=<new direct> npx prisma migrate deploy`.
    Read `prisma migrate status`'s datasource host first; it must be the **new** host.
@@ -175,6 +206,28 @@ npm run configure-env -- staging --file secrets/merqify-staging.vars
    - store roles use `--vendor aheed-food-centre --role ADMIN`;
    - for the demo roster on staging only, run `npm run demo:accounts -- add` against the new
      staging database.
+9. **Replace the copied `nocaped` addresses.** The migration's plan lists them under "WARNING:
+   copied values still naming nocaped". On old staging these are the two stores'
+   `VendorConfig.senderEmail` values. Set real addresses at `/staff/storefront` on each store's new
+   host. Sending works only from a domain verified in Resend, which means `merqify.com` once its DNS
+   records are in the Merqify zone (`#104`).
+
+### Dev database
+
+Local development also leaves the old Neon account. Create a dev project in the Merqify Neon account
+(London), then point **both** `.env` and `.dev.vars` at it: `DATABASE_URL` pooled, `DIRECT_URL`
+direct, and the reference URLs from the shared reference project. Then:
+
+```bash
+# per-variable check first (CLAUDE.md): nothing exported may override the files
+npx prisma migrate status          # the datasource line must name the NEW dev host
+npx prisma migrate deploy
+npm run db:seed                    # local stores, localhost hosts, hand-seeded catalogue
+npm run demo:accounts -- add       # local demo logins
+```
+
+Dev is filled by the seed, not by `migrate-to-new-neon.ts`, whose hosts are the deployed
+`merqify.com` names. The seed writes the `localhost` hosts that `npm run preview` resolves.
 
 ### Production cut-over (owner approval at every step)
 
@@ -197,6 +250,27 @@ read, and the new production database is filled from old staging (owner decision
 - **Deploying to Nocaped again** also needs this slice's `wrangler.toml` routes reverted, and
   Workers Paid restored on that account.
 - **Revoke the old login-wide token** only after both environments run on Merqify.
+
+### Freeing Nocaped
+
+Remove these **only after both staging and production are validated on Merqify, and only with the
+owner's approval, one item at a time**. Until then they are the rollback.
+
+| Where | What | Notes |
+|---|---|---|
+| Nocaped Cloudflare account | Workers `aheed-store-staging`, `aheed-store-production`, `aheed-scheduler-staging`, `aheed-scheduler-production`, `aheed-kms-internal` | The schedulers still fire their crons against the old hosts until deleted. |
+| Nocaped Cloudflare account | R2 buckets `aheed-images-staging`, `aheed-images-production` | Only after the image copy is verified on both environments. |
+| Nocaped Cloudflare account | The Cloudflare Access application for `docs.internal.aheedfoodcentre.nocaped.com` | Delete the docs Worker's route first. |
+| Nocaped login | The login-wide `CLOUDFLARE_API_TOKEN` in the old `secrets/*.vars` and `.dev.vars` | It also reaches the Aheed Food Centre account. |
+| Old Neon account | Projects dev (`ep-dry-morning`), staging (`ep-empty-scene`), production (`ep-young-glitter`), reference | Production is unreadable (`#1289`); take a backup if the quota allows, or confirm nothing in it is wanted. |
+| Stripe | Webhook endpoints on `aheedfoodcentre.nocaped.com` and `staging.aheedfoodcentre.nocaped.com` | Keep until no checkout can return to an old host. |
+| Google Cloud console | OAuth redirect URIs on `nocaped.com` hosts | |
+| Resend | Any domain or sender on `aheedfoodcentre.nocaped.com` | After `RESEND_FROM_EMAIL` moves to `merqify.com`. |
+| Cloudflare | The `nocaped.com` zone and domain registration | Owner decision. It also appears in `lib/running-costs.ts` as a running cost. |
+
+After the deletions, switch the local files over too: rename or replace `secrets/staging.vars` and
+`secrets/production.vars` with the Merqify values. `scripts/lib/protected-hosts.ts` reads exactly
+those two paths, so once they name the Merqify databases, those are the protected ones.
 
 ## One Neon project per environment (isolation)
 

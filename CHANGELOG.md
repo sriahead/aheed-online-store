@@ -13,6 +13,9 @@ every branch merges.
   - **`scripts/migrate-to-new-neon.ts`** fills a new, empty database from the old staging one. It defaults to a dry run. It copies the two stores, real users and **10% of the products** (245 for Aheed, plus SriMart's 3). It leaves behind test orders, carts, payments, logs and every `@example.com` account. It keeps the original ids, copies the images and re-counts everything at the end.
   - **`scripts/grant-role.ts`** gives an existing user platform or store admin rights. A freshly migrated database has no admin, because every role on old staging belonged to a demo account.
   - **Aheed Superstore retired**: its route, provisioning script, manifest and test are gone.
+  - **The UK location reference database and the dev database move too.** Reference data is rebuilt in the new Neon account from the public datasets with the existing sync script. Its direct URL must name the primary, which also fixes the replica problem in `#1123`. Dev is migrated and seeded.
+  - **`configure-env` now runs wrangler against the account named in the file being pushed**, not the machine's login, and prints that account first. It also pushes the two reference database URLs.
+  - **"Freeing Nocaped" checklist**: every old Worker, bucket, token, Neon project and external registration, each removed only after both environments are proven and with owner approval.
   - **Runbook**: `docs/developer-portal/env-setup.md`, "Merqify account": what the owner creates (the Access application for the docs site first), the `secrets/merqify-*.vars` files, the staging cut-over steps, production order and rollback.
 
   Nothing changes until the owner's Merqify and Neon setup exists and the secrets move. No schema change.
