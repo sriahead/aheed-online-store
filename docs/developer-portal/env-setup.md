@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.22.0"
-updated: 2026-10-23
+version: "1.23.0"
+updated: 2026-10-29
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -63,6 +63,140 @@ local env file proves nothing about a Worker: `curl -s https://<any vendor host>
 return `Allow: /` plus a `Sitemap:` line naming **that same host** in production, and `Disallow: /`
 everywhere else. Checking a single host cannot detect the multi-tenancy half, so check a second
 vendor.
+
+## Merqify account (#1323, 2026-10-29)
+
+**Hosting moves from the Nocaped Cloudflare account to the Merqify account, and the databases move
+to a new Neon account.** The Nocaped account dropped to the Workers Free plan, which refuses this
+app's `cpu_ms = 300` limit (`code 100328`), so nothing can deploy there.
+
+Spec: `specs/2026-10-29-merqify-platform-move/`. The old Workers, old Neon projects and old
+`secrets/staging.vars` / `secrets/production.vars` are **not touched**; they are the rollback.
+
+| Purpose | Staging | Production |
+|---|---|---|
+| Aheed Food Centre | `aheed-staging.merqify.com` | `aheed.merqify.com` |
+| SriMart (demo store) | `srimart-staging.merqify.com` | `srimart.merqify.com` |
+| Images (`CDN_BASE_URL`) | `https://images-staging.merqify.com` | `https://images.merqify.com` |
+| Internal docs (Access) | `docs.merqify.com` | |
+
+### Check which account wrangler is on, before ANY manual wrangler command
+
+This machine's `wrangler login` has pointed at an unrelated account ("Cobrasmashbc@gmail.com's
+Account"). Before every manual `wrangler secret put`, `kv namespace create` or `deploy`, run
+`npx wrangler whoami` and confirm it names the **Merqify** account. Otherwise
+`npx wrangler login` again, signed in to the browser as the Merqify account's owner. CI never uses
+the login; it deploys with `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` from the GitHub
+environment.
+
+### What the owner creates
+
+**In the Merqify Cloudflare account:**
+
+1. **Workers Paid.** Without it every deploy fails exactly as it does on Nocaped.
+2. **A Cloudflare Access application for `docs.merqify.com`, FIRST, before step 6.**
+   - Self-hosted, with a One-time PIN and an allow-list, as the old site had.
+   - `deploy-docs-internal.yml` deploys that route on every push to `staging` or `main`, using the
+     staging environment's Cloudflare secrets.
+   - The moment those secrets name Merqify, the next push publishes the internal docs. With no
+     Access application in front, ADRs and `CLAUDE.md` are on the open internet.
+3. **R2 buckets `aheed-images-staging` and `aheed-images-production`** (the names `wrangler.toml`
+   binds), each with:
+   - a **custom domain**: `images-staging.merqify.com` and `images.merqify.com`;
+   - an **R2 S3 API token** limited to that bucket.
+4. **One API token per environment, scoped to the Merqify account only.**
+   - Start from the "Edit Cloudflare Workers" template.
+   - Set Account Resources to the Merqify account and Zone Resources to `merqify.com`.
+   - Add Workers AI and R2 permissions.
+   - Never use a token that covers the whole login. The Aheed Food Centre account will sit under the
+     same login, and a login-wide token would reach the client's account.
+5. **Optional:** `JOB_SIGNALS` KV namespaces (`#1325`). Until then every scheduler tick runs every
+   job.
+
+**In the new Neon account:** two projects, staging and production, in **AWS London
+(`eu-west-2`)**.
+- Each gives a **direct** URL (`DIRECT_URL`) and a **pooled** one, the host with `-pooler`
+  (`DATABASE_URL`).
+- `pg_trgm` is created by a migration, so nothing is set up by hand.
+- The UK location reference database stays where it is: `UK_LOCATION_REF_*` is unchanged.
+
+**Elsewhere:**
+- **Stripe:** register a webhook endpoint for `https://<aheed host>/api/webhooks/stripe` per
+  environment. Its signing secret is that environment's `STRIPE_WEBHOOK_SECRET`.
+- **Google OAuth:** add each new host's `/api/auth/callback/google` as a redirect URI.
+
+### The files, and the one command per environment
+
+```bash
+cp secrets/example.vars secrets/merqify-staging.vars      # then fill in
+cp secrets/example.vars secrets/merqify-production.vars
+npm run configure-env -- staging --file secrets/merqify-staging.vars --dry-run   # names only
+npm run configure-env -- staging --file secrets/merqify-staging.vars
+```
+
+- **Fill in:**
+  - a fresh `BETTER_AUTH_SECRET` per environment;
+  - `BETTER_AUTH_URL` and `CDN_BASE_URL` for the new hosts;
+  - the new Neon URLs, R2 values and scoped token.
+- **Carry over unchanged:** Resend, Google and Stripe keys (`STRIPE_WEBHOOK_SECRET` excepted).
+- **Set by hand on the new Workers** (after `wrangler whoami`). `configure-env` does not push these:
+  - `JOB_INVOCATION_TOKEN`, the same value on the app Worker and on
+    `--config workers/scheduler/wrangler.toml`;
+  - `UK_LOCATION_REF_DATABASE_URL`;
+  - `WORKERS_AI_PLAN` if used.
+
+### Staging cut-over, in order
+
+1. **The owner's setup above**, the Access application included. Check it with `whoami` and in the
+   dashboard.
+2. **Migrate the schema into the new staging database** from this branch:
+   `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<new direct> DATABASE_URL=<new direct> npx prisma migrate deploy`.
+   Read `prisma migrate status`'s datasource host first; it must be the **new** host.
+3. **Dry run the data copy, then read its plan:**
+   `env -u DIRECT_URL -u DATABASE_URL npx tsx scripts/migrate-to-new-neon.ts --from secrets/staging.vars --to secrets/merqify-staging.vars --target staging`.
+   - Expected: Aheed 245 products plus SriMart's 3, no orders, no `@example.com` users, and two
+     generated `VendorDomain` rows.
+   - The source's S3 keys are needed in `secrets/staging.vars` for the image copy; today it has
+     none.
+4. **Copy:** the same command with `--apply --copy-images`. It ends by re-counting every model; any
+   `MISMATCH` or `MISSING` exits non-zero.
+5. **Push the secrets:** `npm run configure-env -- staging --file secrets/merqify-staging.vars`,
+   then the hand-set Worker secrets.
+6. **Re-run `deploy-staging`.** Its route check compares `wrangler.toml` with the new database's
+   `VendorDomain` rows.
+7. **Check the new hosts:**
+   - `https://aheed-staging.merqify.com/api/health` shows the commit, `db.ok`,
+     `reference.reachable` and non-empty `reference.sources`;
+   - both storefronts load, and an image under `images-staging.merqify.com` returns 200;
+   - `docs.merqify.com` shows the Access login, not a document.
+8. **Give yourself an admin login.** Sign up on `aheed-staging.merqify.com`, then:
+   - `npx tsx scripts/grant-role.ts --env-file secrets/merqify-staging.vars --email <you> --platform-admin`
+     (dry run first, then `--apply`);
+   - store roles use `--vendor aheed-food-centre --role ADMIN`;
+   - for the demo roster on staging only, run `npm run demo:accounts -- add` against the new
+     staging database.
+
+### Production cut-over (owner approval at every step)
+
+Production deploys when `staging` is promoted to `main`, so do these **before** merging the
+promotion PR:
+- steps 1–5 above with `secrets/merqify-production.vars` and `--target production`, which copies no
+  demo login;
+- step 8 for the owner's own account.
+
+Then merge the promotion and run step 7 on the production hosts. Old production (`#1289`) is never
+read, and the new production database is filled from old staging (owner decision, 2026-10-29).
+
+### Rollback
+
+- **Before the cut-over:** nothing to undo. A deploy that fails on the new account changes nothing,
+  and the Nocaped Workers keep serving their last build.
+- **After the cut-over:** push the old values back with
+  `npm run configure-env -- staging --file secrets/staging.vars` (the same for production). The old
+  Neon projects are untouched.
+- **Deploying to Nocaped again** also needs this slice's `wrangler.toml` routes reverted, and
+  Workers Paid restored on that account.
+- **Revoke the old login-wide token** only after both environments run on Merqify.
 
 ## One Neon project per environment (isolation)
 

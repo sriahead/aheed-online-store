@@ -51,19 +51,17 @@ id = "local-job-signals"
 [env.staging]
 name = "aheed-store-staging"
 
+# #1323 — hosts live on merqify.com in the Merqify Cloudflare account (the Nocaped account dropped
+# to Free and can no longer deploy). Flat names, because Universal SSL covers one subdomain level.
+# The deploy target is CLOUDFLARE_ACCOUNT_ID in the GitHub environment; nothing here names it.
 [[env.staging.routes]]
-pattern = "staging.aheedfoodcentre.nocaped.com"
+pattern = "aheed-staging.merqify.com"
 custom_domain = true
 
 # ADR-004 slice 3b — SriMart, a 2nd vendor resolved by host (VendorDomain). This staging
 # host must be declared here so `wrangler deploy` doesn't tear down the custom domain.
 [[env.staging.routes]]
-pattern = "srimart-staging.nocaped.com"
-custom_domain = true
-
-# P11 (#1265) — Aheed Superstore test vendor (3rd vendor), resolved by host (VendorDomain).
-[[env.staging.routes]]
-pattern = "aheedsuperstore-staging.nocaped.com"
+pattern = "srimart-staging.merqify.com"
 custom_domain = true
 
 [[env.staging.r2_buckets]]
@@ -96,12 +94,12 @@ PLATFORM_NAME = "[PLATFORM NAME]"
 name = "aheed-store-production"
 
 [[env.production.routes]]
-pattern = "aheedfoodcentre.nocaped.com"
+pattern = "aheed.merqify.com"
 custom_domain = true
 
 # ADR-004 slice 3b — SriMart (2nd vendor) production host, resolved by host (VendorDomain).
 [[env.production.routes]]
-pattern = "srimart.nocaped.com"
+pattern = "srimart.merqify.com"
 custom_domain = true
 
 [[env.production.r2_buckets]]

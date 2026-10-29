@@ -50,7 +50,7 @@ crons = ["*/15 * * * *", "0 3 * * *"]
 #   id = "<the id wrangler printed>"
 
 [env.staging.vars]
-APP_BASE_URL = "https://staging.aheedfoodcentre.nocaped.com"
+APP_BASE_URL = "https://aheed-staging.merqify.com"
 
 # ---- Production ----------------------------------------------------------
 [env.production]
@@ -70,7 +70,7 @@ crons = ["*/15 * * * *", "0 3 * * *"]
 #   id = "<the id wrangler printed>"
 
 [env.production.vars]
-APP_BASE_URL = "https://aheedfoodcentre.nocaped.com"
+APP_BASE_URL = "https://aheed.merqify.com"
 
 # NOTE: JOB_INVOCATION_TOKEN is NOT set here. It is a runtime secret and must be
 # set per environment, on BOTH this Worker and the application Worker, with the

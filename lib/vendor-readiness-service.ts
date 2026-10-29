@@ -439,7 +439,7 @@ export function evaluateVendorReadinessData(
       name: "Customer Contact Email",
       category: "Footer, Location & Legal Compliance",
       currentValue: config?.contactEmail || null,
-      referenceValue: "orders@aheedfoodcentre.nocaped.com",
+      referenceValue: "A monitored address on the store's own domain",
       status:
         config?.contactEmail?.trim() && !config.contactEmail.includes("[")
           ? "CONFIGURED"
@@ -651,7 +651,7 @@ export function evaluateVendorReadinessData(
       name: "Host Domain Mapping",
       category: "Platform Infrastructure & Governance",
       currentValue: data.domain?.host ? data.domain.host : "Unmapped",
-      referenceValue: "aheedfoodcentre.nocaped.com",
+      referenceValue: "aheed.merqify.com",
       status: hasDomain ? "CONFIGURED" : "MISSING",
       required: true,
       validationRule: "VendorDomain row mapped and custom domain routed in wrangler.toml",
@@ -712,8 +712,9 @@ export function evaluateVendorReadinessData(
       id: "external_apex_dns",
       name: "Client Apex Domain DNS",
       category: "Platform Infrastructure & Governance",
-      currentValue: "Staging Host (aheedsuperstore-staging.nocaped.com)",
-      referenceValue: "Active Cloudflare zone + NS delegation (#104)",
+      // #1323 — the store's own mapped host, not one store's host hardcoded for every vendor.
+      currentValue: data.domain?.host ? `Platform host (${data.domain.host})` : "Unmapped",
+      referenceValue: "Store's own domain on www via Cloudflare for SaaS",
       status: "PLANNED",
       required: false,
       validationRule: "Owner-gated registrar cutover",

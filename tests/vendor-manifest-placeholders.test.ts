@@ -154,11 +154,7 @@ describe("--emit-route (R5)", () => {
   });
 
   it("refuses a host with a port or a localhost host", () => {
-    for (const host of [
-      "aheedsuperstore.localhost:8787",
-      "shop.localhost",
-      "shop.example.com:8787",
-    ]) {
+    for (const host of ["store.localhost:8787", "shop.localhost", "shop.example.com:8787"]) {
       const result = emitRouteCommand(readyManifest({ host }), "staging");
       expect(result.code).toBe(1);
       expect(result.stdout).toBe("");

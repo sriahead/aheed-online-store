@@ -34,7 +34,10 @@ export async function StorefrontChrome({
 }) {
   const requestHeaders = await headers();
   const session = await (await getAuth()).api.getSession({ headers: requestHeaders });
-  const host = requestHeaders.get("host") ?? "staging.aheedfoodcentre.nocaped.com";
+  // #1323 — no hardcoded fallback host: a named store's host here would put another store's
+  // address into this store's referral link. Every real request carries `host`; without one the
+  // referral URL is merely unusable, never another store's.
+  const host = requestHeaders.get("host") ?? "";
   const proto = requestHeaders.get("x-forwarded-proto") ?? "https";
   const baseUrl = `${proto}://${host}`;
   const initialRewardsData = await getRewardsDataForUser(session?.user?.id ?? null, baseUrl);
