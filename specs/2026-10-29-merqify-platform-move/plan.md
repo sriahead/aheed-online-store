@@ -4,7 +4,7 @@ title: "Move hosting to Merqify's Cloudflare account and data to a new Neon acco
 audience: [dev]
 type: spec
 status: draft
-version: "1.0.0"
+version: "1.1.0"
 updated: 2026-10-29
 visibility: internal
 summary: "#1323: deploys move from the Free-plan Nocaped Cloudflare account to Merqify's new account under flat merqify.com hosts, and a dry-run-first script fills a new Neon account from old staging with 10% of the products and no test orders or demo logins."
@@ -118,6 +118,64 @@ Consequences here:
 - The **Aheed Food Centre** projects are reserved for the client cell.
 - Requirements R34a and R34b.
 
+## Amendment 6 (`/validate` finding, owner chose option A, 2026-10-29): a migrated target is never empty
+
+**Found by:** `/validate`, running R7 against the scratch Neon branch after the owner applied all 79
+migrations. The script refused: "the target already holds 1 store(s)".
+
+**Cause:** `prisma/migrations/20260808130000_multitenancy_vendor_scope/migration.sql:82` inserts the
+Aheed vendor (`a4ed0000-0000-4000-a000-000000000001`, slug `aheed-food-centre`). Every migrated
+database has it, so the original "target holds no `Vendor`" refusal fired on every correctly prepared
+target and `--apply` was unreachable. The spec's Setup ("an empty database with migrations applied")
+and R7's "count is 0" could not both hold. It is the spec that was wrong, not the build.
+It is also why loosening the check alone would not do: old staging ran the same migration, so its
+`aheed-food-centre` very likely has the same fixed id, and copying it with its original key (R16)
+would collide with the seeded row on both the primary key and the unique slug.
+
+**Options considered (owner chose A):**
+- **A. Accept a `seeded-only` target, delete the seeded row at `--apply`, then insert the copied
+  vendor.** Keeps R16 for the vendor. Adopted.
+- **B.** Accept it and update the seeded row in place instead of inserting. Rejected: the update would
+  need its own column list kept in step with the schema, where delete-then-insert reuses the
+  existing insert path.
+
+**Design (R8a–R8d):**
+- A pure `classifyTargetVendors` returns `empty`, `seeded-only` or `occupied`. It matches the seeded
+  row on **both** id and slug, so a lookalike never passes.
+- **A guard that the row owns nothing** (R8b) comes before the delete. The migrations insert only
+  that one `Vendor` row (their later `UPDATE`s match zero rows on a fresh database), but many foreign
+  keys to `Vendor` cascade, so a bare delete on a target someone had started to populate would drop
+  their rows without a word. The guard's model list comes from the schema, not a hand-written list.
+- The delete happens in `--apply` only. Dry run and `--verify-only` write nothing.
+- The runbook says a target is *freshly migrated*, and a failed apply is *reset*, not re-run (R8d).
+
+**Deliberately not done:**
+- **No atomic apply.** The delete and the inserts are separate statements over the HTTP-capable
+  adapter, so a failure partway leaves a partial target. Recovery is a reset of the disposable
+  branch (R8d). Wrapping the run in one interactive transaction on `getPrismaWs()` is a larger
+  change, and a new target has nothing to lose.
+- **No change to what is copied.** `VENDOR_SLUGS`, the model table, R12–R18 and the grant tool are
+  untouched. The scratch branch and its owner-run reset are unchanged from the handoff.
+
+**Process note:** this amendment was written on **Sonnet 5.5**, not Opus 5, at the owner's explicit
+request ("Proceed on Sonnet, run /spec"), after the model mismatch was flagged under `CLAUDE.md`'s
+rule. The change is small, but it is a wrong-model Spec stage; the adversarial pass below is the
+compensation, and `/build` should be run on Opus 5 if the owner switches.
+
+**Adversarial pass (checked before presenting):**
+- *Does R8c contradict R13/R16?* No: both are tightened, and the vendor's id is asserted equal to the
+  source's.
+- *Does R17's count check still hold?* Yes: `Vendor` is planned at two and counted at two.
+- *Does `--verify-only` still work on a filled target?* Yes: it skips the vendor-state refusal as
+  before and deletes nothing (R8c).
+- *Can a hand-emptied target pass?* Yes, as `empty`; R8d warns against it, because hand-emptying
+  cascades in the other direction, but the script does not forbid it.
+- *Is a seeded row with an edited name still `seeded-only`?* Yes (id and slug match). R8b still
+  protects any dependents, and the name is replaced by the source's. No requirement depends on the
+  old name.
+- *Production target:* identical, since the same migration runs there. Not exercised in this
+  slice's validation (staging only).
+
 ## Scope (this slice)
 
 1. **Host configuration:**
@@ -136,8 +194,9 @@ Consequences here:
      This is what lets images be copied key for key, unlike `scripts/copy-product-images.ts`, whose
      environments had different IDs.
    - **`VendorDomain` is rewritten** to the table above, and old hosts are not copied.
-   - **Refusals:** `--from` and `--to` are the same host; the target already has a `Vendor` row;
-     the target host is protected (`scripts/lib/protected-hosts.ts`).
+   - **Refusals:** `--from` and `--to` are the same host; the target holds any `Vendor` other than
+     the migration-seeded one (Amendment 6), or that one has dependent rows; the target host is
+     protected (`scripts/lib/protected-hosts.ts`).
    - **After `--apply`,** the script re-counts every copied model against its plan and exits
      non-zero on any difference.
    - **`--copy-images`** copies every R2 object the copied rows reference from the source bucket to

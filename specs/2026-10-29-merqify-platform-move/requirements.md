@@ -40,12 +40,37 @@ R6. No non-comment line of these files contains `nocaped`:
 R7. The script takes `--from <env-file>`, `--to <env-file>` and `--target staging|production`, and
     reads `DIRECT_URL` from each file (never from the process environment). Without `--apply` it
     writes nothing to either database. It prints, per model, the number of rows it would copy and
-    the reason for each skipped model, and both hosts with their passwords masked.
+    the reason for each skipped model, and both hosts with their passwords masked. It also prints the
+    target's vendor state, `empty` or `seeded-only` (R8a), and for `seeded-only` a line saying that
+    `--apply` will replace the migration-seeded vendor (R8c).
 R8. The script exits non-zero before any write in each of these cases:
     - the `--from` and `--to` hosts are equal;
-    - the target database already contains at least one `Vendor` row;
+    - the target's vendor state is `occupied` (R8a), or the seeded vendor has dependent rows (R8b);
     - the target host is refused by `scripts/lib/protected-hosts.ts`;
     - either file lacks `DIRECT_URL`.
+R8a. (Amendment 6, from `/validate`: a migrated database is never empty.) Every migrated database
+     holds one `Vendor` inserted by `prisma/migrations/20260808130000_multitenancy_vendor_scope/`,
+     with `id` `a4ed0000-0000-4000-a000-000000000001` and `slug` `aheed-food-centre`. A pure,
+     exported `classifyTargetVendors` takes the target's `Vendor` rows (`id`, `slug`) and returns:
+     - `empty` for zero rows;
+     - `seeded-only` for exactly one row whose `id` **and** `slug` both equal the values above;
+     - `occupied` for anything else, including one row matching only the `id` or only the `slug`,
+       and any set of two or more rows.
+
+     The script proceeds on `empty` and `seeded-only` and refuses on `occupied`.
+R8b. Before any write, for a `seeded-only` target, the script counts the rows that reference the
+     seeded vendor in **every model with a foreign key to `Vendor`**, and exits non-zero naming the
+     first model with a non-zero count. The model list is derived from `prisma/schema.prisma`
+     (`parseForeignKeys`), never hand-written, because many of the foreign keys to `Vendor` cascade on
+     delete (`onDelete: Cascade` in the schema) and removing a vendor that owns rows would delete them silently.
+R8c. With `--apply` on a `seeded-only` target, the script deletes the seeded vendor row **before
+     inserting any copied row**, then inserts as before. A dry run and `--verify-only` delete
+     nothing. After `--apply`, the target holds each copied vendor once: the seeded row is replaced
+     by the source's `aheed-food-centre`, not duplicated alongside it.
+R8d. The "Merqify account" section of `docs/developer-portal/env-setup.md` says that a target is a
+     **freshly migrated** database holding only the migration-seeded vendor, never a hand-emptied
+     one, and that a failed `--apply` leaves a partial target that is **reset** (Neon "Reset from
+     parent" on `scratch`, then `migrate deploy`), not re-run.
 R9. A committed classification table assigns every `model` in `prisma/schema.prisma` exactly one of
     `copy`, `copy-filtered` or `skip`. `tests/neon-migration-plan.test.ts` parses the schema and
     fails when a model is missing from the table, listed twice, or listed but absent from the
@@ -80,7 +105,9 @@ R12a. Generalising R12, rows are handled by what their foreign keys point at:
 R13. Vendors:
     - with either `--target`, exactly `aheed-food-centre` and `srimart` and their vendor-owned rows
       are copied;
-    - rows belonging to any other vendor are never copied.
+    - rows belonging to any other vendor are never copied;
+    - (Amendment 6) the seeded vendor of R8a is not one of "their vendor-owned rows": it is
+      replaced (R8c), so the target ends with exactly those two vendors and no other.
 R14. Users:
     - a `User` is copied only when its email does not end in `@example.com`;
     - its `Account` rows are copied with it;
@@ -92,7 +119,8 @@ R15. No `VendorDomain` row is copied from the source. After `--apply` the target
     marked canonical. `scripts/verify-worker-routes.ts` against the target and that environment's
     routes reports no mismatch.
 R16. Copied rows keep their source primary keys: a copied product's `id` in the target equals its
-    `id` in the source.
+    `id` in the source, and so does each copied vendor's, including `aheed-food-centre`'s, whether
+    or not the source's id is the seeded one.
 R17. After `--apply` the script counts every copied model in the target. It exits 0 only when each
     count equals the planned count it printed.
 R18. With `--copy-images`, every R2 object key referenced by a copied row is read from the source
@@ -230,6 +258,13 @@ R34c. The runbook says demo logins are allowed in every environment and every ce
       steps run `npm run demo:accounts -- add` against the new database. R14 is unchanged: the
       **copy** never carries an `@example.com` user, because their roles on old staging are stale
       and the roster is re-created fresh.
+
+## Amendment 6 (from `/validate`, owner chose option A, 2026-10-29): a migrated target is never empty
+
+`/validate` found that R7, R8 and the validation Setup assumed a target with zero `Vendor` rows,
+which no database that has had `prisma migrate deploy` ever is. R8, R8a–R8d, R13 and R16 above carry
+the change. Nothing else in the migration changes: `VENDOR_SLUGS`, the copy order, R12–R12a, R14,
+R15, R17 and R18 are as written.
 
 ## Gates
 
