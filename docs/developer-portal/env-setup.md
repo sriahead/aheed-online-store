@@ -226,8 +226,13 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.
    - `npx tsx scripts/grant-role.ts --env-file secrets/merqify-staging.vars --email <you> --platform-admin`
      (dry run first, then `--apply`);
    - store roles use `--vendor aheed-food-centre --role ADMIN`;
-   - for the demo roster on staging only, run `npm run demo:accounts -- add` against the new
-     staging database.
+   - **demo logins**: allowed in **every** environment, production included, until go-live,
+     when they are deleted (owner, 2026-10-29). The migration never copies them, because old
+     staging's roles are stale. Re-create the roster fresh against the new database:
+     `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<new direct url> npm run demo:accounts -- add`
+     (it reads `DIRECT_URL` and `DEMO_ACCOUNT_PASSWORD` from the environment).
+   - **At go-live** remove them in each environment with `npm run demo:accounts -- remove`
+     (`#1332`).
 9. **Replace the copied `nocaped` addresses.** The migration's plan lists them under "WARNING:
    copied values still naming nocaped". On old staging these are the two stores'
    `VendorConfig.senderEmail` values. Set real addresses at `/staff/storefront` on each store's new
@@ -269,9 +274,9 @@ Dev is filled by the seed, not by `migrate-to-new-neon.ts`, whose hosts are the 
 
 Production deploys when `staging` is promoted to `main`, so do these **before** merging the
 promotion PR:
-- steps 1–5 above with `secrets/merqify-production.vars` and `--target production`, which copies no
-  demo login;
-- step 8 for the owner's own account.
+- steps 1–5 above with `secrets/merqify-production.vars` and `--target production`;
+- step 8: the owner's own account, and the demo roster (allowed in production until go-live,
+  `#1332`).
 
 Then merge the promotion and run step 7 on the production hosts. Old production (`#1289`) is never
 read, and the new production database is filled from old staging (owner decision, 2026-10-29).

@@ -47,8 +47,10 @@ reconciliation. If overall project state did not materially change, leave this f
   - **Owner direction:**
     - **Merqify is the new Cloudflare account** (it holds `merqify.com` and no Workers yet), and
       **Neon is a fresh account**.
-    - The new databases are **filled from old staging**: 10% of products, no test orders, no demo
-      logins in production.
+    - The new databases are **filled from old staging**: 10% of products and no test orders. The
+      copy skips demo users because their roles are stale, and **demo logins are re-added with
+      `demo:accounts add` in EVERY environment, production included, until go-live**, when they are
+      deleted (`#1332`, owner 2026-10-29).
     - **Aheed Superstore is retired.**
     - Hosts are flat on `merqify.com`: `aheed[-staging]`, `srimart[-staging]`,
       `images[-staging]`, and `docs`.

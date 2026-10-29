@@ -152,8 +152,25 @@ it also carries `#1324`'s Document commit (`237bd37`: roadmap row 1.186.0, hando
 - **Not changed:** `VENDOR_SLUGS`, which still copies `aheed-food-centre` and `srimart`; the first
   is now the demo copy. The host names are unchanged too, so `aheed.merqify.com` is the demo store,
   while the real business will live at `aheedfoodcentre.co.uk` in its own cell.
-- **Open for `#1331` to settle:** whether production demo logins are allowed on the platform's Aheed
-  demo. This slice keeps the earlier rule: no `@example.com` users in production.
+- **Settled by amendment 5:** production demo logins.
+
+### Amendment 5: demo logins allowed everywhere until go-live (owner, 2026-10-29)
+
+- **Owner:** "As of now demo logins are allowed in prod, in all environments. When we go live these
+  demo accounts will be deleted."
+- **This corrects my own earlier rule.** The project memory already recorded that demo accounts
+  stay in production and staging until every phase is done, and the original "no demo logins in
+  production" contradicted it.
+- **Code is unchanged.** The copy still skips `@example.com` users, because their roles on old
+  staging are stale (`demo-admin` is still a platform ADMIN there). Only the comment on
+  `isDemoEmail` now gives that reason instead of "production starts with no demo login".
+- **Runbook:**
+  - step 8 re-creates the roster with `demo:accounts add` in every environment, with the exact
+    `DIRECT_URL` override;
+  - the production cut-over includes the roster;
+  - the go-live removal is `#1332`, filed and on the board as Backlog, P10.
+- **Spec:** R34c is new; the plan's decision bullet and the requirements intro are marked
+  superseded.
 
 ## Decisions taken during the build
 

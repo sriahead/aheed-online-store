@@ -68,7 +68,11 @@ slice stops using.
   copied to either database. Its route, `scripts/provision-aheedsuperstore-staging.ts`,
   `prisma/manifests/aheedsuperstore.json` and `tests/staging-test-vendor-onboarding.test.ts` are
   removed. The generic `scripts/provision-vendor.ts` and `prisma/manifests/example.json` stay.
-- **No demo logins in the new production database.** Staging gets its demo roster back from
+- **Superseded 2026-10-29 (amendment 5): demo logins ARE allowed in every environment, production
+  included, until go-live, when they are deleted.** The copy still skips `@example.com` users,
+  because their roles on old staging are stale; each environment gets a fresh roster from
+  `npm run demo:accounts -- add`. Original text: "No demo logins in the new production database."
+  Staging gets its demo roster back from
   `npm run demo:accounts -- add`, which also lands `#1319`'s roles.
 
 ## Amendment (owner, 2026-10-29, after Build)

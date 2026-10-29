@@ -2,7 +2,7 @@
 
 This closes `#1323`. Deploys move from the Free-plan Nocaped Cloudflare account to the new Merqify
 account under flat `merqify.com` hosts. A dry-run-first script fills a new Neon account from the old
-**staging** database with a 10% product sample, and with no test orders and no demo logins in
+**staging** database with a 10% product sample. It copies no test orders and no demo logins; amendment 5 re-adds a fresh demo roster in every environment, production included, until go-live. This applies in
 production. A grant tool gives the owner an admin login in a database that would otherwise have
 none. Staging is cut over and verified live; production follows at promotion, with owner approval.
 Narrative, decisions and exclusions: `plan.md`.
@@ -221,6 +221,15 @@ R34a. The runbook names the Neon projects this slice uses:
 R34b. `specs/architecture.md`'s "Where it runs" names the platform cell and dedicated client cells
       (one database per Worker; a client cell is a separate deployment of the same code), and the
       shared reference database.
+
+## Amendment 5 (owner, 2026-10-29): demo logins until go-live
+
+R34c. The runbook says demo logins are allowed in every environment and every cell, production
+      included, until go-live, and that they are deleted at go-live with
+      `npm run demo:accounts -- remove` (`#1332`). Both the staging and the production cut-over
+      steps run `npm run demo:accounts -- add` against the new database. R14 is unchanged: the
+      **copy** never carries an `@example.com` user, because their roles on old staging are stale
+      and the roster is re-created fresh.
 
 ## Gates
 

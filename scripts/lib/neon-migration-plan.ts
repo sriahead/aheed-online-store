@@ -121,7 +121,7 @@ export const VENDOR_HOSTS: Record<Target, Record<string, string>> = {
   },
 };
 
-/** Demo and test accounts. Never copied, so production starts with no demo login (R14). */
+/** Demo and test accounts. Never copied: their roles on old staging are stale; the roster is re-created with `demo:accounts add` (R14). */
 export function isDemoEmail(email: string): boolean {
   return email.trim().toLowerCase().endsWith("@example.com");
 }
