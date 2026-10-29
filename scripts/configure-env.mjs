@@ -55,10 +55,36 @@ const WORKER_SECRETS = [
 // endpoint (and vice versa) — copying it between environments produces a webhook that
 // fails signature verification on every delivery. Each secrets/<env>.vars must carry the
 // secret belonging to THAT environment's endpoint.
-const OPTIONAL_WORKER_SECRETS = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"];
+//
+// #1323 — UK_LOCATION_REF_DATABASE_URL (pooled, read at runtime by lib/reference/) is optional
+// here for the same reason: an older env file without it must still push. Its direct twin is the
+// optional GitHub secret below.
+const OPTIONAL_WORKER_SECRETS = [
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
+  "UK_LOCATION_REF_DATABASE_URL",
+];
+
+// #1323 — the reference database's DIRECT url, used by sync-reference-data.yml and the reference
+// migrations. Optional so a file written before the reference database moved still pushes.
+const OPTIONAL_GITHUB_ENV_SECRETS = ["UK_LOCATION_REF_DIRECT_URL"];
+
+// #1323 — Worker secrets that a PRODUCTION GitHub workflow also reads: fill-product-images.yml
+// (daily, `environment: production`) writes images with these. Pushing them to the Worker only
+// would leave that job writing into the previous bucket after a move, silently. Already required
+// as Worker secrets, so this only adds a second destination, and only for production — no
+// staging workflow reads them.
+const PRODUCTION_GITHUB_ALSO = [
+  "S3_ENDPOINT",
+  "S3_BUCKET",
+  "S3_ACCESS_KEY",
+  "S3_SECRET_KEY",
+  "S3_REGION",
+  "CDN_BASE_URL",
+];
 
 const REQUIRED = [...GITHUB_ENV_SECRETS, ...WORKER_SECRETS];
-const KNOWN = [...REQUIRED, ...OPTIONAL_WORKER_SECRETS];
+const KNOWN = [...REQUIRED, ...OPTIONAL_WORKER_SECRETS, ...OPTIONAL_GITHUB_ENV_SECRETS];
 const VALID_ENVS = ["staging", "production"];
 
 // --- Arg parsing ----------------------------------------------------------
@@ -109,9 +135,27 @@ const extra = Object.keys(values).filter((k) => !KNOWN.includes(k));
 if (extra.length) {
   console.warn(`! ignoring ${extra.length} unrecognized key(s): ${extra.join(", ")}`);
 }
-const optionalPresent = OPTIONAL_WORKER_SECRETS.filter((k) => values[k] && values[k].length > 0);
-const optionalAbsent = OPTIONAL_WORKER_SECRETS.filter((k) => !optionalPresent.includes(k));
+const present = (k) => Boolean(values[k] && values[k].length > 0);
+const optionalPresent = OPTIONAL_WORKER_SECRETS.filter(present);
+const optionalGithubPresent = OPTIONAL_GITHUB_ENV_SECRETS.filter(present);
+const productionGithubAlso = env === "production" ? PRODUCTION_GITHUB_ALSO : [];
+const optionalAbsent = [...OPTIONAL_WORKER_SECRETS, ...OPTIONAL_GITHUB_ENV_SECRETS].filter(
+  (k) => !present(k),
+);
 console.log(`✓ all ${REQUIRED.length} required variables present for "${env}" (source: ${file})`);
+
+// #1323 — wrangler runs against the account THIS FILE names, never the machine's `wrangler login`
+// or whatever the shell exports. A login on this machine pointed at an unrelated account, so
+// Worker secrets meant for one account would silently have been written into another. wrangler
+// prefers CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID from its environment over a stored login.
+const wranglerEnv = {
+  ...process.env,
+  CLOUDFLARE_ACCOUNT_ID: values.CLOUDFLARE_ACCOUNT_ID,
+  CLOUDFLARE_API_TOKEN: values.CLOUDFLARE_API_TOKEN,
+};
+console.log(
+  `  Cloudflare target: account …${values.CLOUDFLARE_ACCOUNT_ID.slice(-6)} (from ${file})`,
+);
 if (optionalPresent.length) {
   console.log(`  + ${optionalPresent.length} optional: ${optionalPresent.join(", ")}`);
 }
@@ -124,6 +168,12 @@ if (optionalAbsent.length) {
 if (dryRun) {
   console.log("\n[dry-run] would set (no values shown):");
   for (const k of GITHUB_ENV_SECRETS) console.log(`  ${k} → github env secret (${env})`);
+  for (const k of optionalGithubPresent) {
+    console.log(`  ${k} → github env secret (${env}) [optional]`);
+  }
+  for (const k of productionGithubAlso) {
+    console.log(`  ${k} → github env secret (${env}) [also: fill-product-images.yml]`);
+  }
   for (const k of WORKER_SECRETS) console.log(`  ${k} → cloudflare worker secret (${env})`);
   for (const k of optionalPresent) {
     console.log(`  ${k} → cloudflare worker secret (${env}) [optional]`);
@@ -132,19 +182,29 @@ if (dryRun) {
 }
 
 // --- Prerequisite auth checks --------------------------------------------
-function check(cmd, argv, hint) {
-  const r = spawnSync(cmd, argv, { encoding: "utf8", shell: process.platform === "win32" });
+function check(cmd, argv, hint, childEnv = process.env) {
+  const r = spawnSync(cmd, argv, {
+    encoding: "utf8",
+    shell: process.platform === "win32",
+    env: childEnv,
+  });
   if (r.status !== 0) die(`${cmd} not authenticated. ${hint}`);
 }
 check("gh", ["auth", "status"], "Run `gh auth login` (it will show a one-time device code).");
-check("npx", ["wrangler", "whoami"], "Run `wrangler login`, or export CLOUDFLARE_API_TOKEN.");
+check(
+  "npx",
+  ["wrangler", "whoami"],
+  `The CLOUDFLARE_API_TOKEN in ${file} was refused for account …${values.CLOUDFLARE_ACCOUNT_ID.slice(-6)}.`,
+  wranglerEnv,
+);
 
 // --- Push each secret via stdin (value never in argv or logs) -------------
-function setSecret(cmd, argv, value, label) {
+function setSecret(cmd, argv, value, label, childEnv = process.env) {
   const r = spawnSync(cmd, argv, {
     input: value,
     encoding: "utf8",
     shell: process.platform === "win32",
+    env: childEnv,
   });
   if (r.status === 0) {
     console.log(`  ✓ ${label}`);
@@ -161,18 +221,21 @@ let ok = 0;
 let failed = 0;
 
 console.log(`\nSetting GitHub environment secrets (${env})…`);
-for (const k of GITHUB_ENV_SECRETS) {
+for (const k of [...GITHUB_ENV_SECRETS, ...optionalGithubPresent, ...productionGithubAlso]) {
   const good = setSecret("gh", ["secret", "set", k, "--env", env], values[k], `${k} → github`);
   good ? ok++ : failed++;
 }
 
-console.log(`\nSetting Cloudflare Worker secrets (${env})…`);
+console.log(
+  `\nSetting Cloudflare Worker secrets (${env}, account …${values.CLOUDFLARE_ACCOUNT_ID.slice(-6)})…`,
+);
 for (const k of [...WORKER_SECRETS, ...optionalPresent]) {
   const good = setSecret(
     "npx",
     ["wrangler", "secret", "put", k, "--env", env],
     values[k],
     `${k} → worker`,
+    wranglerEnv,
   );
   good ? ok++ : failed++;
 }

@@ -2,7 +2,7 @@
   "id": "e8a3b100-0000-4000-a000-000000000003",
   "slug": "example-grocer",
   "name": "Example Grocer",
-  "host": "example-grocer.nocaped.com",
+  "host": "example-grocer.merqify.com",
   "branding": {
     "name": "Example Grocer",
     "tagline": "A worked example — replace every value in this file",

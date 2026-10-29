@@ -266,7 +266,7 @@ const AHEED_SATELLITES: VendorSatellites = {
   config: {
     localityName: "Milton Keynes",
     senderName: "Aheed Food Centre",
-    senderEmail: "orders@aheedfoodcentre.nocaped.com",
+    senderEmail: "orders@aheed.merqify.com",
     searchPlaceholder: "Search halal lamb, basmati, lentils…",
     // P7.5c+f (#239) — copy that used to be hardcoded in Header.tsx and the
     // homepage hero, and so rendered for SriMart too. Aheed's halal claim is
@@ -1351,7 +1351,7 @@ const SRIMART_SATELLITES: VendorSatellites = {
   config: {
     localityName: "Reading",
     senderName: "SriMart",
-    senderEmail: "orders@srimart.nocaped.com",
+    senderEmail: "orders@srimart.merqify.com",
     searchPlaceholder: "Search chargers, earbuds, lamps…",
     // P7.5c+f (#239) — SriMart's own voice. Before this slice it advertised
     // "100% Certified HMC Halal Fresh Meat Cut Daily" and "Delivering fresh

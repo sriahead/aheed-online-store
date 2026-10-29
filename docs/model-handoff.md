@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.151.0"
-updated: 2026-10-28
+version: "1.153.0"
+updated: 2026-10-29
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,15 +39,117 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-29 (`#1324` Ship, paused): PR #1327 into `staging` is OPEN, CI GREEN, NOT MERGED.** Branch
-  `feature/event-gated-jobs` (pushed), rebased onto `docs/carry-forward-1319`, so the PR also lands that
-  handoff. Spec, build notes and validation record: `specs/2026-10-28-event-gated-jobs/`.
+- **2026-10-29 (`#1323` Build, before Validate): the hosting move is BUILT, NOT VALIDATED and NOT
+  MERGED.** Branch `feature/merqify-platform-move` is **pushed, with no PR yet**. The spec started at
+  `418235b` and the implementation at `2c16f31`; amendments 1–5 and the env-audit fixes followed, and
+  `git log` has the latest. It was cut from `docs/carry-forward-1324`, so it carries `#1324`'s
+  Document commit too. Spec and build
+  notes: `specs/2026-10-29-merqify-platform-move/`. Runbook: `docs/developer-portal/env-setup.md`,
+  "Merqify account". `#1323` is `In Progress`.
+  - **Owner direction:**
+    - **Merqify is the new Cloudflare account** (it holds `merqify.com` and no Workers yet), and
+      **Neon is a fresh account**.
+    - The new databases are **filled from old staging**: 10% of products and no test orders. The
+      copy skips demo users because their roles are stale, and **demo logins are re-added with
+      `demo:accounts add` in EVERY environment, production included, until go-live**, when they are
+      deleted (`#1332`, owner 2026-10-29).
+    - **Aheed Superstore is retired.**
+    - Hosts are flat on `merqify.com`: `aheed[-staging]`, `srimart[-staging]`,
+      `images[-staging]`, and `docs`.
+    - **Old production (`#1289`) is never read.** The new Neon account makes `#1289` moot for
+      deploys.
+    - **Amendment (spec `51b8842`): EVERYTHING moves and Nocaped is freed.**
+      - The `uk-location-reference` database is rebuilt from public data in the Merqify Neon
+        account; its new primary also fixes `#1123`. The dev database moves too.
+      - **`configure-env` now targets the account named in the file**, not the machine's
+        `wrangler login`.
+      - The "Freeing Nocaped" checklist in `env-setup.md` lists what to delete once both
+        environments are proven, each with owner approval.
+    - **Architecture: a platform cell plus dedicated client cells (owner, 2026-10-29;
+      `specs/architecture.md`, "Cells").**
+      - **ShopLocal** (`shoplocal.merqify.com`) is the subscription multi-vendor platform. Its cell
+        holds SriMart and an **Aheed demo copy** in Neon `Shoplocal` and `Shoplocal Staging`
+        (branches `dev` and `scratch`). **#1323 moves this cell.**
+      - **Aheed Food Centre (`aheedfoodcentre.co.uk`) is an independent business with its own
+        database.** It is a **dedicated cell**: the same code as its own Workers, in Neon
+        `Aheed Food Centre` and `Aheed Food Centre Staging`, with its own bucket and secrets. That
+        is `#1331`, with staging at `staging.aheedfoodcentre.co.uk` through Cloudflare for SaaS.
+        Never point a platform file at the Aheed projects.
+    - **Email: Resend is RETIRED (owner, 2026-10-29).** Email becomes a provider-agnostic
+      `EmailService` with Cloudflare Email Service (`#1217`), with **no Resend fallback**. Until it
+      ships, the new environments carry today's `RESEND_*` values unchanged, because production
+      refuses to send without them. Nothing new is registered with Resend.
+  - **Four Cloudflare accounts:**
+    - **Nocaped:** old; Free plan, cannot deploy.
+    - **Merqify:** the target.
+    - **Aheed Food Centre:** `aheedfoodcentre.co.uk` with no DNS records. It is under the Nocaped
+      login **temporarily** and moves under the Merqify login after Cloudflare's 7-day wait.
+    - **Cobrasmash:** what this machine's `wrangler login` points at. It is **not this project's**,
+      so run `npx wrangler whoami` before any manual wrangler command.
+  - **Security findings:**
+    - **The shared `CLOUDFLARE_API_TOKEN`** in `.dev.vars` and `secrets/*.vars` can read the Nocaped
+      **and** Aheed accounts. It is replaced by per-environment tokens scoped to the Merqify account.
+    - **On old staging, `demo-admin` is still a platform ADMIN**, because `#1319`'s demotion never
+      reached it.
+    - **Every role on old staging belongs to an `@example.com` account**, so the new databases need
+      `scripts/grant-role.ts` for a first admin.
+  - **Neon state, seen in the owner's console on 2026-10-29.**
+    - The Merqify organization holds `Shoplocal`, `Shoplocal Staging`, `uk-location-reference`,
+      `Aheed Food Centre` and `Aheed Food Centre Staging`, all in London.
+    - `Shoplocal Staging`'s default branch is named **`staging`**, with children **`dev`** and
+      **`scratch`**.
+    - **Both children auto-expire around 2026-11-28.** The owner cannot remove the expiry and asked
+      to be reminded (memory `project-neon-dev-branch-expiry`). `dev` is rebuilt from the seed if it
+      lapses.
+    - **The owner confirmed `scratch` and `public` have 0 tables.** "Reset from parent" on `scratch`
+      gives a clean slate only while `staging` is still empty, so validate **before** the real
+      staging fill.
+  - **The env files exist, with every secret blank, and git ignores them.** They are
+    `secrets/scratch-target.vars` (Validate only; two URLs), `secrets/merqify-staging.vars` and
+    `secrets/merqify-production.vars`. A blank required value makes `configure-env` and the copy
+    script refuse, which was checked. **The owner is filling them in.**
+  - **Amendment 6 (owner, 2026-10-29, from the first `/validate`): a migrated database is never
+    empty.** Every `migrate deploy` inserts one vendor, `aheed-food-centre`
+    (`a4ed0000-0000-4000-a000-000000000001`), so the script's old "target holds no vendor" refusal
+    fired on every prepared target. Now the target is *freshly migrated*, not empty: the script
+    accepts exactly that seeded row (`seeded-only`), refuses if it owns any rows (many keys to
+    `Vendor` cascade), and `--apply` deletes it before inserting the copied vendors. Spec commit
+    `8fe054b8`, implementation in the next commit. **Spec and Build both ran on Sonnet 5.5 at the
+    owner's request, not Opus 5.**
+  - **Next:** `/clear`, then `/validate` on Sonnet 5, **from the top**.
+    1. **`scratch` is migrated** (79 of 79, applied by the owner 2026-10-29) and holds only the
+       seeded vendor. A dry run against it from old staging works (`target vendors: seeded-only`).
+    2. **Before every `--apply` the owner resets `scratch`** ("Reset from parent", then
+       `migrate deploy`: `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<scratch direct> DATABASE_URL=<scratch direct> npx prisma migrate deploy`).
+       Auto mode blocks migrations, and also blocked a script run against old staging that
+       included a protected-host refusal case, so hand over a `! <command>` where it does.
+    3. `/validate` runs the copy for real against `scratch`: R7–R20, R8a–R8d, R12a, the staging
+       and production targets, and a reset between runs. **`--apply` has never run.** The first
+       `/validate` passed the static rows, `configure-env` dry runs and R9; the rest waited on this.
+    4. The live rows R24–R28 wait for the owner's Merqify setup: Workers Paid; **the Access
+       application for `docs.merqify.com` before any secret is pushed** (`#1328`); the three image
+       buckets with the hotlink rule on staging and production only; scoped tokens; the filled
+       `merqify-*.vars` files. Report them **unverified** until then.
+  - **Follow-ups (all `P10`/Backlog):**
+    - `#1328`: docs Access guard;
+    - `#1329`: `www.aheedfoodcentre.co.uk` through Cloudflare for SaaS;
+    - `#1330`: the client's real catalogue and details, waiting on the client's files;
+    - `#1331`: the Aheed dedicated cell;
+    - `#1332`: delete the demo accounts at go-live;
+    - `#1217`, now updated: Cloudflare Email Service, no Resend.
+
+    The next slices after `#1323`: `#1331` (Aheed cell), then `#1217` (email). Investigation page: https://claude.ai/artifact/XLdwB3PjYGMFmjYHZUtKYw (private).
+
+- **2026-10-29 (`#1324` Document): `#1324` is MERGED TO STAGING (PR #1327, `57ede8f`) but NOT
+  DEPLOYED.** `deploy-staging` run 40814195702 passed quality and failed at Deploy to Workers with the
+  same Free-plan refusal as `#1319` (`code 100328`, `#1323`). Staging still serves `9a32058`. Spec,
+  build notes and validation record: `specs/2026-10-28-event-gated-jobs/`; roadmap row 1.186.0.
+  `#1324` is `In Review`.
   - **Validated in-session (not independent).** Every row passes except **R25 (unverified)**: a
-    browser-paid Stripe Checkout must flip the return page to confirmed. No Chrome extension was
-    connected.
-  - **Merge is the owner's call** (`gh pr merge 1327 --squash`; auto mode blocks merges). After it:
-    move `#1324` to In Review, check `deploy-staging`, then `/document`. **`deploy-staging` will fail
-    until `#1323`**, and promotion to `main` waits for `#1289` and `#1323`.
+    browser-paid Stripe Checkout must flip the return page to confirmed. Check it on staging after
+    the move.
+  - Its Document commit (`237bd37`, carry-forward branch `docs/carry-forward-1324`) rides
+    `feature/merqify-platform-move` (`#1323`). Promotion to `main` waits for `#1323`.
   - **Why it matters:** the 15-minute `workers/scheduler` tick woke each Neon database 96 times a day
     with zero traffic (about 8 h of compute, ~61 CU-hours a month at 0.25 CU). That is a likely large
     share of production's quota breach (`#1289`).
@@ -87,8 +189,7 @@ reconciliation. If overall project state did not materially change, leave this f
   - **Validated in the building session (not independent).** The record is in
     `specs/2026-10-28-rbac-four-views/build-notes.md`. The dev database has the new demo roster.
     New issue: `#1321` (platform onboarding page returns 500 after about 83 s on dev).
-  - **This note is on the local branch `docs/carry-forward-1319`** (cut from `origin/staging` after
-    the merge). **The next slice branches from it, not from `origin/staging`.**
+  - Its carry-forward branch `docs/carry-forward-1319` reached `staging` with PR #1327.
 
 - **2026-10-28 (`#1319` Build), kept for its standing facts.** Spec and build notes:
   `specs/2026-10-28-rbac-four-views/`.

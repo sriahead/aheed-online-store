@@ -88,7 +88,7 @@ export default async function PlatformSettingsPage() {
             <div className="flex justify-between py-2.5">
               <dt className="text-slate-500">Local Dev Origin</dt>
               <dd className="font-mono text-xs font-semibold text-purple-700">
-                aheedsuperstore.localhost:8787
+                srimart.localhost:8787
               </dd>
             </div>
           </dl>
@@ -143,7 +143,9 @@ export default async function PlatformSettingsPage() {
             </div>
             <div className="flex justify-between py-2.5">
               <dt className="text-slate-500">Session Cookie</dt>
-              <dd className="font-semibold text-slate-900">Subdomain Family SSO (.nocaped.com)</dd>
+              <dd className="font-semibold text-slate-900">
+                Host-only (one session per store host)
+              </dd>
             </div>
             <div className="flex justify-between py-2.5">
               <dt className="text-slate-500">Registered Users Pool</dt>

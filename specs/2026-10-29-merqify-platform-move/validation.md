@@ -1,0 +1,84 @@
+# Move hosting to Merqify's Cloudflare account and data to a new Neon account (validation)
+
+> **Testing Strategy (Lean 80/20 Model)**
+> Provide enough testing to give confidence without creating unnecessary or duplicate tests. Avoid testing the same behaviour multiple times at different levels unless doing so provides additional confidence.
+>
+> **The Main Principle:**
+> - **Build:** Did we build the component correctly?
+> - **Validate:** Does the feature work correctly in the real system?
+> - **Release:** Is the complete system safe, reliable, and ready for users?
+
+## Testing Areas
+
+Unit tests cover the pure parts: the model classification and the product selection. The migration
+and grant scripts are integration-tested against **real** databases, never a mock. Old staging is
+the source, and a **disposable** target is the destination: a throwaway Neon branch or a fresh
+project the owner provides. The live rows (R24–R27) run only after the owner's Merqify and Neon
+setup exists. Until then they are reported **unverified, with the reason**, never counted as passing.
+
+## Setup
+
+- **Shell guard, before any script or Prisma command:** check `DIRECT_URL` and `DATABASE_URL` one at
+  a time (`if printenv "$v" >/dev/null 2>&1`), print the host only, and prefix every command with
+  `env -u DIRECT_URL -u DATABASE_URL` (`CLAUDE.md`, Config & secrets).
+- **Disposable target:** an env file `secrets/scratch-target.vars` (gitignored) whose `DIRECT_URL`
+  names a **freshly migrated** database (Amendment 6): after
+  `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<scratch> DATABASE_URL=<scratch> npx prisma migrate deploy`
+  it holds exactly one `Vendor`, the migration-seeded `aheed-food-centre`
+  (`a4ed0000-0000-4000-a000-000000000001`), and no other row. Read `prisma migrate status`'s
+  datasource host first; it must be the scratch host. **To re-create** the target between runs, use
+  Neon "Reset from parent" on the `scratch` branch, then `migrate deploy` again. The owner runs both
+  (auto mode blocks them), so a row that needs a fresh target is reported unverified until they have.
+- **Manual wrangler commands:** run `npx wrangler whoami` first. It must name the Merqify account,
+  not "Cobrasmashbc@gmail.com's Account".
+
+## Validation Steps
+
+| Req | Testing Area | How to verify |
+|-----|--------------|---------------|
+| R1 | Unit | `npx vitest run tests/worker-routes.test.ts --maxWorkers=4` passes with assertions updated to the two staging hosts. Also `rg -n "^pattern" wrangler.toml` lists exactly `aheed-staging.merqify.com` and `srimart-staging.merqify.com` under `[env.staging]`, each followed by `custom_domain = true`. |
+| R1a | Unit | `ls scripts/provision-aheedsuperstore-staging.ts prisma/manifests/aheedsuperstore.json tests/staging-test-vendor-onboarding.test.ts` reports all three missing. `rg -l aheedsuperstore app components lib scripts prisma/manifests tests --glob '!app/(admin)/staff/runbook/docs.ts'` prints nothing, and `npm run kms:check-generated` shows `docs.ts` current once committed. |
+| R2 | Unit | The same `rg` lists exactly `aheed.merqify.com` and `srimart.merqify.com` under `[env.production]`, each with `custom_domain = true`; the test from R1 asserts it. |
+| R3 | Unit | `rg -n "APP_BASE_URL" workers/scheduler/wrangler.toml` prints exactly `https://aheed-staging.merqify.com` (staging) and `https://aheed.merqify.com` (production). |
+| R4 | Unit | `rg -n "^pattern" kms/site-internal/wrangler.toml` prints exactly one line, `pattern = "docs.merqify.com"`, followed by `custom_domain = true`. |
+| R5 | Unit | `rg -n "img-src" next.config.mjs` contains `https://*.merqify.com`, and `rg -c nocaped next.config.mjs` prints nothing or `0`. |
+| R6 | Unit | `rg -n "nocaped" wrangler.toml workers/scheduler/wrangler.toml kms/site-internal/wrangler.toml next.config.mjs components/layout/StorefrontChrome.tsx lib/vendor-readiness-service.ts "app/(admin)/staff/platform/settings/page.tsx" \| rg -v ":\s*(#\|//\|\*\|/\*)"` prints nothing. `rg -n 'requestHeaders.get\("host"\) \?\? "[^"]' components/layout/StorefrontChrome.tsx` prints nothing (an empty-string fallback, `?? ""`, is the required behaviour). |
+| R7 | Integration | `env -u DIRECT_URL -u DATABASE_URL npx tsx scripts/migrate-to-new-neon.ts --from secrets/staging.vars --to secrets/scratch-target.vars --target staging` exits 0. It prints a per-model plan, both hosts with `***` in place of the password, and the target vendor state `seeded-only` with the line saying `--apply` will replace the seeded vendor. `SELECT id, slug FROM "Vendor"` on the scratch target before and after the dry run returns the same single row, `a4ed0000-0000-4000-a000-000000000001`, `aheed-food-centre`. |
+| R8 | Integration | Each of these exits non-zero with a message naming the reason, and `SELECT id, slug FROM "Vendor"` on the scratch target is unchanged afterwards: (i) `--to secrets/staging.vars`, same host as `--from`; (ii) a second `--apply` after R17's run, the target now `occupied` (two vendors); (iii) `--to secrets/production.vars`, protected host; (iv) `--to` a file with no `DIRECT_URL` line. Case (ii) needs R17's run done first. Cases (i), (iii) and (iv) need no fresh target. |
+| R8a | Unit | `npx vitest run tests/neon-migration-plan.test.ts --maxWorkers=4` passes with `classifyTargetVendors` cases: `[]` gives `empty`; the seeded id and slug together give `seeded-only`; the seeded id with another slug, another id with the seeded slug, one unrelated vendor, and two vendors (the seeded one plus another) each give `occupied`. Mutate to prove the guard bites: change the `slug` comparison to `true` in a scratch run, print `git diff --numstat` to show the edit landed, and confirm the "seeded id with another slug" case fails. Restore with `git checkout`. |
+| R8b | Unit + Integration | Unit, same test file: the model list from `parseForeignKeys` includes `Product`, `Category`, `VendorConfig` and `VendorDomain`, excludes `Vendor` and `Session`, and equals the set of models whose schema text has a `@relation` to `Vendor`. Integration, on a freshly migrated scratch target: insert one `Category` row referencing the seeded vendor, run `--apply`, expect non-zero exit naming `Category` and unchanged `Vendor` and `Category` counts, then delete that row. Needs a write to scratch, so owner-run if auto mode blocks it. |
+| R8c | Integration | On a freshly migrated scratch target, `--apply` (R17's run) exits 0, then `SELECT slug, count(*) FROM "Vendor" GROUP BY slug` returns `aheed-food-centre 1` and `srimart 1`. A dry run and a `--verify-only` run on a freshly migrated target both leave the single seeded row in place. |
+| R8d | Unit | `rg -n "freshly migrated\|Reset from parent" docs/developer-portal/env-setup.md` finds both inside the "Merqify account" section, and the sentence says a failed `--apply` is reset, not re-run. |
+| R9 | Unit | `npx vitest run tests/neon-migration-plan.test.ts --maxWorkers=4` passes. Then temporarily delete one model's entry from the table: the test fails naming that model. Restore it. |
+| R10 | Unit | The same test asserts each model listed in R10 is classified `skip`. Every `*Attempt` model is matched by name from the schema, not hand-listed. |
+| R11 | Unit | The same test file's `selectProducts` cases pass: a non-`gen-` slug kept; `gen-0-apples` and `gen-10-rice` kept; `gen-11-rice` dropped; `gen-abc-rice` dropped. |
+| R12 | Integration | After R17's `--apply` to the scratch target: `SELECT count(*) FROM "Inventory" i LEFT JOIN "Product" p ON p.id = i."productId" WHERE p.id IS NULL` returns `0`, and the same query for `ProductImage`, `ProductPriceTier`, `ProductAttributeValue` and `BundleItem` returns `0`. `SELECT count(*) FROM "Bundle" b WHERE NOT EXISTS (SELECT 1 FROM "BundleItem" bi WHERE bi."bundleId" = b.id)` returns `0`. |
+| R12a | Integration | R7's dry-run output has a "dropped (missing parent)" count and a "nulled (missing parent)" count per model. R17's `--apply` completes with no Postgres `23503` (foreign-key) error. Every copied `DiscountCode` with a non-null referral owner joins to a `User` row in the target (`LEFT JOIN … WHERE u.id IS NULL` returns `0`). |
+| R13 | Integration | On the scratch target after `--apply --target staging`, `SELECT slug FROM "Vendor" ORDER BY slug` returns exactly `aheed-food-centre`, `srimart`. There is one row per slug, never two for `aheed-food-centre`. Then re-create the scratch target (Setup: reset from parent, `migrate deploy`) and run `--target production --apply`: it returns exactly `aheed-food-centre`, `srimart`. |
+| R14 | Integration | On each scratch target: `SELECT count(*) FROM "User" WHERE email LIKE '%@example.com'` returns `0`. `SELECT count(*) FROM "VendorMembership" m LEFT JOIN "User" u ON u.id = m."userId" WHERE u.id IS NULL` returns `0`. The non-`@example.com` user count equals the source's. |
+| R15 | Integration | `SELECT host, "isCanonical" FROM "VendorDomain" ORDER BY host` on the staging-target run returns exactly the three R1 hosts, each `true`. Then `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<scratch> DATABASE_URL=<scratch> npx tsx scripts/verify-worker-routes.ts --env staging` (or the invocation `deploy-staging.yml` uses) reports no mismatch. |
+| R16 | Integration | Pick one product slug from the source (`SELECT id, slug FROM "Product" WHERE slug LIKE 'gen-10-%'`). The same query on the scratch target returns the same `id`. Do the same for the vendor: `SELECT id FROM "Vendor" WHERE slug = 'aheed-food-centre'` on the source and on the target returns the same `id`. |
+| R17 | Integration | `... --target staging --apply` exits 0, and its closing summary prints `match` for every copied model. Then delete one copied `Inventory` row on the scratch target and run the script's count check (`--verify-only` or equivalent, as built): it exits non-zero naming `Inventory`. |
+| R18 | Integration | (`secrets/staging.vars` already holds the source bucket's `S3_*` keys.) With a scratch bucket the owner provides: `--copy-images` exits 0. For one copied `ProductImage.key`, a GET of `<scratch CDN base>/<key>` returns 200. A key deliberately absent from the source, of the `products/*/main.svg` form, ends up holding the placeholder bytes, and the output names it. **Unverified, stating why**, if no scratch bucket or source S3 keys are available. |
+| R19 | Integration | Against the scratch target: `scripts/grant-role.ts --env-file secrets/scratch-target.vars --email <a copied non-demo user> --platform-admin` without `--apply` prints the change and leaves `User.role` unchanged. `--email nobody@nowhere.invalid` exits non-zero. `--email demo-admin@example.com --platform-admin` exits non-zero without `--allow-demo`. |
+| R20 | Integration | With `--apply`, `SELECT role FROM "User" WHERE email = '<that user>'` returns `ADMIN`. A store grant (`--vendor srimart --role STAFF --apply`) creates the membership and exactly one new `VendorRoleAuditLog` row. |
+| R21 | Unit | `rg -n "^## Merqify account\|^### Merqify account" docs/developer-portal/env-setup.md` finds the heading. The section names `secrets/merqify-staging.vars`, `secrets/merqify-production.vars`, `configure-env`, `wrangler whoami`, `eu-west-2`, `BETTER_AUTH_SECRET` and `docs.merqify.com`, and has a rollback paragraph. |
+| R22 | Unit | `rg -n "merqify" specs/architecture.md` shows the hosting statement naming the Merqify Cloudflare account and the new Neon projects. |
+| R23 | Unit | For each `"KEY"` literal in `scripts/configure-env.mjs`, `rg -n "^KEY=" secrets/example.vars` finds it; the same for the five `S3_*` keys. |
+| R24 | E2E | After the staging merge's `deploy-staging` run completes: `curl -s https://aheed-staging.merqify.com/api/health` shows `commit` equal to `git rev-parse --short origin/staging`, `db.ok: true`, `reference.reachable: true` and a non-empty `reference.sources`. **Unverified, stating why**, if the owner setup is not done. |
+| R25 | E2E | `curl -s https://srimart-staging.merqify.com/` contains SriMart's store name, and `curl -s https://aheed-staging.merqify.com/` contains Aheed Food Centre's (prefix with `MSYS_NO_PATHCONV=1`). |
+| R26 | E2E | Against the new staging database (env file `secrets/merqify-staging.vars`, host printed first): `SELECT count(*) FROM "Product" p JOIN "Vendor" v ON v.id = p."vendorId" WHERE v.slug = 'aheed-food-centre'` returns `245`, and `SELECT count(*) FROM "Order"` returns `0`. |
+| R27 | E2E | Take one `ProductImage.key` from the new staging database. `curl -s -o NUL -w "%{http_code}" https://images-staging.merqify.com/<key>`, run in PowerShell (not Git Bash), prints `200`. |
+| R28 | Integration | `rg -n "ref:migrate\|code-point-open\|os-open-names\|pg_is_in_recovery" docs/developer-portal/env-setup.md` finds all four inside the "Merqify account" section. Live, once the owner has created the project: `npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.vars` exits 0 with `missing=[]`, and `SELECT pg_is_in_recovery()` over the new `UK_LOCATION_REF_DIRECT_URL` returns `false`. **Unverified, stating why**, if the project does not exist yet. |
+| R29 | Integration | With a scratch copy of `secrets/example.vars` filled with dummy values plus both `UK_LOCATION_REF_*` keys: `node scripts/configure-env.mjs staging --file <scratch> --dry-run` lists `UK_LOCATION_REF_DIRECT_URL → github env secret` and `UK_LOCATION_REF_DATABASE_URL → cloudflare worker secret`. Without those two keys it still exits 0. |
+| R30 | Integration | The same dry run prints `account …<last 6 of the file's CLOUDFLARE_ACCOUNT_ID>`. `rg -n "CLOUDFLARE_ACCOUNT_ID\|CLOUDFLARE_API_TOKEN" scripts/configure-env.mjs` shows both passed in the environment of the `wrangler` spawns, taken from the parsed file values. |
+| R30a | Integration | With the dummy file: `node scripts/configure-env.mjs production --file <scratch> --dry-run` lists the five `S3_*` keys and `CDN_BASE_URL` as `→ github env secret (production)`. The same dry run with `staging` lists none of them as a GitHub secret. |
+| R31 | Integration | The R7 dry run (`--from secrets/staging.vars`) prints a warning naming `VendorConfig.senderEmail` and `VendorConfig.contactEmail` with their counts. A target row's value equals the source's. |
+| R32 | Unit | `rg -n nocaped prisma/seed.ts prisma/manifests/example.json` prints nothing. `rg -n "STOPGAP" -A4 secrets/example.vars` shows the stopgap note naming `#1217`. In `env-setup.md`'s "Merqify account" section, `rg -n "Resend"` finds only the stopgap line, step 9's stopgap mention and the "Freeing Nocaped" row, and none says to verify a domain in Resend. |
+| R33 | Unit | `rg -n "Dev database" docs/developer-portal/env-setup.md` finds the step. It names `db:seed`, `.env`, `.dev.vars` and `images-dev.merqify.com`. |
+| R34 | Unit | `rg -n "Freeing Nocaped" docs/developer-portal/env-setup.md` finds the checklist. It names each of the five Workers, all three buckets (`aheed-images-dev`, `-staging` and `-production`), the Access application, the token, the four Neon projects, Stripe, Google, Resend and the zone, and states the "after both environments are validated, owner approval" condition. |
+| R34a | Unit | In `env-setup.md`'s "Merqify account" section, `rg -n "Shoplocal Staging\|uk-location-reference\|Aheed Food Centre Staging\|scratch\|\`dev\` branch"` finds the project names, the two branches, and the note that the Aheed projects are not used here. |
+| R34b | Unit | `rg -n "cell" specs/architecture.md` shows the platform-cell and dedicated-client-cell statement in "Where it runs". |
+| R34c | Unit | In `env-setup.md`'s "Merqify account" section, `rg -n "demo:accounts"` finds `add` in both the staging step and the production cut-over, plus the go-live `remove` note naming `#1332`. No line there says production gets no demo login. |
+| R35 | Gate | `git diff origin/staging -- CHANGELOG.md` shows a new `[Unreleased]` entry for `#1323`, mentioning the reference database. |
+| R36 | Gate | `npm run lint`, `npx tsc --noEmit`, `npm run format:check` and `npx vitest run --maxWorkers=4` (run alone) all exit 0. |

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   compareRoutes,
@@ -125,5 +126,54 @@ describe("renderRoutesBlock", () => {
     expect(block).not.toContain("localhost");
     // The round trip is what lets the writer be trusted as the fix for the reader's failure.
     expect(parseRoutePatterns(block, "staging")).toEqual(["a.nocaped.com", "b.nocaped.com"]);
+  });
+});
+
+/**
+ * #1323 — the repository's own config, not a fixture: the Workers deploy to the Merqify account
+ * under flat merqify.com hosts. A route left on nocaped.com would target a zone the deploy token
+ * cannot reach, and Aheed Superstore was retired with this move.
+ */
+describe("repository Worker config (#1323)", () => {
+  const read = (path: string) => readFileSync(path, "utf8");
+  const customDomainCount = (toml: string) =>
+    (toml.match(/^custom_domain\s*=\s*true/gm) ?? []).length;
+
+  it("R1: staging routes are exactly the two merqify.com store hosts", () => {
+    expect(parseRoutePatterns(read("wrangler.toml"), "staging")).toEqual([
+      "aheed-staging.merqify.com",
+      "srimart-staging.merqify.com",
+    ]);
+  });
+
+  it("R2: production routes are exactly the two merqify.com store hosts", () => {
+    expect(parseRoutePatterns(read("wrangler.toml"), "production")).toEqual([
+      "aheed.merqify.com",
+      "srimart.merqify.com",
+    ]);
+  });
+
+  it("R1/R2: every app Worker route is a custom domain", () => {
+    expect(customDomainCount(read("wrangler.toml"))).toBe(4);
+  });
+
+  it("R3: the scheduler calls the Aheed host of its own environment", () => {
+    const toml = read("workers/scheduler/wrangler.toml");
+    const urls = [...toml.matchAll(/^APP_BASE_URL\s*=\s*"([^"]+)"/gm)].map((m) => m[1]);
+    expect(urls).toEqual(["https://aheed-staging.merqify.com", "https://aheed.merqify.com"]);
+  });
+
+  it("R4: the internal docs site has exactly one route, docs.merqify.com", () => {
+    const toml = read("kms/site-internal/wrangler.toml");
+    const patterns = [...toml.matchAll(/^pattern\s*=\s*"([^"]+)"/gm)].map((m) => m[1]);
+    expect(patterns).toEqual(["docs.merqify.com"]);
+    expect(customDomainCount(toml)).toBe(1);
+  });
+
+  it("R5: the image CSP allows merqify.com and no nocaped.com host", () => {
+    const config = read("next.config.mjs");
+    const imgSrc = /"img-src[^"]*"/.exec(config)?.[0] ?? "";
+    expect(imgSrc).toContain("https://*.merqify.com");
+    expect(config).not.toMatch(/nocaped/);
   });
 });
