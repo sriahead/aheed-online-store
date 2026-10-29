@@ -61,6 +61,16 @@ reconciliation. If overall project state did not materially change, leave this f
         `wrangler login`.
       - The "Freeing Nocaped" checklist in `env-setup.md` lists what to delete once both
         environments are proven, each with owner approval.
+    - **Architecture: a platform cell plus dedicated client cells (owner, 2026-10-29;
+      `specs/architecture.md`, "Cells").**
+      - **ShopLocal** (`shoplocal.merqify.com`) is the subscription multi-vendor platform. Its cell
+        holds SriMart and an **Aheed demo copy** in Neon `Shoplocal` and `Shoplocal Staging`
+        (branches `dev` and `scratch`). **#1323 moves this cell.**
+      - **Aheed Food Centre (`aheedfoodcentre.co.uk`) is an independent business with its own
+        database.** It is a **dedicated cell**: the same code as its own Workers, in Neon
+        `Aheed Food Centre` and `Aheed Food Centre Staging`, with its own bucket and secrets. That
+        is `#1331`, with staging at `staging.aheedfoodcentre.co.uk` through Cloudflare for SaaS.
+        Never point a platform file at the Aheed projects.
     - **Email: Resend is RETIRED (owner, 2026-10-29).** Email becomes a provider-agnostic
       `EmailService` with Cloudflare Email Service (`#1217`), with **no Resend fallback**. Until it
       ships, the new environments carry today's `RESEND_*` values unchanged, because production

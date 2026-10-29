@@ -117,14 +117,24 @@ environment.
 5. **Optional:** `JOB_SIGNALS` KV namespaces (`#1325`). Until then every scheduler tick runs every
    job.
 
-**In the new Neon account (Merqify):** four projects, all in **AWS London (`eu-west-2`)**.
-- **Staging and production**: each gives a **direct** URL (`DIRECT_URL`) and a **pooled** one, the
-  host with `-pooler` (`DATABASE_URL`). `pg_trgm` is created by a migration, so nothing is set up by
-  hand.
-- **`uk-location-reference`**: one project shared by staging and production, as today. Its
-  **primary** direct URL is `UK_LOCATION_REF_DIRECT_URL` (never a read replica, `#1123`) and its
-  pooled URL is `UK_LOCATION_REF_DATABASE_URL`. Both go in **both** `merqify-*.vars` files.
-- **Dev**: for local work only (see "Dev database" below).
+**In the new Neon account (Merqify organization),** all in **AWS London (`eu-west-2`)**.
+
+This slice moves the **ShopLocal platform cell**: one database per environment holding SriMart and
+the Aheed Food Centre **demo** store (`specs/architecture.md`, "Where it runs").
+- **`Shoplocal`** (production) and **`Shoplocal Staging`** (staging): each gives a **direct** URL
+  (`DIRECT_URL`) and a **pooled** one, the host with `-pooler` (`DATABASE_URL`). `pg_trgm` is
+  created by a migration, so nothing is set up by hand.
+- **Branches on `Shoplocal Staging`:**
+  - `dev` for local work (see "Dev database" below);
+  - `scratch` for validating the migration, reset between runs.
+- **`uk-location-reference`**: one project shared by every cell, because it holds public postcode
+  data and no client data. Its **primary** direct URL is `UK_LOCATION_REF_DIRECT_URL` (never a read
+  replica, `#1123`) and its pooled URL is `UK_LOCATION_REF_DATABASE_URL`. Both go in **both**
+  `merqify-*.vars` files.
+- **`Aheed Food Centre`** and **`Aheed Food Centre Staging`** are **not used by this move**. They
+  belong to the Aheed Food Centre **dedicated cell**: the independent business at
+  `aheedfoodcentre.co.uk`, with its own Workers, bucket and secrets, built in its own slice. Never
+  point a platform `.vars` file at them.
 
 **Elsewhere:**
 - **Stripe:** register a webhook endpoint for `https://<aheed host>/api/webhooks/stripe` per
@@ -228,8 +238,10 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.
 
 Local development also leaves the old Neon account **and** the Nocaped dev bucket
 (`aheed-images-dev`, served at `images.dev.aheedfoodcentre.nocaped.com`).
-- **Create** a dev project in the Merqify Neon account (London), and an `aheed-images-dev` R2 bucket
-  in the Merqify account with custom domain `images-dev.merqify.com` and its own S3 API token.
+- **Create** a `dev` branch on the `Shoplocal Staging` Neon project (a branch, not a separate
+  project: one fewer compute to pay for, and resettable from staging), and an `aheed-images-dev` R2
+  bucket in the Merqify account with custom domain `images-dev.merqify.com` and its own S3 API
+  token.
 - **Point both `.env` and `.dev.vars` at them:**
   - `DATABASE_URL` (pooled) and `DIRECT_URL` (direct);
   - the reference URLs from the shared reference project;

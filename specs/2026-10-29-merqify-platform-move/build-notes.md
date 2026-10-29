@@ -130,6 +130,31 @@ it also carries `#1324`'s Document commit (`237bd37`: roadmap row 1.186.0, hando
   - The spec's R32 and the plan's exclusions are updated to match.
   - Every instruction to verify a domain in Resend is gone.
 
+### Amendment 4: platform cell plus dedicated client cells (owner, 2026-10-29)
+
+- **Owner's Neon organization "Merqify"** (from a screenshot; the plan is probably Free; I have no
+  Neon access) holds five empty London projects: `uk-location-reference`, `Shoplocal`,
+  `Shoplocal Staging`, `Aheed Food Centre` and `Aheed Food Centre Staging`.
+- **Owner model:**
+  - ShopLocal is the subscription multi-vendor platform;
+  - Aheed Food Centre (`aheedfoodcentre.co.uk`) is an independent business with its own database,
+    managed through Merqify.
+- **Decisions (AskUserQuestion):**
+  - the platform database holds SriMart plus an **Aheed demo copy**;
+  - **this slice moves the platform cell only**, and the Aheed cell is `#1331`;
+  - Aheed's staging is `staging.aheedfoodcentre.co.uk` through Cloudflare for SaaS, in `#1331`.
+- **Changed here: docs and spec only, no code.**
+  - The runbook names Shoplocal and Shoplocal Staging (with branches `dev` and `scratch`) and
+    uk-location-reference, and marks the Aheed projects as not for this move.
+  - Dev becomes a branch, not a project.
+  - `architecture.md` gains a "Cells" paragraph.
+  - R33 is aligned; R34a and R34b are new.
+- **Not changed:** `VENDOR_SLUGS`, which still copies `aheed-food-centre` and `srimart`; the first
+  is now the demo copy. The host names are unchanged too, so `aheed.merqify.com` is the demo store,
+  while the real business will live at `aheedfoodcentre.co.uk` in its own cell.
+- **Open for `#1331` to settle:** whether production demo logins are allowed on the platform's Aheed
+  demo. This slice keeps the earlier rule: no `@example.com` users in production.
+
 ## Decisions taken during the build
 
 - **The schema text is the source of foreign keys, not `Prisma.dmmf`.** With

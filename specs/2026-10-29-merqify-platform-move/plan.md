@@ -88,6 +88,32 @@ everything to Merqify and free up Nocaped." So:
 - **A "Freeing Nocaped" checklist** lists what can be deleted once both environments are proven,
   each item with owner approval. Requirements R28–R34; the gates are renumbered R35–R36.
 
+## Amendment 4 (owner, 2026-10-29): platform cell plus dedicated client cells
+
+The owner's model:
+- **ShopLocal** (`shoplocal.merqify.com`) is a subscription multi-vendor platform.
+- **Aheed Food Centre** at `aheedfoodcentre.co.uk` runs as an independent business, "with a
+  separate database and client data, managed through Merqify". For now it is hosted in the Merqify
+  account, and could later move into the client's own.
+
+The app holds one database connection per Worker, so a separate database means **a separate
+deployment of the same code**: a dedicated cell. Choosing a database per request was rejected; it
+would rewrite every service.
+
+Owner decisions (AskUserQuestion):
+- the platform database holds **SriMart plus an Aheed demo copy**;
+- **this slice moves the platform cell only**, and a new slice builds the Aheed cell;
+- Aheed's staging will be `staging.aheedfoodcentre.co.uk`, through Cloudflare for SaaS, in that
+  slice.
+
+Consequences here:
+- No code change. `VENDOR_SLUGS` already copies `aheed-food-centre` and `srimart`, which now
+  makes the demo copy.
+- The Neon projects are **Shoplocal**, **Shoplocal Staging** (branches `dev` and `scratch`) and
+  **uk-location-reference**, all created by the owner on 2026-10-29.
+- The **Aheed Food Centre** projects are reserved for the client cell.
+- Requirements R34a and R34b.
+
 ## Scope (this slice)
 
 1. **Host configuration:**

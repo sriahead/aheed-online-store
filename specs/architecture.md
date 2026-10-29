@@ -51,6 +51,20 @@ environment-configured seam so the platform can move clouds without a rewrite.
   `docs.merqify.com`, behind Access.
 - **Neon:** the staging and production databases are **new projects in a new Neon account** (London,
   `eu-west-2`), filled from the old staging database by `scripts/migrate-to-new-neon.ts`.
+- **Cells (owner, 2026-10-29).** The app holds **one database connection per Worker**, so isolation
+  between businesses comes in two forms:
+  - **Within a cell, by store ID.** The ShopLocal platform cell (`Shoplocal` and
+    `Shoplocal Staging`, at `shoplocal.merqify.com`) holds many stores in one database: SriMart and
+    the Aheed Food Centre demo. ADR-004 separates them by store ID.
+  - **Between cells, by deployment.** A business that operates independently with its own data gets
+    a **dedicated cell**: the same code deployed as its own Workers, with its own Neon projects,
+    bucket and secrets, whose database holds that one business. The first is Aheed Food Centre
+    (`aheedfoodcentre.co.uk`; Neon `Aheed Food Centre` and `Aheed Food Centre Staging`).
+  - A cell can later move into the client's own Cloudflare and Neon accounts as a unit.
+  - **Shared by every cell:** the codebase, the Merqify Workers Paid plan, and the read-only
+    `uk-location-reference` database (public data, no client data).
+  - A dedicated-cell store does not appear in the ShopLocal marketplace by itself. Listing it needs
+    a feed into the platform cell, which is not designed yet.
 - **The old setup:** the Nocaped account and the old Neon projects are no longer deploy targets.
   Runbook: `docs/developer-portal/env-setup.md`, "Merqify account".
 - **Clients' domains:** a client's own domain reaches these Workers through Cloudflare for SaaS

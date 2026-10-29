@@ -181,7 +181,8 @@ R32. `prisma/seed.ts` and `prisma/manifests/example.json` contain no `nocaped`.
      `RESEND_*` values are copied unchanged as a stopgap, that nothing new is registered with
      Resend, and that `#1217` replaces both keys. Resend is in the "Freeing Nocaped" table, to be
      removed after `#1217` is live.
-R33. The runbook has a "Dev database" step: a new dev project in the Merqify Neon account,
+R33. The runbook has a "Dev database" step: a new dev database in the Merqify Neon account (a `dev`
+     branch of Shoplocal Staging, per R34a),
      `prisma migrate deploy` then `npm run db:seed` against it, and `.env` and `.dev.vars` both
      pointed at it. (Amendment 2) The step also replaces the dev images bucket: an
      `aheed-images-dev` bucket in the Merqify account with `CDN_BASE_URL`
@@ -199,6 +200,27 @@ R34. The runbook has a "Freeing Nocaped" checklist. It names every resource in t
 
      It states that each is removed only after both environments are validated on Merqify, and
      only with the owner's approval.
+
+## Amendment 4 (owner, 2026-10-29): a platform cell and dedicated client cells
+
+ShopLocal (`shoplocal.merqify.com`) is the multi-vendor platform. A client that runs as an
+independent business gets a **dedicated cell**: the same code deployed as its own Workers, with its
+own Neon projects, bucket and secrets. The first is Aheed Food Centre (`aheedfoodcentre.co.uk`),
+built in its own slice. This slice moves **the platform cell only**. In it, `aheed-food-centre` is
+the **demo copy** shown on ShopLocal, beside SriMart.
+
+R34a. The runbook names the Neon projects this slice uses:
+      - **Shoplocal** is the production platform database;
+      - **Shoplocal Staging** is the staging platform database, with branches `dev` (local work)
+        and `scratch` (validation);
+      - **uk-location-reference** is shared by every cell (public data, no client data).
+
+      The runbook also says the **Aheed Food Centre** and **Aheed Food Centre Staging** projects
+      belong to the Aheed dedicated cell and are not used here. The dev database is the `dev`
+      branch, not a separate project, and R33 applies to that branch.
+R34b. `specs/architecture.md`'s "Where it runs" names the platform cell and dedicated client cells
+      (one database per Worker; a client cell is a separate deployment of the same code), and the
+      shared reference database.
 
 ## Gates
 
