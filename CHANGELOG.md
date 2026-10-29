@@ -8,6 +8,15 @@ every branch merges.
 
 ### Added
 
+- **Background jobs only wake the database when there is work** (issue `#1324`, spec `specs/2026-10-28-event-gated-jobs/`):
+  - **Gated scheduler**: the 15-minute tick reads two markers from a new `JOB_SIGNALS` KV namespace and calls the payment sweep or the error-rate check only when it is due. An idle store goes from 96 database wakes a day to one. Any KV doubt runs the job.
+  - **Daily 03:00 UTC run** calls all three jobs ungated. The guest-cart reaper now runs only there, with its per-store cap raised from 500 to 5,000.
+  - **Stripe Checkout sessions expire 35 minutes after the order is created** (was Stripe's 24-hour default), so abandoned checkouts release their stock within the hour.
+  - **Return page check**: a shopper back from Stripe on a still-pending order is confirmed on the spot if Stripe says it was paid. It never cancels anything.
+  - **Staff order page** (store admins only): **Check payment now** for a pending order, and **Resend confirmation email** for a paid one.
+
+  The staging and production KV namespaces are an owner step (`docs/developer-portal/env-setup.md`, "Gated ticks"). Until they exist, everything runs as before.
+
 - **Four separated views (Shopper, Staff, Store Admin, Platform Admin)** on the existing role checks:
   - **Landing after sign-in**: `/login` and Google sign-in now go through `/signed-in`, which sends a platform admin to `/staff/platform`, staff and store admins of the host's store to `/staff`, and everyone else to `/account`. A same-site `next` wins; an off-site one is ignored.
   - **Demo accounts**: `demo-admin` is a store admin only. The new `demo-platform-admin@example.com` is the only platform admin, using the existing `DEMO_ACCOUNT_PASSWORD`. Re-run `npm run demo:accounts -- add` to apply this to a database.

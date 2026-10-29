@@ -39,6 +39,22 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
+- **2026-10-29 (`#1324` Build): event-gated background jobs are BUILT, NOT VALIDATED AND NOT PUSHED**,
+  on local branch `feature/event-gated-jobs`, rebased onto `docs/carry-forward-1319` so its PR also
+  lands that unpushed handoff. Spec and build notes: `specs/2026-10-28-event-gated-jobs/`.
+  - **Why it matters:** the 15-minute `workers/scheduler` tick woke each Neon database 96 times a day
+    with zero traffic (about 8 h of compute, ~61 CU-hours a month at 0.25 CU). That is a likely large
+    share of production's quota breach (`#1289`).
+  - **The scheduler is now gated** on two `JOB_SIGNALS` KV markers, with a daily ungated `0 3 * * *`
+    run. **The KV namespaces do not exist yet (owner, `#1325`)**, and until they do every tick runs
+    every job, as before.
+  - **Stripe sessions now expire 35 minutes after the order is created**, and a shopper's return page
+    can confirm a paid order whose webhook was lost.
+  - **The scheduler uses 4 of the Free plan's 5 Cron Triggers.** Check this against the new Cloudflare
+    account's plan (`#1323`).
+  - Follow-ups: `#1325` (owner: namespaces + live check; also holds the constraint on `#946`'s
+    heartbeat), `#1326` (attribution).
+
 - **2026-10-28 (paused at `#1319` Ship): DEPLOYS ARE BLOCKED, AND HOSTING IS MOVING TO A NEW CLOUDFLARE
   ACCOUNT.**
   - **`#1319` is MERGED TO STAGING (PR #1322, `09e9aa0`) but NOT DEPLOYED.**

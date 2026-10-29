@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-28T21:22:53.770Z` · commit `09e9aa0` · `294` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-29T00:22:14.192Z` · commit `622688a` · `295` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -282,6 +282,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Orders grid, Quick Shop orders tile and cart Continue shopping (plan)](specs/2026-10-27-orders-grid-quickshop-cart/plan.md) | spec | 1.0.0 | 2026-10-27 | draft | internal | Adds a Your orders tile to Quick Shop, turns /account/orders into a 1/2/3-column card grid with Reorder items and Save as list on each card, and adds Continue shopping to /cart (#1302). |
 | [Platform costs, competitor pricing, profitability and business models (plan)](specs/2026-10-27-pricing-business-model/plan.md) | spec | 1.0.0 | 2026-10-27 | draft | internal | Extends /staff/platform/costs (#1295) into an advisory dashboard: grouped costs, sourced competitor pricing, proposed plans, break-even profitability, business models, AI refresh as unconfirmed suggestions, quarterly review issue, CSV/print export (#1309). |
 | [Running costs report for platform admins (plan)](specs/2026-10-27-running-costs-report/plan.md) | spec | 1.0.0 | 2026-10-27 | draft | internal | A read-only /staff/platform/costs page for platform admins: what the platform costs now, what is planned, what changes at renewal, and today's Workers AI usage, from a typed in-repo registry (#1295). |
+| [Event-gated background jobs and on-demand payment checks (plan)](specs/2026-10-28-event-gated-jobs/plan.md) | spec | 1.0.0 | 2026-10-28 | draft | internal | Stops the 15-minute scheduler waking Neon when nothing is pending (#1324): jobs gated on activity markers in Cloudflare KV, a daily backstop run, 35-minute Stripe sessions, a return-page payment check and two staff controls. |
 | [Pricing model v2: scaling costs, partner time, volume-linked models, add-ons and launch recommendation (plan)](specs/2026-10-28-pricing-model-v2/plan.md) | spec | 1.0.0 | 2026-10-28 | draft | internal | Reworks the advisory /staff/platform/costs dashboard (#1313): a production cost model over shops x orders x basket, partner time, Stripe Connect, four volume-linked pricing models, add-ons, a risks register, a launch recommendation and browser-only what-if inputs. |
 | [RBAC four views: role landing, demo-admin as store admin, platform home, gate matrix (plan)](specs/2026-10-28-rbac-four-views/plan.md) | spec | 1.0.0 | 2026-10-28 | draft | internal | Separates the four experiences on the existing RBAC: role-based landing after sign-in, demo-admin demoted to store admin with a new demo-platform-admin, a /staff/platform home, and a test pinning every staff page, route and action to its gate. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.43.0 | 2026-10-22 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
