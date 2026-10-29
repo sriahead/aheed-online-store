@@ -709,6 +709,14 @@ database rather than the app.
   never proves a cache forms.
 - Optional **edge KV** for hot reads (categories, homepage rails) behind a `CacheService` port; if
   absent it falls through to the DB. KV ↔ Redis is a one-file swap.
+- **Cloudflare KV is in use for one thing: the job activity markers** (`#1324`). The `JOB_SIGNALS`
+  namespace, bound to both the application Worker and `workers/scheduler`, holds two timestamps that
+  tell the scheduler's 15-minute tick whether the payment sweep or the error-rate check has any work.
+  An idle store therefore never wakes Neon, except in the ungated daily run. The application reaches it
+  **only through `lib/job-signals.ts`**, and an absent binding, a failing call or an unparseable value
+  **fails open to running the job**. KV here decides *when* a job runs, never *what* it does; the
+  database stays the source of truth for every order. Detail: `docs/developer-portal/env-setup.md`,
+  "Gated ticks".
 - The **database is always the source of truth**; caches are accelerators with explicit TTLs and
   tag-based invalidation on write.
 

@@ -22,16 +22,19 @@ import {
  */
 
 /**
- * Deleted per vendor per tick, NOT across all vendors combined.
+ * Deleted per vendor per run, NOT across all vendors combined.
  *
  * A shared cap would let one vendor with a large backlog consume the whole
  * budget and starve every other vendor indefinitely — that is #619, an open
  * defect in the payment sweep's own batching, and there is no reason to
- * reproduce it in a second job. Bounded because a tick should be predictable,
- * not because the work is urgent: anything left is simply reaped on the next
- * one, fifteen minutes later.
+ * reproduce it in a second job. Bounded because a run should be predictable,
+ * not because the work is urgent: anything left is reaped on the next one.
+ *
+ * Since #1324 the reaper runs ONCE A DAY (the scheduler's `0 3 * * *` run), not
+ * on every 15-minute tick, so the cap rose from 500 to 5,000: at 500 a day, a
+ * busy store's backlog could take weeks to drain.
  */
-const PER_VENDOR_LIMIT = 500;
+const PER_VENDOR_LIMIT = 5000;
 
 export interface GuestCartReapSummary {
   /** Active vendors swept on this tick. */

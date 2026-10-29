@@ -8,7 +8,7 @@
 import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { keysetCursorArgs, runKeysetPage } from "@/lib/repositories/pagination";
 import { buildOrderNumber, computeTotals, type DeliveryRules } from "@/lib/order-totals";
-import { getPaymentService } from "@/lib/payments";
+import { CHECKOUT_SESSION_TTL_MS, getPaymentService } from "@/lib/payments";
 import { PURCHASABILITY_SELECT, purchasableQuantity } from "@/lib/cart-rules";
 import {
   buildStaffTimeline,
@@ -399,8 +399,12 @@ export async function placeOrder(
       );
 
       // Retry against the unique index rather than assuming randomness never collides.
-      let order: { id: string; orderNumber: string; confirmationToken: string | null } | null =
-        null;
+      let order: {
+        id: string;
+        orderNumber: string;
+        confirmationToken: string | null;
+        createdAt: Date;
+      } | null = null;
       for (let attempt = 0; attempt < ORDER_NUMBER_ATTEMPTS; attempt++) {
         const orderNumber = buildOrderNumber(input.vendorSlug, new Date());
         const clash = await tx.order.findUnique({
@@ -434,7 +438,7 @@ export async function placeOrder(
             deliveryFeePence: totals.deliveryFeePence,
             totalPence: totals.totalPence,
           },
-          select: { id: true, orderNumber: true, confirmationToken: true },
+          select: { id: true, orderNumber: true, confirmationToken: true, createdAt: true },
         });
         break;
       }
@@ -526,6 +530,7 @@ export async function placeOrder(
         // Non-null by construction: the create above always supplies it. The
         // column is nullable only for orders that predate the P9.1 migration.
         confirmationToken: order.confirmationToken ?? "",
+        createdAt: order.createdAt,
         totalPence: totals.totalPence,
         currency: CURRENCY,
       };
@@ -549,6 +554,9 @@ export async function placeOrder(
       vendorId,
       returnOrigin: input.returnOrigin,
       confirmationToken: created.confirmationToken,
+      // #1324 — anchored on the stored createdAt, never on this call's clock, so
+      // a retried session creation sends identical parameters (idempotency key).
+      expiresAt: new Date(created.createdAt.getTime() + CHECKOUT_SESSION_TTL_MS),
     });
 
     await prisma.payment.update({
@@ -2166,4 +2174,75 @@ export async function listStalePendingOrders(
     providerReference: row.payment?.providerReference ?? null,
     consecutiveFailures: row.reconciliation?.consecutiveFailures ?? 0,
   }));
+}
+
+/**
+ * The earliest instant `listStalePendingOrders` will next return anything for
+ * this vendor, or `null` when it never will (#1324).
+ *
+ * The same two populations that query admits, without its time filter: an
+ * order never swept becomes due at `createdAt + candidateCutoffMs`; one with a
+ * non-exhausted `PaymentReconciliation` row becomes due at its `nextAttemptAt`.
+ * An exhausted row is out of the sweep's hands (staff Retry re-arms it), so it
+ * contributes nothing.
+ *
+ * Written to KV by the sweep service at the end of every run, so the scheduler
+ * calls the sweep exactly when there is something to do — including the
+ * backed-off retries and long-cutoff deferrals a "last checkout" window would
+ * strand. Two `take: 1` reads rather than one aggregate because the due instant
+ * comes from a different column on each side.
+ */
+export async function findNextPaymentSweepDueAt(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  candidateCutoffMs: number,
+): Promise<Date | null> {
+  const neverSwept = await prisma.order.findFirst({
+    where: { vendorId, status: "PENDING_PAYMENT", reconciliation: { is: null } },
+    orderBy: { createdAt: "asc" },
+    select: { createdAt: true },
+  });
+
+  const scheduled = await prisma.paymentReconciliation.findFirst({
+    where: { vendorId, exhaustedAt: null, order: { status: "PENDING_PAYMENT" } },
+    orderBy: { nextAttemptAt: "asc" },
+    select: { nextAttemptAt: true },
+  });
+
+  const candidates = [
+    neverSwept ? neverSwept.createdAt.getTime() + candidateCutoffMs : null,
+    scheduled ? scheduled.nextAttemptAt.getTime() : null,
+  ].filter((at): at is number => at !== null);
+
+  return candidates.length === 0 ? null : new Date(Math.min(...candidates));
+}
+
+/** What the single-order payment check needs about one order (#1324). */
+export interface OrderPaymentState {
+  orderNumber: string;
+  status: OrderStatusValue;
+  /** The order's OWN stored session id — never one supplied by the caller. */
+  providerReference: string | null;
+}
+
+/**
+ * One order's status and stored payment session, vendor-scoped (#1324). Backs
+ * the shopper's return-page check and staff "Check payment now": the session
+ * the provider is asked about always comes from here, never from a URL or form.
+ */
+export async function findOrderPaymentState(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  orderNumber: string,
+): Promise<OrderPaymentState | null> {
+  const row = await prisma.order.findFirst({
+    where: { vendorId, orderNumber },
+    select: { orderNumber: true, status: true, payment: { select: { providerReference: true } } },
+  });
+  if (!row) return null;
+  return {
+    orderNumber: row.orderNumber,
+    status: row.status,
+    providerReference: row.payment?.providerReference ?? null,
+  };
 }

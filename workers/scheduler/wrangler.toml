@@ -7,25 +7,47 @@
 # no `scheduled` export to attach a trigger to, and the generated file is
 # overwritten by every build. See workers/scheduler/src/index.ts.
 #
-# This Worker has NO bindings: no R2, no database URL, no vendor knowledge. Its
-# whole configuration is where to call and what secret to prove itself with.
+# This Worker has no database URL, no R2 and no vendor knowledge. Its only
+# binding is the JOB_SIGNALS KV namespace (#1324), read to decide whether a tick
+# has anything to do; the rest of its configuration is where to call and what
+# secret to prove itself with.
 name = "aheed-scheduler"
 main = "src/index.ts"
 compatibility_date = "2025-03-25"
 
-# Every 15 minutes. The number being bought is recovery latency: a shopper who
-# paid into a lost webhook sits with no confirmation email until a tick resolves
-# them, and an hourly period would leave them there up to four times longer for
-# no saving that matters at this volume.
+# Every 15 minutes, GATED (#1324): a tick calls a job only when its KV marker
+# says there is work, so an idle store never wakes the database. The number the
+# 15 minutes buys is recovery latency for a shopper who paid into a lost webhook.
+# Plus `0 3 * * *`: the daily ungated run, which calls every job whatever the
+# markers say and is the only run of the guest-cart reaper. Two triggers per
+# environment, four in all: the Workers Free plan allows five per account.
 [triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/15 * * * *", "0 3 * * *"]
+
+# LOCAL SIMULATION ONLY. `wrangler dev` simulates this namespace on disk; no
+# deploy reads it, because both deploy workflows pass `--env` and kv_namespaces
+# is not inherited by an environment. The id is a placeholder, not a real
+# namespace.
+[[kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "local-job-signals"
 
 # ---- Staging -------------------------------------------------------------
 [env.staging]
 name = "aheed-scheduler-staging"
 
 [env.staging.triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/15 * * * *", "0 3 * * *"]
+
+# JOB_SIGNALS for staging: NOT YET CREATED — owner action (#1324, plan.md).
+# Until it exists this Worker deploys without the binding and every tick runs
+# every job, exactly as before #1324. To enable gating:
+#   wrangler kv namespace create aheed-jobs-staging
+# then put the printed id in BOTH files — here and the application Worker's
+# root wrangler.toml — under the same binding name:
+#   [[env.staging.kv_namespaces]]
+#   binding = "JOB_SIGNALS"
+#   id = "<the id wrangler printed>"
 
 [env.staging.vars]
 APP_BASE_URL = "https://staging.aheedfoodcentre.nocaped.com"
@@ -35,7 +57,17 @@ APP_BASE_URL = "https://staging.aheedfoodcentre.nocaped.com"
 name = "aheed-scheduler-production"
 
 [env.production.triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/15 * * * *", "0 3 * * *"]
+
+# JOB_SIGNALS for production: NOT YET CREATED — owner action (#1324, plan.md).
+# Until it exists this Worker deploys without the binding and every tick runs
+# every job, exactly as before #1324. To enable gating:
+#   wrangler kv namespace create aheed-jobs-production
+# then put the printed id in BOTH files — here and the application Worker's
+# root wrangler.toml — under the same binding name:
+#   [[env.production.kv_namespaces]]
+#   binding = "JOB_SIGNALS"
+#   id = "<the id wrangler printed>"
 
 [env.production.vars]
 APP_BASE_URL = "https://aheedfoodcentre.nocaped.com"

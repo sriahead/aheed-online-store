@@ -563,6 +563,50 @@ not set it, so rotating it is a `wrangler` operation that needs no deploy.
 the token is absent under `NODE_ENV=production`, and the route returns `503` rather than running an
 unauthenticated sweep. Locally, leaving it unset is fine and the route simply refuses.
 
+#### Gated ticks and the `JOB_SIGNALS` KV namespace (#1324)
+
+Every job touches the main Neon database, and Neon stays awake for five minutes after any query. An
+unconditional 15-minute tick therefore kept each database awake about 8 hours a day with no traffic
+at all. The scheduler now has **two Cron Triggers** and decides per invocation which jobs to call:
+
+| Cron | Calls |
+|---|---|
+| `*/15 * * * *` (the tick) | `/api/jobs/reconcile-payments` and `/api/jobs/check-error-rate`, each **only when its marker says there is work**; never the reaper |
+| `0 3 * * *` (the daily run) | all three jobs, **ungated**, including `/api/jobs/reap-guest-carts`, which runs nowhere else |
+
+The markers live in a Cloudflare KV namespace bound as **`JOB_SIGNALS`** to **both** Workers. The app
+writes them only through `lib/job-signals.ts`, and the key names live in `lib/job-signal-keys.ts`:
+
+| Key | Written by | The tick calls the job when |
+|---|---|---|
+| `payment-sweep:due-at` | checkout (now + 40 min, only ever brought forward), staff Retry (now), and the sweep itself at the end of every run (the next instant anything is due, or the key is deleted) | the stored instant is at or before now |
+| `error-events:last-at` | every `ErrorEvent` write path, at most once per 5 minutes | the stored instant is within the last 20 minutes |
+
+**Every failure mode fails open.** If the binding is missing, a read throws, or a value does not parse,
+the tick calls the job, exactly as before #1324. A failed marker *write* is logged
+(`job-signal … failed`) and never fails the checkout or error capture that made it. Its cost is a
+skipped job, which the daily run bounds to a day. Each invocation logs one
+`scheduler tick cron=… ran=… skipped=…` line, so in `wrangler tail` a quiet tick (`ran=none`) is
+distinguishable from a dead one (no line).
+
+**Creating the namespaces is an owner step.** Run it once per environment, on the account the Workers
+deploy to:
+
+```bash
+wrangler kv namespace create aheed-jobs-staging
+wrangler kv namespace create aheed-jobs-production
+```
+
+Put each printed id into **both** `wrangler.toml` (the application Worker) and
+`workers/scheduler/wrangler.toml`, under `[[env.<env>.kv_namespaces]]` with `binding = "JOB_SIGNALS"`.
+**It must be the same id in both files.** Two different namespaces would leave the scheduler reading
+markers nobody writes, so it would skip the sweep forever and only the daily run would remain. Both
+files carry a commented placeholder block at the right spot. The top-level (non-`--env`) block in each
+file holds a placeholder id that only `npm run preview` / `wrangler dev` use; no deploy reads it.
+
+**Cron Trigger budget:** the scheduler uses **4** of the Workers Free plan's **5** Cron Triggers per
+account (two per environment). The application Worker has none.
+
 ## Prerequisites (one-time)
 
 1. **Authenticate the GitHub CLI** — this is where GitHub issues the **one-time device code**:

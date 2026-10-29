@@ -9,6 +9,8 @@ import {
   isOrderStatus,
   nextStatus,
   orderStatusLabel,
+  ORDER_STATUSES,
+  paymentControlsFor,
   REVENUE_STATUSES,
   STAFF_QUEUE_STATUSES,
   type StaffStatusEventInput,
@@ -389,5 +391,24 @@ describe("LEGAL_TRANSITIONS is unchanged by #696", () => {
   it("still yields exactly one forward rung from CONFIRMED", () => {
     expect(nextStatus("CONFIRMED", "DELIVERY")).toBe("OUT_FOR_DELIVERY");
     expect(nextStatus("CONFIRMED", "COLLECTION")).toBe("READY_FOR_COLLECTION");
+  });
+});
+
+// #1324 R26 — which payment controls the staff order page shows.
+describe("paymentControlsFor (#1324)", () => {
+  const paid = new Set([
+    "CONFIRMED",
+    "OUT_FOR_DELIVERY",
+    "DELIVERED",
+    "READY_FOR_COLLECTION",
+    "COLLECTED",
+  ]);
+  it.each(
+    ORDER_STATUSES.flatMap((status) => ["ADMIN", "STAFF"].map((role) => [role, status] as const)),
+  )("%s on %s", (role, status) => {
+    expect(paymentControlsFor(role, status)).toEqual({
+      checkPayment: role === "ADMIN" && status === "PENDING_PAYMENT",
+      resendEmail: role === "ADMIN" && paid.has(status),
+    });
   });
 });
