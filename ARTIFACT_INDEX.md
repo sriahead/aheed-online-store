@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-29T07:19:16.057Z` · commit `57ede8f` · `295` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-29T11:33:19.559Z` · commit `237bd37` · `296` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -285,6 +285,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Event-gated background jobs and on-demand payment checks (plan)](specs/2026-10-28-event-gated-jobs/plan.md) | spec | 1.0.0 | 2026-10-28 | draft | internal | Stops the 15-minute scheduler waking Neon when nothing is pending (#1324): jobs gated on activity markers in Cloudflare KV, a daily backstop run, 35-minute Stripe sessions, a return-page payment check and two staff controls. |
 | [Pricing model v2: scaling costs, partner time, volume-linked models, add-ons and launch recommendation (plan)](specs/2026-10-28-pricing-model-v2/plan.md) | spec | 1.0.0 | 2026-10-28 | draft | internal | Reworks the advisory /staff/platform/costs dashboard (#1313): a production cost model over shops x orders x basket, partner time, Stripe Connect, four volume-linked pricing models, add-ons, a risks register, a launch recommendation and browser-only what-if inputs. |
 | [RBAC four views: role landing, demo-admin as store admin, platform home, gate matrix (plan)](specs/2026-10-28-rbac-four-views/plan.md) | spec | 1.0.0 | 2026-10-28 | draft | internal | Separates the four experiences on the existing RBAC: role-based landing after sign-in, demo-admin demoted to store admin with a new demo-platform-admin, a /staff/platform home, and a test pinning every staff page, route and action to its gate. |
+| [Move hosting to Merqify's Cloudflare account and data to a new Neon account (plan)](specs/2026-10-29-merqify-platform-move/plan.md) | spec | 1.0.0 | 2026-10-29 | draft | internal | #1323: deploys move from the Free-plan Nocaped Cloudflare account to Merqify's new account under flat merqify.com hosts, and a dry-run-first script fills a new Neon account from old staging with 10% of the products and no test orders or demo logins. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.43.0 | 2026-10-22 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
