@@ -39,9 +39,15 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-29 (`#1324` Build): event-gated background jobs are BUILT, NOT VALIDATED AND NOT PUSHED**,
-  on local branch `feature/event-gated-jobs`, rebased onto `docs/carry-forward-1319` so its PR also
-  lands that unpushed handoff. Spec and build notes: `specs/2026-10-28-event-gated-jobs/`.
+- **2026-10-29 (`#1324` Ship, paused): PR #1327 into `staging` is OPEN, CI GREEN, NOT MERGED.** Branch
+  `feature/event-gated-jobs` (pushed), rebased onto `docs/carry-forward-1319`, so the PR also lands that
+  handoff. Spec, build notes and validation record: `specs/2026-10-28-event-gated-jobs/`.
+  - **Validated in-session (not independent).** Every row passes except **R25 (unverified)**: a
+    browser-paid Stripe Checkout must flip the return page to confirmed. No Chrome extension was
+    connected.
+  - **Merge is the owner's call** (`gh pr merge 1327 --squash`; auto mode blocks merges). After it:
+    move `#1324` to In Review, check `deploy-staging`, then `/document`. **`deploy-staging` will fail
+    until `#1323`**, and promotion to `main` waits for `#1289` and `#1323`.
   - **Why it matters:** the 15-minute `workers/scheduler` tick woke each Neon database 96 times a day
     with zero traffic (about 8 h of compute, ~61 CU-hours a month at 0.25 CU). That is a likely large
     share of production's quota breach (`#1289`).
