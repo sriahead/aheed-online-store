@@ -108,12 +108,24 @@ reconciliation. If overall project state did not materially change, leave this f
     `secrets/scratch-target.vars` (Validate only; two URLs), `secrets/merqify-staging.vars` and
     `secrets/merqify-production.vars`. A blank required value makes `configure-env` and the copy
     script refuse, which was checked. **The owner is filling them in.**
-  - **Next:** `/clear`, then Validate on Sonnet 5.
-    1. The owner fills in `secrets/scratch-target.vars` with the `scratch` direct and pooled URLs.
-    2. The owner runs `migrate status`, then `migrate deploy`, against `scratch` (auto mode blocks
-       migrations): `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<scratch direct> DATABASE_URL=<scratch direct> npx prisma migrate …`.
-    3. `/validate` runs the copy for real against `scratch`: R7–R20, R12a, the staging and
-       production targets, and a "Reset from parent" between runs. **`--apply` has never run.**
+  - **Amendment 6 (owner, 2026-10-29, from the first `/validate`): a migrated database is never
+    empty.** Every `migrate deploy` inserts one vendor, `aheed-food-centre`
+    (`a4ed0000-0000-4000-a000-000000000001`), so the script's old "target holds no vendor" refusal
+    fired on every prepared target. Now the target is *freshly migrated*, not empty: the script
+    accepts exactly that seeded row (`seeded-only`), refuses if it owns any rows (many keys to
+    `Vendor` cascade), and `--apply` deletes it before inserting the copied vendors. Spec commit
+    `8fe054b8`, implementation in the next commit. **Spec and Build both ran on Sonnet 5.5 at the
+    owner's request, not Opus 5.**
+  - **Next:** `/clear`, then `/validate` on Sonnet 5, **from the top**.
+    1. **`scratch` is migrated** (79 of 79, applied by the owner 2026-10-29) and holds only the
+       seeded vendor. A dry run against it from old staging works (`target vendors: seeded-only`).
+    2. **Before every `--apply` the owner resets `scratch`** ("Reset from parent", then
+       `migrate deploy`: `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<scratch direct> DATABASE_URL=<scratch direct> npx prisma migrate deploy`).
+       Auto mode blocks migrations, and also blocked a script run against old staging that
+       included a protected-host refusal case, so hand over a `! <command>` where it does.
+    3. `/validate` runs the copy for real against `scratch`: R7–R20, R8a–R8d, R12a, the staging
+       and production targets, and a reset between runs. **`--apply` has never run.** The first
+       `/validate` passed the static rows, `configure-env` dry runs and R9; the rest waited on this.
     4. The live rows R24–R28 wait for the owner's Merqify setup: Workers Paid; **the Access
        application for `docs.merqify.com` before any secret is pushed** (`#1328`); the three image
        buckets with the hotlink rule on staging and production only; scoped tokens; the filled

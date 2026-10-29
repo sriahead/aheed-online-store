@@ -4,7 +4,7 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.23.0"
+version: "1.24.0"
 updated: 2026-10-29
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
@@ -209,6 +209,15 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.
    `env -u DIRECT_URL -u DATABASE_URL npx tsx scripts/migrate-to-new-neon.ts --from secrets/staging.vars --to secrets/merqify-staging.vars --target staging`.
    - Expected: Aheed 245 products plus SriMart's 3, no orders, no `@example.com` users, and two
      generated `VendorDomain` rows.
+   - **The target is a freshly migrated database, not an empty one.** Step 2's `migrate deploy`
+     inserts one vendor, `aheed-food-centre` (`a4ed0000-0000-4000-a000-000000000001`), and the plan
+     prints `target vendors: seeded-only`. `--apply` replaces that row with the copied one, once
+     nothing references it. A database holding any other store, or a seeded vendor that already
+     owns rows, is refused. Do not hand-empty a target to get past a refusal: deleting a vendor
+     cascades into the rows it owns.
+   - **A failed `--apply` leaves a partial target. Reset it, do not re-run it:** on the `scratch`
+     branch use Neon "Reset from parent", then run step 2 again. Without a `scratch` branch,
+     recreate the database first, then run step 2 again.
    - The image copy reads the old bucket with the `S3_*` keys already in `secrets/staging.vars`
      (bucket `aheed-images-staging` in the Nocaped account). Those keys must still work there.
 4. **Copy:** the same command with `--apply --copy-images`. It ends by re-counting every model; any
@@ -276,7 +285,7 @@ Production deploys when `staging` is promoted to `main`, so do these **before** 
 promotion PR:
 - steps 1–5 above with `secrets/merqify-production.vars` and `--target production`;
 - step 8: the owner's own account, and the demo roster (allowed in production until go-live,
-  `#1332`).
+  `#1332`): `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<new production direct url> npm run demo:accounts -- add`.
 
 Then merge the promotion and run step 7 on the production hosts. Old production (`#1289`) is never
 read, and the new production database is filled from old staging (owner decision, 2026-10-29).

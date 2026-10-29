@@ -17,7 +17,9 @@ R1a. Aheed Superstore is retired. These files no longer exist:
      - `tests/staging-test-vendor-onboarding.test.ts`.
 
      No file under `app/`, `components/`, `lib/`, `scripts/`, `prisma/manifests/` or `tests/`
-     contains `aheedsuperstore`.
+     contains `aheedsuperstore`, except `app/(admin)/staff/runbook/docs.ts`. That file is generated
+     by `kms:build-index` from historical specs and docs, which are not rewritten, and
+     `kms:check-generated` keeps it current (corrected after the first `/validate`).
 R2. `wrangler.toml` `[env.production]` declares exactly two routes, each `custom_domain = true`:
     `aheed.merqify.com` and `srimart.merqify.com`.
 R3. `workers/scheduler/wrangler.toml` sets `APP_BASE_URL` to `https://aheed-staging.merqify.com`

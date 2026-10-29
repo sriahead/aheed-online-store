@@ -2,12 +2,16 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   MODEL_PLAN,
+  SEEDED_VENDOR,
   applyForeignKeys,
+  classifyTargetVendors,
   insertOrder,
   isDemoEmail,
   isPlaceholderKey,
   isSelectedProductSlug,
+  parseForeignKeys,
   selectProducts,
+  vendorDependents,
   type ForeignKey,
 } from "../scripts/lib/neon-migration-plan";
 
@@ -198,5 +202,77 @@ describe("applyForeignKeys (R12a)", () => {
       row: { id: "d", ownerId: null },
       nulled: 0,
     });
+  });
+});
+
+describe("target vendor state (R8a, Amendment 6)", () => {
+  const seeded = { id: SEEDED_VENDOR.id, slug: SEEDED_VENDOR.slug };
+
+  it("names the vendor the multitenancy migration inserts", () => {
+    const sql = readFileSync(
+      "prisma/migrations/20260808130000_multitenancy_vendor_scope/migration.sql",
+      "utf8",
+    );
+    expect(sql).toContain(`'${SEEDED_VENDOR.id}', '${SEEDED_VENDOR.slug}'`);
+  });
+
+  it("no rows is empty", () => {
+    expect(classifyTargetVendors([])).toBe("empty");
+  });
+
+  it("exactly the seeded row, matched on id and slug, is seeded-only", () => {
+    expect(classifyTargetVendors([seeded])).toBe("seeded-only");
+  });
+
+  it.each([
+    ["the seeded id with another slug", [{ id: SEEDED_VENDOR.id, slug: "other" }]],
+    ["another id with the seeded slug", [{ id: "x", slug: SEEDED_VENDOR.slug }]],
+    ["one unrelated vendor", [{ id: "x", slug: "srimart" }]],
+    ["the seeded row plus another", [seeded, { id: "x", slug: "srimart" }]],
+    [
+      "two vendors, neither seeded",
+      [
+        { id: "x", slug: "a" },
+        { id: "y", slug: "b" },
+      ],
+    ],
+  ])("%s is occupied", (_label, rows) => {
+    expect(classifyTargetVendors(rows)).toBe("occupied");
+  });
+});
+
+describe("models that can own the seeded vendor's rows (R8b)", () => {
+  const schema = readFileSync("prisma/schema.prisma", "utf8");
+  const dependents = vendorDependents(parseForeignKeys(schema));
+  const found = new Set(dependents.map((d) => `${d.model}.${d.field}`));
+
+  // Independent of parseForeignKeys: every `x Vendor @relation(fields: [col], ...)` line, by text.
+  const fromText = new Set<string>();
+  for (const block of schema.matchAll(/^model (\w+) \{([\s\S]*?)^\}/gm)) {
+    for (const line of block[2].split(/\r?\n/)) {
+      const m = /^\s*\w+\s+Vendor\??\s+.*@relation\(.*fields:\s*\[(\w+)\]/.exec(line);
+      if (m) fromText.add(`${block[1]}.${m[1]}`);
+    }
+  }
+
+  it("is derived from the schema: the same set as a plain-text scan of the relations", () => {
+    expect(fromText.size).toBeGreaterThan(40);
+    expect([...found].sort()).toEqual([...fromText].sort());
+  });
+
+  it("includes the models a migrated vendor would own rows in", () => {
+    for (const key of [
+      "Product.vendorId",
+      "Category.vendorId",
+      "VendorConfig.vendorId",
+      "VendorDomain.vendorId",
+    ]) {
+      expect(found.has(key), key).toBe(true);
+    }
+  });
+
+  it("excludes the vendor itself and models with no key to it", () => {
+    expect(dependents.some((d) => d.model === "Vendor")).toBe(false);
+    expect(dependents.some((d) => d.model === "Session")).toBe(false);
   });
 });

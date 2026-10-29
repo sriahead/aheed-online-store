@@ -8,14 +8,17 @@ import { assertNotDeployedDatabase, normalizeHost } from "./lib/protected-hosts"
 import {
   IMAGE_KEY_FIELDS,
   MODEL_PLAN,
+  SEEDED_VENDOR,
   VENDOR_HOSTS,
   VENDOR_SLUGS,
   applyForeignKeys,
+  classifyTargetVendors,
   insertOrder,
   isDemoEmail,
   isPlaceholderKey,
   isSelectedProductSlug,
   parseForeignKeys,
+  vendorDependents,
   type ForeignKey,
   type Row,
   type Target,
@@ -40,8 +43,14 @@ import {
  *
  * SAFETY. Hosts come from the two env files, never from the process environment, and are printed
  * with no password before anything is read. It refuses before any write when the two hosts are the
- * same, when the target already has a store, or when the target is a host named in
- * secrets/staging.vars or secrets/production.vars (the OLD databases, which this only reads).
+ * same, when the target already has a store other than the one every migration seeds (R8a-R8b),
+ * or when the target is a host named in secrets/staging.vars or secrets/production.vars (the OLD
+ * databases, which this only reads).
+ *
+ * THE TARGET IS A FRESHLY MIGRATED DATABASE, not an empty one: `prisma migrate deploy` inserts the
+ * Aheed vendor (`SEEDED_VENDOR`). `--apply` deletes that one row, only once nothing references it,
+ * and then inserts the copied vendors, so the target ends with each vendor once (R8c). A failed
+ * `--apply` leaves a partial target: reset the branch and re-migrate, do not re-run.
  */
 
 function flag(name: string): boolean {
@@ -95,7 +104,8 @@ function delegate(client: PrismaClient, model: string) {
       {
         findMany: (args?: object) => Promise<Row[]>;
         createMany: (args: { data: Row[] }) => Promise<{ count: number }>;
-        count: () => Promise<number>;
+        count: (args?: object) => Promise<number>;
+        deleteMany: (args: object) => Promise<{ count: number }>;
       }
     >
   )[name];
@@ -387,14 +397,43 @@ async function main() {
   const sourceDb = new PrismaClient({ adapter: new PrismaNeon({ connectionString: from.url }) });
   const targetDb = new PrismaClient({ adapter: new PrismaNeon({ connectionString: to.url }) });
   try {
-    const existingStores = await delegate(targetDb, "Vendor").count();
-    if (!verifyOnly && existingStores > 0) {
-      fail(
-        `the target already holds ${existingStores} store(s); this only fills an empty database`,
-      );
+    // R8a-R8b. A verify-only run compares a target that is already filled, so it skips both.
+    let targetState: "empty" | "seeded-only" = "empty";
+    if (!verifyOnly) {
+      const rows = (await delegate(targetDb, "Vendor").findMany({
+        select: { id: true, slug: true },
+      })) as Array<{ id: string; slug: string }>;
+      const state = classifyTargetVendors(rows);
+      if (state === "occupied") {
+        fail(
+          `the target already holds ${rows.length} store(s) (${rows.map((r) => r.slug).join(", ")}) ` +
+            `beyond the migration-seeded ${SEEDED_VENDOR.slug}; this only fills a freshly migrated database`,
+        );
+      }
+      targetState = state;
+      if (state === "seeded-only") {
+        const models = parseForeignKeys(readFileSync("prisma/schema.prisma", "utf8"));
+        for (const { model, field } of vendorDependents(models)) {
+          const owned = await delegate(targetDb, model).count({
+            where: { [field]: SEEDED_VENDOR.id },
+          });
+          if (owned > 0) {
+            fail(
+              `the migration-seeded vendor ${SEEDED_VENDOR.slug} already owns ${owned} ${model} row(s); ` +
+                `deleting it would remove them. Reset the target from a fresh migrate deploy.`,
+            );
+          }
+        }
+      }
     }
 
     const plan = await buildPlan(sourceDb, target);
+    console.log(`target vendors: ${targetState}`);
+    if (targetState === "seeded-only") {
+      console.log(
+        `  --apply will replace the migration-seeded vendor ${SEEDED_VENDOR.slug} (${SEEDED_VENDOR.id}) with the copied one.`,
+      );
+    }
     printPlan(plan);
 
     if (!apply && !verifyOnly) {
@@ -403,6 +442,13 @@ async function main() {
     }
 
     if (apply) {
+      // R8c — before any copied row: the copied `aheed-food-centre` would otherwise collide with
+      // the seeded one on both its primary key and its unique slug.
+      if (targetState === "seeded-only") {
+        await delegate(targetDb, "Vendor").deleteMany({ where: { id: SEEDED_VENDOR.id } });
+        console.log(`
+removed the migration-seeded vendor ${SEEDED_VENDOR.slug}.`);
+      }
       for (const model of plan.order) {
         const data = plan.rows.get(model)!;
         for (let i = 0; i < data.length; i += 500) {

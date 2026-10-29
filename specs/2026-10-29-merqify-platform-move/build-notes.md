@@ -172,6 +172,47 @@ it also carries `#1324`'s Document commit (`237bd37`: roadmap row 1.186.0, hando
 - **Spec:** R34c is new; the plan's decision bullet and the requirements intro are marked
   superseded.
 
+### Amendment 6 (from the first `/validate`, owner chose option A, 2026-10-29): a migrated target is never empty
+
+Spec commit `8fe054b8`. Implementation is the commit after it.
+
+- **Why:** `/validate`'s R7 run refused with "the target already holds 1 store(s)". Every
+  `prisma migrate deploy` inserts the Aheed vendor (`a4ed0000-0000-4000-a000-000000000001`, slug
+  `aheed-food-centre`; `20260808130000_multitenancy_vendor_scope/migration.sql:82`), so the original
+  "no `Vendor` row" refusal could never pass and `--apply` was unreachable. The spec was wrong, not
+  the first build.
+- **`scripts/lib/neon-migration-plan.ts` (R8a, R8b):**
+  - `SEEDED_VENDOR` holds the id and slug.
+  - `classifyTargetVendors(rows)` returns `empty`, `seeded-only` (exactly one row, id **and** slug
+    equal) or `occupied`.
+  - `vendorDependents(models)` lists every `model.field` with a single-column foreign key to
+    `Vendor`, from `parseForeignKeys`. The schema has 56 such relations and none is composite.
+- **`scripts/migrate-to-new-neon.ts` (R8, R8b, R8c):**
+  - It reads the target's `Vendor` rows (`id`, `slug`) and refuses on `occupied`.
+  - For `seeded-only` it counts, per dependent `model.field`, the rows referencing the seeded id,
+    and refuses on the first non-zero count. This runs in the dry run too.
+  - It prints `target vendors: empty|seeded-only` and, for `seeded-only`, the "will replace" line.
+  - `--apply` calls `deleteMany({ where: { id: SEEDED_VENDOR.id } })` before the first insert.
+  - `--verify-only` skips the vendor check, as before, and deletes nothing.
+  - `delegate()` gained `deleteMany` and an optional `count(args)`.
+- **Tests (R8a, R8b):** `tests/neon-migration-plan.test.ts` has 11 new cases (59 in the file): the
+  migration SQL names the seeded vendor; `[]`, the seeded row, and five `occupied` shapes; and the
+  dependents list equals an independent text scan of the schema, includes `Product`, `Category`,
+  `VendorConfig` and `VendorDomain`, and excludes `Vendor` and `Session`.
+- **Runbook (R8d):** `env-setup.md` 1.24.0 step 3 says the target is freshly migrated, what the
+  plan prints, that a failed `--apply` is reset and not re-run, and the production cut-over step 8
+  now carries the literal `demo:accounts -- add` command.
+- **Three wording defects from the first `/validate` are corrected in the spec, with no code
+  change:** R1a carves out the generated `docs.ts`; R6's fallback check no longer matches the
+  required empty-string fallback (`?? "[^"]`); R34c's production step names `add` literally.
+- **Generated files** (`ARTIFACT_INDEX.md`, `app/(admin)/staff/runbook/docs.ts`) were rebuilt with
+  `kms:build-index`. `kms:check-generated` reads `git show HEAD:<path>`, so it reports them stale
+  until they are committed. That is expected, not drift.
+- **CHANGELOG** (Gate 4): the `#1323` entry's "new, empty database" is corrected and the seeded
+  vendor handling is added.
+- **Stage models:** Spec **and** Build for this amendment ran on **Sonnet 5.5**, not Opus 5, at the
+  owner's explicit request. `plan.md` records it. Nothing here was validated in this context.
+
 ## Decisions taken during the build
 
 - **The schema text is the source of foreign keys, not `Prisma.dmmf`.** With
@@ -203,6 +244,22 @@ it also carries `#1324`'s Document commit (`237bd37`: roadmap row 1.186.0, hando
   "Access application first" (step 2 of the owner list), and the comment in the docs `wrangler.toml`
   says the same. An automated pre-deploy guard would be new scope, so it is filed as a follow-up.
 
+### Amendment 6 decisions
+
+- **Delete-then-insert, not update in place** (option A over B). It reuses the existing insert
+  path, so no second column list has to track the schema. The copied vendor then arrives with the
+  source's own id and slug, which keeps R16.
+- **The dependents guard runs in the dry run as well as `--apply`.** The spec says "before any
+  write"; running it earlier means the operator sees a refusal at plan time, not mid-run.
+- **Single-column keys only in `vendorDependents`.** Verified against the schema (56 relations to
+  `Vendor`, none composite) rather than assumed; a future composite key to `Vendor` would be missed
+  by the guard, and the schema-scan test would NOT catch it (its regex is single-column too). If
+  one is ever added, widen `vendorDependents` and that test together.
+- **The seeded row is matched on id AND slug, not on either.** A row with the right slug and
+  another id is a real store and counts as `occupied`.
+- **The vendor check reads the schema from `prisma/schema.prisma` relative to the working
+  directory**, like `buildPlan` already does, so the script must run from the repo root.
+
 ## Deviations from the spec
 
 - **R1a's "no file under `app/` contains `aheedsuperstore`" is not met by
@@ -218,7 +275,31 @@ it also carries `#1324`'s Document commit (`237bd37`: roadmap row 1.186.0, hando
 
 ## Known-shaky areas
 
-- **No `--apply` has run yet.** The refusals (R8a–d) and the full plan were run against the real
+### Amendment 6
+
+- **The `--apply` path has never run, and now includes a delete.** What is verified: types, lint,
+  format, 59 unit tests, and a real dry run from old staging into `scratch` (exit 0,
+  `target vendors: seeded-only`, nothing written). What is not: the `deleteMany` on the seeded
+  vendor, the inserts after it, `createMany` with original ids, the re-count, and R8b's refusal on a
+  target whose seeded vendor owns a row. Validate these on `scratch` first.
+- **The dependents guard has no integration test.** R8b's integration step needs a write to
+  `scratch` (insert a `Category` for the seeded vendor); auto mode may block it, so it may need to
+  be a `! <command>` from the owner.
+- **Each `--apply` needs a fresh `scratch`.** Reset from parent, then `migrate deploy`, both owner-run.
+  A second apply on the same branch is refused by design (two vendors, `occupied`), which is also
+  R8(ii)'s test.
+- **The delete and the inserts are not atomic.** A failure between them leaves a target with no
+  seeded vendor and some copied rows; rerunning may refuse or half-succeed. The runbook says reset,
+  not re-run. Filed as `#1333` (not yet on the delivery board).
+- **The mutation guard for R8a is part of `/validate`** (change the slug comparison, show the diff
+  landed, see the lookalike case fail, restore). The build did not run it.
+- **`protected-hosts` and the same-host refusal were not re-run live** in this build; they are
+  unchanged, and have not been run live. R8(i), (iii), (iv) still need
+  a run, and the first attempt at them was blocked by auto mode (a shared-database action).
+
+### Earlier build
+
+- **(Superseded by Amendment 6 above for the empty-target refusal.) No `--apply` has run yet.** The refusals (R8a–d) and the full plan were run against the real
   old staging database, read-only:
   - 6 users kept and 8 dropped; 2 stores;
   - 248 products (Aheed 245 + SriMart 3) and 248 inventory rows;

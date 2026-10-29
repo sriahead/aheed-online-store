@@ -109,6 +109,52 @@ export const VENDOR_SLUGS: Record<Target, readonly string[]> = {
   production: ["aheed-food-centre", "srimart"],
 };
 
+/**
+ * The `Vendor` that `prisma/migrations/20260808130000_multitenancy_vendor_scope/migration.sql`
+ * inserts into EVERY migrated database (R8a). A migrated target therefore is never empty, so the
+ * emptiness check has to recognise this one row, and only this one, as acceptable.
+ */
+export const SEEDED_VENDOR = {
+  id: "a4ed0000-0000-4000-a000-000000000001",
+  slug: "aheed-food-centre",
+} as const;
+
+export type TargetVendorState = "empty" | "seeded-only" | "occupied";
+
+/**
+ * R8a — what a target's `Vendor` rows say about it. `seeded-only` needs exactly one row whose id
+ * AND slug both match the migration's, so a row that matches only one of them (a lookalike, or a
+ * real store that happens to reuse the slug) is `occupied`.
+ */
+export function classifyTargetVendors(
+  rows: ReadonlyArray<{ id: string; slug: string }>,
+): TargetVendorState {
+  if (rows.length === 0) return "empty";
+  if (rows.length === 1 && rows[0].id === SEEDED_VENDOR.id && rows[0].slug === SEEDED_VENDOR.slug) {
+    return "seeded-only";
+  }
+  return "occupied";
+}
+
+/**
+ * R8b — every `model.field` that holds a foreign key to `Vendor`, read from the schema. The
+ * seeded vendor may only be replaced when none of these reference it: many of these keys cascade
+ * on delete, so removing a vendor that owns rows would delete them without a word.
+ */
+export function vendorDependents(
+  models: Record<string, ForeignKey[]>,
+): Array<{ model: string; field: string }> {
+  const out: Array<{ model: string; field: string }> = [];
+  for (const model of Object.keys(models).sort()) {
+    for (const fk of models[model]) {
+      if (fk.target === "Vendor" && fk.fields.length === 1) {
+        out.push({ model, field: fk.fields[0] });
+      }
+    }
+  }
+  return out;
+}
+
 /** The `VendorDomain` rows a target gets, one canonical host per store (R1, R2, R15). */
 export const VENDOR_HOSTS: Record<Target, Record<string, string>> = {
   staging: {
