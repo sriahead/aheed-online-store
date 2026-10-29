@@ -144,7 +144,11 @@ npm run configure-env -- staging --file secrets/merqify-staging.vars
   - a fresh `BETTER_AUTH_SECRET` per environment;
   - `BETTER_AUTH_URL` and `CDN_BASE_URL` for the new hosts;
   - the new Neon URLs, R2 values and scoped token.
-- **Carry over unchanged:** Resend, Google and Stripe keys (`STRIPE_WEBHOOK_SECRET` excepted).
+- **Carry over unchanged:** Google and Stripe keys (`STRIPE_WEBHOOK_SECRET` excepted).
+- **Email is a stopgap.** Copy today's `RESEND_API_KEY` and `RESEND_FROM_EMAIL` unchanged:
+  production refuses to send without them (`lib/config.ts`). Register **nothing** new with Resend.
+  Resend is being retired. Outgoing email moves to a provider-agnostic `EmailService` with
+  **Cloudflare Email Service** in the Merqify account (`#1217`), which replaces both keys.
 - **`configure-env` pushes to the account the FILE names.** It runs every `wrangler` command with
   that file's `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, never the machine's login, and
   prints `Cloudflare target: account …<last 6>` first. Check that suffix against the Merqify
@@ -217,8 +221,8 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.
 9. **Replace the copied `nocaped` addresses.** The migration's plan lists them under "WARNING:
    copied values still naming nocaped". On old staging these are the two stores'
    `VendorConfig.senderEmail` values. Set real addresses at `/staff/storefront` on each store's new
-   host. Sending works only from a domain verified in Resend, which means `merqify.com` once its DNS
-   records are in the Merqify zone (`#104`).
+   host once the sending domain is set up with Cloudflare Email Service in the Merqify account
+   (`#1217`, `#104`). Until then the stopgap Resend sender applies.
 
 ### Dev database
 
@@ -231,7 +235,7 @@ Local development also leaves the old Neon account **and** the Nocaped dev bucke
   - the reference URLs from the shared reference project;
   - `S3_*` for the new dev bucket, with `CDN_BASE_URL=https://images-dev.merqify.com`;
   - in `.dev.vars`, the Merqify `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` for Workers AI;
-  - `RESEND_FROM_EMAIL` once `merqify.com` is verified.
+  - email keys: unchanged (in dev a missing key only skips sending); `#1217` replaces them.
 
   Keep `.env` comments on their own line (`CLAUDE.md`): today's `S3_BUCKET` and `CDN_BASE_URL`
   lines carry trailing comments.
@@ -285,7 +289,7 @@ owner's approval, one item at a time**. Until then they are the rollback.
 | Old Neon account | Projects dev (`ep-dry-morning`), staging (`ep-empty-scene`), production (`ep-young-glitter`), reference | Production is unreadable (`#1289`); take a backup if the quota allows, or confirm nothing in it is wanted. |
 | Stripe | Webhook endpoints on `aheedfoodcentre.nocaped.com` and `staging.aheedfoodcentre.nocaped.com` | Keep until no checkout can return to an old host. |
 | Google Cloud console | OAuth redirect URIs on `nocaped.com` hosts | |
-| Resend | Any domain or sender on `aheedfoodcentre.nocaped.com` | After `RESEND_FROM_EMAIL` moves to `merqify.com`. |
+| Resend | The account, API key and any domain or sender on `aheedfoodcentre.nocaped.com` | Resend is retired: remove it once `#1217`'s Cloudflare Email Service adapter is live in both environments and the `RESEND_*` keys are gone. |
 | Cloudflare | The `nocaped.com` zone and domain registration | Owner decision. It also appears in `lib/running-costs.ts` as a running cost. |
 
 After the deletions, switch the local files over too: rename or replace `secrets/staging.vars` and

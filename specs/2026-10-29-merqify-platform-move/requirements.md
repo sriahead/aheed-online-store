@@ -176,8 +176,11 @@ R31. The migration script's plan output lists, as warnings, every copied text va
      `nocaped`, with its model, field and count. The values are copied unchanged, and the runbook
      says where to replace them after the cut-over.
 R32. `prisma/seed.ts` and `prisma/manifests/example.json` contain no `nocaped`.
-     `secrets/example.vars` says `RESEND_FROM_EMAIL` is an address on a Resend-verified
-     `merqify.com` domain.
+     (Amendment 3, owner 2026-10-29: Resend is retired; email becomes provider-agnostic with
+     Cloudflare Email Service, `#1217`.) `secrets/example.vars` and the runbook say the two
+     `RESEND_*` values are copied unchanged as a stopgap, that nothing new is registered with
+     Resend, and that `#1217` replaces both keys. Resend is in the "Freeing Nocaped" table, to be
+     removed after `#1217` is live.
 R33. The runbook has a "Dev database" step: a new dev project in the Merqify Neon account,
      `prisma migrate deploy` then `npm run db:seed` against it, and `.env` and `.dev.vars` both
      pointed at it. (Amendment 2) The step also replaces the dev images bucket: an

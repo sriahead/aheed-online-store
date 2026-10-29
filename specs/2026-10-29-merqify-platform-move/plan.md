@@ -137,7 +137,9 @@ everything to Merqify and free up Nocaped." So:
 - **Production cut-over:** it rides the `staging → main` promotion and needs owner approval at each
   step. The runbook covers it; this slice validates staging only.
 - **Old production's data** (unreadable, `#1289`), **Stripe live keys** (`#113`), **Connect**
-  (`#1310`), **Resend domain verification** (`#104`), a **`merqify.com` marketing site** (the bare
+  (`#1310`), **the email provider change** (Resend retired in favour of a provider-agnostic
+  `EmailService` with Cloudflare Email Service, `#1217`; this slice only carries the Resend values
+  as a stopgap, owner 2026-10-29), a **`merqify.com` marketing site** (the bare
   domain matches no store and goes to `/coming-soon`), **deleting anything in the Nocaped account**,
   **new demo stores**, and **`JOB_SIGNALS` KV namespaces** (`#1325`; optional, and the same
   commented placeholders apply).

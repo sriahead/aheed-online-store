@@ -116,6 +116,20 @@ it also carries `#1324`'s Document commit (`237bd37`: roadmap row 1.186.0, hando
 - **Gap 3.** Corrected the false "`secrets/staging.vars` lacks the S3 keys" in `plan.md`, this file
   and the runbook. All five are present (bucket `aheed-images-staging`).
 
+### Amendment 3: Resend is retired (owner, 2026-10-29)
+
+- **Owner direction:** "We won't be using Resend but Cloudflare Email Service, and it would be
+  generic, i.e. email-service agnostic." That is `#1217`'s slice, but with **no Resend fallback**.
+  The owner chose (AskUserQuestion) to **carry today's `RESEND_*` values unchanged as a stopgap**,
+  because production's `lib/config.ts` refuses to send without them. The alternatives were building
+  `#1217` first, or no email until then.
+- **Changed here: wording only, no code.**
+  - `secrets/example.vars` gains a STOPGAP note.
+  - In the runbook: the stopgap bullet; step 9 now points at Cloudflare Email Service (`#1217`); the
+    dev bullet; the "Freeing Nocaped" Resend row (remove after `#1217` is live).
+  - The spec's R32 and the plan's exclusions are updated to match.
+  - Every instruction to verify a domain in Resend is gone.
+
 ## Decisions taken during the build
 
 - **The schema text is the source of foreign keys, not `Prisma.dmmf`.** With

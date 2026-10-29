@@ -61,6 +61,10 @@ reconciliation. If overall project state did not materially change, leave this f
         `wrangler login`.
       - The "Freeing Nocaped" checklist in `env-setup.md` lists what to delete once both
         environments are proven, each with owner approval.
+    - **Email: Resend is RETIRED (owner, 2026-10-29).** Email becomes a provider-agnostic
+      `EmailService` with Cloudflare Email Service (`#1217`), with **no Resend fallback**. Until it
+      ships, the new environments carry today's `RESEND_*` values unchanged, because production
+      refuses to send without them. Nothing new is registered with Resend.
   - **Four Cloudflare accounts:**
     - **Nocaped:** old; Free plan, cannot deploy.
     - **Merqify:** the target.
