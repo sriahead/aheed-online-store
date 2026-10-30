@@ -102,7 +102,7 @@ in place and the secrets are repointed.
   in the first place.
 - **Reviewing who an allow policy admits** (emails, groups, identity providers). Owner territory.
 - **Re-checking between deploys.** If someone deletes the Access application later, nothing notices
-  until the next push. A scheduled probe is a candidate follow-up, not filed without the owner.
+  until the next push. A scheduled probe is filed as `#1352` (P10, Backlog) for a later `/propose`.
 - **The token permission itself.** Adding "Access: Apps and Policies Read" to the staging token is
   an owner step in `#1339`.
 - **Removing the old Nocaped Access application and the `nocaped` text** in `kms/site-internal`'s

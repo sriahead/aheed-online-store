@@ -39,6 +39,27 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
+- **2026-10-30 (`#1328` Build Notes): P12 exists, the reference secret moved, and the docs guard is
+  BUILT, NOT VALIDATED, NOT MERGED.**
+  - **P12 tracks the Merqify move, the Aheed launch and freeing Nocaped** (`specs/roadmap.md`
+    1.187.0, PR #1351, `3df7a57`): milestone 25, board Phase `P12`, parents `#1336` (A), `#1337` (B),
+    `#1338` (C) with sub-issues and GitHub "blocked by" links. Read the parent issues for the order.
+    The board now has six P12 `High` items (`#1336`, `#1339`, `#1328`, `#1123`, `#1323`, `#1341`).
+  - **GitHub `UK_LOCATION_REF_DIRECT_URL` (staging and production) now names the Merqify reference
+    primary** (`ep-late-mud-zalcsvmm`, eu-west-2), set 2026-10-30 from `secrets/merqify-*.vars`.
+    It is the primary (`pg_is_in_recovery()` false) but **empty (0 tables)**; the 2026-11-03
+    `sync-reference-data` run on `main` runs `ref:migrate` first, so it should build it rather than
+    fail (`#1123` comment). The app Workers still read the old reference DB until the cut-over.
+  - **`secrets/merqify-*.vars` still have 8 blanks each** (auth secret, Google, Resend, Stripe,
+    `JOB_INVOCATION_TOKEN`) as of 2026-10-30; `configure-env` refuses until they are filled (`#1339`).
+  - **The internal docs host is `docs-shoplocal.merqify.com`** (owner, 2026-10-30), not
+    `docs.merqify.com`. `#1328` (branch `feature/p1328-docs-access-guard`, spec
+    `specs/2026-10-30-docs-access-guard/`) adds `scripts/verify-docs-access.ts`: `--pre` refuses the
+    docs deploy unless an Access app guards every host, `--post` proves signed-out requests reach the
+    Access login. The staging token needs **Access: Apps and Policies Read** (`#1339`). **Do not run
+    `configure-env` for staging until `#1328` is merged to `staging`.** Next: `/validate` from a
+    fresh context, then `/ship`. Follow-up `#1352` (scheduled re-check).
+
 - **2026-10-29 (`#1323` Document): the hosting move is MERGED TO STAGING (PR #1334, `70c777b`) but
   NOT DEPLOYED, and the cut-over has not happened.** `deploy-staging` run 40944731541 failed at
   `verify-worker-routes`: `wrangler.toml` routes staging to `merqify.com` while staging's
