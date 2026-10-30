@@ -20,6 +20,8 @@ every branch merges.
   - **Runbook**: `docs/developer-portal/env-setup.md`, "Merqify account": what the owner creates (the Access application for the docs site first), the `secrets/merqify-*.vars` files, the staging cut-over steps, production order and rollback.
 
   Nothing changes until the owner's Merqify and Neon setup exists and the secrets move. No schema change.
+  Merged to staging (PR #1334) but not deployed: `deploy-staging`'s route guard refuses until staging's
+  `VendorDomain` rows name the `merqify.com` hosts, so staging stays on its last build until the cut-over.
 
 - **Background jobs only wake the database when there is work** (issue `#1324`, spec `specs/2026-10-28-event-gated-jobs/`):
   - **Gated scheduler**: the 15-minute tick reads two markers from a new `JOB_SIGNALS` KV namespace and calls the payment sweep or the error-rate check only when it is due. An idle store goes from 96 database wakes a day to one. Any KV doubt runs the job.
