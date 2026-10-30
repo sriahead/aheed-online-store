@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.153.0"
-updated: 2026-10-29
+version: "1.154.0"
+updated: 2026-10-30
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -131,7 +131,7 @@ reconciliation. If overall project state did not materially change, leave this f
     auto mode blocks migrations and protected-host script runs, so hand over a `! <command>`.
     `--apply` ran once against `scratch` and passed.
     The live rows R24–R28 wait for the owner's Merqify setup: Workers Paid; **the Access
-       application for `docs.merqify.com` before any secret is pushed** (`#1328`); the three image
+       application for `docs-shoplocal.merqify.com` before any secret is pushed** (`#1328`); the three image
        buckets with the hotlink rule on staging and production only; scoped tokens; the filled
        `merqify-*.vars` files. Report them **unverified** until then.
   - **Follow-ups (all `P10`/Backlog):**

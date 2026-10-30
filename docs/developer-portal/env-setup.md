@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.24.0"
-updated: 2026-10-29
+version: "1.25.0"
+updated: 2026-10-30
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -78,7 +78,7 @@ Spec: `specs/2026-10-29-merqify-platform-move/`. The old Workers, old Neon proje
 | Aheed Food Centre | `aheed-staging.merqify.com` | `aheed.merqify.com` |
 | SriMart (demo store) | `srimart-staging.merqify.com` | `srimart.merqify.com` |
 | Images (`CDN_BASE_URL`) | `https://images-staging.merqify.com` | `https://images.merqify.com` |
-| Internal docs (Access) | `docs.merqify.com` | |
+| Internal docs (Access) | `docs-shoplocal.merqify.com` | |
 
 ### Check which account wrangler is on, before ANY manual wrangler command
 
@@ -94,12 +94,21 @@ environment.
 **In the Merqify Cloudflare account:**
 
 1. **Workers Paid.** Without it every deploy fails exactly as it does on Nocaped.
-2. **A Cloudflare Access application for `docs.merqify.com`, FIRST, before step 6.**
-   - Self-hosted, with a One-time PIN and an allow-list, as the old site had.
+2. **A Cloudflare Access application for `docs-shoplocal.merqify.com`, FIRST, before step 6.**
+   - Self-hosted, with a One-time PIN and an allow-list, as the old site had. Scope it to the whole
+     host (no path), and give it no `bypass` policy and no allow rule for "Everyone".
    - `deploy-docs-internal.yml` deploys that route on every push to `staging` or `main`, using the
-     staging environment's Cloudflare secrets.
-   - The moment those secrets name Merqify, the next push publishes the internal docs. With no
-     Access application in front, ADRs and `CLAUDE.md` are on the open internet.
+     staging environment's Cloudflare secrets. With no Access application in front, ADRs and
+     `CLAUDE.md` would be on the open internet.
+   - **The workflow guards this itself (`#1328`)** with `scripts/verify-docs-access.ts`, which reads
+     the hosts from `kms/site-internal/wrangler.toml`:
+     - `--pre`, before the build: the Access API must show a self-hosted application covering every
+       host, with no policy that lets everyone in. Otherwise nothing is deployed.
+     - `--post`, after the deploy: signed-out requests to `/` and a deep link must redirect to
+       `*.cloudflareaccess.com`. A normal page means the docs are public; the job fails and names
+       the custom domain to remove.
+   - Check it from this machine before pushing the secrets:
+     `npx tsx scripts/verify-docs-access.ts --pre --env-file secrets/merqify-staging.vars`.
 3. **R2 buckets `aheed-images-staging` and `aheed-images-production`** (the names `wrangler.toml`
    binds), plus `aheed-images-dev` for local work. Each gets:
    - a **custom domain**: `images-staging.merqify.com`, `images.merqify.com` and
@@ -112,6 +121,9 @@ environment.
    - Start from the "Edit Cloudflare Workers" template.
    - Set Account Resources to the Merqify account and Zone Resources to `merqify.com`.
    - Add Workers AI and R2 permissions.
+   - On the **staging** token also add **Access: Apps and Policies Read**: the docs deploy runs with
+     staging's secrets, and its `--pre` check reads the Access applications. Without it the check
+     fails closed with a 403 and the docs never deploy.
    - Never use a token that covers the whole login. The Aheed Food Centre account will sit under the
      same login, and a login-wide token would reach the client's account.
 5. **Optional:** `JOB_SIGNALS` KV namespaces (`#1325`). Until then every scheduler tick runs every
@@ -230,7 +242,8 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.
    - `https://aheed-staging.merqify.com/api/health` shows the commit, `db.ok`,
      `reference.reachable` and non-empty `reference.sources`;
    - both storefronts load, and an image under `images-staging.merqify.com` returns 200;
-   - `docs.merqify.com` shows the Access login, not a document.
+   - `docs-shoplocal.merqify.com` shows the Access login, not a document. The
+     `deploy-docs-internal` run's `--post` step checks the same thing on every deploy.
 8. **Give yourself an admin login.** Sign up on `aheed-staging.merqify.com`, then:
    - `npx tsx scripts/grant-role.ts --env-file secrets/merqify-staging.vars --email <you> --platform-admin`
      (dry run first, then `--apply`);
