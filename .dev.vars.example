@@ -5,11 +5,11 @@
 # its connection strings.
 DATABASE_URL="postgres://...-pooler.../db?sslmode=require"
 S3_ENDPOINT="https://<ACCOUNT_ID>.r2.cloudflarestorage.com"
-S3_BUCKET="aheed-images-dev"
+S3_BUCKET="shoplocal-images-dev"
 S3_ACCESS_KEY=""
 S3_SECRET_KEY=""
 S3_REGION="auto"
-CDN_BASE_URL="https://images.aheedfoodcentre.nocaped.com"
+CDN_BASE_URL="https://images-dev.merqify.com"
 BETTER_AUTH_SECRET="generate locally: openssl rand -base64 32"
 BETTER_AUTH_URL="http://localhost:8787"
 RESEND_API_KEY=""

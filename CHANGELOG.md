@@ -6,6 +6,10 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **The Merqify image buckets are named after the ShopLocal platform cell** (`#1339`, amendment 7 to `specs/2026-10-29-merqify-platform-move/`). `wrangler.toml` binds `shoplocal-images-staging` and `shoplocal-images-production`, the buckets the owner created, instead of `aheed-images-*`, which do not exist in the Merqify account and would have failed the first deploy. The dev bucket is `shoplocal-images-dev`. The runbook and `.env.example`/`.dev.vars.example` follow; `.dev.vars.example` also pointed local dev at the production image host, which has a hotlink rule. Store hosts are unchanged (`aheed[-staging].merqify.com`, `srimart[-staging].merqify.com`).
+
 ### Added
 
 - **The internal docs deploy refuses to publish without Cloudflare Access** (issue `#1328`, spec `specs/2026-10-30-docs-access-guard/`). The docs site has no login of its own, and `deploy-docs-internal` deploys it on every push to `staging` or `main`.

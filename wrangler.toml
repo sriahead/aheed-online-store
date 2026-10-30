@@ -66,7 +66,7 @@ custom_domain = true
 
 [[env.staging.r2_buckets]]
 binding = "IMAGES"
-bucket_name = "aheed-images-staging"
+bucket_name = "shoplocal-images-staging"
 
 # #1324 — JOB_SIGNALS for staging: NOT YET CREATED — owner action. Until it exists
 # this Worker deploys without the binding and every marker write is skipped,
@@ -104,7 +104,7 @@ custom_domain = true
 
 [[env.production.r2_buckets]]
 binding = "IMAGES"
-bucket_name = "aheed-images-production"
+bucket_name = "shoplocal-images-production"
 
 # #1324 — JOB_SIGNALS for production: NOT YET CREATED — owner action. Until it exists
 # this Worker deploys without the binding and every marker write is skipped,

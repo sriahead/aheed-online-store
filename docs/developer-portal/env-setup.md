@@ -4,7 +4,7 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.25.0"
+version: "1.26.0"
 updated: 2026-10-30
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
@@ -109,8 +109,9 @@ environment.
        the custom domain to remove.
    - Check it from this machine before pushing the secrets:
      `npx tsx scripts/verify-docs-access.ts --pre --env-file secrets/merqify-staging.vars`.
-3. **R2 buckets `aheed-images-staging` and `aheed-images-production`** (the names `wrangler.toml`
-   binds), plus `aheed-images-dev` for local work. Each gets:
+3. **R2 buckets `shoplocal-images-staging` and `shoplocal-images-production`** (the names
+   `wrangler.toml` binds; the platform cell's name, owner 2026-10-30), plus `shoplocal-images-dev`
+   for local work. The old Nocaped buckets keep their `aheed-images-*` names. Each gets:
    - a **custom domain**: `images-staging.merqify.com`, `images.merqify.com` and
      `images-dev.merqify.com`;
    - the **same hotlink pairing as before**: a referer rule on the staging and production image
@@ -266,8 +267,8 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.
 Local development also leaves the old Neon account **and** the Nocaped dev bucket
 (`aheed-images-dev`, served at `images.dev.aheedfoodcentre.nocaped.com`).
 - **Create** a `dev` branch on the `Shoplocal Staging` Neon project (a branch, not a separate
-  project: one fewer compute to pay for, and resettable from staging), and an `aheed-images-dev` R2
-  bucket in the Merqify account with custom domain `images-dev.merqify.com` and its own S3 API
+  project: one fewer compute to pay for, and resettable from staging), and a `shoplocal-images-dev`
+  R2 bucket in the Merqify account with custom domain `images-dev.merqify.com` and its own S3 API
   token.
 - **Point both `.env` and `.dev.vars` at them:**
   - `DATABASE_URL` (pooled) and `DIRECT_URL` (direct);
@@ -685,27 +686,28 @@ DIRECT_URL="<branch-direct-url>" npx prisma migrate deploy   # or `migrate dev` 
 This runs from your machine via the Node Prisma CLI, not the Worker — consistent with `CLAUDE.md`'s
 "migrations never run on the Worker, never at request time."
 
-**Object storage**: one **shared** R2 bucket, `aheed-images-dev` — used by *every* developer, not one
+**Object storage**: one **shared** R2 bucket, `shoplocal-images-dev` (`aheed-images-dev` in the old
+Nocaped account) — used by *every* developer, not one
 per developer. Object storage isn't where concurrent local test writes actually collide; the worst
 case is a stale test image, not corrupted state, so a per-developer bucket isn't worth provisioning.
 
-**Pair it with the DEV CDN host, not staging's.** `aheed-images-dev` is served by
-`images.dev.aheedfoodcentre.nocaped.com`, which is the only one of the three CDN hostnames with **no
+**Pair it with the DEV CDN host, not staging's.** `shoplocal-images-dev` is served by
+`images-dev.merqify.com` (the old bucket by `images.dev.aheedfoodcentre.nocaped.com`), which is the only one of the three CDN hostnames with **no
 hotlink/referer rule** — that is what lets an image load under `npm run preview`, where the referer
 is `http://localhost:3000`. The three hosts and their buckets are strictly paired:
 
-| Environment | `S3_BUCKET` | `CDN_BASE_URL` (Merqify account, #1323) | Was (Nocaped) | Hotlink rule |
+| Environment | `S3_BUCKET` (Merqify account) | `CDN_BASE_URL` (Merqify account, #1323) | Was (Nocaped bucket, host) | Hotlink rule |
 |---|---|---|---|---|
-| local dev | `aheed-images-dev` | `https://images-dev.merqify.com` | `images.dev.aheedfoodcentre.nocaped.com` | none |
-| staging | `aheed-images-staging` | `https://images-staging.merqify.com` | `images.staging.aheedfoodcentre.nocaped.com` | yes |
-| production | `aheed-images-production` | `https://images.merqify.com` | `images.aheedfoodcentre.nocaped.com` | yes |
+| local dev | `shoplocal-images-dev` | `https://images-dev.merqify.com` | `aheed-images-dev`, `images.dev.aheedfoodcentre.nocaped.com` | none |
+| staging | `shoplocal-images-staging` | `https://images-staging.merqify.com` | `aheed-images-staging`, `images.staging.aheedfoodcentre.nocaped.com` | yes |
+| production | `shoplocal-images-production` | `https://images.merqify.com` | `aheed-images-production`, `images.aheedfoodcentre.nocaped.com` | yes |
 
 The Merqify hosts must repeat this pairing: a referer rule on the staging and production image
 hosts, and **none** on the dev host (`env-setup.md`, "Merqify account").
 
 ```bash
-S3_BUCKET="aheed-images-dev"
-CDN_BASE_URL="https://images.dev.aheedfoodcentre.nocaped.com"
+S3_BUCKET="shoplocal-images-dev"
+CDN_BASE_URL="https://images-dev.merqify.com"
 ```
 
 Mixing a row — the state `.env` and `.dev.vars` shipped in until P8.1b (#277) — gives you a bucket

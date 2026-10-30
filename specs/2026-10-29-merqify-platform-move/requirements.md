@@ -268,6 +268,15 @@ which no database that has had `prisma migrate deploy` ever is. R8, R8a–R8d, R
 the change. Nothing else in the migration changes: `VENDOR_SLUGS`, the copy order, R12–R12a, R14,
 R15, R17 and R18 are as written.
 
+## Amendment 7 (owner, 2026-10-30, `#1339`): Merqify buckets carry the platform cell's name
+
+The owner created the Merqify buckets as `shoplocal-images-staging` and
+`shoplocal-images-production`, after the ShopLocal platform cell (Amendment 4), and chose to keep
+them. R33's dev bucket is likewise `shoplocal-images-dev`. `wrangler.toml`'s `IMAGES` bindings,
+the runbook and the env examples use these names. The store hosts stay flat on `merqify.com`
+(`aheed[-staging]`, `srimart[-staging]`); `shoplocal.merqify.com` is reserved for a future
+marketplace page and nothing serves it yet. R34's Nocaped buckets keep their `aheed-images-*` names.
+
 ## Gates
 
 R35. `CHANGELOG.md` updated (Gate 4).
