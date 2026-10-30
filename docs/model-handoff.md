@@ -39,13 +39,22 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-29 (`#1323` Build, before Validate): the hosting move is BUILT, NOT VALIDATED and NOT
-  MERGED.** Branch `feature/merqify-platform-move` is **pushed, with no PR yet**. The spec started at
-  `418235b` and the implementation at `2c16f31`; amendments 1–5 and the env-audit fixes followed, and
-  `git log` has the latest. It was cut from `docs/carry-forward-1324`, so it carries `#1324`'s
-  Document commit too. Spec and build
-  notes: `specs/2026-10-29-merqify-platform-move/`. Runbook: `docs/developer-portal/env-setup.md`,
-  "Merqify account". `#1323` is `In Progress`.
+- **2026-10-29 (`#1323` Document): the hosting move is MERGED TO STAGING (PR #1334, `70c777b`) but
+  NOT DEPLOYED, and the cut-over has not happened.** `deploy-staging` run 40944731541 failed at
+  `verify-worker-routes`: `wrangler.toml` routes staging to `merqify.com` while staging's
+  `VendorDomain` rows still list the `nocaped.com` hosts (deploying would tear those domains down).
+  Staging deploys were already failing since 2026-10-28 (Nocaped on Free, `code 100328`), so
+  restoring the old routes would not help. **Owner decision: leave staging as is until the cut-over.**
+  Staging serves `9a32058`; no `/api/health` was read. Spec and build notes:
+  `specs/2026-10-29-merqify-platform-move/`; runbook `docs/developer-portal/env-setup.md`, "Merqify
+  account". `#1323` stays `In Progress`.
+  - **Validated in-session (not independent).** Verified live on a scratch Neon branch. **Unverified:**
+    R8(iii) protected-host refusal, R13 production-target run (reset scratch first), R18 images,
+    R24–R27 (after the owner's Merqify setup and a staging deploy), R28 live reference DB.
+  - **Pending owner action:** rotate the R2 token whose secret key was printed into the validation
+    transcript. The scratch Neon branch is filled and needs a "Reset from parent" before another apply.
+  - **Cut-over order:** move staging data to the new Neon (`migrate-to-new-neon.ts`), update
+    `VendorDomain` to the `merqify.com` hosts, then deploy and read `/api/health`.
   - **Owner direction:**
     - **Merqify is the new Cloudflare account** (it holds `merqify.com` and no Workers yet), and
       **Neon is a fresh account**.
@@ -116,17 +125,12 @@ reconciliation. If overall project state did not materially change, leave this f
     `Vendor` cascade), and `--apply` deletes it before inserting the copied vendors. Spec commit
     `8fe054b8`, implementation in the next commit. **Spec and Build both ran on Sonnet 5.5 at the
     owner's request, not Opus 5.**
-  - **Next:** `/clear`, then `/validate` on Sonnet 5, **from the top**.
-    1. **`scratch` is migrated** (79 of 79, applied by the owner 2026-10-29) and holds only the
-       seeded vendor. A dry run against it from old staging works (`target vendors: seeded-only`).
-    2. **Before every `--apply` the owner resets `scratch`** ("Reset from parent", then
-       `migrate deploy`: `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<scratch direct> DATABASE_URL=<scratch direct> npx prisma migrate deploy`).
-       Auto mode blocks migrations, and also blocked a script run against old staging that
-       included a protected-host refusal case, so hand over a `! <command>` where it does.
-    3. `/validate` runs the copy for real against `scratch`: R7–R20, R8a–R8d, R12a, the staging
-       and production targets, and a reset between runs. **`--apply` has never run.** The first
-       `/validate` passed the static rows, `configure-env` dry runs and R9; the rest waited on this.
-    4. The live rows R24–R28 wait for the owner's Merqify setup: Workers Paid; **the Access
+  - **Next:** the owner's Merqify setup, then the cut-over (order above). Before any further
+    `--apply` the owner resets `scratch` ("Reset from parent", then
+    `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<scratch direct> DATABASE_URL=<scratch direct> npx prisma migrate deploy`);
+    auto mode blocks migrations and protected-host script runs, so hand over a `! <command>`.
+    `--apply` ran once against `scratch` and passed.
+    The live rows R24–R28 wait for the owner's Merqify setup: Workers Paid; **the Access
        application for `docs.merqify.com` before any secret is pushed** (`#1328`); the three image
        buckets with the hotlink rule on staging and production only; scoped tokens; the filled
        `merqify-*.vars` files. Report them **unverified** until then.
