@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.154.0"
+version: "1.155.0"
 updated: 2026-10-30
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,8 +39,8 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-10-30 (`#1328` Build Notes): P12 exists, the reference secret moved, and the docs guard is
-  BUILT, NOT VALIDATED, NOT MERGED.**
+- **2026-10-30 (`#1328` Document): P12 exists, the reference secret moved, and the docs guard is
+  MERGED TO STAGING (PR #1353, `ba42b79`), board `In Review`.**
   - **P12 tracks the Merqify move, the Aheed launch and freeing Nocaped** (`specs/roadmap.md`
     1.187.0, PR #1351, `3df7a57`): milestone 25, board Phase `P12`, parents `#1336` (A), `#1337` (B),
     `#1338` (C) with sub-issues and GitHub "blocked by" links. Read the parent issues for the order.
@@ -53,12 +53,23 @@ reconciliation. If overall project state did not materially change, leave this f
   - **`secrets/merqify-*.vars` still have 8 blanks each** (auth secret, Google, Resend, Stripe,
     `JOB_INVOCATION_TOKEN`) as of 2026-10-30; `configure-env` refuses until they are filled (`#1339`).
   - **The internal docs host is `docs-shoplocal.merqify.com`** (owner, 2026-10-30), not
-    `docs.merqify.com`. `#1328` (branch `feature/p1328-docs-access-guard`, spec
-    `specs/2026-10-30-docs-access-guard/`) adds `scripts/verify-docs-access.ts`: `--pre` refuses the
-    docs deploy unless an Access app guards every host, `--post` proves signed-out requests reach the
-    Access login. The staging token needs **Access: Apps and Policies Read** (`#1339`). **Do not run
-    `configure-env` for staging until `#1328` is merged to `staging`.** Next: `/validate` from a
-    fresh context, then `/ship`. Follow-up `#1352` (scheduled re-check).
+    `docs.merqify.com`. `#1328` (spec `specs/2026-10-30-docs-access-guard/`) adds
+    `scripts/verify-docs-access.ts`: `--pre` refuses the docs deploy unless an Access app guards every
+    host, `--post` proves signed-out requests reach the Access login. It is on `staging`, so
+    repointing staging's Cloudflare secrets (`configure-env`, `#1339`) is now safe from the docs
+    side. Follow-up `#1352` (scheduled re-check).
+  - **Both staging deploys on `ba42b79` refused, as expected, and nothing deployed.**
+    `deploy-docs-internal` (run 41122451401) stopped at the `--pre` guard: "no Access application
+    covers docs-shoplocal.merqify.com" in the account the staging secrets still name. That is the
+    guard working; it turns green after `#1339`. `deploy-staging` (run 41122451690) still fails at
+    `verify-worker-routes` (3 vendor hosts unrouted), unchanged since `#1323`. Staging serves `9a32058`.
+  - **Validated in-session, not independent.** Live: R13 (real Merqify API, refused), R14, R10.
+    **Unverified:** R15 (owner-gated, `#1339`) and R18's local `kms/site-internal` build (stopped
+    for low memory; CI `docs-gates` passed). Measured 2026-10-30: the Merqify staging token already
+    gets HTTP 200 from the Access list (so it has the read permission), and **both accounts list 0
+    Access applications**, so whether the list returns `policies` inline is still unknown. If not,
+    `--pre` fails closed on a correct setup and needs a per-app policies call. Check it when the
+    owner creates the docs Access app.
 
 - **2026-10-29 (`#1323` Document): the hosting move is MERGED TO STAGING (PR #1334, `70c777b`) but
   NOT DEPLOYED, and the cut-over has not happened.** `deploy-staging` run 40944731541 failed at
