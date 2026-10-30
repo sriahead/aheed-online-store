@@ -4,10 +4,10 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.186.0"
-updated: 2026-10-29
+version: "1.187.0"
+updated: 2026-10-30
 visibility: internal
-summary: Master backlog and phase sequencing (M0, P0-P11, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, vendor onboarding P11.
+summary: Master backlog and phase sequencing (M0, P0-P12, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, onboarding P11, Merqify move P12.
 tags: [roadmap, phases, backlog]
 ---
 
@@ -247,6 +247,10 @@ and the manual approval gate works. Spec: `specs/2026-08-05-m0-walking-skeleton/
   procedure, and explicit owner rulings on VAT and restricted-product scope. **Not a new data
   model** — the storefront-versus-stock-management question is itself one of the rulings. Full
   scope in the dedicated section below.
+- **P12 — Platform move, Aheed launch & Nocaped decommission.** Added 2026-10-30. Move the
+  ShopLocal platform cell to the Merqify Cloudflare and Neon accounts, launch Aheed Food Centre as
+  a dedicated cell at `aheedfoodcentre.co.uk`, then free the Nocaped account. Infrastructure and
+  launch work, mostly owner-gated; current priority. Full scope in the dedicated section below.
 
 > **The #408 brief and how it was split.** #408 (2026-08-27) filed fourteen issues, **#394**â€“**#407**,
 > covering navigation, product discovery, halal meat merchandising, fulfilment, checkout and
@@ -887,6 +891,51 @@ in `docs/developer-portal/`, `specs/decisions/` or `specs/architecture.md`, and 
 these projects has not been read. **A client handover that claims a recovery responsibility needs
 `#436` closed first**, which is a reason to pull it forward rather than to re-file it here.
 
+## P12 — Platform move, Aheed launch & Nocaped decommission
+
+Added 2026-10-30 at the owner's direction: these three pieces of work are the current priority and
+are tracked in one place. Milestone `P12 — Platform move, Aheed launch & Nocaped decommission`,
+board Phase `P12`.
+
+**Why.** The Nocaped Cloudflare account dropped to the Workers Free plan and refuses this app's CPU
+limit (`code 100328`), so nothing has deployed since 2026-10-28, and old production is down on its
+Neon quota (`#1289`). The owner chose a new Cloudflare account (Merqify) and a new Neon account
+rather than restoring the old ones, and made Aheed Food Centre an independent business in its own
+**dedicated cell** (`specs/architecture.md`, "Cells"). Runbook: `docs/developer-portal/env-setup.md`,
+"Merqify account".
+
+**Structure.** One parent issue per workstream, with every piece of work attached as a GitHub
+sub-issue and the order recorded as GitHub "blocked by" dependencies. The parent issues carry the
+sequence; scope still lives in each slice's `specs/` folder.
+
+- **A — Move the ShopLocal platform cell to Merqify (`#1336`).** Owner setup `#1339` (Workers Paid,
+  the docs Access application first, buckets, scoped tokens, filled `merqify-*.vars`, Stripe and
+  Google registrations, rotating the leaked R2 token); the docs Access guard `#1328`; the reference
+  database rebuilt on a primary `#1123`; the staging cut-over `#1323`; `JOB_SIGNALS` KV `#1325`;
+  local development moved `#1340`; atomic copy `#1333`; then the production cut-over and the
+  `staging -> main` promotion `#1341`.
+- **B — Launch Aheed Food Centre at `aheedfoodcentre.co.uk` (`#1337`).** The zone moves under the
+  Merqify login and the account-ownership decision `#1342`; the dedicated cell `#1331`; Cloudflare
+  for SaaS hosts `#1329`; the real catalogue `#1330`; outgoing email through Cloudflare Email
+  Service `#1217` with `#1299`, and the verified sending domain `#104`; inbound email `#1343`; live
+  Stripe keys `#113`; the go-live checklist `#1344`; then deleting the demo accounts `#1332`.
+- **C — Decommission Nocaped (`#1338`).** Starts only after `#1341` is validated, and every deletion
+  needs the owner's approval, one item at a time (runbook, "Freeing Nocaped"): Workers `#1345`;
+  buckets, the old Access application and the login-wide token `#1346` (resolves `#783`); the old
+  Neon account `#1347` (resolves `#1289` and `#175`); Stripe, Google and Resend registrations
+  `#1348`; the `nocaped.com` domain decision `#1349` (feeds `#1298`); and the sweep of remaining
+  `nocaped` references in code, current docs, local secrets files and guardrails `#1350`.
+
+**Held outside P12 on purpose.** `#1319` and `#1324` are P10 feature slices whose remaining live
+checks wait on the staging cut-over; they carry a "blocked by `#1323`" dependency instead of moving.
+`#1310` (the Connect decision) is a platform business decision that `#113` relates to but does not
+need.
+
+**Dates.** The monthly reference sync on `main` fails on **2026-11-03** unless its GitHub secret is
+repointed at a primary before then (`#1123`). The `aheedfoodcentre.co.uk` zone can move under the
+Merqify login after Cloudflare's 7-day wait, about **2026-11-05** (`#1342`). The Neon `dev` and
+`scratch` branches expire around **2026-11-28** (`#1340`).
+
 ## Roadmap Change Log
 
 | Date | Change | Reason |
@@ -1308,3 +1357,4 @@ is unrelated guest-cart retention, and no correctly-numbered issue for this exis
 | 2026-10-28 | **Pricing model v2 on `/staff/platform/costs` (`#1313`) merged to staging** (PR #1318, merge `9a32058`; `specs/2026-10-28-pricing-model-v2/`). No schema change. It adds a production cost model of 18 drivers scaling with shops and orders, four business models over a 6 × 3 × 3 scenario grid with card fees of 1.5% + 20p, an on-page What if panel that saves and fetches nothing, 12 add-ons, 11 risks, and a recommendation. **The recommendation is the customer-fee model** (£15/month + 30p per order paid by the customer), the only model with a positive margin at the reference scenario once partner time at £25/hr is counted. Founding offer for Aheed Food Centre: £0 + 25p from 2026-11-01. Still advisory. The yearly partner-rate increase and the pay target are left blank by the owner. `#1312` item 3 (the long comparison table on phones) is resolved by a 660 px comparison block at 360 px. `deploy-staging` succeeded, and staging `/api/health` reported `9a32058` with `db.ok` and `reference.reachable` true and two reference sources. R39 passed on staging: signed out, the page redirects to `/login` and the CSV export returns 401. Validation ran in the building session; left unverified: typing into the What if panel in a real browser. Owner items: `#1314`–`#1317` and `#1310`. `#1313` is `In Review`; not promoted, and production is down (`#1289`). | Staging merge |
 | 2026-10-29 | **Event-gated background jobs, 35-minute Stripe sessions and on-demand payment checks (`#1324`) merged to staging** (PR #1327, merge `57ede8f`; `specs/2026-10-28-event-gated-jobs/`). No schema change, no dependency change. The `workers/scheduler` `*/15` tick now calls the payment sweep and the error-rate check only when a `JOB_SIGNALS` KV marker says there is work, fails open on any doubt, and a daily ungated `0 3 * * *` run backstops it and is the only run of the guest-cart reaper. Before this, the tick woke each Neon database 96 times a day with no traffic (~61 CU-hours a month at 0.25 CU), a likely large share of `#1289`. Also: Stripe Checkout sessions expire at the order's `createdAt` + 35 min; the checkout return page can confirm a paid order whose webhook was lost (POST only, confirm-only); store admins get **Check payment now** and **Resend confirmation email** on the staff order page. PR #1327 also carried `#1319`'s handoff. **Merged but NOT DEPLOYED:** `deploy-staging` run 40814195702 passed quality and failed at Deploy to Workers with Cloudflare `code 100328` (the Free-plan CPU-limit refusal, `#1323`), so staging still serves `9a32058` and no `/api/health` was read. **Gating is inert until the owner creates the KV namespaces (`#1325`)**; until then every tick runs every job, as before. Validation ran in the building session; every row passed except **R25 (unverified)**, a browser-paid Stripe Checkout flipping the return page to confirmed. Follow-ups: `#1325`, `#1326`. `#1324` is `In Review`; not promoted, blocked by `#1323` and `#1289`. | Staging merge |
 | 2026-10-29 | **Move to Merqify's Cloudflare and Neon accounts (`#1323`) merged to staging** (PR #1334, merge `70c777b`; `specs/2026-10-29-merqify-platform-move/`). No schema change. Adds `scripts/migrate-to-new-neon.ts` (copy plan, dry run, `--apply`, `--verify-only`), `scripts/grant-role.ts`, Merqify-aware `configure-env`, the `merqify.com` host routes and the "Merqify account" runbook. Amendment 6: a freshly migrated target always holds the migration-seeded vendor `aheed-food-centre`, so the script classifies it `seeded-only` and replaces it at `--apply` (atomic apply deferred, `#1333`). **Merged but NOT DEPLOYED:** `deploy-staging` run 40944731541 passed quality and failed at `verify-worker-routes` — the routes now name `merqify.com` hosts while staging's `VendorDomain` rows still list the three `nocaped.com` hosts, and deploying would have torn those domains down. Staging deploys were already failing since 2026-10-28 (Nocaped account on Free, `code 100328`). Owner chose to leave staging as is until the cut-over; no `/api/health` was read and staging still serves `9a32058`. Validation ran in the building session (not independent). Verified live on a scratch Neon branch: apply, counts, refusals, `--verify-only` drift, grant tool, both mutation guards. **Unverified:** R8(iii) protected-host refusal, R13 production-target run, R18 images, R24–R27 (staging deploy and Merqify setup), R28 live reference DB. An R2 secret key was printed into the validation transcript; rotation is pending. `#1323` stays `In Progress`; not promoted. Follow-ups: `#1333`, `#1328`–`#1332`, `#1217`. | Staging merge |
+| 2026-10-30 | **Added P12 — Platform move, Aheed launch & Nocaped decommission** (milestone and board Phase `P12`). Three workstream parent issues, `#1336` (A, Merqify), `#1337` (B, Aheed Food Centre at `aheedfoodcentre.co.uk`) and `#1338` (C, Nocaped), hold every related issue as a GitHub sub-issue, with the order recorded as "blocked by" dependencies. New: `#1339` (owner Merqify setup), `#1340` (local development), `#1341` (production cut-over and promotion), `#1342` (zone handover and account ownership), `#1343` (inbound email), `#1344` (go-live checklist), `#1345`–`#1349` (Nocaped Workers, buckets and token, old Neon, external registrations, domain decision) and `#1350` (`nocaped` reference sweep). Moved in: `#1323`, `#1325`, `#1328`, `#1123`, `#1333`, `#1331`, `#1329`, `#1330`, `#1217`, `#1299`, `#1332`, `#1289`, `#783`, `#1298`, and `#104`, `#113`, `#175` from P9.2. Titles of `#1217` and `#104` changed for Resend's retirement; dated notes added to eleven issue bodies with the original text kept. No code change. | Owner direction: the migration, the Aheed launch and freeing Nocaped are the current priority and are tracked in one place |

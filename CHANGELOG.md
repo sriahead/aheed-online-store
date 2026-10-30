@@ -8,6 +8,8 @@ every branch merges.
 
 ### Added
 
+- **Roadmap phase P12 — Platform move, Aheed launch & Nocaped decommission** (`specs/roadmap.md` 1.187.0). One milestone and board Phase for the Merqify move, the Aheed Food Centre launch at `aheedfoodcentre.co.uk` and freeing the Nocaped account, with three workstream parent issues (`#1336`, `#1337`, `#1338`) holding every related issue as a sub-issue and the order recorded as GitHub dependencies. Twelve new issues cover work that was tracked only in the runbook or nowhere (`#1339`–`#1350`). Planning only; no code change.
+
 - **Hosting moves to the Merqify Cloudflare account and a new Neon account** (issue `#1323`, spec `specs/2026-10-29-merqify-platform-move/`). The Nocaped account dropped to the Workers Free plan and can no longer deploy.
   - **New hosts on `merqify.com`**: `aheed-staging`, `srimart-staging` and `images-staging` for staging; `aheed`, `srimart` and `images` for production; `docs` for the internal docs behind Access. The scheduler and the image security policy follow.
   - **`scripts/migrate-to-new-neon.ts`** fills a new, freshly migrated database from the old staging one. It defaults to a dry run. It copies the two stores, real users and **10% of the products** (245 for Aheed, plus SriMart's 3). It leaves behind test orders, carts, payments, logs and every `@example.com` account. It keeps the original ids, copies the images and re-counts everything at the end.
