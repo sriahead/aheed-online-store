@@ -163,10 +163,11 @@ describe("repository Worker config (#1323)", () => {
     expect(urls).toEqual(["https://aheed-staging.merqify.com", "https://aheed.merqify.com"]);
   });
 
-  it("R4: the internal docs site has exactly one route, docs.merqify.com", () => {
+  // #1328 moved the host (owner, 2026-10-30); this amends #1323's R4.
+  it("R4: the internal docs site has exactly one route, docs-shoplocal.merqify.com", () => {
     const toml = read("kms/site-internal/wrangler.toml");
     const patterns = [...toml.matchAll(/^pattern\s*=\s*"([^"]+)"/gm)].map((m) => m[1]);
-    expect(patterns).toEqual(["docs.merqify.com"]);
+    expect(patterns).toEqual(["docs-shoplocal.merqify.com"]);
     expect(customDomainCount(toml)).toBe(1);
   });
 

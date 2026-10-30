@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.44.0"
-updated: 2026-10-29
+version: "1.45.0"
+updated: 2026-10-30
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -48,7 +48,8 @@ environment-configured seam so the platform can move clouds without a rewrite.
   buckets run in the **Merqify Cloudflare account**, under flat `merqify.com` hosts. Staging is
   `aheed-staging.merqify.com`, `srimart-staging.merqify.com` and `images-staging.merqify.com`;
   production is `aheed.merqify.com`, `srimart.merqify.com` and `images.merqify.com`; the docs are
-  `docs.merqify.com`, behind Access.
+  `docs-shoplocal.merqify.com`, behind Access, and `deploy-docs-internal` refuses to deploy them
+  unless an Access application guards that host (`#1328`).
 - **Neon:** the staging and production databases are **new projects in a new Neon account** (London,
   `eu-west-2`), filled from the old staging database by `scripts/migrate-to-new-neon.ts`.
 - **Cells (owner, 2026-10-29).** The app holds **one database connection per Worker**, so isolation

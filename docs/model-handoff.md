@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.153.0"
-updated: 2026-10-29
+version: "1.154.0"
+updated: 2026-10-30
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -38,6 +38,27 @@ Build Notes across the pre-validation Clear. Remove or replace stale information
 reconciliation. If overall project state did not materially change, leave this file untouched.
 
 ## Last Verified
+
+- **2026-10-30 (`#1328` Build Notes): P12 exists, the reference secret moved, and the docs guard is
+  BUILT, NOT VALIDATED, NOT MERGED.**
+  - **P12 tracks the Merqify move, the Aheed launch and freeing Nocaped** (`specs/roadmap.md`
+    1.187.0, PR #1351, `3df7a57`): milestone 25, board Phase `P12`, parents `#1336` (A), `#1337` (B),
+    `#1338` (C) with sub-issues and GitHub "blocked by" links. Read the parent issues for the order.
+    The board now has six P12 `High` items (`#1336`, `#1339`, `#1328`, `#1123`, `#1323`, `#1341`).
+  - **GitHub `UK_LOCATION_REF_DIRECT_URL` (staging and production) now names the Merqify reference
+    primary** (`ep-late-mud-zalcsvmm`, eu-west-2), set 2026-10-30 from `secrets/merqify-*.vars`.
+    It is the primary (`pg_is_in_recovery()` false) but **empty (0 tables)**; the 2026-11-03
+    `sync-reference-data` run on `main` runs `ref:migrate` first, so it should build it rather than
+    fail (`#1123` comment). The app Workers still read the old reference DB until the cut-over.
+  - **`secrets/merqify-*.vars` still have 8 blanks each** (auth secret, Google, Resend, Stripe,
+    `JOB_INVOCATION_TOKEN`) as of 2026-10-30; `configure-env` refuses until they are filled (`#1339`).
+  - **The internal docs host is `docs-shoplocal.merqify.com`** (owner, 2026-10-30), not
+    `docs.merqify.com`. `#1328` (branch `feature/p1328-docs-access-guard`, spec
+    `specs/2026-10-30-docs-access-guard/`) adds `scripts/verify-docs-access.ts`: `--pre` refuses the
+    docs deploy unless an Access app guards every host, `--post` proves signed-out requests reach the
+    Access login. The staging token needs **Access: Apps and Policies Read** (`#1339`). **Do not run
+    `configure-env` for staging until `#1328` is merged to `staging`.** Next: `/validate` from a
+    fresh context, then `/ship`. Follow-up `#1352` (scheduled re-check).
 
 - **2026-10-29 (`#1323` Document): the hosting move is MERGED TO STAGING (PR #1334, `70c777b`) but
   NOT DEPLOYED, and the cut-over has not happened.** `deploy-staging` run 40944731541 failed at
@@ -131,7 +152,7 @@ reconciliation. If overall project state did not materially change, leave this f
     auto mode blocks migrations and protected-host script runs, so hand over a `! <command>`.
     `--apply` ran once against `scratch` and passed.
     The live rows R24–R28 wait for the owner's Merqify setup: Workers Paid; **the Access
-       application for `docs.merqify.com` before any secret is pushed** (`#1328`); the three image
+       application for `docs-shoplocal.merqify.com` before any secret is pushed** (`#1328`); the three image
        buckets with the hotlink rule on staging and production only; scoped tokens; the filled
        `merqify-*.vars` files. Report them **unverified** until then.
   - **Follow-ups (all `P10`/Backlog):**

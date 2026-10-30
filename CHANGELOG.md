@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **The internal docs deploy refuses to publish without Cloudflare Access** (issue `#1328`, spec `specs/2026-10-30-docs-access-guard/`). The docs site has no login of its own, and `deploy-docs-internal` deploys it on every push to `staging` or `main`.
+  - **`scripts/verify-docs-access.ts --pre`**, before the build: the Access API must show a self-hosted application covering every docs host (read from `kms/site-internal/wrangler.toml`), with no `bypass` policy and no allow rule for everyone. Any API error refuses. The staging token needs **Access: Apps and Policies Read**.
+  - **`--post`**, after the deploy: signed-out requests to `/` and a deep link must redirect to `*.cloudflareaccess.com`. A normal page fails the job at once and names the custom domain to remove.
+  - **The docs host is now `docs-shoplocal.merqify.com`** (owner, 2026-10-30). The runbook, architecture and route test follow.
+
+  Until the staging environment's Cloudflare secrets name the Merqify account and its Access application exists (`#1339`), the docs deploy stays red: that is the guard refusing, not a new failure.
+
 - **Roadmap phase P12 — Platform move, Aheed launch & Nocaped decommission** (`specs/roadmap.md` 1.187.0). One milestone and board Phase for the Merqify move, the Aheed Food Centre launch at `aheedfoodcentre.co.uk` and freeing the Nocaped account, with three workstream parent issues (`#1336`, `#1337`, `#1338`) holding every related issue as a sub-issue and the order recorded as GitHub dependencies. Twelve new issues cover work that was tracked only in the runbook or nowhere (`#1339`–`#1350`). Planning only; no code change.
 
 - **Hosting moves to the Merqify Cloudflare account and a new Neon account** (issue `#1323`, spec `specs/2026-10-29-merqify-platform-move/`). The Nocaped account dropped to the Workers Free plan and can no longer deploy.
