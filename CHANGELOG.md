@@ -14,6 +14,7 @@ every branch merges.
   - **The docs host is now `docs-shoplocal.merqify.com`** (owner, 2026-10-30). The runbook, architecture and route test follow.
 
   Until the staging environment's Cloudflare secrets name the Merqify account and its Access application exists (`#1339`), the docs deploy stays red: that is the guard refusing, not a new failure.
+  Merged to staging (PR #1353); the first `deploy-docs-internal` run refused at `--pre` as designed, and nothing was deployed.
 
 - **Roadmap phase P12 — Platform move, Aheed launch & Nocaped decommission** (`specs/roadmap.md` 1.187.0). One milestone and board Phase for the Merqify move, the Aheed Food Centre launch at `aheedfoodcentre.co.uk` and freeing the Nocaped account, with three workstream parent issues (`#1336`, `#1337`, `#1338`) holding every related issue as a sub-issue and the order recorded as GitHub dependencies. Twelve new issues cover work that was tracked only in the runbook or nowhere (`#1339`–`#1350`). Planning only; no code change.
 
