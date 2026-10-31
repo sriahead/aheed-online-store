@@ -4,8 +4,8 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.7.0"
-updated: "2026-10-31"
+version: "1.8.0"
+updated: 2026-10-31
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
 tags: ["admin", "platform", "technical", "multi-tenancy"]
@@ -202,3 +202,46 @@ reload to see them.
 **Common mistakes and limitations:** What if values are not saved: reloading the page restores the committed values, and nothing typed there changes the figures in the other sections. The totals use the UK card rate; the EEA rate is recorded but not modelled, and nor is the card fee Stripe keeps on a refund. Comparators exclude disputes. Nothing is pulled live except Workers AI usage and what a refresh fetches, so each figure is only as current as its date; the refresh does not yet read the production cost, Connect, add-on or risk pages. Refresh suggestions are not saved: download them as CSV first if you need them. Each refresh uses Workers AI and is recorded as Pricing review on the AI usage page against the store whose site you are signed in on, so it counts against that store's daily AI budget. The risks section is not legal, tax or insurance advice. The page sends no alerts and no emails.
 
 **What happens after changes are saved:** Nothing is saved from this page. An edit to a file under `lib/` takes effect once deployed, and the page recalculates every figure, and reads Workers AI usage, fresh on each load.
+
+---
+
+## Feature Catalogue - `/staff/feature-catalogue`
+
+**Purpose:** A structured reference of what the platform does today, written for demonstrations. It
+is organised by who uses it (Customer, Admin, Staff, Platform Admin), then by business area, then by
+feature. Each feature opens with what it does and why, then its business value and a short demo
+talking point.
+
+**Who can access:** Platform admins only
+
+**What you can do:** Read the catalogue, jump between roles with the buttons under the heading, open a
+feature's page from its card, and check the "Not ready to demonstrate" table for anything partial or
+unavailable. The page is read-only.
+
+**Typical workflow:** Before a demonstration, open the page and scan the three status counts. Pick the
+role you are showing, follow its areas in order, and use each card's demo line as the talking point.
+Check "Not ready to demonstrate" before you promise anything.
+
+**Important fields and filters:** **Live** works end to end. **Partial** is real but conditional, for
+example a per-store switch that is off by default or an owner-only setup that is not done; the card
+says what is missing. **Unavailable** is not built or not usable yet. There are no filters.
+
+**Common mistakes and limitations:** The catalogue is written by hand and checked only for real
+routes and for menu pages being listed; it cannot prove a description is still true, so tell a
+developer if you find one that is wrong. It is closed to store admins and staff (`#1379`): it lists
+unbuilt and partial features, which is platform-level information.
+
+**What happens after changes are saved:** Nothing is saved here. The page changes only when a
+developer edits the catalogue and deploys it.
+
+### Sanity check: Feature Catalogue (`#1374`, `#1379`)
+
+Run after deploying changes to `/staff/feature-catalogue` or `features/feature-catalogue/`. Last run: 2026-10-31, after the `#1379` change: checks 1 and 2 passed locally; 3-5 run after the staging deploy.
+
+| # | Check | Expect |
+|---|---|---|
+| 1 | `npx vitest run --maxWorkers=4 tests/feature-catalogue.test.ts` | All pass; every route and menu page is catalogued |
+| 2 | `npx vitest run --maxWorkers=4 tests/operator-doc-coverage.test.ts tests/staff-nav-parity.test.ts` | All pass |
+| 3 | `curl.exe -sS -I https://aheed-staging.merqify.com/staff/feature-catalogue` | `307 Temporary Redirect` to `/login` |
+| 4 | Sign in as `demo-platform-admin@merqify.com`, open `/staff/feature-catalogue` | The catalogue renders; it is in the Platform menu |
+| 5 | Sign in as `demo-admin@merqify.com` (store admin), open `/staff/feature-catalogue` | "Platform admin only" refusal; no menu entry |

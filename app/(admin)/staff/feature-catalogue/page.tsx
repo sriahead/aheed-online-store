@@ -117,8 +117,17 @@ export default async function FeatureCataloguePage() {
     if (auth.status === 401) redirect("/login");
     return (
       <PanelRefusal
-        title="Admin only"
-        message="The Feature Catalogue is restricted to store administrators."
+        title="Platform admin only"
+        message="The Feature Catalogue is restricted to platform administrators."
+      />
+    );
+  }
+  // Platform admins only: a store admin also passes requireVendorRole("ADMIN"), so refuse them here.
+  if (auth.via !== "platform-admin") {
+    return (
+      <PanelRefusal
+        title="Platform admin only"
+        message="The Feature Catalogue is restricted to platform administrators."
       />
     );
   }

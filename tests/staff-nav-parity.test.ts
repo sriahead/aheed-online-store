@@ -47,10 +47,16 @@ const STAFF_ROUTES_DIR = join(REPO_ROOT, "app/(admin)/staff");
  * distinction, so the hub carries it alone behind its own `auth.via` check.
  * `/staff/platform` is the platform admin's home (#1319). Like every `/staff/platform/*` page it is
  * registered in `platform-nav-items.ts`, not this vendor-scoped module.
+ * `/staff/feature-catalogue` is platform-admin-only too (#1379), registered in `platform-nav-items.ts`.
  */
-const EXCLUDED = new Set(["/staff", "/staff/errors", "/staff/platform"]);
+const EXCLUDED = new Set([
+  "/staff",
+  "/staff/errors",
+  "/staff/platform",
+  "/staff/feature-catalogue",
+]);
 
-/** Every `/staff/<dir>` on disk that has a `page.tsx`, minus the two excluded routes. */
+/** Every `/staff/<dir>` on disk that has a `page.tsx`, minus the excluded routes. */
 function routesOnDisk(): Set<string> {
   const routes = new Set<string>();
 
