@@ -11,6 +11,7 @@ every branch merges.
 - **A failed `migrate-to-new-neon --apply` now rolls back** (issue `#1333`, spec `specs/2026-10-31-atomic-neon-copy/`). The seeded-vendor delete and every insert run inside one transaction (`scripts/lib/neon-migration-apply.ts`), so the target is left exactly as `migrate deploy` made it and the same command can be re-run. This makes the copy safe against the real production database in `#1341`, which cannot be reset from a parent branch. `--simulate-failure` (only with `--apply`) proves the rollback on a disposable target. The image copy still runs after the commit and is not rolled back.
 
   Merged to staging (PR #1360). The live rollback check on Neon has not run yet; it must pass before `#1341`.
+  A short sanity-check guide (two quick checks, five live steps) is in `env-setup.md`, "Sanity check: the copy rolls back".
 
 - **The demo logins moved to `@merqify.com`** (issue `#1356`, spec `specs/2026-10-31-demo-accounts-merqify-email/`). The six `demo-*@example.com` accounts are now `demo-*@merqify.com`, so mail to them can be forwarded to the owner's inbox by Cloudflare Email Routing. The owner sets up forwarding once; the steps are in `env-setup.md`, "Demo mail forwarding".
   - **`demo:accounts add` renames instead of re-creating.** An account still on its old `@example.com` address has its email changed in place, so its id, password, roles and orders carry over. If both addresses exist, it refuses before writing anything. `remove` deletes both forms.
