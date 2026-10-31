@@ -661,3 +661,47 @@ twice is safe and will not double-charge or double-confirm anything.
 
 
 
+
+---
+
+## Feature Catalogue - `/staff/feature-catalogue`
+
+**Purpose:** A structured reference of what the platform does today, written for demonstrations. It
+is organised by who uses it (Customer, Admin, Staff, Platform Admin), then by business area, then by
+feature. Each feature opens with what it does and why, then its business value and a short demo
+talking point.
+
+**Who can access:** Store admins only
+
+**What you can do:** Read the catalogue, jump between roles with the buttons under the heading, open a
+feature's page from its card, and check the "Not ready to demonstrate" table for anything partial or
+unavailable. The page is read-only.
+
+**Typical workflow:** Before a demonstration, open the page and scan the three status counts. Pick the
+role you are showing, follow its areas in order, and use each card's demo line as the talking point.
+Check "Not ready to demonstrate" before you promise anything.
+
+**Important fields and filters:** **Live** works end to end. **Partial** is real but conditional, for
+example a per-store switch that is off by default or an owner-only setup that is not done; the card
+says what is missing. **Unavailable** is not built or not usable yet. There are no filters.
+
+**Common mistakes and limitations:** The catalogue is written by hand and checked only for real
+routes and for menu pages being listed; it cannot prove a description is still true, so tell a
+developer if you find one that is wrong. Some Platform Admin features need a platform admin to open;
+this page lists them but does not grant access to them.
+
+**What happens after changes are saved:** Nothing is saved here. The page changes only when a
+developer edits the catalogue and deploys it.
+
+### Sanity check: Feature Catalogue (`#1374`)
+
+Run after deploying changes to `/staff/feature-catalogue` or `features/feature-catalogue/`. Last run: 2026-10-31, after PR #1375 (`14b61da`): all passed.
+
+| # | Check | Expect |
+|---|---|---|
+| 1 | `npx vitest run --maxWorkers=4 tests/feature-catalogue.test.ts` | 95 tests pass; all routes and menu pages verified |
+| 2 | `npx vitest run --maxWorkers=4 tests/operator-doc-coverage.test.ts` | All operator doc coverage tests pass |
+| 3 | `curl.exe -sS -I https://aheed-staging.merqify.com/staff/feature-catalogue` | Anonymous request returns `307 Temporary Redirect` to `/login` |
+| 4 | Sign in to staging as `demo-admin@merqify.com` and open `/staff/feature-catalogue` | HTTP 200; renders Customer, Admin, Staff, Platform Admin sections and 'Not ready to demonstrate' table |
+| 5 | Sign in to staging as `demo-staff@merqify.com` and open `/staff/feature-catalogue` | HTTP 200; renders 'Admin only' PanelRefusal ('This area is restricted to store administrators') |
+
