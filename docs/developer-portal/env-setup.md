@@ -4,7 +4,7 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.29.0"
+version: "1.30.0"
 updated: 2026-10-31
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
@@ -270,7 +270,7 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.
 
 Run it after any change to `scripts/migrate-to-new-neon.ts` and **before every real `--apply`
 against a database you cannot reset** (production, `#1341`). Spec:
-`specs/2026-10-31-atomic-neon-copy/`. Last run: quick checks 2026-10-31; live checks not yet run.
+`specs/2026-10-31-atomic-neon-copy/`. Last run: 2026-10-31, all steps passed (`committed: 720 ms` for the staging sample).
 
 **Quick (no database, 1 minute):**
 
@@ -281,6 +281,9 @@ against a database you cannot reset** (production, `#1341`). Spec:
 
 **Live (needs a throwaway database):** the owner creates an empty database on `Shoplocal Staging`
 → `scratch` and puts its direct URL in `secrets/validate-1333.vars` (one `DIRECT_URL="…"` line).
+It must be **truly empty**: a "schema only" branch has the tables but no migration history and no
+seeded store, so `migrate deploy` fails and step 4 skips the store delete. Use a new database, or
+drop and recreate its `public` schema first.
 Prefix every command with `env -u DIRECT_URL -u DATABASE_URL`. `C` below stands for
 `npx tsx scripts/migrate-to-new-neon.ts --from secrets/staging.vars --to secrets/validate-1333.vars --target staging`.
 

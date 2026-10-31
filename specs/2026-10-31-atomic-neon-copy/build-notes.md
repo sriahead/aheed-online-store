@@ -104,3 +104,24 @@ Commit under test: `d47e20d`.
 - **R9, R10: UNVERIFIED (blocked on owner precondition P1).** `secrets/validate-1333.vars` does
   not exist. The real transaction on Neon through `PrismaNeon` is still unproven.
 - **R14: local half passes; CI runs at Ship** (no PR yet).
+
+**Pass 2, 2026-10-31 (live rows), NOT independent (same context).** Commit under test: `f617050`
+(`staging`).
+
+- **Target:** `secrets/validate-1333.vars`, host `ep-lingering-cherry`, database `neondb`, a
+  throwaway branch the owner created. It is not either Merqify host or old staging.
+  - It arrived as a **schema-only branch**: 70 empty tables and an empty `_prisma_migrations`.
+  - With the owner's approval, a host-guarded scratch script checked that `Vendor`, `Product`,
+    `User` and `_prisma_migrations` all held 0 rows, then dropped and recreated `public`.
+  - `migrate status` showed the validate host; `migrate deploy` applied 79 migrations.
+- **R9 passes.** `--apply --simulate-failure` exits 1. It printed `target vendors: seeded-only`,
+  "removed the migration-seeded vendor (inside the transaction).", "rows written (not yet
+  committed).", then `ROLLED BACK: simulated failure after every write (--simulate-failure)` and
+  the exact sentence. Nothing followed. The dry run straight after exits 0 with
+  `target vendors: seeded-only` and no `REFUSING:`.
+- **R10 passes.** The clean `--apply` exits 0 with `committed: 720 ms` (well under 150000), then
+  the count lines, then `OK: every copied model matches the plan.`.
+- **R6, R7: confirmed live** by the outputs above.
+- **Lesson:** a schema-only Neon branch is not a valid target for this check. That is now in the
+  runbook's sanity-check section.
+- Still owed (owner): delete the throwaway branch (guide step 7).
