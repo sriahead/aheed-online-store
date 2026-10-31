@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-10-31T16:46:35.360Z` · commit `8e9a1656` · `301` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-10-31T17:43:24.973Z` · commit `16876c8f` · `302` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -289,6 +289,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Docs Access guard and the docs-shoplocal.merqify.com host (plan)](specs/2026-10-30-docs-access-guard/plan.md) | spec | 1.0.0 | 2026-10-30 | approved | internal | #1328: deploy-docs-internal refuses to deploy unless a Cloudflare Access app guards every docs route host, then proves signed-out requests are sent to the Access login. The internal docs host becomes docs-shoplocal.merqify.com. |
 | [Atomic apply for migrate-to-new-neon (plan)](specs/2026-10-31-atomic-neon-copy/plan.md) | spec | 1.0.0 | 2026-10-31 | draft | internal | #1333: scripts/migrate-to-new-neon.ts --apply writes the whole copy inside one interactive transaction, so a failure part-way rolls the target back to its freshly migrated state and a re-run is safe. Unblocks the #1341 production copy. |
 | [Demo logins on @merqify.com, with forwarded mail (plan)](specs/2026-10-31-demo-accounts-merqify-email/plan.md) | spec | 1.0.0 | 2026-10-31 | draft | internal | #1356: the six demo logins move from demo-*@example.com to demo-*@merqify.com. demo:accounts add renames existing accounts in place, demo detection matches the exact roster, and Cloudflare Email Routing forwards the six addresses to the owner's inbox. |
+| [Feature Catalogue under the Admin menu (plan)](specs/2026-10-31-feature-catalogue/plan.md) | spec | 1.0.0 | 2026-10-31 | draft | internal | #1374: a role-organised Feature Catalogue at /staff/feature-catalogue, linked from the Admin menu. A typed module lists Customer, Admin, Staff and Platform Admin features with BLUF, value, demo line and Live/Partial/Unavailable status; a test pins routes and menu coverage. |
 | [Platform name Merqify by default; Third-party credits (plan)](specs/2026-10-31-platform-name-merqify/plan.md) | spec | 1.0.0 | 2026-10-31 | approved | internal | #1371: the footer's Powered by line defaults to Merqify and its tagline in every environment; the Icon credits link and page are relabelled Third-party credits. |
 | [Production cut-over to Merqify, with gated scheduler ticks (plan)](specs/2026-10-31-production-cutover/plan.md) | spec | 1.0.0 | 2026-10-31 | draft | internal | #1341 + #1325: create and bind the JOB_SIGNALS KV namespaces, fill the new Merqify production database from old staging, push its secrets, then promote staging to main and prove both production hosts healthy. |
 | [System Architecture — Aheed Online Store](specs/architecture.md) | doc | 1.45.0 | 2026-10-30 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
