@@ -7,7 +7,7 @@ status: draft
 version: "1.0.0"
 updated: 2026-10-31
 visibility: internal
-summary: "#1374: a role-organised, demo-ready Feature Catalogue at /staff/feature-catalogue, linked from the Admin menu. Content is a typed module covering Customer, Admin, Staff and Platform Admin features with BLUF, value, demo talking point and an honest Live/Partial/Unavailable status; a test pins its routes and menu coverage."
+summary: "#1374: a role-organised Feature Catalogue at /staff/feature-catalogue, linked from the Admin menu. A typed module lists Customer, Admin, Staff and Platform Admin features with BLUF, value, demo line and Live/Partial/Unavailable status; a test pins routes and menu coverage."
 tags: [feature-catalogue, demo, admin-menu, p10]
 related: [store-admin-tabs-guide]
 ---
