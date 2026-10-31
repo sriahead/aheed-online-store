@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.155.0"
-updated: 2026-10-30
+version: "1.156.0"
+updated: 2026-10-31
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,6 +39,23 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
+- **2026-10-31 (`#1356` Document): STAGING IS LIVE ON MERQIFY, and the docs guard passes.**
+  - **Staging serves `a9685fa`** on `aheed-staging.merqify.com` and `srimart-staging.merqify.com`
+    (`/api/health` ok, `db.ok: true`, images on `images-staging.merqify.com`, reference reachable, no
+    drift). `deploy-staging` and `deploy-docs-internal` both succeeded on `0ca03fd` and `a9685fa`
+    (runs 41179895144, 41179895152). The staging half of the cut-over is done; production is `#1341`.
+  - **`docs-shoplocal.merqify.com` is behind Access:** signed out, `/` returns 302 to
+    `*.cloudflareaccess.com`, so `#1328`'s `--pre` and `--post` both pass in the Merqify account.
+  - **`#1356` is MERGED TO STAGING (PR #1357), board `In Review`, without an independent Validate.**
+    The demo logins are `demo-*@merqify.com` (roster `scripts/lib/demo-roster.ts`); new staging's six
+    accounts were renamed in place. Email Routing (R15/R16) is deferred by the owner.
+  - **`#1319` is deployed on new staging (in `a9685fa`), board `In Review`.** Still owed: its R25
+    staging walk and the `#1321` onboarding check (comment on `#1319`).
+  - **Old Nocaped production is still down:** `/api/health` `degraded`, Neon HTTP 402 quota (`#1289`);
+    replaced by the move, not repaired.
+  - **The Merqify reference DB is no longer empty:** staging health shows `os-open-names` synced
+    2026-10-30 23:34 (23,551 rows). Still confirm the 2026-11-03 `sync-reference-data` run (`#1123`).
+
 - **2026-10-30 (`#1328` Document): P12 exists, the reference secret moved, and the docs guard is
   MERGED TO STAGING (PR #1353, `ba42b79`), board `In Review`.**
   - **P12 tracks the Merqify move, the Aheed launch and freeing Nocaped** (`specs/roadmap.md`
@@ -62,7 +79,8 @@ reconciliation. If overall project state did not materially change, leave this f
     `deploy-docs-internal` (run 41122451401) stopped at the `--pre` guard: "no Access application
     covers docs-shoplocal.merqify.com" in the account the staging secrets still name. That is the
     guard working; it turns green after `#1339`. `deploy-staging` (run 41122451690) still fails at
-    `verify-worker-routes` (3 vendor hosts unrouted), unchanged since `#1323`. Staging serves `9a32058`.
+    `verify-worker-routes` (3 vendor hosts unrouted), unchanged since `#1323`. (Superseded 2026-10-31:
+    both now deploy; see above.)
   - **Validated in-session, not independent.** Live: R13 (real Merqify API, refused), R14, R10.
     **Unverified:** R15 (owner-gated, `#1339`) and R18's local `kms/site-internal` build (stopped
     for low memory; CI `docs-gates` passed). Measured 2026-10-30: the Merqify staging token already
@@ -230,7 +248,7 @@ reconciliation. If overall project state did not materially change, leave this f
 - **2026-10-28 (`#1319` Build), kept for its standing facts.** Spec and build notes:
   `specs/2026-10-28-rbac-four-views/`.
   - **`demo-admin` is no longer a platform admin.** It is a store admin only;
-    **`demo-platform-admin@example.com` is the only platform admin**, with the same
+    **`demo-platform-admin@merqify.com` is the only platform admin** (`@example.com` until `#1356`), with the same
     `DEMO_ACCOUNT_PASSWORD`. Use it, not `demo-admin`, for any `/staff/platform/*` or `/staff/errors`
     check. The change reaches a database only when `npm run demo:accounts -- add` runs against it:
     dev before Validate, staging after deploy (owner), and production after `#1289` (owner).
