@@ -4,7 +4,7 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.53.0"
+version: "2.53.1"
 updated: 2026-10-31
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
@@ -1081,7 +1081,7 @@ revisited later:
 
 - numbered steps, each with the exact command or action and the **expected result**;
 - quick checks first (no infrastructure), then live ones, marking which need an owner action;
-- a "Last run: <date>" line, and "any other result: stop, reopen `#NN`".
+- a `Last run: <date>` line, and "any other result: stop, reopen `#NN`".
 
 Put the canonical copy in the doc an operator reads for that area (a "Sanity check" subsection in
 the runbook or guide), and the same steps as a comment on the slice's issue. Run the quick checks

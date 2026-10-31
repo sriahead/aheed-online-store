@@ -95,6 +95,8 @@ every branch merges.
 
 ### Fixed
 
+- **The internal docs deploy builds again.** `specs/sdd-workflow.md` 2.53.0 carried a bare `<date>` placeholder, which MDX read as an unclosed tag, so `deploy-docs-internal` failed on `81ab8ac`. It is now in backticks (2.53.1). CI `docs-gates` does not build the docs site, so it passed; the real `kms/site-internal` build is green locally.
+
 - **Staff users saw asset buttons that always failed** — `/staff/icons` is now read-only for STAFF; the mutation routes were already ADMIN-only (issue `#1288`).
 
 - **Dynamic slot asset activation across storefront touchpoints and themed 3D isometric prompt generation** (issue `#1285`).
