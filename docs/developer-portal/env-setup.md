@@ -4,7 +4,7 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.28.0"
+version: "1.29.0"
 updated: 2026-10-31
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
@@ -265,6 +265,35 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.
    `VendorConfig.senderEmail` values. Set real addresses at `/staff/storefront` on each store's new
    host once the sending domain is set up with Cloudflare Email Service in the Merqify account
    (`#1217`, `#104`). Until then the stopgap Resend sender applies.
+
+### Sanity check: the copy rolls back (`#1333`)
+
+Run it after any change to `scripts/migrate-to-new-neon.ts` and **before every real `--apply`
+against a database you cannot reset** (production, `#1341`). Spec:
+`specs/2026-10-31-atomic-neon-copy/`. Last run: quick checks 2026-10-31; live checks not yet run.
+
+**Quick (no database, 1 minute):**
+
+| # | Run | Expect |
+|---|-----|--------|
+| 1 | `npx vitest run tests/neon-migration-apply.test.ts` | `10 passed` |
+| 2 | `npx tsx scripts/migrate-to-new-neon.ts --from x --to x --target staging --simulate-failure` | `REFUSING: --simulate-failure needs --apply …`, exit 1 |
+
+**Live (needs a throwaway database):** the owner creates an empty database on `Shoplocal Staging`
+→ `scratch` and puts its direct URL in `secrets/validate-1333.vars` (one `DIRECT_URL="…"` line).
+Prefix every command with `env -u DIRECT_URL -u DATABASE_URL`. `C` below stands for
+`npx tsx scripts/migrate-to-new-neon.ts --from secrets/staging.vars --to secrets/validate-1333.vars --target staging`.
+
+| # | Run | Expect |
+|---|-----|--------|
+| 3 | `DIRECT_URL=<validate url> DATABASE_URL=<validate url> npx prisma migrate deploy` (read `migrate status`'s host first) | host is the validate one; migrations applied |
+| 4 | `C --apply --simulate-failure` | `ROLLED BACK: simulated failure …`, exit 1 |
+| 5 | `C` (dry run) | `target vendors: seeded-only`, no `REFUSING:` (nothing was left behind) |
+| 6 | `C --apply` | `committed: <n> ms`, then `OK: every copied model matches the plan.`, exit 0 |
+| 7 | Drop the validate database in the Neon console | gone |
+
+Any other result: stop, do not run the real copy, and reopen `#1333`. Update "Last run" above
+when you run it.
 
 ### Dev database
 

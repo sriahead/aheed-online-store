@@ -40,7 +40,12 @@ Follow the **Ship** stage of `specs/sdd-workflow.md` (read it if not already in 
    delivery board — **not `Done`**. `Done` means *in production*: PRs merge into `staging`, which
    isn't the default branch, so `Closes #NN` doesn't fire and the issue stays open by design. It
    closes (→ `Done`) only when the work is promoted to `main`.
-10. Then go straight to `/document` — **no model switch here.** `/document` runs on this same
+10. **Write the post-ship sanity-check guide** (see `specs/sdd-workflow.md`, Ship): numbered
+    steps, each with the exact command and its expected result, quick checks before live ones, and
+    a "Last run: <date>" line. Put the canonical copy in the doc an operator reads for that area,
+    and post the same steps on the issue. Run the quick checks first and mark what ran. If the
+    feature already has a guide, update it instead of writing a new one.
+11. Then go straight to `/document` — **no model switch here.** `/document` runs on this same
     Sonnet 5 session; the switch to Opus 5 happens at the end of *that* stage, immediately before
     `/clear`, not now.
 
