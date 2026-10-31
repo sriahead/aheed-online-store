@@ -77,7 +77,8 @@ Output was pasted back.
 - **R13 passes with the demo accounts.** Sign-in returned 200 for `demo-platform-admin` on aheed
   and `demo-srimart-admin` on srimart; the `@example.com` address returned 401. The owner's own
   account is pending (see R10).
-- **R14:** see the line below.
+- **R14 passes.** `aheed-scheduler-production` logged `scheduler tick cron=*/15 * * * * ran=none
+  skipped=…` at 14:15:58 UTC.
 - **R15 passes.** All 19 issues are closed and `Done`. Follow-ups: `#1367` (P10, `#1319` R25),
   `#1368` (P10, `#1324` R25), `#1369` (P12, `#1356` R15/R16).
 - **R16 passes:** the sanity check is in `env-setup.md` and on `#1341`.
