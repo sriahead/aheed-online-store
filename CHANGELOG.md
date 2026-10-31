@@ -12,6 +12,7 @@ every branch merges.
 
   Merged to staging (PR #1360). The live rollback check on Neon has not run yet; it must pass before `#1341`.
   A short sanity-check guide (two quick checks, five live steps) is in `env-setup.md`, "Sanity check: the copy rolls back".
+  Ship now ends with a post-ship sanity-check guide for every slice (`specs/sdd-workflow.md` 2.53.0, `/ship` step 10): steps with expected results, in the operator doc and on the issue, with a "Last run" date.
 
 - **The demo logins moved to `@merqify.com`** (issue `#1356`, spec `specs/2026-10-31-demo-accounts-merqify-email/`). The six `demo-*@example.com` accounts are now `demo-*@merqify.com`, so mail to them can be forwarded to the owner's inbox by Cloudflare Email Routing. The owner sets up forwarding once; the steps are in `env-setup.md`, "Demo mail forwarding".
   - **`demo:accounts add` renames instead of re-creating.** An account still on its old `@example.com` address has its email changed in place, so its id, password, roles and orders carry over. If both addresses exist, it refuses before writing anything. `remove` deletes both forms.

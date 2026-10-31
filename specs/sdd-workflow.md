@@ -4,8 +4,8 @@ title: SDD Workflow
 audience: [dev]
 type: doc
 status: approved
-version: "2.52.0"
-updated: 2026-10-27
+version: "2.53.0"
+updated: 2026-10-31
 visibility: internal
 summary: The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands.
 tags: [sdd, workflow, process, context]
@@ -1074,6 +1074,20 @@ named gates, but the part of this repo's actual history most prone to drift.
   *known local flake*, confirmed in the same session's `/validate`, not an external outage. Always
   read the actual failure before re-running blind: a different test, or a different line, would
   mean a real regression, not this.
+
+**Write the post-ship sanity-check guide** (owner, 2026-10-31, `#1333`). Once the deploy is
+confirmed, write a short guide anyone can run straight after the ship, and when the feature is
+revisited later:
+
+- numbered steps, each with the exact command or action and the **expected result**;
+- quick checks first (no infrastructure), then live ones, marking which need an owner action;
+- a "Last run: <date>" line, and "any other result: stop, reopen `#NN`".
+
+Put the canonical copy in the doc an operator reads for that area (a "Sanity check" subsection in
+the runbook or guide), and the same steps as a comment on the slice's issue. Run the quick checks
+yourself before posting and mark what ran. When a later slice changes the feature, **update that
+guide and its "Last run" line** rather than writing a new one. First example: `env-setup.md`,
+"Sanity check: the copy rolls back (#1333)".
 
 Then go straight to **Document (final)** — no model switch here. It runs on the same Sonnet 5
 session that just shipped.
