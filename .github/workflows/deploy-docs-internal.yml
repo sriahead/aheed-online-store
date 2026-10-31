@@ -6,18 +6,19 @@ on:
 # Unlike the storefront app, the internal KMS site has no staging/production split — it's one
 # "internal" audience regardless of branch, so either branch triggers the same deploy.
 #
-# LIVE, AND GATED BY CLOUDFLARE ACCESS — not "no public route". This comment said the opposite
-# until 2026-10-16, long after the route went live: kms/site-internal/wrangler.toml carries an
-# uncommented [[routes]] block for docs.internal.aheedfoodcentre.nocaped.com with
-# custom_domain = true, annotated LIVE (2026-08-08). Read that file, not this comment, and keep
-# the two in step.
+# GATED BY CLOUDFLARE ACCESS. kms/site-internal/wrangler.toml routes the site as a custom domain
+# (docs-shoplocal.merqify.com since #1328). Read that file, not this comment, for the host.
 #
 # Access IS this site's only auth — it has no application-level auth of its own, and it serves
-# internal content (ADRs, CLAUDE.md, operator runbooks). Verified unauthenticated on 2026-10-16:
-# both the root and a deep link (/dev/runbook/local-dev-playbook) 302 to
-# nocaped.cloudflareaccess.com with auth_status NONE, and no document content leaks through.
-# Re-check the deep link, not only "/", after any Access policy change — a policy scoped to the
-# root alone would leave every document directly reachable.
+# internal content (ADRs, CLAUDE.md, operator runbooks). So this workflow guards the deploy itself
+# (#1328), with scripts/verify-docs-access.ts reading the hosts from that wrangler.toml:
+#   --pre   before the build: the Access API must show a self-hosted application covering every
+#           host with no policy that lets everyone in. A failure means nothing is deployed. The
+#           token needs "Access: Apps and Policies Read".
+#   --post  after the deploy: signed-out GETs of "/" and a deep link must redirect to
+#           *.cloudflareaccess.com. A 2xx means the docs are public: the job fails and says what to
+#           remove. The deep link matters — a policy scoped to the root alone would leave every
+#           document directly reachable.
 #
 # workers_dev stays false: a deployed Worker gets a public *.workers.dev URL by default,
 # which Access does NOT gate. If the Access application is ever removed, re-comment the route in
@@ -34,6 +35,12 @@ jobs:
       - name: Install root deps (needed for kms/scripts/assemble.ts)
         run: npm ci
 
+      - name: Refuse to deploy unless Cloudflare Access guards every docs host (#1328)
+        run: npx tsx scripts/verify-docs-access.ts --pre
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Assemble internal content from single-source docs
         run: npm run kms:assemble:internal
 
@@ -47,3 +54,6 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Prove signed-out requests are sent to the Access login (#1328)
+        run: npx tsx scripts/verify-docs-access.ts --post

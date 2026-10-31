@@ -1,0 +1,14 @@
+{
+  "index": {
+    "title": "Welcome",
+    "type": "page"
+  },
+  "staff": {
+    "title": "Client Help Centre",
+    "type": "page"
+  },
+  "dev": {
+    "title": "Internal Engineering",
+    "type": "page"
+  }
+}

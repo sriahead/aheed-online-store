@@ -10,19 +10,27 @@ compatibility_flags = ["nodejs_compat"]
 # publishes the workers.dev URL to the internet with no Access gate in front of it.
 workers_dev = false
 
+[vars]
+PLATFORM_NAME = "Aheed"
+NEXT_PUBLIC_PLATFORM_NAME = "Aheed"
+
 [assets]
 directory = ".open-next/assets"
 binding = "ASSETS"
 
-# NOT YET LIVE — requires Cloudflare-side provisioning the human must do:
-#   1. Custom domain/DNS for docs.internal.aheedfoodcentre.nocaped.com on the zone.
-#   2. A Cloudflare Access application gating this route (zero-trust, email/SSO) —
-#      this site has no application-level auth of its own; Access IS the auth.
-# LIVE (2026-08-08): gated by a Cloudflare Access self-hosted application (One-time PIN,
-# allow-list) created BEFORE this route was deployed — Access is the only auth this site
-# has. If you ever remove the Access application, re-comment this route in the same change;
-# an uncommented route with no Access policy would serve internal docs (ADRs, CLAUDE.md) to
-# the public internet. Never set workers_dev = true.
+# Access IS this site's only auth — it has no application-level auth of its own.
+# Was LIVE at docs.internal.aheedfoodcentre.nocaped.com from 2026-08-08, gated by a Cloudflare
+# Access self-hosted application (One-time PIN, allow-list) created BEFORE the route deployed.
+#
+# #1323/#1328 — served at docs-shoplocal.merqify.com in the Merqify account. The Access application
+# for this hostname MUST exist in the Merqify account BEFORE the staging GitHub environment's
+# CLOUDFLARE_* secrets are repointed there: deploy-docs-internal.yml deploys this route on every
+# push to staging or main with those secrets, and a route with no Access policy serves internal
+# docs (ADRs, CLAUDE.md) to the public internet. scripts/verify-docs-access.ts enforces this: it
+# reads the hosts from THIS file, refuses the deploy (--pre) unless an Access application guards
+# each one, and fails the job (--post) unless signed-out requests are redirected to the Access
+# login. If you ever remove the Access application, re-comment this route in the same change.
+# Never set workers_dev = true.
 [[routes]]
-pattern = "docs.internal.aheedfoodcentre.nocaped.com"
+pattern = "docs-shoplocal.merqify.com"
 custom_domain = true

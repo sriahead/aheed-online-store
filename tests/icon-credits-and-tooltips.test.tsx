@@ -57,7 +57,8 @@ describe("Icon Credits & Cart Tooltip Polish (#1257)", () => {
     expect(button?.getAttribute("title")).toBe("My Cart");
 
     // The inner SVG must have aria-hidden and no <title> tag that would hijack browser hover
-    const svg = button?.querySelector("svg");
+    // #1288: 3D icons render inside IconMedallion; its root carries data-icon and the size.
+    const svg = button?.querySelector("[data-medallion]");
     expect(svg).not.toBeNull();
     expect(svg?.getAttribute("aria-hidden")).toBe("true");
     expect(svg?.querySelector("title")).toBeNull();
@@ -78,9 +79,12 @@ describe("Icon Credits & Cart Tooltip Polish (#1257)", () => {
     expect(button).not.toBeNull();
     expect(button?.getAttribute("title")).toBe("Contact & Follow Hub");
 
-    const svg = button?.querySelector("svg");
+    // #1288: 3D icons render inside IconMedallion; its root carries data-icon and the size.
+    // The button's title is the one tooltip; the decorative medallion adds no competing <title>.
+    const svg = button?.querySelector("[data-medallion]");
     expect(svg).not.toBeNull();
-    expect(svg?.querySelector("title")?.textContent).toBe("Contact & Follow Hub");
+    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+    expect(svg?.querySelector("title")).toBeNull();
   });
 
   it("R2: Catalog definitions have clean, professional names with no redundant '3D ' prefixes", () => {

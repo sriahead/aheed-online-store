@@ -85,7 +85,8 @@ describe("3D Icon Suite Expansion (#1248)", () => {
     expect(link.getAttribute("href")).toBe("/quick-shop");
     expect(link.getAttribute("aria-label")).toBe("Quick Shop");
 
-    const svg = container.querySelector("svg");
+    // #1288: 3D icons render inside IconMedallion; its root carries data-icon and the size.
+    const svg = container.querySelector("[data-medallion]");
     expect(svg).not.toBeNull();
     expect(svg?.getAttribute("data-icon")).toBe("quick-shop");
     expect(svg?.getAttribute("aria-hidden")).toBe("true");
@@ -107,9 +108,10 @@ describe("3D Icon Suite Expansion (#1248)", () => {
     );
     expect(button).not.toBeNull();
 
-    const svg = button?.querySelector("svg");
+    // #1288: 3D icons render inside IconMedallion; its root carries data-icon and the size.
+    const svg = button?.querySelector("[data-medallion]");
     expect(svg).not.toBeNull();
-    expect(svg?.querySelector("title")?.textContent).toBe("Contact & Follow Hub");
+    expect(svg?.getAttribute("data-icon")).toBe("users");
   });
 
   it("RewardsLauncher renders 3D rewards-coin icon when closed", () => {
@@ -117,7 +119,8 @@ describe("3D Icon Suite Expansion (#1248)", () => {
     const button = screen.getByRole("button", { name: "Open rewards and loyalty panel" });
     expect(button).not.toBeNull();
 
-    const svg = button.querySelector("svg");
+    // #1288: 3D icons render inside IconMedallion; its root carries data-icon and the size.
+    const svg = button.querySelector("[data-medallion]");
     expect(svg).not.toBeNull();
     expect(svg?.getAttribute("data-icon")).toBe("rewards-coin");
     expect(svg?.getAttribute("aria-hidden")).toBe("true");
@@ -168,8 +171,10 @@ describe("3D Icon Suite Expansion (#1248)", () => {
 
   it("DepartmentGlyph with use3D=true renders 3D icon for halal-meat", () => {
     const { container } = render(<DepartmentGlyph slug="halal-meat" use3D />);
-    const svg = container.querySelector("svg");
-    expect(svg).not.toBeNull();
-    expect(svg?.querySelector("title")?.textContent).toBe("Prime Halal Cut");
+    // #1288: 3D icons render inside IconMedallion; its root carries data-icon and the size.
+    const medallion = container.querySelector("[data-medallion]");
+    expect(medallion).not.toBeNull();
+    expect(medallion?.getAttribute("data-icon")).toBe("halal-meat");
+    expect(medallion?.querySelector('[data-icon3d="halal-meat"]')).not.toBeNull();
   });
 });

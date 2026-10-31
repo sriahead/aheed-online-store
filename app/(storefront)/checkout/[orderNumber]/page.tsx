@@ -8,7 +8,8 @@ import { OrderItemsCard } from "@/components/orders/OrderItemsCard";
 import { OrderAddressCard } from "@/components/orders/OrderAddressCard";
 import { OrderPointsNote } from "@/components/orders/OrderPointsNote";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { Icon } from "@/components/icons/Icon";
+import { IconMedallion } from "@/components/icons/IconMedallion";
+import { PaymentStatusCheck } from "@/components/checkout/PaymentStatusCheck";
 
 export const dynamic = "force-dynamic";
 
@@ -45,19 +46,19 @@ export default async function OrderConfirmationPage({
   if (!order) redirect(`/orders/lookup?orderNumber=${encodeURIComponent(orderNumber)}`);
 
   return (
-    <PageContainer width="narrow">
+    <PageContainer width="standard">
       {/* Status comes from the DB on every request — never from the fact that the
           shopper arrived at the provider's success_url. That redirect routinely
           races the webhook, and a closed tab means it never happens at all. */}
       <div className="mb-6 flex items-center gap-3">
         {order.status === "CONFIRMED" && (
-          <Icon name="circle-check" className="h-8 w-8 shrink-0 text-action" />
+          <IconMedallion icon="circle-check" size={32} className="shrink-0" decorative />
         )}
         {order.status === "PENDING_PAYMENT" && (
-          <Icon name="clock" className="h-8 w-8 shrink-0 text-accent" />
+          <IconMedallion icon="clock" size={32} tint="accent" className="shrink-0" decorative />
         )}
         {order.status === "CANCELLED" && (
-          <Icon name="circle-x" className="h-8 w-8 shrink-0 text-danger" />
+          <IconMedallion icon="circle-x" size={32} tint="danger" className="shrink-0" decorative />
         )}
         <div>
           <h1 className="text-xl font-bold text-primary">
@@ -71,6 +72,12 @@ export default async function OrderConfirmationPage({
           </p>
         </div>
       </div>
+
+      {/* #1324 — asks the provider once, via a POST, whether this order was in fact
+          paid; the page's own render stays read-only (#428). */}
+      {order.status === "PENDING_PAYMENT" && (
+        <PaymentStatusCheck orderNumber={order.orderNumber} token={t ?? null} />
+      )}
 
       {order.status === "PENDING_PAYMENT" && (
         <p className="mb-5 rounded-2xl bg-accent-tint px-4 py-3 text-sm text-primary">

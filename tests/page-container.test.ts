@@ -45,6 +45,7 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(admin)/staff/runbook/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/reports/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/categories/page.tsx": { width: "wide", padY: "default" },
+  "app/(admin)/staff/icons/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/promotions/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/brands/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/attributes/page.tsx": { width: "wide", padY: "default" },
@@ -53,11 +54,14 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(admin)/staff/bundles/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/feedback/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/team/page.tsx": { width: "wide", padY: "default" },
+  // #1319 — the platform admin's home: a metrics strip and a card grid, like the hub.
+  "app/(admin)/staff/platform/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/platform/vendors/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/platform/domains/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/platform/onboarding/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/platform/settings/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/platform/health/page.tsx": { width: "wide", padY: "default" },
+  "app/(admin)/staff/platform/costs/page.tsx": { width: "wide", padY: "default" },
   // --- admin: standard
   "app/(admin)/staff/faqs/page.tsx": { width: "standard", padY: "default" },
   "app/(admin)/staff/discounts/page.tsx": { width: "standard", padY: "default" },
@@ -101,6 +105,8 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(storefront)/account/lists/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/lists/[listId]/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/loyalty/page.tsx": { width: "standard", padY: "default" },
+  // #1305 — back to `standard`, with 2 cards per row: cart, checkout and order history now share a
+  // width (`#1302` had made this `wide` for a third column).
   "app/(storefront)/account/orders/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/orders/[orderNumber]/page.tsx": {
     width: "standard",
@@ -109,13 +115,15 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(storefront)/cart/page.tsx": { width: "standard", padY: "tight" },
   "app/(storefront)/icon-credits/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/products/[slug]/page.tsx": { width: "standard", padY: "default" },
-  // --- storefront: narrow
-  "app/(storefront)/checkout/page.tsx": { width: "narrow", padY: "tight" },
-  "app/(storefront)/checkout/[orderNumber]/page.tsx": { width: "narrow", padY: "default" },
+  // #1305 — checkout was `narrow` (672px), which squeezed its form + summary columns; it now shares
+  // the cart's width.
+  "app/(storefront)/checkout/page.tsx": { width: "standard", padY: "tight" },
+  "app/(storefront)/checkout/[orderNumber]/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/checkout/[orderNumber]/cancel/page.tsx": {
-    width: "narrow",
+    width: "standard",
     padY: "default",
   },
+  // --- storefront: narrow
   "app/(storefront)/shop-your-list/page.tsx": { width: "narrow", padY: "tight" },
   "app/(storefront)/orders/lookup/page.tsx": { width: "narrow", padY: "default" },
   "app/(storefront)/feedback/page.tsx": { width: "narrow", padY: "default" },

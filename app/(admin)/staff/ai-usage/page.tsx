@@ -23,6 +23,7 @@ const FEATURE_LABELS: Record<AiFeature, string> = {
   NET_CONTENT: "Net content suggestions",
   PRODUCT_IMAGE: "Product images",
   CAMPAIGN_IMAGE: "Department campaign images",
+  PRICING_REVIEW: "Pricing review",
 };
 
 function neurons(value: number): string {

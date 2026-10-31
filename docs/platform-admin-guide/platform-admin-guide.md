@@ -4,8 +4,8 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.2.0"
-updated: "2026-10-19"
+version: "1.7.0"
+updated: "2026-10-31"
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
 tags: ["admin", "platform", "technical", "multi-tenancy"]
@@ -17,8 +17,22 @@ Welcome to the **Platform Admin** documentation. Unlike Store Admins (who manage
 
 ## Global Roles vs Vendor Roles
 It is critical to understand the distinction between the two types of administrative roles in the system:
-- **Global Platform `ADMIN`**: This role transcends all vendors. It grants access to system-wide configurations, vendor onboarding, and global user management.
+- **Global Platform `ADMIN`**: This role transcends all vendors. It grants access to system-wide configurations, vendor onboarding, and every store's admin panel. Managing users across all stores from one page is not built yet (`#1320`); team roles are managed per store at `/staff/team`.
 - **Vendor-Specific `ADMIN`**: This is a Store Admin. Their administrative powers are strictly scoped to a single vendor (e.g., managing the catalogue or delivery rules for "Aheed Food Centre" only). 
+
+**Where each role lands after sign-in (#1319).** Everyone signs in at the same `/login` page, and the
+server then sends each person to the home for their role:
+- a platform admin goes to `/staff/platform`;
+- staff or a store admin of the store whose web address they signed in on goes to `/staff`;
+- anyone else goes to `/account`.
+
+If the sign-in link carried a `next` page on the same site, that page wins; a `next` pointing at
+another site is ignored. Every page and action still checks the role on the server, so typing a
+URL never grants access the role does not have.
+
+The demo platform admin is `demo-platform-admin@merqify.com`. Since `#1319`,
+`demo-admin@merqify.com` is a store admin only (`docs/developer-portal/env-setup.md`). The demo
+addresses moved from `@example.com` to `@merqify.com` on 2026-10-31 (`#1356`).
 
 ## Managing Vendors (Tenants)
 The platform is designed to host multiple independent store fronts (vendors) from a single database.
@@ -33,6 +47,31 @@ The platform is designed to host multiple independent store fronts (vendors) fro
 
 ## Store Impersonation (Dev/Support)
 For support and debugging, Platform Admins can use the View Switcher to impersonate specific vendors and view the platform exactly as a Store Admin or Staff member of that vendor would see it.
+
+## Platform overview — `/staff/platform`
+
+**Purpose:** The platform admin's home page, and where a platform admin lands after signing in. It
+shows platform-wide figures and links to every platform page.
+
+**Who can access:** Platform admins only
+
+**What you can do:** Read seven figures: stores, active stores, domains, users, products, active
+products and recent errors. Open any platform page from its card: vendors, onboarding roll-up,
+domain registry, settings, system health, costs, and error events. The page has no controls and
+nothing to edit.
+
+**Typical workflow:** After signing in, glance at the figures for anything unexpected, such as a
+rise in recent errors or a store that is no longer active. Then open the matching page from its card.
+
+**Important fields and filters:** Each figure counts across every store on the platform, not only
+the store whose web address you are on. There are no filters.
+
+**Common mistakes and limitations:** **Store admins are refused here even though they hold an admin
+role**, as on every platform page. The figures are counts only; to act on one, open the page it
+relates to. The page does not manage users across stores (`#1320`).
+
+**What happens after changes are saved:** Nothing is editable. The figures are read live on each
+visit; reload to refresh them.
 
 ## Error events — `/staff/errors`
 
@@ -147,3 +186,19 @@ reload to see them.
 
 **What happens after changes are saved:** Re-measures connection latency and queries the latest diagnostic records fresh on every page load.
 
+
+## Costs, Pricing & Business Model — `/staff/platform/costs`
+
+**Purpose:** One advisory page covering what the platform costs now and in production as shops and orders grow, what competitors charge, four ways we could charge, what each costs a shop against the alternatives, paid add-ons, the risks not priced anywhere else, and one launch recommendation. A banner at the top states that it is advisory: the platform has not traded, so no figure is realised revenue, prices are in pounds excluding VAT, Stripe Connect (each shop as the seller, paying its own card fees) is a planning assumption, and nothing on the page changes live prices, subscriptions or any store's settings.
+
+**Who can access:** Platform admins only
+
+**What you can do:** Read nine sections in order. **Costs**: what the platform pays now — the six totals (now, with planned items, and at renewal prices, each per month and per year), Needs attention, Upcoming renewals, and one card per service grouped under Platform running costs (fixed), Platform running costs (usage-based) and Development tools, plus an Owner to confirm list. **Production costs as we grow**: our monthly cost, excluding partner time, at 1, 5, 10, 25, 50 and 100 shops and 100, 500 and 2,000 orders per shop, with the cost per order; partner time for each shop count; which free allowance runs out first at each order volume; the one-off start-up costs; Stripe Connect's two options side by side, with the one that has no platform fees marked as the one modelled; and every cost line with its price, free allowance and source, or Estimate. **Competitors**: each competitor's published plans with a link to the page they came from and the date it was read. **Business models**: four models that grow with a shop's orders (order bands, allowance plus per order, low fee capped per order, and a customer service fee), each labelled Proposal, with what the shop pays (including its own card fees and expected disputes), our revenue, cost and margin at the reference scenario of 10 shops taking 500 orders a month at a £25 basket, the shops needed to fund the partners' pay target, break-even including partner time, and the shop count at which our revenue crosses the VAT threshold; then a comparison table of what a shop pays on each model and on Shopify Basic and Grow, Square Online Free and Plus, Ecwid Starter, Uber Eats (self-delivery) and doing nothing, at a £25 basket, with £15 and £40 tables you can expand. **What if**: type a partner hourly rate, yearly rate increase, partner minutes per shop, onboarding minutes, the partners' monthly pay target, average basket, orders per shop and number of shops, and every model recalculates. **Add-ons**: twelve paid extras with price, our running cost, margin, whether each is cheap to run or usage-heavy, whether it is included or sold separately, and which are in the launch set. **Risks and gaps**: who bears each risk, its cost where one can be stated, and what to do. **Recommendation**: the recommended model and its public prices for shop two onwards, the launch add-ons, the dated founding-partner offer with its review clause, the three numbers to track every month, what would change the recommendation, and why. **Review**: the Refresh Costs and Refresh Recommendations buttons. Every section except What if and Review shows when it was last updated, how many of its entries are stale, and a Download CSV link. Print / Save as PDF opens the browser's print dialog; the staff navigation, the buttons, What if and Review are left out of the printout.
+
+**Typical workflow:** Review costs monthly and everything else quarterly; a GitHub issue titled Quarterly pricing review opens on the first day of January, April, July and October as a reminder, listing stale figures, items for the owner to confirm, each model's figures at the reference scenario, and whether the partner pay target and yearly rate increase are still unset. Press Refresh Recommendations: the page fetches the pricing pages the competitor and current-cost figures came from, has Workers AI read the prices, and lists each difference as an Unconfirmed suggestion, with how each model's reference margin and shop total would change if accepted and a list of recommended actions. Refresh Costs does the same for the current-cost pages only. To change a figure, edit the file that holds it and ship the change by pull request: current costs in `lib/running-costs.ts`; production cost lines in `lib/pricing/cost-drivers.ts`; Stripe Connect options in `lib/pricing/connect.ts`; competitors in `lib/pricing/competitors.ts`; the exchange rate, card fees, partner time, basket and reference scenario in `lib/pricing/assumptions.ts`; the models, comparisons and recommendation in `lib/pricing/business-models.ts`; add-ons in `lib/pricing/add-ons.ts`; and risks in `lib/pricing/risks.ts`. CSV downloads are available for costs, competitors, production, models (every model at every shop count, order volume and basket), comparison, add-ons and risks.
+
+**Important fields and filters:** Each current-cost card carries a status label: Actual, Planned, Estimate or Unverified, as before; only Actual and Planned reach a total. A production cost line marked Estimate has no published price; the others link to the provider's page. Usage quantities behind every production line (requests per order, storage per shop, emails per order) are estimates even where the unit price is published. None of our models takes a percentage of sales; card percentages appear only in the shop's own card fees and in competitors' prices. "More than 1,000 shops" means the figure is not reached in the range searched. A missing value (the yearly rate increase, the pay target) shows "Enter a value" or "Enter a pay target" rather than a number. Add-ons marked Not available yet are not built; their prices are proposals. A warning appears when the numbers no longer support the recommendation (the recommended model loses money at the reference scenario, or another model earns more and costs the shop less), and another when its review date has passed. There are no filters.
+
+**Common mistakes and limitations:** What if values are not saved: reloading the page restores the committed values, and nothing typed there changes the figures in the other sections. The totals use the UK card rate; the EEA rate is recorded but not modelled, and nor is the card fee Stripe keeps on a refund. Comparators exclude disputes. Nothing is pulled live except Workers AI usage and what a refresh fetches, so each figure is only as current as its date; the refresh does not yet read the production cost, Connect, add-on or risk pages. Refresh suggestions are not saved: download them as CSV first if you need them. Each refresh uses Workers AI and is recorded as Pricing review on the AI usage page against the store whose site you are signed in on, so it counts against that store's daily AI budget. The risks section is not legal, tax or insurance advice. The page sends no alerts and no emails.
+
+**What happens after changes are saved:** Nothing is saved from this page. An edit to a file under `lib/` takes effect once deployed, and the page recalculates every figure, and reads Workers AI usage, fresh on each load.

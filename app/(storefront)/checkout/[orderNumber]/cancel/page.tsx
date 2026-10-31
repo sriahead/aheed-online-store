@@ -7,7 +7,7 @@ import { getAuth } from "@/lib/auth";
 import { formatPrice } from "@/components/product/format-price";
 import { cancelOrder } from "@/features/checkout/cancel-order";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { Icon } from "@/components/icons/Icon";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 export const dynamic = "force-dynamic";
 
@@ -55,9 +55,15 @@ export default async function CancelOrderPage({
   }
 
   return (
-    <PageContainer width="narrow">
+    <PageContainer width="standard">
       <div className="mb-6 flex items-center gap-3">
-        <Icon name="circle-alert" className="h-8 w-8 shrink-0 text-accent" />
+        <IconMedallion
+          icon="circle-alert"
+          size={32}
+          tint="accent"
+          className="shrink-0"
+          decorative
+        />
         <div>
           <h1 className="text-xl font-bold text-primary">Cancel this order?</h1>
           <p className="text-sm text-primary-muted">

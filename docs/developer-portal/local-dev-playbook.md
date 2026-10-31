@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.37.0"
-updated: 2026-10-23
+version: "1.38.0"
+updated: 2026-10-31
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, KMS coverage vs gitignore, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -491,7 +491,7 @@ to the server-side two-`TZ`-run technique above, at that time of year.
   the rewrite of a `/staff/...` argument passed to `python`; `MSYS_NO_PATHCONV=1` did).
   This relaxes the "cannot sign in as a second vendor locally" limit in the bullet above for the
   seeded SriMart host; it was measured here for a customer account only. At `#1135`'s Validate
-  (2026-10-19) `demo-admin` (a platform admin) signed in the same way and read SriMart's
+  (2026-10-19) `demo-admin` (then a platform admin; since `#1319` use `demo-platform-admin`) signed in the same way and read SriMart's
   `/staff/ai-usage`. `demo-srimart-admin` answered 401: its dev password is not
   `DEMO_ACCOUNT_PASSWORD`, so a SriMart **store-admin** sign-in is still unproven on dev.
 - **A server action that a client component calls from JavaScript (no `<form>`) is still drivable
@@ -923,7 +923,8 @@ layout.
 the forwarded proto, so over plain local `http` it computes an `https://` origin and refuses. Add
 `--header x-forwarded-proto:http` (the same trap `#1177` hit from the other direction). A **401**
 after that really is the credential — most often the account simply is not in the dev database;
-`npx tsx scripts/demo-accounts.ts add` seeds the roster, `demo-srimart-admin@example.com` included.
+`npx tsx scripts/demo-accounts.ts add` seeds the roster, `demo-srimart-admin@merqify.com` included
+(since `#1356` the roster is `@merqify.com`; `add` renames a legacy `@example.com` account in place).
 
 **But a 401 with the account present means you are using the wrong password file (`#1187`).** `.env`
 and `.dev.vars` hold **different** `DEMO_ACCOUNT_PASSWORD` values, and `.dev.vars` is the one in

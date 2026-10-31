@@ -6,7 +6,169 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **Scheduler gating is switched on, and production moves to Merqify** (issues `#1325` and `#1341`, spec `specs/2026-10-31-production-cutover/`). The `JOB_SIGNALS` KV namespaces `aheed-jobs-staging` and `aheed-jobs-production` now exist in the Merqify account and are bound in both `wrangler.toml` files, so an idle 15-minute tick no longer wakes the database (`ran=none`). The production cut-over (new database filled from old staging, secrets, promotion) follows the runbook, `env-setup.md`, "Production cut-over".
+
+- **A failed `migrate-to-new-neon --apply` now rolls back** (issue `#1333`, spec `specs/2026-10-31-atomic-neon-copy/`). The seeded-vendor delete and every insert run inside one transaction (`scripts/lib/neon-migration-apply.ts`), so the target is left exactly as `migrate deploy` made it and the same command can be re-run. This makes the copy safe against the real production database in `#1341`, which cannot be reset from a parent branch. `--simulate-failure` (only with `--apply`) proves the rollback on a disposable target. The image copy still runs after the commit and is not rolled back.
+
+  Merged to staging (PR #1360). The live rollback check passed on Neon on 2026-10-31: a forced failure rolled everything back, and a clean re-run committed in 720 ms with every model matching the plan.
+  A short sanity-check guide (two quick checks, five live steps) is in `env-setup.md`, "Sanity check: the copy rolls back".
+  Ship now ends with a post-ship sanity-check guide for every slice (`specs/sdd-workflow.md` 2.53.0, `/ship` step 10): steps with expected results, in the operator doc and on the issue, with a "Last run" date.
+
+- **The demo logins moved to `@merqify.com`** (issue `#1356`, spec `specs/2026-10-31-demo-accounts-merqify-email/`). The six `demo-*@example.com` accounts are now `demo-*@merqify.com`, so mail to them can be forwarded to the owner's inbox by Cloudflare Email Routing. The owner sets up forwarding once; the steps are in `env-setup.md`, "Demo mail forwarding".
+  - **`demo:accounts add` renames instead of re-creating.** An account still on its old `@example.com` address has its email changed in place, so its id, password, roles and orders carry over. If both addresses exist, it refuses before writing anything. `remove` deletes both forms.
+  - **Demo accounts are recognised by their exact addresses.** The new-Neon copy and `grant-role` treat the twelve roster addresses and any other `@example.com` address as demo or test accounts. Every other `@merqify.com` address is a real person. The roster now lives in `scripts/lib/demo-roster.ts`.
+  - **App emails to these addresses still do not arrive**, because Resend rejects unverified domains. That changes with `#1217`/`#104`.
+
+  Merged to staging (PR #1357) and deployed: both staging hosts serve `a9685fa`. It merged without an independent Validate pass.
+
+- **The Merqify image buckets are named after the ShopLocal platform cell** (`#1339`, amendment 7 to `specs/2026-10-29-merqify-platform-move/`). `wrangler.toml` binds `shoplocal-images-staging` and `shoplocal-images-production`, the buckets the owner created, instead of `aheed-images-*`, which do not exist in the Merqify account and would have failed the first deploy. The dev bucket is `shoplocal-images-dev`. The runbook and `.env.example`/`.dev.vars.example` follow; `.dev.vars.example` also pointed local dev at the production image host, which has a hotlink rule. Store hosts are unchanged (`aheed[-staging].merqify.com`, `srimart[-staging].merqify.com`).
+
 ### Added
+
+- **The internal docs deploy refuses to publish without Cloudflare Access** (issue `#1328`, spec `specs/2026-10-30-docs-access-guard/`). The docs site has no login of its own, and `deploy-docs-internal` deploys it on every push to `staging` or `main`.
+  - **`scripts/verify-docs-access.ts --pre`**, before the build: the Access API must show a self-hosted application covering every docs host (read from `kms/site-internal/wrangler.toml`), with no `bypass` policy and no allow rule for everyone. Any API error refuses. The staging token needs **Access: Apps and Policies Read**.
+  - **`--post`**, after the deploy: signed-out requests to `/` and a deep link must redirect to `*.cloudflareaccess.com`. A normal page fails the job at once and names the custom domain to remove.
+  - **The docs host is now `docs-shoplocal.merqify.com`** (owner, 2026-10-30). The runbook, architecture and route test follow.
+
+  Until the staging environment's Cloudflare secrets name the Merqify account and its Access application exists (`#1339`), the docs deploy stays red: that is the guard refusing, not a new failure.
+  Merged to staging (PR #1353); the first `deploy-docs-internal` run refused at `--pre` as designed, and nothing was deployed.
+
+- **Roadmap phase P12 — Platform move, Aheed launch & Nocaped decommission** (`specs/roadmap.md` 1.187.0). One milestone and board Phase for the Merqify move, the Aheed Food Centre launch at `aheedfoodcentre.co.uk` and freeing the Nocaped account, with three workstream parent issues (`#1336`, `#1337`, `#1338`) holding every related issue as a sub-issue and the order recorded as GitHub dependencies. Twelve new issues cover work that was tracked only in the runbook or nowhere (`#1339`–`#1350`). Planning only; no code change.
+
+- **Hosting moves to the Merqify Cloudflare account and a new Neon account** (issue `#1323`, spec `specs/2026-10-29-merqify-platform-move/`). The Nocaped account dropped to the Workers Free plan and can no longer deploy.
+  - **New hosts on `merqify.com`**: `aheed-staging`, `srimart-staging` and `images-staging` for staging; `aheed`, `srimart` and `images` for production; `docs` for the internal docs behind Access. The scheduler and the image security policy follow.
+  - **`scripts/migrate-to-new-neon.ts`** fills a new, freshly migrated database from the old staging one. It defaults to a dry run. It copies the two stores, real users and **10% of the products** (245 for Aheed, plus SriMart's 3). It leaves behind test orders, carts, payments, logs and every `@example.com` account. It keeps the original ids, copies the images and re-counts everything at the end.
+  - **A migrated database is never empty**, so the copy accepts a target holding only the vendor every migration inserts (`aheed-food-centre`), replaces it with the copied one at `--apply`, and refuses if that vendor already owns any rows or any other store exists. A failed `--apply` leaves a partial target: reset it, do not re-run. Found by the first validation run; the original "target holds no store" refusal could never pass.
+  - **`scripts/grant-role.ts`** gives an existing user platform or store admin rights. A freshly migrated database has no admin, because every role on old staging belonged to a demo account.
+  - **Aheed Superstore retired**: its route, provisioning script, manifest and test are gone.
+  - **The UK location reference database and the dev database move too.** Reference data is rebuilt in the new Neon account from the public datasets with the existing sync script. Its direct URL must name the primary, which also fixes the replica problem in `#1123`. Dev is migrated and seeded.
+  - **`configure-env` now runs wrangler against the account named in the file being pushed**, not the machine's login, and prints that account first. It also pushes the two reference database URLs and, for production, the image storage keys the daily image job reads from GitHub. Dev's images bucket moves too.
+  - **"Freeing Nocaped" checklist**: every old Worker, bucket, token, Neon project and external registration, each removed only after both environments are proven and with owner approval.
+  - **Runbook**: `docs/developer-portal/env-setup.md`, "Merqify account": what the owner creates (the Access application for the docs site first), the `secrets/merqify-*.vars` files, the staging cut-over steps, production order and rollback.
+
+  Nothing changes until the owner's Merqify and Neon setup exists and the secrets move. No schema change.
+  Merged to staging (PR #1334) but not deployed: `deploy-staging`'s route guard refuses until staging's
+  `VendorDomain` rows name the `merqify.com` hosts, so staging stays on its last build until the cut-over.
+
+- **Background jobs only wake the database when there is work** (issue `#1324`, spec `specs/2026-10-28-event-gated-jobs/`):
+  - **Gated scheduler**: the 15-minute tick reads two markers from a new `JOB_SIGNALS` KV namespace and calls the payment sweep or the error-rate check only when it is due. An idle store goes from 96 database wakes a day to one. Any KV doubt runs the job.
+  - **Daily 03:00 UTC run** calls all three jobs ungated. The guest-cart reaper now runs only there, with its per-store cap raised from 500 to 5,000.
+  - **Stripe Checkout sessions expire 35 minutes after the order is created** (was Stripe's 24-hour default), so abandoned checkouts release their stock within the hour.
+  - **Return page check**: a shopper back from Stripe on a still-pending order is confirmed on the spot if Stripe says it was paid. It never cancels anything.
+  - **Staff order page** (store admins only): **Check payment now** for a pending order, and **Resend confirmation email** for a paid one.
+
+  The staging and production KV namespaces are an owner step (`docs/developer-portal/env-setup.md`, "Gated ticks"). Until they exist, everything runs as before.
+
+- **Four separated views (Shopper, Staff, Store Admin, Platform Admin)** on the existing role checks:
+  - **Landing after sign-in**: `/login` and Google sign-in now go through `/signed-in`, which sends a platform admin to `/staff/platform`, staff and store admins of the host's store to `/staff`, and everyone else to `/account`. A same-site `next` wins; an off-site one is ignored.
+  - **Demo accounts**: `demo-admin` is a store admin only. The new `demo-platform-admin@example.com` is the only platform admin, using the existing `DEMO_ACCOUNT_PASSWORD`. Re-run `npm run demo:accounts -- add` to apply this to a database.
+  - **Platform home**: `/staff/platform` shows seven platform-wide figures and links to every platform page. Store admins are refused.
+  - **Role-check test**: `tests/rbac-gate-matrix.test.ts` fails CI when a staff page, admin API route or staff server action has no server-side role check, or when a platform-only one does not refuse store admins.
+
+  No schema change (issue `#1319`, spec `specs/2026-10-28-rbac-four-views/`). Platform-wide user management is `#1320`.
+
+- **Pricing model v2 on `/staff/platform/costs`**:
+  - **Production costs as we grow**: 18 cost lines (Neon, Workers, R2, Workers AI, Resend, Twilio, Sentry, uptime, backups, company, accountant, ICO, insurance, legal) at 1-100 shops × 100-2,000 orders. Shows which free allowance runs out first, the one-off start-up costs, and both Stripe Connect options.
+  - **Partner time** as a cost, at the owner's £25 an hour.
+  - **Business models**: four that grow with orders and take no percentage of sales. Each shows what the shop pays (its own 1.5% + 20p under Connect, and disputes) beside Shopify, Square, Ecwid, Uber Eats and doing nothing at £15, £25 and £40 baskets.
+  - **What if**: inputs that recalculate in the browser and save nothing.
+  - **Add-ons, risks and recommendation**: 12 add-ons, a risks register, and a recommendation (customer service fee) with a dated founding-partner offer.
+
+  The v1 proposed plans and break-even engine are removed. CSV sections become production, models, comparison, add-ons and risks. Advisory only: no payment code or price changes (issue `#1313`, spec `specs/2026-10-28-pricing-model-v2/`).
+
+- **`/staff/platform/costs` becomes "Costs, Pricing & Business Model"**:
+  - **Costs**: 17 items grouped as fixed, usage-based and development tools, with an Owner to confirm list.
+  - **Competitors**: 10 competitors read from their own pricing pages on 2026-10-27, with source links. Unreadable or unpublished ones show no figures.
+  - **Proposed pricing**: four plans, each labelled Proposal.
+  - **Profitability**: break-even and at-zero-sales scenarios, converted at a dated Bank of England rate. No sales, order or vendor-count forecasts.
+  - **Business models**: six models with a written recommendation, which warns when the numbers disagree with it or its review date has passed.
+  - **Refresh Costs / Refresh Recommendations**: fetch only the registries' own pricing pages and use Workers AI to show unconfirmed, unsaved suggestions. Metered as the new `PRICING_REVIEW` AI feature, which needs one enum migration.
+  - **Export and review**: CSV export per section, Print / Save as PDF, and a quarterly `pricing-review` workflow that opens one reminder issue.
+
+  Advisory only: nothing changes live prices (issue `#1309`, spec `specs/2026-10-27-pricing-business-model/`).
+
+### Changed
+
+- **Checkout slot picker is a 7-day grid; Continue shopping beside Proceed to checkout and Continue to payment; cart, checkout and orders share the `standard` width; orders show 2 per row** — the slot picker now shows a week at a time (days across, time ranges down in Morning / Afternoon / Evening, Free / N left / Full cells, previous and next week arrows) and submits the same `fulfilmentSlotId` and `fulfilmentDate`; one new server action, `getAvailableSlotsForWeek`, fetches a week through the existing per-day lookup. Cart header Continue shopping and Smart Lists are matching pill buttons. The cart drawer is unchanged. Checkout moves from `narrow` to `standard`, so `specs/design-system.md` lists it there. Storefront only, no schema change (issue `#1305`, spec `specs/2026-10-27-checkout-width-and-slot-grid/`).
+
+- **Orders list is a card grid with Reorder items and Save as list on each card; Quick Shop links to orders; the cart has Continue shopping** — `/account/orders` shows 1, 2 or 3 orders per row (wide container), each card keeping its detail link with the two actions beneath it; Save as list from the list returns to the list with a status message. Quick Shop gains a "Your orders" tile and a count-free intro line. `/cart` always links back to `/categories`. Storefront only, no schema change (issue `#1302`, spec `specs/2026-10-27-orders-grid-quickshop-cart/`).
+
+### Fixed
+
+- **The internal docs deploy builds again.** `specs/sdd-workflow.md` 2.53.0 carried a bare `<date>` placeholder, which MDX read as an unclosed tag, so `deploy-docs-internal` failed on `81ab8ac`. It is now in backticks (2.53.1). CI `docs-gates` does not build the docs site, so it passed; the real `kms/site-internal` build is green locally.
+
+- **Staff users saw asset buttons that always failed** — `/staff/icons` is now read-only for STAFF; the mutation routes were already ADMIN-only (issue `#1288`).
+
+- **Dynamic slot asset activation across storefront touchpoints and themed 3D isometric prompt generation** (issue `#1285`).
+  - **Dynamic Slot Asset Activation:** Created `ActiveSlotIconsProvider` supplying active system icon assets from the `CategoryAsset` relational ledger directly into `<Icon3D />`. Now, activating or deactivating candidate assets in `/staff/icons` dynamically propagates to the live storefront header, view switcher, trust strip cards, and floating cart drawer.
+  - **Themed 3D Isometric Prompt Engineering:** Refined `buildSlotAssetPrompt` in `lib/category-image.ts` to align strictly with the store's visual identity (emerald green `#059669`, royal navy `#1E3A8A`, warm gold `#F59E0B`) and isolated 3D app icon specifications, preventing opaque photographic backgrounds or cluttered supermarket scenes.
+  - **Department Scroller on Landing Page:** Rendered `<DepartmentScroller />` on the storefront home page with prioritized high-fidelity category imagery ahead of procedural vector glyphs.
+  - **Alpha-Transparent 3D Icon Suite:** Reprocessed all 14 commercial 3D icons in `public/images/icons-3d/` with feathered alpha edge cutouts, ensuring crisp rendering without white bounding boxes across light, dark, and brand-tinted surfaces.
+
+- **Escape raw angle brackets in 3D icon spec files preventing MDX compilation errors in internal KMS** (issue `#1280`).
+
+- **Resolve broken 404 links, drill-down navigation to portal home, and configurable platform branding** (issue `#1276`).
+  - **404 Link Resolution:** Corrected broken links in `/dev` landing page (`/dev/doc/architecture`, `/dev/doc/tech-stack`, `/dev/doc/design-system`, `/dev/doc/roadmap`, `/dev/doc/sdd-workflow`, `/dev/doc/mission`), staff runbooks (`/staff/runbook/order-fulfilment-core`), and SDD self-review audit records. Validated 0 broken internal links across all 280+ compiled documentation artifacts.
+  - **Drill-down Navigation to Portal Home:** Configured Nextra 4 `_meta.json` top-level entries with `"type": "page"`, establishing persistent top navbar tabs (`Welcome`, `Client Help Centre`, `Internal Engineering`) across all views. Added `home: { title: "← Portal Overview", href: "/" }` to `/staff` and `/dev` sidebars to provide direct 1-click drill-down navigation back to the portal root (`/`).
+  - **Configurable Platform Name:** Replaced hardcoded "Aheed KMS" strings in `kms/site-internal` layout, metadata, navbar, and footer with dynamic resolution via `process.env.NEXT_PUBLIC_PLATFORM_NAME` / `process.env.PLATFORM_NAME` (defaulting cleanly to configurable platform name with `"Aheed"` defined in `wrangler.toml`). Exported `<PlatformName />` component via `kms/site-internal/mdx-components.tsx` and updated KMS index heading.
+
+### Added
+
+- **Running costs report for platform admins at `/staff/platform/costs`** (issue `#1295`; `specs/2026-10-27-running-costs-report/`). Read-only; registered in `PLATFORM_NAV_ITEMS` and refused to anyone who is not a platform admin.
+  - **Registry, not a table:** `lib/running-costs.ts` lists 11 services (Workers Paid $5/month, the `nocaped.com`, `merqify.com` and `aheedfoodcentre.co.uk` domains, Neon, R2, Access, GitHub on free tiers, Workers AI, Stripe, Cloudflare email), each marked Actual, Planned, Estimate or Unverified with an as-of date. USD only; no conversion. Edited in code and shipped; no schema change.
+  - **Totals:** now ($70.46/yr, $5.87/mo), with planned items ($86.22/yr) and at renewal prices after Verisign's `.com` rise on 2026-11-01 ($87.64/yr). Usage-based and unpriced items are in no total.
+  - **Needs attention and renewals:** auto-renew off, a renewal or a price change within 60 days. Today that flags `nocaped.com`, whose auto-renew is off and which expires 2027-08-15.
+  - **Live usage:** only Workers AI (`getPlatformAiNeuronsToday`); a failed read says "Usage unavailable", never 0. Every other row says "Usage not monitored".
+  - **Provider limits** for Workers, Neon, R2 and Workers AI are copied from the providers' own pricing pages with source and date, shown as not confirmed by the owner. Access, GitHub and Stripe pages could not be read, so those rows say "Limits not recorded".
+  - **Deferred:** threshold alerts, notifications and email, provider-API usage pulls, trial and credit expiry, domain rows read from the database.
+
+- **Deactivate icon and category assets, one circular icon medallion everywhere, and AI-replaceable icon inventory** (issue `#1288`; `specs/2026-10-27-icon-asset-activation-and-medallion/`).
+  - **Deactivate:** an active asset can be switched off from `/staff/icons` and the category manager (`POST /api/admin/category-images/deactivate`); the surface falls back to its built-in artwork, and a category's `imageKey` is cleared. Activate and deactivate each run in one interactive transaction.
+  - **`IconMedallion`:** every 3D icon, every decorative icon drawn at 32 px or more, and all category imagery render in one vendor-tinted circle (`components/icons/IconMedallion.tsx`); product photography stays square. `tests/icon-medallion-coverage.test.tsx` enforces it.
+  - **Slot registry:** `lib/icon-slots.ts` lists 15 3D slots (adds `postcode-search`, `contact-follow`, `rewards-gift`) and 81 flat `icon:<name>` slots; the generate route rejects unknown slots. The inventory is in the Icon & Visual Asset Standards Guide.
+  - **Prompts:** use the vendor's own brand colours and ask for circle-safe framing; Aheed's hardcoded colours are removed. ADR-008 v1.3.0 (Decision 6) and the design system record the rules.
+
+- **Category asset management, dedicated icon gallery, and realistic commercial system icons** (issue `#1285`; `specs/2026-10-27-category-asset-gallery-and-realistic-icons/`).
+  - **Category Asset Management Workflow:** Upgraded `CategoryImageManager.tsx` on `/staff/categories/[id]` enabling operators to generate multiple candidate visual assets, review them side-by-side in a responsive thumbnail grid, select the active live asset, and permanently delete redundant variations.
+  - **Dedicated Icon & Visual Asset Gallery:** Built centralized staff panel at `/staff/icons` (`IconGalleryClient.tsx` & `StaffIconsPage`) providing cross-category and system slot inspection, search filtering, high-resolution modal preview, activation, and one-click asset generation metered by Cloudflare Workers AI.
+  - **Relational Asset Ledger (`CategoryAsset`):** Added `CategoryAsset` Postgres model and hand-authored non-destructive migration `20261027080000_category_and_system_assets` with data backfill linking existing category images.
+  - **Photorealistic Commercial System Icons:** Generated, feathered, and optimized high-resolution WebP and PNG assets for 10 system touchpoints: `delivery-van`, `storefront`, `quick-shop`, `user-profile`, `cart-add`, `secure-checkout`, `order-updates`, `view-shopper`, `view-staff`, and `view-admin`. Registered in `Icon3D.tsx` and wired into `LocationControl.tsx` and `ViewSwitcher.tsx`.
+  - **Operator Playbook & Visual Standards:** Documented `/staff/icons` across all 7 required sections in `docs/staff-playbook/staff-tabs-guide.md` and updated `docs/client-help-centre/category-image-standards.md` and `icon-and-visual-asset-standards.md`.
+
+- **AI image generation for category icons and bulk catalogue backfill** (issue `#1283`; `specs/2026-10-26-category-ai-image-generation/`).
+  - **One-Click Category AI Image Generation:** Added `CategoryImageManager.tsx` with style selector (`photo` vs `3d-icon`), real-time image preview via `ImageWithFallback`, and one-click auto-generation backed by Cloudflare Workers AI (`@cf/black-forest-labs/flux-1-schnell`) and R2 object storage.
+  - **Bulk Catalogue Backfill:** Added `BackfillCategoryImagesButton.tsx` and `/api/admin/category-images/backfill` to batch-generate imagery for all categories missing photos/icons up to 5 per invocation with budget guardrails.
+  - **Standardized Prompt Engineering:** Authored `lib/category-image.ts` defining distinct prompt formulas for Tesco-model commercial grocery studio photography and clean 3D isometric tactile icons.
+  - **Client Help Centre Documentation:** Updated `docs/client-help-centre/category-image-standards.md` detailing single and bulk generation workflows, style modes, and storage key conventions.
+
+- **Realistic 3D rendered icon suite, high-resolution asset delivery for Icon3D, and visual standards documentation** (issue `#1280`; `specs/2026-10-26-realistic-3d-icons/`).
+  - **Photorealistic Commercial 3D Rendered Suite:** Extracted and generated 12 commercial 3D rendered icons with studio lighting, clay-smooth tactile surfaces, and true alpha transparency: `storefront`, `quick-shop`, `user-profile`, `rewards-gift`, `rewards-coin`, `cart-add`, `delivery-van`, `halal-certified`, `secure-checkout`, `order-updates`, `postcode-search`, and `contact-follow`.
+  - **Dual-Format Asset Optimization:** Saved 24 lightweight WebP and PNG assets under `public/images/icons-3d/` (512x512 canvas, 432x432 safe zone, <65KB per asset).
+  - **Enhanced `<Icon3D>` Component:** Added `ICON_3D_IMAGE_ASSETS` registry and `renderAs?: 'auto' | 'image' | 'svg'` prop with instant zero-layout-shift procedural SVG fallback for SSR and test parity.
+  - **Client Help Centre Visual Standards:** Authored `docs/client-help-centre/icon-and-visual-asset-standards.md` establishing 3D asset dimensions, alpha cutouts, prompt engineering formulas, and merchant onboarding guidelines.
+
+- **Realistic product photography for categories, Category.imageKey schema, and dynamic image URLs** (issue `#1278`; `specs/2026-10-26-category-realistic-photography/`).
+  - **Schema & Migration:** Hand-authored migration `prisma/migrations/20261026150000_category_image_key/migration.sql` adding `imageKey TEXT` to "Category" with backfill for all existing seeded categories, updated `prisma/schema.prisma`, and regenerated WASM client.
+  - **15 Commercial Studio Photographic Assets:** Created 512x512 high-resolution, lightweight commercial studio product photographs under `public/images/categories/<slug>.jpg` matching UK supermarket retail standards (Tesco reference model) across Fresh Food, Bakery, Dairy & Eggs, Halal Meat, Food Cupboard, Drinks, Treats & Snacks, Household, Frozen Food, International, Health & Beauty, Baby & Kids, Pet Supplies, SriMart Electronics, and Home.
+  - **Dynamic Image URL Delivery:** Updated `lib/repositories/categories.ts` and `lib/categories-service.ts` to compose `imageUrl` dynamically from `CDN_BASE_URL` and relative `imageKey`. Updated search suggestions endpoint (`app/api/search/suggest/route.ts`) and staff category forms.
+  - **Responsive Photographic Scroller:** Enhanced `components/layout/DepartmentScroller.tsx` and `DepartmentGlyph.tsx` with clean card framing, eager loading for top 6 items, lazy loading for remainder, and seamless fallback to semantic icons without layout shift.
+  - **KMS Category Image Standards:** Documented image specifications and client onboarding guide in `docs/client-help-centre/category-image-standards.md`.
+
+
+- **Restructure KMS documentation into Client Knowledge Centre and Internal Engineering section** (issue `#1274`).
+  - **Client Help & Documentation Centre (`/staff`):** Reorganized into 8 primary client-friendly categories: Home & Getting Started, User Journey Maps, Set Up & Launch Your Store, Feature & Task Guides, Roles, Permissions & Security, Troubleshooting & Support, Reference Library, and Documentation Management.
+  - **Internal Project & Engineering Knowledge (`/dev`):** Established a dedicated, access-controlled technical repository housing System Architecture, ADRs (001–008), Business Strategy & Pitch, Product Requirements (PRD), Developer Playbooks, and 200+ milestone engineering plans.
+  - **Document Governance & Clean Separation:** Created `docs/client-help-centre/documentation-management.md` for article freshness, review cycles, and no-code `/staff/faqs` CMS authoring; pruned engineering sprint plans from the `/staff` track; integrated `shopping-guide.md` into the staff reference library.
+  - **Navigation & Discovery:** Configured Nextra 4 `_meta.json` sidebar metadata across root, `/staff`, and `/dev` for structured topic browsing and Pagefind indexing.
+
+- **Integrate Client Help & Documentation Centre into existing KMS** (issue `#1272`).
+  - **Comprehensive Client Help Centre:** Added 9 core documentation guides under `docs/client-help-centre/` covering Getting Started, Roles & Permissions, Features & Settings, Products & Catalogue, Integrations, Tutorials & FAQs, Troubleshooting & Escalation, and Glossary & Release Notes.
+  - **Documented End-to-End User Journey Maps:** Authored verified visual flowcharts (Mermaid), step-by-step guides, prerequisites, alternative error paths, and onboarding checklists for all 4 roles: Platform Admin, Vendor Admin, Staff, and Customer.
+  - **In-App Search & Deep Linking in `/staff/runbook`:** Enhanced `RunbookClient` with instant real-time article search and query param deep linking (`initialDocId`, `initialQuery`), allowing staff and admins to jump directly to specific guides.
+  - **Contextual Help Links:** Added contextual guidance buttons on `/staff/products/import` (bulk import guide), `/staff/onboarding` (onboarding checklist guide), and `/staff/delivery-areas` (delivery rules guide).
+  - **KMS Multi-Track Assembly & Navigation:** Updated `kms/site-internal` content hub with structured categories, assembled 279 documents, and verified full-text search indexing with Pagefind (282 pages indexed).
 
 - **Platform Admin role and platform-wide management suite** (issue `#1269`; `specs/2026-10-25-platform-admin-role-and-management/`).
   - **Platform Admin Server-Side Role Enforcement:** Added `requirePlatformAdmin()` to `lib/auth-rbac.ts` ensuring strict `session.user.role === "ADMIN"` checking. Guaranteed that store-level admins holding `VendorMembership(role: "ADMIN")` with `User.role === "CUSTOMER"` are refused on all platform-wide management operations with HTTP 403 Forbidden (`<PanelRefusal title="Platform admin only" />`).
@@ -43,10 +205,10 @@ every branch merges.
   - **ADR-007 Default Policy & Stock Safety:** Enforces automatic restriction categorization (`TOBACCO`/`ALCOHOL` $\rightarrow$ `AGE_RESTRICTED`, `INSTANT LOTTERY` $\rightarrow$ `PROHIBITED`, `PHONE CARDS`/`NEWS`/`E-PAY`/`STAMPS` $\rightarrow$ `NOT_DELIVERABLE`, `DEFAULT` department $\rightarrow$ `NEEDS_REVIEW`). Creates all new products as hidden (`isActive: false`) with stock `UNKNOWN` and quantity 0.
   - **Session Isolation & 10,000 Row Limit:** Derives `vendorId` exclusively from verified session, rejecting client-supplied vendor IDs, and aborts payloads $> 10,000$ rows before execution.
 
-- **Click & Collect order details: replace order reference with customer email** (issue #1261; specs/2026-10-24-p1261-click-collect-email/).
-  - **Click & Collect Order Details:** Replaced redundant Order Reference on Click & Collect card with customer Email in components/orders/OrderAddressCard.tsx.
-  - **Multi-View Email Propagation:** Wired customer email across staff order view (pp/(admin)/staff/orders/[orderNumber]/page.tsx), account order history (pp/(storefront)/account/orders/[orderNumber]/page.tsx), and confirmation views (pp/(storefront)/checkout/[orderNumber]/page.tsx).
-  - **Repository & Summary Model:** Added customerEmail resolution to OrderSummary in lib/repositories/orders.ts (indOrderForViewer, indOrderForUser, and indOrderForStaff).
+- **Click & Collect order details: replace order reference with customer email** (issue `#1261`; `specs/2026-10-24-p1261-click-collect-email/`).
+  - **Click & Collect Order Details:** Replaced redundant Order Reference on Click & Collect card with customer Email in `components/orders/OrderAddressCard.tsx`.
+  - **Multi-View Email Propagation:** Wired customer email across staff order view (`app/(admin)/staff/orders/[orderNumber]/page.tsx`), account order history (`app/(storefront)/account/orders/[orderNumber]/page.tsx`), and confirmation views (`app/(storefront)/checkout/[orderNumber]/page.tsx`).
+  - **Repository & Summary Model:** Added `customerEmail` resolution to `OrderSummary` in `lib/repositories/orders.ts` (`findOrderForViewer`, `findOrderForUser`, and `findOrderForStaff`).
 
 - **Icon credits page, generated icon attribution, and cart tooltip cleanup** (issue `#1257`; `specs/2026-10-24-p1257-icon-credits-cart-tooltip/`).
   - **Cart Hover Tooltip Purity:** Suppressed inner SVG `<title>` in `components/cart/CartDrawerShell.tsx` via `decorative={true}` on the trigger and drawer header icons, ensuring only `"My Cart"` displays on browser hover.
@@ -6815,12 +6977,3 @@ every branch merges.
 ### Notes
 - No feature code beyond the skeleton. Auth, catalogue, cart, checkout, and the design system
   arrive in P1+ behind their specs and gates.
-
-
-
-
-
- 
- |   2 0 2 6 - 0 9 - 1 2   |   D o c u m e n t a t i o n   h a n d o f f   f o r   # 7 3 4 ,   b u i l t   a n d   m e r g e d   t o   s t a g i n g .   |   P o s t - s h i p   d o c s   r e c o n c i l i a t i o n   | 
- 
- 

@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.25.0"
-updated: 2026-10-24
+version: "1.26.0"
+updated: 2026-10-27
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -184,12 +184,43 @@ Each department with art shows a **Noto Emoji** illustration (Apache-2.0), mappe
 with `<img>` through `ImageWithFallback`, **not inlined**: `DepartmentScroller` and `DepartmentHero` are
 client components, so inlined art would ship in the client bundle. A slug with no illustration renders the
 neutral decorative `tag` glyph, never a picture of food on a non-grocery vendor (#729). The strip keeps its
-64 pixel tile with a 48 pixel illustration, tinted `action-tint` and `accent-tint` alternately by position;
-the hero corner uses `DepartmentGlyph` (96 pixels, 128 from `md`). Per-vendor and generated art is `#1224`.
+64 pixel tile, now a circular `IconMedallion` on `action-tint` for every tile (#1288; it alternated with
+`accent-tint` before), with the illustration inset to 80 %; the hero corner uses `DepartmentGlyph` (96 pixels,
+128 from `md`), also a medallion. Per-vendor and generated art is `#1224`.
 
 Licences for every set in use, and the Noto Emoji note (its upstream licence URL returns 404, so the
 canonical Apache 2.0 text is used), are in `public/third-party-icon-licenses.txt`, linked from the storefront
 footer as "Icon credits".
+
+### The circular medallion — the only frame (#1288)
+
+Every 3D icon, every large decorative icon and every category image renders inside **one** component,
+`components/icons/IconMedallion.tsx`: a `rounded-full` circle on the vendor's tint, so the whole set
+reads as one family whichever artwork fills it.
+
+```tsx
+<IconMedallion icon3d="storefront" size={24} decorative />        // 3D icon (static cut-out or AI override)
+<IconMedallion icon="package" size={32} className="mx-auto" decorative /> // large flat icon
+<IconMedallion imageUrl={photoUrl} fallbackIcon={glyph} size={64} active /> // category photo
+```
+
+- **Tint.** `action` by default (`bg-action-tint`, which `brandStyle()` sets per vendor);
+  `accent` and `danger` only where the colour carries meaning (a pending or cancelled order, an
+  error). The department strip uses `action` for every tile; it no longer alternates tints.
+- **Fill.** A photo or an AI override fills the circle (`object-cover`) with `mix-blend-multiply`, so
+  the plain white background every AI prompt asks for takes on the tint. A transparent cut-out (a static
+  3D asset or a department illustration, `imageFit="inset"`) sits at 80 %; vector art at 70 %. The
+  storefront has no dark theme; the multiply blend assumes a light tint and needs revisiting if one lands.
+- **The 32 px rule.** A decorative or status `<Icon>` drawn at 32 px or larger (`size="xl"|"2xl"`, or an
+  `h-8`/`w-8` class or larger) goes through the medallion; anything smaller stays a plain inline glyph
+  and is never AI-replaced. Functional icons are never framed. `<Icon3D>` is used only inside
+  `components/icons/`. `tests/icon-medallion-coverage.test.tsx` enforces both.
+- **Size.** `size` is the outer diameter and replaces the icon box it stands for, so layout does not
+  shift. A responsive size uses `md:!h-32 md:!w-32` (the `!` beats the inline size), as `DepartmentGlyph`
+  does.
+- **Product photography is never framed**: product cards, galleries and quick view stay square.
+- **Overrides.** Which icons a vendor can replace with AI art, and how, is ADR-008 Decision 6 and the
+  "Replaceable icon inventory" in `docs/client-help-centre/icon-and-visual-asset-standards.md`.
 
 ### Size scale
 
@@ -494,8 +525,8 @@ its own `mx-auto … max-w-… px-4`; `tests/page-container.test.ts` fails if it
 | `width` | Class | For |
 |---|---|---|
 | `wide` | `max-w-7xl` (1280) | Matches the chrome exactly. Dashboards, lists, tables, product grids, browse. |
-| `standard` | `max-w-5xl` (1024) | Account pages, settings, record detail. |
-| `narrow` | `max-w-2xl` (672) | Forms, auth, checkout, reading copy. |
+| `standard` | `max-w-5xl` (1024) | Account pages, settings, record detail, the cart and checkout (#1305). |
+| `narrow` | `max-w-2xl` (672) | Forms, auth, reading copy. |
 
 **All three render `mx-auto w-full px-4`, and that shared gutter is the point** — not the
 `max-width`. A `narrow` page still shares a left edge and a gutter with the header; it just stops

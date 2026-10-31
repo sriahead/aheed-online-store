@@ -83,7 +83,11 @@ export async function GET(request: Request) {
       name: p.name,
       inStock: p.inStock,
     })),
-    categories: categoryRows.map((c) => ({ slug: c.slug, name: c.name })),
+    categories: categoryRows.map((c) => ({
+      slug: c.slug,
+      name: c.name,
+      imageUrl: c.imageUrl ?? `/images/categories/${c.slug}.jpg`,
+    })),
     terms: suggestTerms(terms, aliases),
   });
 }

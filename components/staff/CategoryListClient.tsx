@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/icons/Icon";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 type CategoryItem = {
   id: string;
@@ -20,7 +21,7 @@ export function CategoryListClient({ categories }: { categories: CategoryItem[] 
   if (categories.length === 0) {
     return (
       <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-        <Icon name="folder-tree" className="mx-auto mb-3 h-8 w-8 text-primary-subtle" />
+        <IconMedallion icon="folder-tree" size={32} className="mx-auto mb-3" decorative />
         <p className="text-sm text-primary-muted">
           No categories yet. Create one before adding products.
         </p>

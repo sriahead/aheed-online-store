@@ -10,7 +10,7 @@ import { updateQuantity } from "@/features/cart/update-quantity";
 import { CheckoutLink } from "./CheckoutLink";
 import { CartLineNote } from "./CartLineNote";
 import { Icon } from "@/components/icons/Icon";
-import { Icon3D } from "@/components/icons/Icon3D";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 /**
  * Server-rendered cart body (P3a, #93) — shared by the drawer and /cart so both
@@ -37,6 +37,7 @@ export function CartContents({
   localityName,
   cdnBaseUrl,
   showViewCartLink = false,
+  continueShoppingHref,
 }: {
   summary: CartSummary;
   method: FulfilmentMethodChoice;
@@ -45,6 +46,8 @@ export function CartContents({
   localityName: string;
   cdnBaseUrl: string;
   showViewCartLink?: boolean;
+  /** #1305 — when set, a Continue shopping link sits beside Proceed to checkout. The drawer omits it. */
+  continueShoppingHref?: string;
 }) {
   const progress = fulfilmentProgress(summary.subtotalPence, {
     method,
@@ -106,7 +109,7 @@ export function CartContents({
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {summary.lines.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-            <Icon3D name="cart-add" size={72} className="mb-3" />
+            <IconMedallion icon3d="cart-add" size={72} className="mb-3" decorative />
             <h3 className="text-sm font-bold text-primary">Your cart is empty</h3>
             <p className="mt-1 max-w-xs text-xs text-primary-muted">
               Browse the aisles and add something you fancy.
@@ -239,7 +242,22 @@ export function CartContents({
           </div>
           {/* The cart deliberately stops at a subtotal — delivery fee and total are
               computed at checkout (P3b) so the two can never disagree. */}
-          <CheckoutLink />
+          {continueShoppingHref ? (
+            // #1305 — /cart only. Stacked with checkout on top below `sm`, side by side from `sm`.
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <Link
+                href={continueShoppingHref}
+                className="flex items-center justify-center rounded-2xl border border-primary px-4 py-3 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white sm:flex-1"
+              >
+                Continue shopping
+              </Link>
+              <div className="sm:flex-1">
+                <CheckoutLink />
+              </div>
+            </div>
+          ) : (
+            <CheckoutLink />
+          )}
 
           {showViewCartLink && (
             <Link

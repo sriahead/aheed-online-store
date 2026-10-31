@@ -266,7 +266,7 @@ const AHEED_SATELLITES: VendorSatellites = {
   config: {
     localityName: "Milton Keynes",
     senderName: "Aheed Food Centre",
-    senderEmail: "orders@aheedfoodcentre.nocaped.com",
+    senderEmail: "orders@aheed.merqify.com",
     searchPlaceholder: "Search halal lamb, basmati, lentils…",
     // P7.5c+f (#239) — copy that used to be hardcoded in Header.tsx and the
     // homepage hero, and so rendered for SriMart too. Aheed's halal claim is
@@ -337,7 +337,7 @@ type CatalogueProduct = {
 };
 
 type CatalogueCategory = {
-  category: { slug: string; name: string };
+  category: { slug: string; name: string; imageKey?: string };
   products: CatalogueProduct[];
   /**
    * #489 — the second tier. `Category.parentId` has existed since P2a and
@@ -834,6 +834,14 @@ async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
       (c) => c.slug,
     ),
   );
+  // #1278: ensure existing categories have realistic photography imageKey populated
+  for (const { category } of catalogue) {
+    await prisma.category.updateMany({
+      where: { vendorId, slug: category.slug, imageKey: null },
+      data: { imageKey: `categories/${category.slug}.jpg` },
+    });
+  }
+
   const pending = catalogue.filter(({ category }) => !existingSlugs.has(category.slug));
   if (pending.length === 0) {
     console.log(
@@ -862,7 +870,11 @@ async function seedCatalogue(vendorId: string, catalogue: CatalogueCategory[]) {
   for (const { category, products } of pending) {
     await prisma.$transaction(async (tx) => {
       const createdCategory = await tx.category.create({
-        data: { ...category, vendorId },
+        data: {
+          ...category,
+          vendorId,
+          imageKey: category.imageKey ?? `categories/${category.slug}.jpg`,
+        },
       });
 
       for (const product of products) {
@@ -1339,7 +1351,7 @@ const SRIMART_SATELLITES: VendorSatellites = {
   config: {
     localityName: "Reading",
     senderName: "SriMart",
-    senderEmail: "orders@srimart.nocaped.com",
+    senderEmail: "orders@srimart.merqify.com",
     searchPlaceholder: "Search chargers, earbuds, lamps…",
     // P7.5c+f (#239) — SriMart's own voice. Before this slice it advertised
     // "100% Certified HMC Halal Fresh Meat Cut Daily" and "Delivering fresh

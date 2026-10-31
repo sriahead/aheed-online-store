@@ -1,12 +1,54 @@
 ---
-title: Start here
+title: Welcome to Knowledge Centre
 ---
 
-# Aheed KMS — Internal
+# <PlatformName /> Knowledge Management System (KMS)
 
-Pick a track:
+Welcome to the central knowledge and documentation portal for the multi-tenant grocery and retail e-commerce platform.
 
-- [Dev](/dev) — architecture, ADRs, runbooks, and prompts. Generated from `specs/`, `docs/`, and
-  `CLAUDE.md` — edit the source doc's front-matter and body, not anything under this site.
-- [Staff](/staff) — operational SOPs and admin how-tos. Stubbed until the admin & staff panel (P6)
-  exists.
+This portal is divided into two distinct, role-tailored sections:
+
+---
+
+## 🏬 [Client Help & Documentation Centre](/staff)
+*For Store Owners, Vendor Administrators, Store Staff, and Operational Teams.*
+
+A client-friendly, task-oriented knowledge base designed to help you configure, launch, and operate your store with confidence:
+
+1. **[Home & Getting Started](/staff)** — Platform introduction, quick-start setup, and launch checklists.
+2. **[User Journey Maps](/staff/guide/client-user-journeys)** — Documented visual flows, step sequences, and checklists for **Platform Admin**, **Vendor Admin**, **Store Staff**, and **Customers**.
+3. **[Set Up & Launch Your Store](/staff/guide/getting-started-onboarding)** — Store branding, catalogue setup, staff invitations, Stripe Connect, and 100% launch audit checklist.
+4. **[Feature & Task Guides](/staff/runbook/store-admin-tabs-guide)** — Step-by-step guides for catalogue creation, bulk imports, live inventory toggles, order fulfillment queues, and delivery area setup.
+5. **[Roles, Permissions & Security](/staff/guide/roles-permissions-matrix)** — Clear RBAC capability matrix, tenant data isolation guarantees, and access troubleshooting.
+6. **[Troubleshooting & Support](/staff/runbook/troubleshooting-escalation)** — Diagnostic symptom matrix, product import error remedies, payment exceptions, and 4-tier escalation tree.
+7. **[Reference Library](/staff/guide/features-settings-reference)** — Settings reference, Excel spreadsheet import column specifications, domain glossary, customer shopping guide, and release notes.
+8. **[Documentation Management](/staff/guide/documentation-management)** — Content governance, review schedules, FAQ CMS authoring, and documentation gap tracking.
+
+👉 **[Enter the Client Help Centre &rarr;](/staff)**
+
+---
+
+## 🛠️ [Internal Project & Engineering Knowledge](/dev)
+*For Developers, Software Architects, Engineering Leads, and Product Stakeholders.*
+
+The technical single source of truth for repository architecture, architectural decisions, product requirements, and engineering execution:
+
+- **[System Architecture & Core Specifications](/dev)** — Architecture standards, database isolation (Neon Postgres + WASM client), multi-tenant routing, and technology stack.
+- **[Architecture Decision Records (ADRs)](/dev)** — Authoritative ADR-001 through ADR-008 covering hosting, Better Auth, S3 storage abstraction, multi-tenancy, and money flow.
+- **[Business Strategy & Product Requirements](/dev)** — Commercial business case and platform pitch, Product Requirements Document (PRD), and user testing feedback logs.
+- **[Developer Playbooks & Conventions](/dev)** — Local development playbook, application conventions, environment secrets setup, runtime pitfalls on Workers, and 3D Icon Studio API.
+- **[Milestone Engineering Plans (M0–P10)](/dev)** — Structured engineering specifications and retrospectives for every completed and in-flight milestone.
+- **[Quality Assurance & NFR Verification](/dev)** — Regression test registers, non-functional requirement (NFR) baselines, and SDD audit reports.
+
+👉 **[Enter the Internal Engineering Portal &rarr;](/dev)**
+
+---
+
+## ⚡ Frequently Accessed Guides
+- **[Store Onboarding & Launch Checklist](/staff/guide/getting-started-onboarding)**
+- **[Bulk Product Import Guide & Template](/staff/guide/products-catalogue-guide)**
+- **[Daily Staff Operations & Order Fulfilment](/staff/runbook/order-fulfilment-core)**
+- **[Live Inventory & Stock Toggles](/staff/runbook/staff-tabs-guide)**
+- **[Operational Troubleshooting & Escalation Matrix](/staff/runbook/troubleshooting-escalation)**
+- **[Local Development Playbook (Dev)](/dev/runbook/local-dev-playbook)**
+- **[Architecture Decision Records Index (Dev)](/dev/adr/adr-001-hosting)**

@@ -6,6 +6,7 @@ import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { CategoryForm } from "@/components/staff/CategoryForm";
 import { CategoryListClient } from "@/components/staff/CategoryListClient";
+import { BackfillCategoryImagesButton } from "@/components/staff/BackfillCategoryImagesButton";
 import { PageContainer } from "@/components/layout/PageContainer";
 
 // Reads the session and this vendor's categories — must render per-request.
@@ -33,6 +34,7 @@ export default async function StaffCategoriesPage() {
   }
 
   const categories = await listCategoriesForAdmin(auth.vendorId);
+  const missingCount = categories.filter((c) => !c.imageKey).length;
 
   return (
     <PageContainer width="wide">
@@ -48,6 +50,11 @@ export default async function StaffCategoriesPage() {
         <h2 className="mb-3 text-sm font-bold text-primary">New category</h2>
         <CategoryForm category={null} categories={categories} />
       </section>
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-sm font-bold text-primary">All categories</h2>
+        <BackfillCategoryImagesButton missingCount={missingCount} />
+      </div>
 
       <CategoryListClient categories={categories} />
     </PageContainer>

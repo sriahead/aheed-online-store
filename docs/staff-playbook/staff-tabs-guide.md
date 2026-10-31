@@ -4,8 +4,8 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.14.0"
-updated: "2026-10-22"
+version: "2.15.0"
+updated: "2026-10-27"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
 tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback"]
@@ -109,7 +109,7 @@ against it and appears in the order's history. The customer sees the new status 
 page. Status moves cannot be undone from this page, so read the order number before you act on a bulk
 selection.
 
-> **Note on operational rules:** For authoritative guidance on cancellations, payment exceptions, and how fulfilment slots interact with order states, see the canonical [Order & Fulfilment Operations](../operations-research/order-fulfilment-core.md) guide.
+> **Note on operational rules:** For authoritative guidance on cancellations, payment exceptions, and how fulfilment slots interact with order states, see the canonical [Order & Fulfilment Operations](/staff/runbook/order-fulfilment-core) guide.
 
 
 ## Internal Operational Runbook — `/staff/runbook`
@@ -183,6 +183,27 @@ shoppers do not see that promotion until the department is shown again.
 **What happens after changes are saved:** The shop's navigation updates immediately, including the
 department list in the header search bar. Products already assigned to a category stay assigned to
 it through a rename.
+
+
+## Icon & Visual Asset Gallery — `/staff/icons`
+
+**Purpose:** Unified visual library to browse, generate, preview, select, and delete category imagery and UI system icons across the store.
+
+**Who can access:** Staff and store admins
+
+**Read-only for staff:** Staff see the gallery read-only, with the note "Only an admin can generate or change visual assets." Only a store admin can generate, activate, deactivate or delete.
+
+**What you can do:** View all generated candidate images for departments and system slots, generate new candidates with AI, inspect high-resolution previews, set active candidates, **deactivate** the active one, and permanently delete obsolete assets. Every preview is shown in the same circle shoppers see.
+
+**Typical workflow:** When refreshing department visuals or system touchpoints, navigate to `/staff/icons`, generate candidate styles, preview them in high resolution, activate the best image, and delete redundant candidates.
+
+**Important fields and filters:** Filter tabs permit switching between All Assets, Category Imagery, System Icons (the 3D icons) and **Flat icons** (the smaller emoji-style icons, stored as `icon:<name>`). Search filters by department name or slot key. The Quick Generator allows picking between Category or System Icon, choosing the target department or slot (grouped under "3D icons" and "Flat icons"; the full list and where each appears is the "Replaceable icon inventory" in the Icon & Visual Asset Standards Guide), and choosing between Studio Photography and 3D Rendered Icon presets.
+
+**Deactivate:** On the active card, or in its preview, **Deactivate** switches the image off without deleting it. The storefront goes back to the built-in artwork (for a department, its icon or illustration), and you can activate the image again later.
+
+**Common mistakes and limitations:** A flat icon replacement only shows where that icon is drawn at 32 px or larger; smaller uses keep the built-in glyph. Deleting an active candidate automatically selects the next most recent candidate or clears the active slot. System slot assignments update touchpoint renders across the storefront instantly.
+
+**What happens after changes are saved:** Selected active images immediately update category cards, navigation scrollers, and touchpoints across the storefront with zero cache staleness.
 
 
 ## Brands — `/staff/brands`

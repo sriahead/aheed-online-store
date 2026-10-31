@@ -20,68 +20,19 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
  * accounts (hashed passwords) — so `add` never sends a verification email (spec R7).
  */
 
-// Platform role = User.role (platform ADMIN transcends vendors); vendor role = a
-// VendorMembership at the current vendor (ADR-004 slice 3a). A demo account can be both.
-export type PlatformRole = "ADMIN" | "CUSTOMER";
-export type VendorRole = "STAFF" | "ADMIN";
-
-export interface DemoAccount {
-  email: string;
-  name: string;
-  platformRole: PlatformRole;
-  vendorRole?: VendorRole;
-  /** Which vendor `vendorRole` attaches to. Omitted = the first ACTIVE vendor (existing
-   *  default). Set this to reach a vendor other than the platform's first one — e.g. a
-   *  second vendor's admin, needed to prove a cross-vendor write is actually refused
-   *  rather than merely untested in the reverse direction (#141). */
-  vendorSlug?: string;
-}
-
-/** Fixed, code-defined roster. demo-admin is a platform admin; demo-store-admin is a store
- *  admin (vendor ADMIN only); demo-staff is a normal user with a vendor STAFF membership
- *  (not a platform staffer); demo-customer is a plain shopper; demo-srimart-admin is a
- *  store admin on the platform's SECOND vendor (SriMart, not the default first-active one).
- *
- *  demo-store-admin exists because a platform admin CANNOT stand in for a store admin:
- *  requireVendorRole() returns early with `via: "platform-admin"` for anyone whose
- *  User.role is ADMIN (lib/auth-rbac.ts), so demo-admin's vendorRole is never actually
- *  read. The role-hierarchy guards in lib/repositories/roles.ts — only a platform admin
- *  may grant ADMIN, a store admin may not touch a platform admin's privileges, and the
- *  self-lockout check — all fire only when `via === "ADMIN"`, which no other account in
- *  this roster can produce. Added for P6.7's validation walk (#190).
- *
- *  demo-srimart-admin exists because every other vendor-role account attaches to the
- *  same (first ACTIVE) vendor, so no cross-vendor write attempt could ever be tested in
- *  both directions — only "vendor A admin tries to redirect a write to vendor B" was
- *  reachable, never the reverse. Added for P5a's R56 reverse-direction gap (#141). */
-export const DEMO_ACCOUNTS: DemoAccount[] = [
-  {
-    email: "demo-admin@example.com",
-    name: "Demo Admin",
-    platformRole: "ADMIN",
-    vendorRole: "ADMIN",
-  },
-  {
-    email: "demo-staff@example.com",
-    name: "Demo Staff",
-    platformRole: "CUSTOMER",
-    vendorRole: "STAFF",
-  },
-  { email: "demo-customer@example.com", name: "Demo Customer", platformRole: "CUSTOMER" },
-  {
-    email: "demo-store-admin@example.com",
-    name: "Demo Store Admin",
-    platformRole: "CUSTOMER",
-    vendorRole: "ADMIN",
-  },
-  {
-    email: "demo-srimart-admin@example.com",
-    name: "Demo SriMart Admin",
-    platformRole: "CUSTOMER",
-    vendorRole: "ADMIN",
-    vendorSlug: "srimart",
-  },
-];
+// The roster itself lives in a data-only module so other scripts can recognise a demo account
+// without loading Better Auth or Prisma (#1356).
+import {
+  DEMO_ACCOUNTS,
+  DEMO_EMAILS,
+  LEGACY_DEMO_EMAILS,
+  legacyDemoEmail,
+  type DemoAccount,
+  type PlatformRole,
+  type VendorRole,
+} from "./lib/demo-roster";
+export { DEMO_ACCOUNTS };
+export type { DemoAccount, PlatformRole, VendorRole };
 
 /**
  * Better Auth options for the tool's throwaway instance. Intentionally has NO email
@@ -112,9 +63,10 @@ function buildDemoAuth(prisma: PrismaClient) {
 export interface DemoPrisma {
   user: {
     findUnique(args: { where: { email: string } }): Promise<{ id: string } | null>;
+    /** Either the reconcile (role, emailVerified, name) or a rename (email), never both. */
     update(args: {
       where: { email: string };
-      data: { role: PlatformRole; emailVerified: boolean; name: string };
+      data: { role: PlatformRole; emailVerified: boolean; name: string } | { email: string };
     }): Promise<{ id: string }>;
     deleteMany(args: { where: { email: { in: string[] } } }): Promise<{ count: number }>;
   };
@@ -145,14 +97,34 @@ export type SignUp = (account: DemoAccount, password: string) => Promise<void>;
  * Idempotent add: sign up any missing account, then reconcile role + emailVerified for
  * every account (so an existing one is corrected rather than errored, and a re-run is a
  * no-op beyond the reconcile). `emailVerified` is forced true directly because the app's
- * runtime auth has `requireEmailVerification: true` and these @example.com addresses can
- * never receive a real verification email.
+ * runtime auth has `requireEmailVerification: true` and the tool's Better Auth instance
+ * sends no verification email (spec R7).
+ *
+ * #1356 — an account still on its legacy `@example.com` address is RENAMED in place, so its
+ * id, password (Better Auth's credential Account row is keyed by user id), memberships and
+ * orders stay attached. If both addresses exist the run refuses before any write: merging two
+ * users is not something a demo tool should guess at.
  */
 export async function addDemoAccounts(
   prisma: DemoPrisma,
   signUp: SignUp,
   password: string,
 ): Promise<void> {
+  const state = new Map<string, "present" | "legacy" | "absent">();
+  const conflicts: string[] = [];
+  for (const account of DEMO_ACCOUNTS) {
+    const legacy = legacyDemoEmail(account.email);
+    const current = await prisma.user.findUnique({ where: { email: account.email } });
+    const old = await prisma.user.findUnique({ where: { email: legacy } });
+    if (current && old) conflicts.push(`${account.email} and ${legacy}`);
+    state.set(account.email, current ? "present" : old ? "legacy" : "absent");
+  }
+  if (conflicts.length) {
+    throw new Error(
+      `both the new and the legacy address exist for: ${conflicts.join("; ")}. Nothing was written; delete the one you do not want, then re-run.`,
+    );
+  }
+
   // The default target — the first ACTIVE vendor (Aheed) — resolved once and reused by
   // every account that doesn't name a vendorSlug. Slug-targeted vendors (e.g. SriMart)
   // are resolved lazily per distinct slug and cached, so a roster with several accounts
@@ -173,10 +145,15 @@ export async function addDemoAccounts(
   }
 
   for (const account of DEMO_ACCOUNTS) {
-    const existing = await prisma.user.findUnique({ where: { email: account.email } });
-    if (!existing) {
+    const found = state.get(account.email);
+    if (found === "legacy") {
+      const legacy = legacyDemoEmail(account.email);
+      await prisma.user.update({ where: { email: legacy }, data: { email: account.email } });
+      console.log(`~ ${legacy} -> ${account.email} [renamed]`);
+    } else if (found === "absent") {
       await signUp(account, password);
     }
+    const existing = found !== "absent";
     const { id: userId } = await prisma.user.update({
       where: { email: account.email },
       data: { role: account.platformRole, emailVerified: true, name: account.name },
@@ -196,9 +173,9 @@ export async function addDemoAccounts(
   }
 }
 
-/** Removes every demo account; Session/Account rows cascade via the schema. */
+/** Removes every demo account, new and legacy address (#1356); Session/Account rows cascade via the schema. */
 export async function removeDemoAccounts(prisma: DemoPrisma): Promise<number> {
-  const emails = DEMO_ACCOUNTS.map((a) => a.email);
+  const emails = [...DEMO_EMAILS, ...LEGACY_DEMO_EMAILS];
   const { count } = await prisma.user.deleteMany({ where: { email: { in: emails } } });
   console.log(`removed ${count} demo user(s)`);
   return count;

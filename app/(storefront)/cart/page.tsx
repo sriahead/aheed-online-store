@@ -25,6 +25,10 @@ import { Icon } from "@/components/icons/Icon";
  */
 export const metadata: Metadata = { title: "Your cart" };
 
+/** One class string for both header actions (#1305), so they cannot drift apart. */
+const HEADER_PILL_CLASS =
+  "flex items-center gap-1.5 rounded-full border border-primary px-4 py-1.5 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white";
+
 export default async function CartPage({
   searchParams,
 }: {
@@ -58,16 +62,21 @@ export default async function CartPage({
   return (
     <PageContainer width="standard" padY="tight">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-primary">Your cart</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-xl font-bold text-primary">Your cart</h1>
+          {/* #1302 — a populated cart had no way back to the shop; only the empty state did.
+              #1305 — and the same pill as Smart Lists, so both read as actions. */}
+          <Link href="/categories" className={HEADER_PILL_CLASS}>
+            <Icon name="chevron-left" className="h-4 w-4" />
+            Continue shopping
+          </Link>
+        </div>
         {/* The other cart-entry path (P3d, #114) — discoverable without knowing the URL. #1187
             relabelled it "Smart Lists" to match the page it opens, and deliberately left it
             pointing at the paste page rather than the new hub: this link exists to get a shopper
             with a list straight to the textarea, and it is what keeps that a one-tap journey now
             the header button opens the hub instead. */}
-        <Link
-          href="/shop-your-list"
-          className="flex items-center gap-1.5 rounded-xl border border-primary/20 px-3 py-1.5 text-xs font-bold text-primary"
-        >
+        <Link href="/shop-your-list" className={HEADER_PILL_CLASS}>
           <Icon name="list-checks" className="h-4 w-4" />
           Smart Lists
         </Link>
@@ -109,6 +118,7 @@ export default async function CartPage({
           freeDeliveryThresholdPence={deliveryRules.freeDeliveryThresholdPence}
           localityName={vendor?.localityName ?? ""}
           cdnBaseUrl={cdnBaseUrl}
+          continueShoppingHref="/categories"
         />
       </div>
 

@@ -19,28 +19,49 @@
  * ask.
  *
  * WHY THE JOB LIST IS A LITERAL. A config-driven list would make a typo'd path
- * silently schedule nothing — a failure with no error and no output. As an array
- * in source, adding or renaming a job is a reviewable diff.
+ * silently schedule nothing — a failure with no error and no output. As constants
+ * in source (`select-jobs.ts`), adding or renaming a job is a reviewable diff.
+ *
+ * WHY IT READS KV FIRST (#1324). Every job touches Neon, and Neon stays awake
+ * for five minutes after any query, so an unconditional 15-minute tick kept the
+ * database awake about 8 hours a day with no traffic at all. The application now
+ * writes activity markers to a KV namespace this Worker also binds, and the tick
+ * calls a job only when its marker says there is work. Reading KV costs no
+ * database wake. The daily `0 3 * * *` run calls everything regardless, and the
+ * decision fails open on any doubt — see `select-jobs.ts`.
  */
+
+import { ERROR_EVENTS_LAST_AT_KEY, PAYMENT_SWEEP_DUE_AT_KEY } from "../../../lib/job-signal-keys";
+import { ALL_JOB_PATHS, selectJobs, type SignalRead } from "./select-jobs";
 
 interface Env {
   /** Origin of the application Worker, e.g. `https://staging.aheedfoodcentre.nocaped.com`. */
   APP_BASE_URL: string;
   /** Shared secret proving to the application that an invocation came from here. */
   JOB_INVOCATION_TOKEN: string;
+  /**
+   * The activity markers (#1324). Optional on purpose: until the owner creates
+   * an environment's namespace the binding is simply absent, and every read
+   * fails open to calling the job, which is exactly the pre-#1324 behaviour.
+   */
+  JOB_SIGNALS?: KVNamespace;
 }
 
-/** Every path invoked on each tick, in order. */
-const JOBS: readonly string[] = [
-  "/api/jobs/reconcile-payments",
-  // P9.2, #94 — deletes guest carts untouched for longer than the cart cookie's
-  // own lifetime, after which the row is unreachable by anyone.
-  "/api/jobs/reap-guest-carts",
-  // P9.2, #437 (code tail) — counts ErrorEvent rows in the last tick's window
-  // and logs a structured line when the threshold is breached. Ordered last
-  // because it observes; the two above it act.
-  "/api/jobs/check-error-rate",
-];
+async function readSignal(env: Env, key: string): Promise<SignalRead> {
+  if (!env.JOB_SIGNALS) return { ok: false };
+  try {
+    return { ok: true, value: await env.JOB_SIGNALS.get(key) };
+  } catch (error) {
+    console.error(
+      `job-signal read of ${key} failed; running its job: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return { ok: false };
+  }
+}
+
+function listOrNone(paths: readonly string[]): string {
+  return paths.length === 0 ? "none" : paths.join(",");
+}
 
 const JOB_TOKEN_HEADER = "x-job-token";
 
@@ -72,10 +93,24 @@ async function invoke(env: Env, path: string): Promise<void> {
 }
 
 const scheduler = {
-  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
+  async scheduled(controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
+    // Read one after the other, each in its own try: a throwing first read must
+    // not cost the second its answer.
+    const paymentDueAt = await readSignal(env, PAYMENT_SWEEP_DUE_AT_KEY);
+    const errorLastAt = await readSignal(env, ERROR_EVENTS_LAST_AT_KEY);
+
+    const jobs = selectJobs({ cron: controller.cron, now: new Date(), paymentDueAt, errorLastAt });
+    const skipped = ALL_JOB_PATHS.filter((path) => !jobs.includes(path));
+
+    // One line per invocation, ran or not: with gating, a quiet tick is now the
+    // normal case, and this line is what tells a quiet tick from a dead one.
+    console.log(
+      `scheduler tick cron=${controller.cron} ran=${listOrNone(jobs)} skipped=${listOrNone(skipped)}`,
+    );
+
     // Sequential, not Promise.all: the job list is short, and a tick that runs
     // them in order keeps the log readable and the load on the app Worker flat.
-    for (const path of JOBS) {
+    for (const path of jobs) {
       await invoke(env, path);
     }
   },

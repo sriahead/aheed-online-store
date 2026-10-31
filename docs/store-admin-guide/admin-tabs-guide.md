@@ -487,7 +487,7 @@ so a store that genuinely moves zone should check its weekly slots still say wha
 **What happens after changes are saved:** Effective immediately at checkout, for shoppers already
 mid-basket as well as new ones. Orders already placed against a slot keep it.
 
-> **Note on operational rules:** For details on how time slots interact with order states and cancellations, see the canonical [Order & Fulfilment Operations](../operations-research/order-fulfilment-core.md) guide.
+> **Note on operational rules:** For details on how time slots interact with order states and cancellations, see the canonical [Order & Fulfilment Operations](/staff/runbook/order-fulfilment-core) guide.
 
 ## Reports — `/staff/reports`
 
@@ -602,12 +602,24 @@ wrong. Escalate rather than cancelling an order the customer insists they paid f
 could not be matched to any order do not appear here at all — they are kept for investigation and are
 not something you can action.
 
+**Checking one order from its own page:** You do not need to wait for the scheduled check. Open the
+order from Fulfillment & Orders. While it is still *Pending payment*, the order page shows a **Check
+payment now** button, which asks the payment provider about that order straight away. If the payment
+went through, the order moves to *Confirmed* and the customer is sent their confirmation email. If it
+did not, the page tells you what the provider reported, and nothing is changed: this button never
+cancels an order or refunds a payment. Once an order is paid, the same page instead shows **Resend
+confirmation email**, for a customer who says the email never arrived. It sends the confirmation to
+the email address on the order. Check that address first if they still do not receive it. Both buttons
+are for store admins only; staff accounts do not see them. Customers coming back from the payment
+page are checked automatically, so most "I paid but it still says pending" cases resolve themselves
+within seconds.
+
 **What happens after changes are saved:** Reconciling asks the payment provider and updates the order
 to match reality — it never assumes. Recovering a genuinely paid order moves it into the normal flow,
 where it shows up in Fulfillment & Orders like any other confirmed order. Running the same action
 twice is safe and will not double-charge or double-confirm anything.
 
-> **Note on operational rules:** For details on how recovered payments enter the order lifecycle, see the canonical [Order & Fulfilment Operations](../operations-research/order-fulfilment-core.md) guide.
+> **Note on operational rules:** For details on how recovered payments enter the order lifecycle, see the canonical [Order & Fulfilment Operations](/staff/runbook/order-fulfilment-core) guide.
 
 
 

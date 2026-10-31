@@ -29,7 +29,12 @@ const RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 const SWEEP_PROBABILITY = 0.01;
 
 export type AiFeature =
-  "LIST_NORMALISATION" | "SEARCH_SYNONYMS" | "NET_CONTENT" | "PRODUCT_IMAGE" | "CAMPAIGN_IMAGE";
+  | "LIST_NORMALISATION"
+  | "SEARCH_SYNONYMS"
+  | "NET_CONTENT"
+  | "PRODUCT_IMAGE"
+  | "CAMPAIGN_IMAGE"
+  | "PRICING_REVIEW";
 
 /** #1029 — every metered feature, in the order the staff AI page lists them. */
 export const AI_FEATURES: readonly AiFeature[] = [
@@ -38,6 +43,7 @@ export const AI_FEATURES: readonly AiFeature[] = [
   "NET_CONTENT",
   "PRODUCT_IMAGE",
   "CAMPAIGN_IMAGE",
+  "PRICING_REVIEW",
 ];
 
 export interface AiUsageEntry {

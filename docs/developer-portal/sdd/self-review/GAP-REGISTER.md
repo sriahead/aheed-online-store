@@ -1,7 +1,7 @@
 ---
 id: gap-register
 title: Phase 6.5 Gap Register (superseded by the master register)
-audience: [dev, admin]
+audience: [dev]
 type: doc
 status: approved
 version: "2.0.0"
@@ -19,7 +19,7 @@ related: [gap-register-audit, self-review-report, p6-5-residual-validation-plan]
 > fallback 404) and **GAP-004** (`ARTIFACT_INDEX.md` staleness) — now live in the single master
 > register:
 >
-> **[`../../gap-register.md`](../../gap-register.md)**
+> **[Master Application Gap Register](/dev/doc/gap-register-audit)**
 
 ## Why it moved
 
@@ -35,6 +35,6 @@ issue #176 stayed open against a symptom nobody had re-fired.
 
 The Phase 6.5 narrative and results remain here alongside this pointer:
 
-- [`SELF-REVIEW.md`](SELF-REVIEW.md) — the Phase 6 exit-gate report.
-- [`VALIDATION-RESULTS.md`](VALIDATION-RESULTS.md) — the audit-step and fix log.
+- [Phase 6.5 Self-Review Report](/dev/doc/self-review-report) — the Phase 6 exit-gate report.
+- [Phase 6.5 Validation & Test Results](/dev/doc/self-review-validation-results) — the audit-step and fix log.
 

@@ -23,6 +23,8 @@ import {
   type PaymentTransitionRefusal,
 } from "@/lib/repositories/orders";
 import { recordPaymentBindingRefusal } from "@/lib/repositories/payment-binding-refusals";
+import { markPaymentSweepDue } from "@/lib/job-signals";
+import { CHECKOUT_SWEEP_DELAY_MS } from "@/lib/job-signal-keys";
 
 /**
  * Request-scoped wrappers around `lib/repositories/orders.ts` (#252) — the three
@@ -45,7 +47,13 @@ export function getOrderRepository(): OrderRepository {
 
   return {
     async createOrder(input) {
-      return placeOrder(getPrismaWs(), await vendorId(), input);
+      const placed = await placeOrder(getPrismaWs(), await vendorId(), input);
+      // #1324 — wake the scheduler's payment sweep once this order's Checkout
+      // Session can have a definitive answer. Here, not in `placeOrder`: the
+      // repository reads no request context, and a marker is not part of the
+      // order. Only on success — a throw above means there is no order to check.
+      await markPaymentSweepDue(new Date(Date.now() + CHECKOUT_SWEEP_DELAY_MS));
+      return placed;
     },
 
     async getByOrderNumber(orderNumber, viewerUserId, confirmationToken) {

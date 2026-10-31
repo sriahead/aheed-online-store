@@ -29,7 +29,7 @@ import {
 } from "@/lib/storage-keys";
 import { STORE_TIMEZONE } from "@/lib/local-datetime";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { Icon3D } from "@/components/icons/Icon3D";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 export const dynamic = "force-dynamic";
 
@@ -115,9 +115,9 @@ export default async function CheckoutPage() {
   });
 
   return (
-    <PageContainer width="narrow" padY="tight">
+    <PageContainer width="standard" padY="tight">
       <div className="mb-6 flex items-center gap-3.5 border-b border-black/10 pb-4">
-        <Icon3D name="secure-checkout" size={44} />
+        <IconMedallion icon3d="secure-checkout" size={44} decorative />
         <div>
           <h1 className="text-2xl font-extrabold text-primary leading-tight">Secure Checkout</h1>
           <p className="text-xs text-black/60">Bank-grade encrypted Stripe card payment</p>

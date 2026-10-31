@@ -2,6 +2,7 @@ import type { Instrumentation } from "next";
 import { getPrismaUncached } from "@/lib/db";
 import { normalizeCaughtError, recordErrorEvent } from "@/lib/repositories/error-events";
 import { recordErrorEventDirect } from "@/lib/error-event-fallback";
+import { markErrorEvent } from "@/lib/job-signals";
 
 /**
  * Server-side error capture (#480 fix, R7). An error boundary's own `console.error`
@@ -57,4 +58,10 @@ export const onRequestError: Instrumentation.onRequestError = async (error, requ
       console.error("Failed to persist ErrorEvent via fallback:", fallbackError);
     }
   }
+
+  // #1324 — tells the scheduler there are errors to count, so its 15-minute tick runs the
+  // error-rate check. After the write attempt and regardless of its outcome: a database outage
+  // is when the check matters most. `markErrorEvent` never rejects, so this cannot compound the
+  // original error either.
+  await markErrorEvent(new Date());
 };

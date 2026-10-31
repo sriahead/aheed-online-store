@@ -5,7 +5,7 @@ import { setDeliveryPostcode, setFulfilmentMethod } from "@/features/storefront/
 import { POSTCODE_INTENT_FIELD, type PostcodeIntent } from "@/lib/delivery-cookie";
 import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
 import { Icon } from "@/components/icons/Icon";
-import { Icon3D } from "@/components/icons/Icon3D";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 /**
  * Header delivery / Click & Collect control.
@@ -264,7 +264,7 @@ export function LocationControl({
       >
         <div data-tap-surface="location-dialog" className="bg-white p-6 flex flex-col">
           <div className="flex items-center gap-3.5 mb-3">
-            <Icon3D name="postcode-search" size={42} />
+            <IconMedallion icon3d="postcode-search" size={42} decorative />
             <div>
               <h2 className="text-lg font-extrabold text-primary leading-tight">
                 Check delivery availability

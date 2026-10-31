@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.43.0"
-updated: 2026-10-22
+version: "1.45.0"
+updated: 2026-10-30
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -42,6 +42,34 @@ environment-configured seam so the platform can move clouds without a rewrite.
 | Auth | **Better Auth** (self-hosted, bearer tokens, RBAC) | Unchanged from ADR-002. |
 | Validation | **zod** (shared client/server, plus env parsing) | — |
 | Caching | Next.js Data/Route cache (portable) + optional edge KV behind a `CacheService` port | Degrades to DB-only; KV ↔ Redis swap. |
+
+**Where it runs (#1323, 2026-10-29).**
+- **Cloudflare:** the Workers (the app, the scheduler and the internal docs site) and the R2 image
+  buckets run in the **Merqify Cloudflare account**, under flat `merqify.com` hosts. Staging is
+  `aheed-staging.merqify.com`, `srimart-staging.merqify.com` and `images-staging.merqify.com`;
+  production is `aheed.merqify.com`, `srimart.merqify.com` and `images.merqify.com`; the docs are
+  `docs-shoplocal.merqify.com`, behind Access, and `deploy-docs-internal` refuses to deploy them
+  unless an Access application guards that host (`#1328`).
+- **Neon:** the staging and production databases are **new projects in a new Neon account** (London,
+  `eu-west-2`), filled from the old staging database by `scripts/migrate-to-new-neon.ts`.
+- **Cells (owner, 2026-10-29).** The app holds **one database connection per Worker**, so isolation
+  between businesses comes in two forms:
+  - **Within a cell, by store ID.** The ShopLocal platform cell (`Shoplocal` and
+    `Shoplocal Staging`, at `shoplocal.merqify.com`) holds many stores in one database: SriMart and
+    the Aheed Food Centre demo. ADR-004 separates them by store ID.
+  - **Between cells, by deployment.** A business that operates independently with its own data gets
+    a **dedicated cell**: the same code deployed as its own Workers, with its own Neon projects,
+    bucket and secrets, whose database holds that one business. The first is Aheed Food Centre
+    (`aheedfoodcentre.co.uk`; Neon `Aheed Food Centre` and `Aheed Food Centre Staging`).
+  - A cell can later move into the client's own Cloudflare and Neon accounts as a unit.
+  - **Shared by every cell:** the codebase, the Merqify Workers Paid plan, and the read-only
+    `uk-location-reference` database (public data, no client data).
+  - A dedicated-cell store does not appear in the ShopLocal marketplace by itself. Listing it needs
+    a feed into the platform cell, which is not designed yet.
+- **The old setup:** the Nocaped account and the old Neon projects are no longer deploy targets.
+  Runbook: `docs/developer-portal/env-setup.md`, "Merqify account".
+- **Clients' domains:** a client's own domain reaches these Workers through Cloudflare for SaaS
+  custom hostnames, while the client keeps its own zone. That is a later slice, not yet built.
 
 **Cost posture:** Neon and R2 both scale to (near) zero when idle; Workers bill per request; R2 has
 **zero egress**. At the MVP's scale this is a low fixed-cost footprint with no idle compute bill.
@@ -709,6 +737,14 @@ database rather than the app.
   never proves a cache forms.
 - Optional **edge KV** for hot reads (categories, homepage rails) behind a `CacheService` port; if
   absent it falls through to the DB. KV ↔ Redis is a one-file swap.
+- **Cloudflare KV is in use for one thing: the job activity markers** (`#1324`). The `JOB_SIGNALS`
+  namespace, bound to both the application Worker and `workers/scheduler`, holds two timestamps that
+  tell the scheduler's 15-minute tick whether the payment sweep or the error-rate check has any work.
+  An idle store therefore never wakes Neon, except in the ungated daily run. The application reaches it
+  **only through `lib/job-signals.ts`**, and an absent binding, a failing call or an unparseable value
+  **fails open to running the job**. KV here decides *when* a job runs, never *what* it does; the
+  database stays the source of truth for every order. Detail: `docs/developer-portal/env-setup.md`,
+  "Gated ticks".
 - The **database is always the source of truth**; caches are accelerators with explicit TTLs and
   tag-based invalidation on write.
 

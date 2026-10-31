@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.144.0"
-updated: 2026-10-24
+version: "1.156.0"
+updated: 2026-10-31
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -38,6 +38,301 @@ Build Notes across the pre-validation Clear. Remove or replace stale information
 reconciliation. If overall project state did not materially change, leave this file untouched.
 
 ## Last Verified
+
+- **2026-10-31 (`#1356` Document): STAGING IS LIVE ON MERQIFY, and the docs guard passes.**
+  - **Staging serves `a9685fa`** on `aheed-staging.merqify.com` and `srimart-staging.merqify.com`
+    (`/api/health` ok, `db.ok: true`, images on `images-staging.merqify.com`, reference reachable, no
+    drift). `deploy-staging` and `deploy-docs-internal` both succeeded on `0ca03fd` and `a9685fa`
+    (runs 41179895144, 41179895152). The staging half of the cut-over is done; production is `#1341`.
+  - **`docs-shoplocal.merqify.com` is behind Access:** signed out, `/` returns 302 to
+    `*.cloudflareaccess.com`, so `#1328`'s `--pre` and `--post` both pass in the Merqify account.
+  - **`#1356` is MERGED TO STAGING (PR #1357), board `In Review`, without an independent Validate.**
+    The demo logins are `demo-*@merqify.com` (roster `scripts/lib/demo-roster.ts`); new staging's six
+    accounts were renamed in place. Email Routing (R15/R16) is deferred by the owner.
+  - **`#1319` is deployed on new staging (in `a9685fa`), board `In Review`.** Still owed: its R25
+    staging walk and the `#1321` onboarding check (comment on `#1319`).
+  - **Old Nocaped production is still down:** `/api/health` `degraded`, Neon HTTP 402 quota (`#1289`);
+    replaced by the move, not repaired.
+  - **`#1333` (atomic `migrate-to-new-neon --apply`, blocker of `#1341`) is MERGED TO STAGING (PR
+    #1360, `c929975`), board `In Review`.** Its live rollback check (R9/R10) PASSED on 2026-10-31 on a
+    throwaway database (`committed: 720 ms`), so `#1341` may use the copy. Guide: `env-setup.md`,
+    "Sanity check: the copy rolls back". The earlier blocker was that it needed the owner to
+    create an empty database on `Shoplocal Staging` → `scratch` and put its URL in
+    `secrets/validate-1333.vars`. `scratch`'s "Reset from parent" now copies filled staging, so it
+    is no longer a clean target for the copy. Detail: `specs/2026-10-31-atomic-neon-copy/build-notes.md`.
+  - **The Merqify reference DB is no longer empty:** staging health shows `os-open-names` synced
+    2026-10-30 23:34 (23,551 rows). Still confirm the 2026-11-03 `sync-reference-data` run (`#1123`).
+
+- **2026-10-30 (`#1328` Document): P12 exists, the reference secret moved, and the docs guard is
+  MERGED TO STAGING (PR #1353, `ba42b79`), board `In Review`.**
+  - **P12 tracks the Merqify move, the Aheed launch and freeing Nocaped** (`specs/roadmap.md`
+    1.187.0, PR #1351, `3df7a57`): milestone 25, board Phase `P12`, parents `#1336` (A), `#1337` (B),
+    `#1338` (C) with sub-issues and GitHub "blocked by" links. Read the parent issues for the order.
+    The board now has six P12 `High` items (`#1336`, `#1339`, `#1328`, `#1123`, `#1323`, `#1341`).
+  - **GitHub `UK_LOCATION_REF_DIRECT_URL` (staging and production) now names the Merqify reference
+    primary** (`ep-late-mud-zalcsvmm`, eu-west-2), set 2026-10-30 from `secrets/merqify-*.vars`.
+    It is the primary (`pg_is_in_recovery()` false) but **empty (0 tables)**; the 2026-11-03
+    `sync-reference-data` run on `main` runs `ref:migrate` first, so it should build it rather than
+    fail (`#1123` comment). The app Workers still read the old reference DB until the cut-over.
+  - **`secrets/merqify-*.vars` still have 8 blanks each** (auth secret, Google, Resend, Stripe,
+    `JOB_INVOCATION_TOKEN`) as of 2026-10-30; `configure-env` refuses until they are filled (`#1339`).
+  - **The internal docs host is `docs-shoplocal.merqify.com`** (owner, 2026-10-30), not
+    `docs.merqify.com`. `#1328` (spec `specs/2026-10-30-docs-access-guard/`) adds
+    `scripts/verify-docs-access.ts`: `--pre` refuses the docs deploy unless an Access app guards every
+    host, `--post` proves signed-out requests reach the Access login. It is on `staging`, so
+    repointing staging's Cloudflare secrets (`configure-env`, `#1339`) is now safe from the docs
+    side. Follow-up `#1352` (scheduled re-check).
+  - **Both staging deploys on `ba42b79` refused, as expected, and nothing deployed.**
+    `deploy-docs-internal` (run 41122451401) stopped at the `--pre` guard: "no Access application
+    covers docs-shoplocal.merqify.com" in the account the staging secrets still name. That is the
+    guard working; it turns green after `#1339`. `deploy-staging` (run 41122451690) still fails at
+    `verify-worker-routes` (3 vendor hosts unrouted), unchanged since `#1323`. (Superseded 2026-10-31:
+    both now deploy; see above.)
+  - **Validated in-session, not independent.** Live: R13 (real Merqify API, refused), R14, R10.
+    **Unverified:** R15 (owner-gated, `#1339`) and R18's local `kms/site-internal` build (stopped
+    for low memory; CI `docs-gates` passed). Measured 2026-10-30: the Merqify staging token already
+    gets HTTP 200 from the Access list (so it has the read permission), and **both accounts list 0
+    Access applications**, so whether the list returns `policies` inline is still unknown. If not,
+    `--pre` fails closed on a correct setup and needs a per-app policies call. Check it when the
+    owner creates the docs Access app.
+
+- **2026-10-29 (`#1323` Document): the hosting move is MERGED TO STAGING (PR #1334, `70c777b`) but
+  NOT DEPLOYED, and the cut-over has not happened.** `deploy-staging` run 40944731541 failed at
+  `verify-worker-routes`: `wrangler.toml` routes staging to `merqify.com` while staging's
+  `VendorDomain` rows still list the `nocaped.com` hosts (deploying would tear those domains down).
+  Staging deploys were already failing since 2026-10-28 (Nocaped on Free, `code 100328`), so
+  restoring the old routes would not help. **Owner decision: leave staging as is until the cut-over.**
+  Staging serves `9a32058`; no `/api/health` was read. Spec and build notes:
+  `specs/2026-10-29-merqify-platform-move/`; runbook `docs/developer-portal/env-setup.md`, "Merqify
+  account". `#1323` stays `In Progress`.
+  - **Validated in-session (not independent).** Verified live on a scratch Neon branch. **Unverified:**
+    R8(iii) protected-host refusal, R13 production-target run (reset scratch first), R18 images,
+    R24–R27 (after the owner's Merqify setup and a staging deploy), R28 live reference DB.
+  - **Pending owner action:** rotate the R2 token whose secret key was printed into the validation
+    transcript. The scratch Neon branch is filled and needs a "Reset from parent" before another apply.
+  - **Cut-over order:** move staging data to the new Neon (`migrate-to-new-neon.ts`), update
+    `VendorDomain` to the `merqify.com` hosts, then deploy and read `/api/health`.
+  - **Owner direction:**
+    - **Merqify is the new Cloudflare account** (it holds `merqify.com` and no Workers yet), and
+      **Neon is a fresh account**.
+    - The new databases are **filled from old staging**: 10% of products and no test orders. The
+      copy skips demo users because their roles are stale, and **demo logins are re-added with
+      `demo:accounts add` in EVERY environment, production included, until go-live**, when they are
+      deleted (`#1332`, owner 2026-10-29).
+    - **Aheed Superstore is retired.**
+    - Hosts are flat on `merqify.com`: `aheed[-staging]`, `srimart[-staging]`,
+      `images[-staging]`, and `docs`.
+    - **Old production (`#1289`) is never read.** The new Neon account makes `#1289` moot for
+      deploys.
+    - **Amendment (spec `51b8842`): EVERYTHING moves and Nocaped is freed.**
+      - The `uk-location-reference` database is rebuilt from public data in the Merqify Neon
+        account; its new primary also fixes `#1123`. The dev database moves too.
+      - **`configure-env` now targets the account named in the file**, not the machine's
+        `wrangler login`.
+      - The "Freeing Nocaped" checklist in `env-setup.md` lists what to delete once both
+        environments are proven, each with owner approval.
+    - **Architecture: a platform cell plus dedicated client cells (owner, 2026-10-29;
+      `specs/architecture.md`, "Cells").**
+      - **ShopLocal** (`shoplocal.merqify.com`) is the subscription multi-vendor platform. Its cell
+        holds SriMart and an **Aheed demo copy** in Neon `Shoplocal` and `Shoplocal Staging`
+        (branches `dev` and `scratch`). **#1323 moves this cell.**
+      - **Aheed Food Centre (`aheedfoodcentre.co.uk`) is an independent business with its own
+        database.** It is a **dedicated cell**: the same code as its own Workers, in Neon
+        `Aheed Food Centre` and `Aheed Food Centre Staging`, with its own bucket and secrets. That
+        is `#1331`, with staging at `staging.aheedfoodcentre.co.uk` through Cloudflare for SaaS.
+        Never point a platform file at the Aheed projects.
+    - **Email: Resend is RETIRED (owner, 2026-10-29).** Email becomes a provider-agnostic
+      `EmailService` with Cloudflare Email Service (`#1217`), with **no Resend fallback**. Until it
+      ships, the new environments carry today's `RESEND_*` values unchanged, because production
+      refuses to send without them. Nothing new is registered with Resend.
+  - **Four Cloudflare accounts:**
+    - **Nocaped:** old; Free plan, cannot deploy.
+    - **Merqify:** the target.
+    - **Aheed Food Centre:** `aheedfoodcentre.co.uk` with no DNS records. It is under the Nocaped
+      login **temporarily** and moves under the Merqify login after Cloudflare's 7-day wait.
+    - **Cobrasmash:** what this machine's `wrangler login` points at. It is **not this project's**,
+      so run `npx wrangler whoami` before any manual wrangler command.
+  - **Security findings:**
+    - **The shared `CLOUDFLARE_API_TOKEN`** in `.dev.vars` and `secrets/*.vars` can read the Nocaped
+      **and** Aheed accounts. It is replaced by per-environment tokens scoped to the Merqify account.
+    - **On old staging, `demo-admin` is still a platform ADMIN**, because `#1319`'s demotion never
+      reached it.
+    - **Every role on old staging belongs to an `@example.com` account**, so the new databases need
+      `scripts/grant-role.ts` for a first admin.
+  - **Neon state, seen in the owner's console on 2026-10-29.**
+    - The Merqify organization holds `Shoplocal`, `Shoplocal Staging`, `uk-location-reference`,
+      `Aheed Food Centre` and `Aheed Food Centre Staging`, all in London.
+    - `Shoplocal Staging`'s default branch is named **`staging`**, with children **`dev`** and
+      **`scratch`**.
+    - **Both children auto-expire around 2026-11-28.** The owner cannot remove the expiry and asked
+      to be reminded (memory `project-neon-dev-branch-expiry`). `dev` is rebuilt from the seed if it
+      lapses.
+    - **The owner confirmed `scratch` and `public` have 0 tables.** "Reset from parent" on `scratch`
+      gives a clean slate only while `staging` is still empty, so validate **before** the real
+      staging fill.
+  - **The env files exist, with every secret blank, and git ignores them.** They are
+    `secrets/scratch-target.vars` (Validate only; two URLs), `secrets/merqify-staging.vars` and
+    `secrets/merqify-production.vars`. A blank required value makes `configure-env` and the copy
+    script refuse, which was checked. **The owner is filling them in.**
+  - **Amendment 6 (owner, 2026-10-29, from the first `/validate`): a migrated database is never
+    empty.** Every `migrate deploy` inserts one vendor, `aheed-food-centre`
+    (`a4ed0000-0000-4000-a000-000000000001`), so the script's old "target holds no vendor" refusal
+    fired on every prepared target. Now the target is *freshly migrated*, not empty: the script
+    accepts exactly that seeded row (`seeded-only`), refuses if it owns any rows (many keys to
+    `Vendor` cascade), and `--apply` deletes it before inserting the copied vendors. Spec commit
+    `8fe054b8`, implementation in the next commit. **Spec and Build both ran on Sonnet 5.5 at the
+    owner's request, not Opus 5.**
+  - **Next:** the owner's Merqify setup, then the cut-over (order above). Before any further
+    `--apply` the owner resets `scratch` ("Reset from parent", then
+    `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<scratch direct> DATABASE_URL=<scratch direct> npx prisma migrate deploy`);
+    auto mode blocks migrations and protected-host script runs, so hand over a `! <command>`.
+    `--apply` ran once against `scratch` and passed.
+    The live rows R24–R28 wait for the owner's Merqify setup: Workers Paid; **the Access
+       application for `docs-shoplocal.merqify.com` before any secret is pushed** (`#1328`); the three image
+       buckets with the hotlink rule on staging and production only; scoped tokens; the filled
+       `merqify-*.vars` files. Report them **unverified** until then.
+  - **Follow-ups (all `P10`/Backlog):**
+    - `#1328`: docs Access guard;
+    - `#1329`: `www.aheedfoodcentre.co.uk` through Cloudflare for SaaS;
+    - `#1330`: the client's real catalogue and details, waiting on the client's files;
+    - `#1331`: the Aheed dedicated cell;
+    - `#1332`: delete the demo accounts at go-live;
+    - `#1217`, now updated: Cloudflare Email Service, no Resend.
+
+    The next slices after `#1323`: `#1331` (Aheed cell), then `#1217` (email). Investigation page: https://claude.ai/artifact/XLdwB3PjYGMFmjYHZUtKYw (private).
+
+- **2026-10-29 (`#1324` Document): `#1324` is MERGED TO STAGING (PR #1327, `57ede8f`) but NOT
+  DEPLOYED.** `deploy-staging` run 40814195702 passed quality and failed at Deploy to Workers with the
+  same Free-plan refusal as `#1319` (`code 100328`, `#1323`). Staging still serves `9a32058`. Spec,
+  build notes and validation record: `specs/2026-10-28-event-gated-jobs/`; roadmap row 1.186.0.
+  `#1324` is `In Review`.
+  - **Validated in-session (not independent).** Every row passes except **R25 (unverified)**: a
+    browser-paid Stripe Checkout must flip the return page to confirmed. Check it on staging after
+    the move.
+  - Its Document commit (`237bd37`, carry-forward branch `docs/carry-forward-1324`) rides
+    `feature/merqify-platform-move` (`#1323`). Promotion to `main` waits for `#1323`.
+  - **Why it matters:** the 15-minute `workers/scheduler` tick woke each Neon database 96 times a day
+    with zero traffic (about 8 h of compute, ~61 CU-hours a month at 0.25 CU). That is a likely large
+    share of production's quota breach (`#1289`).
+  - **The scheduler is now gated** on two `JOB_SIGNALS` KV markers, with a daily ungated `0 3 * * *`
+    run. **The KV namespaces do not exist yet (owner, `#1325`)**, and until they do every tick runs
+    every job, as before.
+  - **Stripe sessions now expire 35 minutes after the order is created**, and a shopper's return page
+    can confirm a paid order whose webhook was lost.
+  - **The scheduler uses 4 of the Free plan's 5 Cron Triggers.** Check this against the new Cloudflare
+    account's plan (`#1323`).
+  - Follow-ups: `#1325` (owner: namespaces + live check; also holds the constraint on `#946`'s
+    heartbeat), `#1326` (attribution).
+
+- **2026-10-28 (paused at `#1319` Ship): DEPLOYS ARE BLOCKED, AND HOSTING IS MOVING TO A NEW CLOUDFLARE
+  ACCOUNT.**
+  - **`#1319` is MERGED TO STAGING (PR #1322, `09e9aa0`) but NOT DEPLOYED.**
+    - `deploy-staging` run 40766803727 failed three times at **Deploy to Workers**. First came R2
+      `code 10136` ("enable R2"). After the owner's dashboard change, the plan error `code 100328`
+      followed: "CPU limits are not supported for the Free plan".
+    - The current Cloudflare account has dropped to the **Free plan**. **Do not remove
+      `[limits] cpu_ms`** to get past it: the Free plan's roughly 10 ms of CPU per request cannot
+      serve the app.
+    - Staging still serves `9a32058` (`#1313`), and its R2 images return 403.
+    - Tracked in **`#1323`**, which also holds the owner's decision and the **full migration
+      checklist**.
+  - **Owner decision: move to a NEW Cloudflare account** with Workers Paid and the client's new
+    domain, instead of restoring the old account. Its own slice comes next: `/propose` once the
+    owner has created the account and chosen the hostnames. Neon does not move.
+  - **Still owed for `#1319`, after the move:**
+    - its R25 staging walk, after `npm run demo:accounts -- add` against staging (owner-run; the
+      staging demo password is not in `secrets/staging.vars`);
+    - the `#1321` onboarding check on staging;
+    - its `/document` (roadmap staging row, board to `In Review`).
+
+    `#1319` stays `In Progress` until then. **`sdd:audit` will report its missing roadmap row;**
+    that is expected until the deploy succeeds.
+  - **Validated in the building session (not independent).** The record is in
+    `specs/2026-10-28-rbac-four-views/build-notes.md`. The dev database has the new demo roster.
+    New issue: `#1321` (platform onboarding page returns 500 after about 83 s on dev).
+  - Its carry-forward branch `docs/carry-forward-1319` reached `staging` with PR #1327.
+
+- **2026-10-28 (`#1319` Build), kept for its standing facts.** Spec and build notes:
+  `specs/2026-10-28-rbac-four-views/`.
+  - **`demo-admin` is no longer a platform admin.** It is a store admin only;
+    **`demo-platform-admin@merqify.com` is the only platform admin** (`@example.com` until `#1356`), with the same
+    `DEMO_ACCOUNT_PASSWORD`. Use it, not `demo-admin`, for any `/staff/platform/*` or `/staff/errors`
+    check. The change reaches a database only when `npm run demo:accounts -- add` runs against it:
+    dev before Validate, staging after deploy (owner), and production after `#1289` (owner).
+  - **After sign-in, `/signed-in` lands each role:** platform admin to `/staff/platform` (a new
+    overview page), staff and store admins to `/staff`, everyone else to `/account`.
+  - **`tests/rbac-gate-matrix.test.ts` now fails CI** for any staff page, `app/api/admin` route or
+    staff server action without a server-side role gate. It also fails any platform-only file that
+    lacks the `via !== "platform-admin"` refusal.
+  - Follow-up: `#1320` (platform Users page, all stores).
+
+- **2026-10-28 (`#1313` Document): pricing model v2 is MERGED TO STAGING (PR #1318, `9a32058`), not
+  promoted.** `deploy-staging` succeeded; staging `/api/health` reports `9a32058` with `db.ok` and
+  `reference.reachable` true. The PR also landed the `#1295`/`#1305`/`#1309` Document commits.
+  - **Spec, build notes and validation record:** `specs/2026-10-28-pricing-model-v2/`. Validation ran in
+    the building session (not independent). R39 passed on staging (signed out: page 307 to `/login`, CSV 401).
+    **Unverified:** typing into the What if panel in a real browser. `#1313` is `In Review`.
+  - **Production was still down at the 2026-10-27 Orient** (`/api/health` 503, Neon HTTP 402, `#1289`).
+  - Its Document pass reached `staging` with PR #1322.
+  - **The dashboard's launch recommendation is now the customer service fee** (`#1313`'s numbers: with
+    partner time at 2 hours a month per shop and £25 an hour, every shop-paid model loses money at
+    10 shops × 500 orders).
+  - **The recommended model cannot be collected yet:** `#1314` (checkout fee) depends on the Connect
+    decision `#1310`.
+  - **Filed:** `#1315` (authorise-then-capture), `#1316` (allergens) and `#1317` (owner: replace the
+    estimates, including an unverified ICO fee; set the pay target and yearly rate increase).
+  - **Branch count was 60 local and 61 origin at Orient**, double the reminder threshold.
+    `/prune-branches` has not been run.
+
+- **2026-10-27 (Orient for `#1288`): PRODUCTION IS DOWN — Neon production project over quota (`#1289`).**
+  Both vendor hosts' `/api/health` return 503 `degraded` at `2ffcb41` with Neon `HTTP 402 … exceeded the
+  quota`; the storefront home page returns 500. Staging is healthy (separate Neon project). Began ~2026-10-26
+  (the daily `fill-product-images` run on `main` first failed then). Owner action in the Neon console; no
+  alert exists. **No promotion can succeed until it is fixed** (`deploy-production` migrates).
+  - **Staging is ahead of `main`** (`#1272`–`#1313`) including three migrations,
+    `20261026150000_category_image_key`, `20261027080000_category_and_system_assets` and
+    `20261027120000_ai_feature_pricing_review`.
+  - **`#1288` (icon deactivate + circular `IconMedallion` + AI-replaceable icon inventory) is MERGED TO
+    STAGING (PR #1292, `204d86a`), not promoted.** Spec and build notes:
+    `specs/2026-10-27-icon-asset-activation-and-medallion/`. ADR-008 is now v1.3.0 (Decision 6). Validated
+    except R6, R29 and the R28 visual check (dev DB lacked the `#1285` migration); those are tracked in
+    the follow-up issue, and the issue is `In Review`, not `Done`.
+  - **`#1295` (platform-admin running costs report at `/staff/platform/costs`) is MERGED TO STAGING
+    (PR #1300, `9092b24`), not promoted.** Spec and build notes: `specs/2026-10-27-running-costs-report/`.
+    Validated except the phone-width visual, the R2/R16 mutation proofs and the `kms/site-internal` build;
+    the issue is `In Review`. The page is registry-driven: **figures are edited in `lib/running-costs.ts`**,
+    only Workers AI usage is read live. The PR also carried the `#1288` Document commit. Platform-admin
+    pages live under `app/(admin)/staff/platform/*` and register once in
+    `components/staff/platform-nav-items.ts` (`/staff/errors` is the only special case). Follow-ups:
+    `#1296` alerts, `#1297` provider usage APIs, `#1298` owner data updates after the domain purchases,
+    `#1299` Resend config and `WORKERS_AI_PLAN` mismatch with Workers Paid.
+  - **`#1302` and `#1305` (storefront layout follow-ups) are MERGED TO STAGING (PRs #1304 `57d52c5`,
+    #1307 `8626962`), not promoted.** Specs: `specs/2026-10-27-orders-grid-quickshop-cart/`,
+    `specs/2026-10-27-checkout-width-and-slot-grid/`. Orders list is a 2-per-row card grid with Reorder /
+    Save as list on each card; Quick Shop has a "Your orders" tile; `/cart` and checkout carry Continue
+    shopping beside the primary button (the cart drawer is deliberately unchanged); cart, checkout and
+    orders share `PageContainer width="standard"` (`specs/design-system.md` updated); the checkout slot
+    picker is a 7-day grid fed by `getAvailableSlotsForWeek`. **Both ran validation in the building
+    session and left the browser checks and a real later-day booking unverified** (signed-in only), so
+    they are worth one staging pass by the owner. Follow-ups: `#1303` (detail page shows no
+    empty-save message), `#1306` (Super Saver tab and slot markers need a slot length/type in the
+    schema). Both issues are `In Review`.
+  - **`#1309` (`/staff/platform/costs` becomes the advisory Costs, Pricing & Business Model dashboard) is
+    MERGED TO STAGING (PR #1311, `01af208`), not promoted.** Spec, build notes and validation record:
+    `specs/2026-10-27-pricing-business-model/`. The registries are files edited by PR (`lib/running-costs.ts`,
+    `lib/pricing/*`), and the refresh buttons only *suggest*; the guide is the platform admin guide 1.4.0.
+    Open: R39 (refresh usage showing as "Pricing review" on `/staff/ai-usage`; **the dev database still
+    lacks the `PRICING_REVIEW` migration**, while staging has it), and the quarterly `pricing-review`
+    workflow, which does nothing until it reaches `main`. Follow-ups: `#1310` (owner decision, ADR-005 Connect trigger), `#1312` (refresh suggestion quality).
+  - **`deploy-staging` can fail on a transient `npm ci`** (Prisma engine postinstall `ECONNRESET`, hit at
+    `#1295`): every later step is skipped, so nothing deployed and no migration ran. After checking
+    githubstatus.com, `gh run rerun <id> --failed` is enough.
+  - **Board drift found:** `#1283` and `#1285` are closed and `Done` though staging-only; `#1272`–`#1280`
+    are open in `Backlog` though merged to staging. KMS slices `#1272/#1274/#1276` merged with no `specs/`
+    folder (recorded in the roadmap change log). Reconciling the board is an owner call.
+  - **`CHANGELOG.md` was a binary blob to git** (a UTF-16 row appended long ago added 113 NUL bytes, so
+    `.gitattributes` never normalised it and it stayed CRLF). Fixed and merged with `#1288` (PR #1292); the
+    file is LF text now. Write CHANGELOG entries with the Edit tool, never PowerShell — backtick escapes (`` `b``, `` `a``, `` `f``) had corrupted two entries.
 
 - **2026-10-24, `#1223` icon system (all phases) & `#1239` colourful Noto Emoji icons: PROMOTED TO PRODUCTION (`main`, `bf4984a`).**
   Promotion PR #1241 ("Promote colourful Noto Emoji icon system to production (#1223, #1239)", merge `bf4984a`, `staging -> main`, 2026-10-24)
@@ -2083,6 +2378,9 @@ These are separate from, not a silent reordering of, the owner's High priorities
 - The raw-SQL exception has no mechanical single-file enforcement (#676).
 - Workers Logs remain at 100 percent sampling and must be reviewed before real traffic.
 - The platform remains merchant of record for all vendors until ADR-005's Connect trigger is met.
+  **Selling the platform to third-party stores is that trigger** (`#1310`, owner decision, filed
+  2026-10-27 while building `#1309`'s pricing dashboard, whose advisory recommendation of a hybrid
+  fee-plus-commission plan assumes the platform keeps paying card fees until then).
 
 ## Requires Live Access
 

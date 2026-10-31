@@ -7,7 +7,7 @@ import { isCampaignLive } from "@/lib/campaign-liveness";
 import { listCampaignsForVendor } from "@/lib/campaigns-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { Icon } from "@/components/icons/Icon";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 // Reads the session and this vendor's campaigns — must render per-request.
 export const dynamic = "force-dynamic";
@@ -70,7 +70,7 @@ export default async function StaffPromotionsPage() {
 
       {departments.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-          <Icon name="megaphone" className="mx-auto mb-3 h-8 w-8 text-primary-subtle" />
+          <IconMedallion icon="megaphone" size={32} className="mx-auto mb-3" decorative />
           <p className="text-sm text-primary-muted">
             No departments yet. Create a top-level category before adding a campaign.
           </p>

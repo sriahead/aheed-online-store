@@ -2,30 +2,24 @@
 
 import Link from "next/link";
 import { categoryIconName } from "@/components/product/category-icon";
-import { Icon } from "@/components/icons/Icon";
-import { Icon3D } from "@/components/icons/Icon3D";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 import { departmentIllustration, department3DIcon } from "@/components/icons/illustrations";
-import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { HorizontalScroller } from "@/components/layout/HorizontalScroller";
 import type { CategorySummary } from "@/lib/repositories/categories";
 
 /**
- * Horizontal, icon-led department strip.
+ * Horizontal, photograph-led department strip (#1278).
  *
- * The scrolling behaviour moved to `HorizontalScroller` in #511, so the shop
- * page's product and bundle rows share one affordance with this strip rather
- * than the page showing one row that scrolls and three that do not. This file
- * keeps only what is department-specific: the icon tiles, the active state, and
- * its original arrow placement and 260px step, both passed explicitly so the
- * extraction changed nothing about how this strip feels.
+ * Each category renders a real commercial studio product photograph (Tesco reference model),
+ * dynamically supplied via `category.imageUrl` (falling back to `/images/categories/${category.slug}.jpg`).
+ * Synthetic 3D vector icons and generic illustrations are replaced with authentic product packshots.
  *
- * #1223 Phase 4a: a department with an illustration shows it (a static file through
- * `ImageWithFallback`, `h-12 w-12` inside the unchanged `h-16 w-16` tile) and any other department
- * keeps the neutral glyph, never a picture of food on a non-grocery shelf (#729). The tile tint
- * alternates by position so neighbouring tiles read apart. The first six images load eagerly, the
- * rest lazily.
+ * If a category photograph is missing or fails to load, `ImageWithFallback` degrades cleanly
+ * to the semantic vector icon (`categoryIconName`). The first six images load eagerly, the rest lazily.
  */
-const EAGER_ILLUSTRATIONS = 6;
+const EAGER_PHOTOGRAPHS = 6;
+/** The tile's 64 px (`h-16 w-16`) frame, unchanged by #1288. */
+const TILE_SIZE = 64;
 
 export function DepartmentScroller({
   categories,
@@ -45,11 +39,18 @@ export function DepartmentScroller({
     >
       {categories.map((category, index) => {
         const isActive = category.slug === activeSlug;
+        const glyphName = categoryIconName(category.slug);
+        const loading = index < EAGER_PHOTOGRAPHS ? "eager" : "lazy";
+
+        // Realistic product photography (Tesco model, #1278)
+        const photoUrl = category.imageUrl;
         const icon3D = use3D ? department3DIcon(category.slug) : null;
         const illustration = departmentIllustration(category.slug);
-        const glyph = (
-          <Icon name={categoryIconName(category.slug)} className="h-7 w-7 text-primary" />
-        );
+
+        // #1288 R17: one circular, single-tint medallion whatever the tile shows.
+        const medallionClass =
+          "transition duration-300 group-hover:scale-105 motion-reduce:group-hover:scale-100 group-hover:-translate-y-1 group-hover:ring-2 group-hover:ring-action/30 group-hover:shadow-md";
+
         return (
           <Link
             key={category.id}
@@ -57,35 +58,48 @@ export function DepartmentScroller({
             aria-current={isActive ? "page" : undefined}
             className="group flex w-20 shrink-0 flex-col items-center gap-2 text-center"
           >
-            <div
-              className={`flex h-16 w-16 items-center justify-center rounded-full ${
-                index % 2 === 0 ? "bg-action-tint" : "bg-accent-tint"
-              } transition duration-300 group-hover:scale-110 motion-reduce:group-hover:scale-100 group-hover:-translate-y-1 group-hover:ring-2 group-hover:ring-action/40 group-hover:shadow-lg ${
-                isActive ? "ring-2 ring-action/60" : ""
-              }`}
-            >
-              {icon3D ? (
-                <Icon3D
-                  name={icon3D}
-                  size={46}
-                  className="transition duration-300 group-hover:scale-105 motion-reduce:group-hover:scale-100"
-                  decorative
-                />
-              ) : illustration ? (
-                <ImageWithFallback
-                  src={illustration}
-                  alt=""
-                  width={48}
-                  height={48}
-                  loading={index < EAGER_ILLUSTRATIONS ? "eager" : "lazy"}
-                  decoding="async"
-                  className="h-12 w-12"
-                  fallback={glyph}
-                />
-              ) : (
-                glyph
-              )}
-            </div>
+            {photoUrl ? (
+              <IconMedallion
+                imageUrl={photoUrl}
+                fallbackIcon={glyphName}
+                size={TILE_SIZE}
+                tint="action"
+                active={isActive}
+                loading={loading}
+                className={medallionClass}
+                decorative
+              />
+            ) : icon3D ? (
+              <IconMedallion
+                icon3d={icon3D}
+                size={TILE_SIZE}
+                tint="action"
+                active={isActive}
+                className={medallionClass}
+                decorative
+              />
+            ) : illustration ? (
+              <IconMedallion
+                imageUrl={illustration}
+                imageFit="inset"
+                fallbackIcon={glyphName}
+                size={TILE_SIZE}
+                tint="action"
+                active={isActive}
+                loading={loading}
+                className={medallionClass}
+                decorative
+              />
+            ) : (
+              <IconMedallion
+                icon={glyphName}
+                size={TILE_SIZE}
+                tint="action"
+                active={isActive}
+                className={medallionClass}
+                decorative
+              />
+            )}
             <span className="line-clamp-2 text-xs font-medium leading-tight text-primary">
               {category.name}
             </span>

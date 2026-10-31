@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { saveCategory } from "@/features/admin/catalogue";
 import { initialCatalogueState } from "@/lib/catalogue-form";
@@ -12,6 +12,7 @@ import type {
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/icons/Icon";
+import { CategoryImageManager } from "@/components/staff/CategoryImageManager";
 
 /**
  * Category create/edit form (P6b1, #159).
@@ -69,11 +70,14 @@ export function CategoryForm({ category, categories, hiddenCounts = null }: Cate
     parentId: category?.parentId ?? "",
     sortOrder: String(category?.sortOrder ?? 0),
     isActive: category?.isActive ?? true,
+    imageKey: category?.imageKey ?? "",
     allowsCustomNote: category?.allowsCustomNote ?? false,
   };
   // A changed key remounts the fields, so a select or checkbox cannot keep a stale DOM default.
   const formKey = submitted ? `refused:${state.error}:${JSON.stringify(submitted)}` : "stored";
   const hiddenNote = !isNew && hiddenCounts ? hiddenWithCategoryNote(hiddenCounts) : null;
+
+  const [imageKey, setImageKey] = useState(values.imageKey);
 
   const parentOptions = categories.filter(
     (row) => row.parentId === null && row.id !== category?.id,
@@ -158,6 +162,28 @@ export function CategoryForm({ category, categories, hiddenCounts = null }: Cate
           defaultValue={values.sortOrder}
           error={isInvalid("sortOrder")}
           errorId="category-form-error"
+        />
+
+        {category && (
+          <CategoryImageManager
+            categoryId={category.id}
+            categoryName={category.name}
+            slug={category.slug}
+            imageKey={imageKey}
+            imageUrl={category.imageUrl ?? null}
+            onImageKeyChange={(newKey) => setImageKey(newKey)}
+          />
+        )}
+
+        <FormField
+          name="imageKey"
+          label="Photograph storage key (e.g. categories/fruit-veg.jpg)"
+          placeholder="categories/slug.jpg"
+          value={imageKey}
+          onChange={(e) => setImageKey(e.target.value)}
+          error={isInvalid("imageKey")}
+          errorId="category-form-error"
+          hint="Relative storage key for realistic product photography. If blank, defaults to /images/categories/[slug].jpg"
         />
 
         <label className="flex items-center gap-2 text-sm text-primary">

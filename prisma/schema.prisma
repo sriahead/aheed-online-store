@@ -196,6 +196,7 @@ model Vendor {
   weeklyHours               VendorWeeklyHours[]
   hoursOverrides            VendorHoursOverride[]
   paymentBadges             VendorPaymentBadge[]
+  categoryAssets            CategoryAsset[]
 }
 
 // P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
@@ -654,8 +655,11 @@ model Category {
   // #1135 — shoppers may attach a note to a basket line for products in this category (and its
   // sub-categories). Decided by lib/custom-note.ts's productAcceptsNote, nowhere else.
   allowsCustomNote Boolean             @default(false)
+  // #1278 — relative storage key for realistic category photography (ADR-003; never a URL)
+  imageKey         String?
   products         Product[]
   campaign         DepartmentCampaign?
+  assets           CategoryAsset[]
 
   @@unique([vendorId, slug])
   @@unique([id, vendorId])
@@ -691,6 +695,23 @@ model DepartmentCampaign {
   // hero read) and "does this category already have a campaign" (categoryId
   // is unique, so a lookup by it alone is already indexed).
   @@index([vendorId, isActive])
+}
+
+// #1285 — multi-candidate category and UI system icon assets (review, select, delete, gallery)
+model CategoryAsset {
+  id         String    @id @default(uuid())
+  vendorId   String
+  vendor     Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  slot       String?   // e.g. "delivery-van", "storefront", "quick-shop", "user-profile", "cart-floating", etc.
+  storageKey String    // relative key in R2
+  style      String    // "photo" | "3d-icon"
+  isSelected Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@index([vendorId, categoryId])
+  @@index([vendorId, slot])
 }
 
 // P8.5c (#347) — a curated BUNDLE is a vendor-authored list of products already
@@ -2072,6 +2093,7 @@ enum AiFeature {
   NET_CONTENT
   PRODUCT_IMAGE
   CAMPAIGN_IMAGE
+  PRICING_REVIEW
 }
 
 // REPORTED = Workers AI's own figure for the call; ESTIMATED = computed from lib/workers-ai.ts.

@@ -7,38 +7,62 @@
 # no `scheduled` export to attach a trigger to, and the generated file is
 # overwritten by every build. See workers/scheduler/src/index.ts.
 #
-# This Worker has NO bindings: no R2, no database URL, no vendor knowledge. Its
-# whole configuration is where to call and what secret to prove itself with.
+# This Worker has no database URL, no R2 and no vendor knowledge. Its only
+# binding is the JOB_SIGNALS KV namespace (#1324), read to decide whether a tick
+# has anything to do; the rest of its configuration is where to call and what
+# secret to prove itself with.
 name = "aheed-scheduler"
 main = "src/index.ts"
 compatibility_date = "2025-03-25"
 
-# Every 15 minutes. The number being bought is recovery latency: a shopper who
-# paid into a lost webhook sits with no confirmation email until a tick resolves
-# them, and an hourly period would leave them there up to four times longer for
-# no saving that matters at this volume.
+# Every 15 minutes, GATED (#1324): a tick calls a job only when its KV marker
+# says there is work, so an idle store never wakes the database. The number the
+# 15 minutes buys is recovery latency for a shopper who paid into a lost webhook.
+# Plus `0 3 * * *`: the daily ungated run, which calls every job whatever the
+# markers say and is the only run of the guest-cart reaper. Two triggers per
+# environment, four in all: the Workers Free plan allows five per account.
 [triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/15 * * * *", "0 3 * * *"]
+
+# LOCAL SIMULATION ONLY. `wrangler dev` simulates this namespace on disk; no
+# deploy reads it, because both deploy workflows pass `--env` and kv_namespaces
+# is not inherited by an environment. The id is a placeholder, not a real
+# namespace.
+[[kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "local-job-signals"
 
 # ---- Staging -------------------------------------------------------------
 [env.staging]
 name = "aheed-scheduler-staging"
 
 [env.staging.triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/15 * * * *", "0 3 * * *"]
+
+# #1324/#1325 — JOB_SIGNALS for staging: KV namespace `aheed-jobs-staging` in the Merqify account
+# (created 2026-10-31). The SAME id is in both this file and the other wrangler.toml.
+[[env.staging.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "20aab8dee7f342809679d36f1d96fc6c"
 
 [env.staging.vars]
-APP_BASE_URL = "https://staging.aheedfoodcentre.nocaped.com"
+APP_BASE_URL = "https://aheed-staging.merqify.com"
 
 # ---- Production ----------------------------------------------------------
 [env.production]
 name = "aheed-scheduler-production"
 
 [env.production.triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/15 * * * *", "0 3 * * *"]
+
+# #1324/#1325 — JOB_SIGNALS for production: KV namespace `aheed-jobs-production` in the Merqify account
+# (created 2026-10-31). The SAME id is in both this file and the other wrangler.toml.
+[[env.production.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "ba3dd6efb50445bc9cf856664fe6c1c5"
 
 [env.production.vars]
-APP_BASE_URL = "https://aheedfoodcentre.nocaped.com"
+APP_BASE_URL = "https://aheed.merqify.com"
 
 # NOTE: JOB_INVOCATION_TOKEN is NOT set here. It is a runtime secret and must be
 # set per environment, on BOTH this Worker and the application Worker, with the

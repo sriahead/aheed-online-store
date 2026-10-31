@@ -27,11 +27,14 @@ vi.mock("@/lib/repositories/error-events", () => ({
 vi.mock("@/lib/error-event-fallback", () => ({
   recordErrorEventDirect: recordErrorEventDirectMock,
 }));
+const markErrorEventMock = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock("@/lib/job-signals", () => ({ markErrorEvent: markErrorEventMock }));
 
 afterEach(() => {
   vi.restoreAllMocks();
   recordErrorEventMock.mockReset();
   recordErrorEventDirectMock.mockReset();
+  markErrorEventMock.mockClear();
 });
 
 /** The request/context pair every case below sends; only the errors differ. */
@@ -160,4 +163,24 @@ it("does not reject even if the fallback itself throws, against its own contract
   vi.spyOn(console, "error").mockImplementation(() => {});
 
   await expect(onRequestError(new Error("boom"), REQUEST, CONTEXT)).resolves.toBeUndefined();
+});
+
+// #1324 R17 — the scheduler's error marker, written whether or not the row was.
+describe("marks the error for the scheduler (#1324)", () => {
+  it("once, after a successful write", async () => {
+    recordErrorEventMock.mockResolvedValueOnce(undefined);
+    const { onRequestError } = await import("@/instrumentation");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await onRequestError(new Error("boom"), REQUEST, CONTEXT);
+    expect(markErrorEventMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("once, when the write and its fallback both fail", async () => {
+    recordErrorEventMock.mockRejectedValueOnce(new Error("db down"));
+    recordErrorEventDirectMock.mockResolvedValueOnce(false);
+    const { onRequestError } = await import("@/instrumentation");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await onRequestError(new Error("boom"), REQUEST, CONTEXT);
+    expect(markErrorEventMock).toHaveBeenCalledTimes(1);
+  });
 });

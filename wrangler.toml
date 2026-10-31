@@ -38,28 +38,41 @@ head_sampling_rate = 1
 directory = ".open-next/assets"
 binding = "ASSETS"
 
+# #1324 — job activity markers, written here and read by workers/scheduler so an
+# idle store's 15-minute tick never wakes the database. LOCAL SIMULATION ONLY:
+# `npm run preview` simulates this namespace on disk; no deploy reads it, because
+# both deploy workflows pass `--env` and kv_namespaces is not inherited by an
+# environment. The id is a placeholder, not a real namespace.
+[[kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "local-job-signals"
+
 # ---- Staging -------------------------------------------------------------
 [env.staging]
 name = "aheed-store-staging"
 
+# #1323 — hosts live on merqify.com in the Merqify Cloudflare account (the Nocaped account dropped
+# to Free and can no longer deploy). Flat names, because Universal SSL covers one subdomain level.
+# The deploy target is CLOUDFLARE_ACCOUNT_ID in the GitHub environment; nothing here names it.
 [[env.staging.routes]]
-pattern = "staging.aheedfoodcentre.nocaped.com"
+pattern = "aheed-staging.merqify.com"
 custom_domain = true
 
 # ADR-004 slice 3b — SriMart, a 2nd vendor resolved by host (VendorDomain). This staging
 # host must be declared here so `wrangler deploy` doesn't tear down the custom domain.
 [[env.staging.routes]]
-pattern = "srimart-staging.nocaped.com"
-custom_domain = true
-
-# P11 (#1265) — Aheed Superstore test vendor (3rd vendor), resolved by host (VendorDomain).
-[[env.staging.routes]]
-pattern = "aheedsuperstore-staging.nocaped.com"
+pattern = "srimart-staging.merqify.com"
 custom_domain = true
 
 [[env.staging.r2_buckets]]
 binding = "IMAGES"
-bucket_name = "aheed-images-staging"
+bucket_name = "shoplocal-images-staging"
+
+# #1324/#1325 — JOB_SIGNALS for staging: KV namespace `aheed-jobs-staging` in the Merqify account
+# (created 2026-10-31). The SAME id is in both this file and the other wrangler.toml.
+[[env.staging.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "20aab8dee7f342809679d36f1d96fc6c"
 
 # #767/#771 — NOT a secret, just non-sensitive config, so it belongs in committed config rather
 # than a dashboard-only binding. A dashboard-added plain-text var (no `[vars]` entry, no
@@ -78,17 +91,23 @@ PLATFORM_NAME = "[PLATFORM NAME]"
 name = "aheed-store-production"
 
 [[env.production.routes]]
-pattern = "aheedfoodcentre.nocaped.com"
+pattern = "aheed.merqify.com"
 custom_domain = true
 
 # ADR-004 slice 3b — SriMart (2nd vendor) production host, resolved by host (VendorDomain).
 [[env.production.routes]]
-pattern = "srimart.nocaped.com"
+pattern = "srimart.merqify.com"
 custom_domain = true
 
 [[env.production.r2_buckets]]
 binding = "IMAGES"
-bucket_name = "aheed-images-production"
+bucket_name = "shoplocal-images-production"
+
+# #1324/#1325 — JOB_SIGNALS for production: KV namespace `aheed-jobs-production` in the Merqify account
+# (created 2026-10-31). The SAME id is in both this file and the other wrangler.toml.
+[[env.production.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "ba3dd6efb50445bc9cf856664fe6c1c5"
 
 # See the identical [env.staging.vars] block above for why this is committed config rather than
 # a dashboard binding.

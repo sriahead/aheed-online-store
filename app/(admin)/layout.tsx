@@ -6,6 +6,8 @@ import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { brandStyle } from "@/lib/vendor-theme";
 import { PanelNav } from "@/components/staff/PanelNav";
 import { Header } from "@/components/layout/Header";
+import { getActiveSlotAssetsForVendor } from "@/lib/category-assets-service";
+import { ActiveSlotIconsProvider } from "@/components/icons/ActiveSlotIconsProvider";
 
 // force-dynamic: reads the session and the resolved vendor, which only work in
 // the Workers runtime — next build's Node-based static prerender can't load
@@ -37,18 +39,22 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     }
   }
 
+  const activeSlotIcons = await getActiveSlotAssetsForVendor(profile.id).catch(() => ({}));
+
   return (
-    <div
-      style={brandStyle(profile.primitives)}
-      className="min-h-screen bg-surface-muted flex flex-col"
-    >
-      <Header isPortal={true} />
-      <PanelNav
-        canSeeOrders={canSeeOrders}
-        currentTier={currentTier}
-        isPlatformAdmin={isPlatformAdmin}
-      />
-      <div className="flex-1">{children}</div>
-    </div>
+    <ActiveSlotIconsProvider initialIcons={activeSlotIcons}>
+      <div
+        style={brandStyle(profile.primitives)}
+        className="min-h-screen bg-surface-muted flex flex-col"
+      >
+        <Header isPortal={true} />
+        <PanelNav
+          canSeeOrders={canSeeOrders}
+          currentTier={currentTier}
+          isPlatformAdmin={isPlatformAdmin}
+        />
+        <div className="flex-1">{children}</div>
+      </div>
+    </ActiveSlotIconsProvider>
   );
 }

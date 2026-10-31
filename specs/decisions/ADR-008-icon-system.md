@@ -4,10 +4,10 @@ title: "ADR-008 — Icon system: semantic registry, build-time Iconify data, thr
 audience: [dev, architect, design]
 type: adr
 status: approved
-version: "1.2.0"
-updated: 2026-10-24
+version: "1.3.0"
+updated: 2026-10-27
 visibility: internal
-summary: Icons are addressed by semantic name through a registry and rendered by one component from Iconify data bundled at build time. Lucide serves functional icons and rating stars, Noto Emoji serves colourful decorative and status icons and department illustrations. Extended in 1239.
+summary: "Icons are addressed by semantic name through a registry and rendered by one component from build-time Iconify data: Lucide for functional icons, Noto Emoji for decorative and status. Since 1288 a vendor may override Noto and 3D icons with AI art, only inside the circular medallion."
 tags: [adr, icons, design-system, theming, multi-tenancy, csp]
 related: [adr-004-multi-tenancy, adr-003-storage, design-system, tech-stack, icon-system-plan]
 ---
@@ -87,6 +87,26 @@ Twemoji) are excluded unless the owner approves a visible credit. The licence te
 the section carries the canonical Apache 2.0 text and records why; `specs/2026-10-22-icon-system/` R63). Lucide stays a
 `dependency` until Phase 5 so a parity test can compare geometry (`tests/icon-lucide-parity.test.ts`).
 
+## Decision 6 — Per-vendor AI overrides, only inside the circular medallion (#1288)
+
+Owner approval: 2026-10-27, issue `#1288`. Slice spec: `specs/2026-10-27-icon-asset-activation-and-medallion/`.
+
+- **What may be overridden.** A vendor may replace any Noto decorative or status icon (every
+  `ICON_REGISTRY` entry with `provider: "noto"`, slot id `icon:<name>`) and any of the 15 non-department
+  `Icon3D` names with an AI-generated raster asset. The canonical list is `lib/icon-slots.ts`.
+  **Functional icons and the rating `star` are never overridable**: controls stay crisp and
+  `currentColor`-themed (Decision 3).
+- **Where an override renders.** Only through `components/icons/IconMedallion.tsx`, and for a flat icon
+  only at **32 px or larger** (`size="xl"|"2xl"`, or an `h-8`/`w-8` class or larger). A smaller decorative
+  icon stays a plain inline glyph and is never replaced, so body text, buttons and status chips do not
+  change shape. `tests/icon-medallion-coverage.test.tsx` fails on a large non-functional `<Icon>` or an
+  `<Icon3D>` outside `components/icons/`.
+- **`<Icon>` is unchanged.** It stays hook-free, server-renderable and fed by build-time data
+  (Decisions 1 and 2). The override decision lives in the medallion, a client component.
+- **No per-icon request.** Overrides come from the vendor's active-asset map, which the admin layout and
+  `StorefrontChrome` load once per request into `ActiveSlotIconsProvider`. The override image file itself
+  is the only fetch, from the CDN host the CSP already allows.
+
 ## Consequences
 
 - One change reaches every icon; a stale generated file fails CI (`icons:check` in `quality.yml`).
@@ -104,4 +124,6 @@ the section carries the canonical Apache 2.0 text and records why; `specs/2026-1
   icons in use.
 - **Colour by CSS only on Lucide:** viable but outline-only, so no two-hue look.
 - **AI-generated icons:** inconsistent, raster and unthemeable for glyphs; considered for illustrations
-  only, as `#1224`.
+  only, as `#1224`. Partly superseded by Decision 6 (#1288): AI art is allowed as a per-vendor
+  override, but only for decorative/status and 3D icons, only at 32 px or more, and only inside the
+  medallion, which keeps the set visually consistent; functional glyphs remain build-time vectors.

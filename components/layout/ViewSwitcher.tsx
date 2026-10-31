@@ -4,6 +4,8 @@ import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { IconName } from "@/components/icons/registry";
 import { Icon } from "@/components/icons/Icon";
+import type { Icon3DName } from "@/components/icons/Icon3D";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 export interface ViewSwitcherProps {
   canSeeAdmin: boolean;
@@ -54,12 +56,12 @@ export function ViewSwitcher({ canSeeAdmin, currentTier, isPortal }: ViewSwitche
     });
   };
 
-  const views: { id: string; label: string; icon: IconName }[] = [
-    { id: "shopper", label: "Shopper View", icon: "shopping-bag" },
-    { id: "staff", label: "Staff View", icon: "store" },
+  const views: { id: string; label: string; icon: IconName; icon3d: Icon3DName }[] = [
+    { id: "shopper", label: "Shopper View", icon: "shopping-bag", icon3d: "view-shopper" },
+    { id: "staff", label: "Staff View", icon: "store", icon3d: "view-staff" },
   ];
   if (canSeeAdmin) {
-    views.push({ id: "admin", label: "Admin View", icon: "shield" });
+    views.push({ id: "admin", label: "Admin View", icon: "shield", icon3d: "view-admin" });
   }
 
   const activeOption = views.find((v) => v.id === activeView) || views[0];
@@ -71,7 +73,7 @@ export function ViewSwitcher({ canSeeAdmin, currentTier, isPortal }: ViewSwitche
         disabled={isPending}
         className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
       >
-        <Icon name={activeOption.icon} className="h-3.5 w-3.5" />
+        <IconMedallion icon3d={activeOption.icon3d} size={18} className="-my-0.5" decorative />
         <span className="hidden sm:inline">{activeOption.label}</span>
         <Icon
           name="chevron-down"
@@ -93,7 +95,7 @@ export function ViewSwitcher({ canSeeAdmin, currentTier, isPortal }: ViewSwitche
                     : "font-medium text-black/70 hover:bg-black/5"
                 }`}
               >
-                <Icon name={view.icon} className="h-4 w-4" />
+                <IconMedallion icon3d={view.icon3d} size={20} className="-my-0.5" decorative />
                 {view.label}
               </button>
             );

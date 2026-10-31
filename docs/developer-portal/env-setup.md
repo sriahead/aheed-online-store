@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.22.0"
-updated: 2026-10-23
+version: "1.31.0"
+updated: 2026-10-31
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -63,6 +63,314 @@ local env file proves nothing about a Worker: `curl -s https://<any vendor host>
 return `Allow: /` plus a `Sitemap:` line naming **that same host** in production, and `Disallow: /`
 everywhere else. Checking a single host cannot detect the multi-tenancy half, so check a second
 vendor.
+
+## Merqify account (#1323, 2026-10-29)
+
+**Hosting moves from the Nocaped Cloudflare account to the Merqify account, and the databases move
+to a new Neon account.** The Nocaped account dropped to the Workers Free plan, which refuses this
+app's `cpu_ms = 300` limit (`code 100328`), so nothing can deploy there.
+
+Spec: `specs/2026-10-29-merqify-platform-move/`. The old Workers, old Neon projects and old
+`secrets/staging.vars` / `secrets/production.vars` are **not touched**; they are the rollback.
+
+| Purpose | Staging | Production |
+|---|---|---|
+| Aheed Food Centre | `aheed-staging.merqify.com` | `aheed.merqify.com` |
+| SriMart (demo store) | `srimart-staging.merqify.com` | `srimart.merqify.com` |
+| Images (`CDN_BASE_URL`) | `https://images-staging.merqify.com` | `https://images.merqify.com` |
+| Internal docs (Access) | `docs-shoplocal.merqify.com` | |
+
+### Check which account wrangler is on, before ANY manual wrangler command
+
+This machine's `wrangler login` has pointed at an unrelated account ("Cobrasmashbc@gmail.com's
+Account"). Before every manual `wrangler secret put`, `kv namespace create` or `deploy`, run
+`npx wrangler whoami` and confirm it names the **Merqify** account. Otherwise
+`npx wrangler login` again, signed in to the browser as the Merqify account's owner. CI never uses
+the login; it deploys with `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` from the GitHub
+environment.
+
+### What the owner creates
+
+**In the Merqify Cloudflare account:**
+
+1. **Workers Paid.** Without it every deploy fails exactly as it does on Nocaped.
+2. **A Cloudflare Access application for `docs-shoplocal.merqify.com`, FIRST, before step 6.**
+   - Self-hosted, with a One-time PIN and an allow-list, as the old site had. Scope it to the whole
+     host (no path), and give it no `bypass` policy and no allow rule for "Everyone".
+   - `deploy-docs-internal.yml` deploys that route on every push to `staging` or `main`, using the
+     staging environment's Cloudflare secrets. With no Access application in front, ADRs and
+     `CLAUDE.md` would be on the open internet.
+   - **The workflow guards this itself (`#1328`)** with `scripts/verify-docs-access.ts`, which reads
+     the hosts from `kms/site-internal/wrangler.toml`:
+     - `--pre`, before the build: the Access API must show a self-hosted application covering every
+       host, with no policy that lets everyone in. Otherwise nothing is deployed.
+     - `--post`, after the deploy: signed-out requests to `/` and a deep link must redirect to
+       `*.cloudflareaccess.com`. A normal page means the docs are public; the job fails and names
+       the custom domain to remove.
+   - Check it from this machine before pushing the secrets:
+     `npx tsx scripts/verify-docs-access.ts --pre --env-file secrets/merqify-staging.vars`.
+3. **R2 buckets `shoplocal-images-staging` and `shoplocal-images-production`** (the names
+   `wrangler.toml` binds; the platform cell's name, owner 2026-10-30), plus `shoplocal-images-dev`
+   for local work. The old Nocaped buckets keep their `aheed-images-*` names. Each gets:
+   - a **custom domain**: `images-staging.merqify.com`, `images.merqify.com` and
+     `images-dev.merqify.com`;
+   - the **same hotlink pairing as before**: a referer rule on the staging and production image
+     hosts (allowing the `merqify.com` store hosts), and **none** on `images-dev.merqify.com`, so
+     images load under `localhost` (see "Development" below);
+   - an **R2 S3 API token** limited to that bucket.
+4. **One API token per environment, scoped to the Merqify account only.**
+   - Start from the "Edit Cloudflare Workers" template.
+   - Set Account Resources to the Merqify account and Zone Resources to `merqify.com`.
+   - Add Workers AI and R2 permissions.
+   - On the **staging** token also add **Access: Apps and Policies Read**: the docs deploy runs with
+     staging's secrets, and its `--pre` check reads the Access applications. Without it the check
+     fails closed with a 403 and the docs never deploy.
+   - Never use a token that covers the whole login. The Aheed Food Centre account will sit under the
+     same login, and a login-wide token would reach the client's account.
+5. **Optional:** `JOB_SIGNALS` KV namespaces (`#1325`). Until then every scheduler tick runs every
+   job.
+
+**In the new Neon account (Merqify organization),** all in **AWS London (`eu-west-2`)**.
+
+This slice moves the **ShopLocal platform cell**: one database per environment holding SriMart and
+the Aheed Food Centre **demo** store (`specs/architecture.md`, "Where it runs").
+- **`Shoplocal`** (production) and **`Shoplocal Staging`** (staging): each gives a **direct** URL
+  (`DIRECT_URL`) and a **pooled** one, the host with `-pooler` (`DATABASE_URL`). `pg_trgm` is
+  created by a migration, so nothing is set up by hand.
+- **Branches on `Shoplocal Staging`:**
+  - `dev` for local work (see "Dev database" below);
+  - `scratch` for validating the migration, reset between runs.
+- **`uk-location-reference`**: one project shared by every cell, because it holds public postcode
+  data and no client data. Its **primary** direct URL is `UK_LOCATION_REF_DIRECT_URL` (never a read
+  replica, `#1123`) and its pooled URL is `UK_LOCATION_REF_DATABASE_URL`. Both go in **both**
+  `merqify-*.vars` files.
+- **`Aheed Food Centre`** and **`Aheed Food Centre Staging`** are **not used by this move**. They
+  belong to the Aheed Food Centre **dedicated cell**: the independent business at
+  `aheedfoodcentre.co.uk`, with its own Workers, bucket and secrets, built in its own slice. Never
+  point a platform `.vars` file at them.
+
+**Elsewhere:**
+- **Stripe:** register a webhook endpoint for `https://<aheed host>/api/webhooks/stripe` per
+  environment. Its signing secret is that environment's `STRIPE_WEBHOOK_SECRET`.
+- **Google OAuth:** add each new host's `/api/auth/callback/google` as a redirect URI.
+
+### The files, and the one command per environment
+
+```bash
+cp secrets/example.vars secrets/merqify-staging.vars      # then fill in
+cp secrets/example.vars secrets/merqify-production.vars
+npm run configure-env -- staging --file secrets/merqify-staging.vars --dry-run   # names only
+npm run configure-env -- staging --file secrets/merqify-staging.vars
+```
+
+- **Fill in:**
+  - a fresh `BETTER_AUTH_SECRET` per environment;
+  - `BETTER_AUTH_URL` and `CDN_BASE_URL` for the new hosts;
+  - the new Neon URLs, R2 values and scoped token.
+- **Carry over unchanged:** Google and Stripe keys (`STRIPE_WEBHOOK_SECRET` excepted).
+- **Email is a stopgap.** Copy today's `RESEND_API_KEY` and `RESEND_FROM_EMAIL` unchanged:
+  production refuses to send without them (`lib/config.ts`). Register **nothing** new with Resend.
+  Resend is being retired. Outgoing email moves to a provider-agnostic `EmailService` with
+  **Cloudflare Email Service** in the Merqify account (`#1217`), which replaces both keys.
+- **`configure-env` pushes to the account the FILE names.** It runs every `wrangler` command with
+  that file's `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, never the machine's login, and
+  prints `Cloudflare target: account …<last 6>` first. Check that suffix against the Merqify
+  account ID before letting it run. It also pushes `UK_LOCATION_REF_DIRECT_URL` (GitHub) and
+  `UK_LOCATION_REF_DATABASE_URL` (Worker) when they are in the file.
+- **For `production` it also pushes `S3_*` and `CDN_BASE_URL` to the GitHub environment.**
+  `fill-product-images.yml` runs daily under `environment: production` and reads those six from
+  GitHub, not from the Worker. Without them it would keep writing images into the old Nocaped
+  bucket.
+- **Set by hand on the new Workers.** `configure-env` does not push these, and they need the same
+  account override:
+  `CLOUDFLARE_ACCOUNT_ID=<merqify id> CLOUDFLARE_API_TOKEN=<scoped token> npx wrangler secret put …`.
+  - `JOB_INVOCATION_TOKEN`: the same value on the app Worker and on
+    `--config workers/scheduler/wrangler.toml`;
+  - `WORKERS_AI_PLAN`, if used.
+
+### Reference database (rebuilt, not copied)
+
+The reference data is public (Code-Point Open and OS Open Names), so the new project is filled
+from source by the repo's own sync, the same script the monthly workflow runs. Run it once, before
+the staging cut-over. Both environments share the project.
+
+```bash
+# host check first: the datasource line must name the NEW reference project
+# prisma/reference/schema.prisma reads BOTH variables, so set both to the new primary direct url
+env -u UK_LOCATION_REF_DIRECT_URL -u UK_LOCATION_REF_DATABASE_URL \
+  UK_LOCATION_REF_DIRECT_URL=<new primary direct url> UK_LOCATION_REF_DATABASE_URL=<same url> \
+  npm run ref:migrate
+npx tsx scripts/sync-reference-data.ts --env-file secrets/merqify-staging.vars --source code-point-open
+npx tsx scripts/sync-reference-data.ts --env-file secrets/merqify-staging.vars --source os-open-names
+npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.vars   # exits 0, missing=[]
+```
+
+- Confirm the direct URL names the **primary**: `SELECT pg_is_in_recovery()` returns `false`.
+  The old "direct" URL named a replica, so the monthly sync would have failed from 2026-11-03
+  (`#1123`).
+- `UK_LOCATION_REF_POSTCODE_AREAS` (`MK,RG`) is unchanged. It is a GitHub environment
+  **variable** and a `wrangler.toml` var, not a secret.
+
+### Staging cut-over, in order
+
+1. **The owner's setup above**, the Access application and the reference database included. Check
+   it with `whoami` and in the dashboard.
+2. **Migrate the schema into the new staging database** from this branch:
+   `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<new direct> DATABASE_URL=<new direct> npx prisma migrate deploy`.
+   Read `prisma migrate status`'s datasource host first; it must be the **new** host.
+3. **Dry run the data copy, then read its plan:**
+   `env -u DIRECT_URL -u DATABASE_URL npx tsx scripts/migrate-to-new-neon.ts --from secrets/staging.vars --to secrets/merqify-staging.vars --target staging`.
+   - Expected: Aheed 245 products plus SriMart's 3, no orders, no `@example.com` users, and two
+     generated `VendorDomain` rows.
+   - **The target is a freshly migrated database, not an empty one.** Step 2's `migrate deploy`
+     inserts one vendor, `aheed-food-centre` (`a4ed0000-0000-4000-a000-000000000001`), and the plan
+     prints `target vendors: seeded-only`. `--apply` replaces that row with the copied one, once
+     nothing references it. A database holding any other store, or a seeded vendor that already
+     owns rows, is refused. Do not hand-empty a target to get past a refusal: deleting a vendor
+     cascades into the rows it owns.
+   - **A failed `--apply` rolls back, so the same command can be re-run** (`#1333`). Every write
+     runs inside one transaction: on any error the script prints `ROLLED BACK:` and the target is
+     exactly as step 2 left it. On success it prints `committed: <n> ms` before re-counting.
+   - **The image copy (`--copy-images`) runs after the commit and cannot be rolled back.** If it
+     fails after `committed:`, the rows stay, and a re-run refuses as `occupied`. Finish the images
+     by hand, or reset the target (`scratch`: Neon "Reset from parent"; otherwise recreate the
+     database) and run step 2 again.
+   - The image copy reads the old bucket with the `S3_*` keys already in `secrets/staging.vars`
+     (bucket `aheed-images-staging` in the Nocaped account). Those keys must still work there.
+4. **Copy:** the same command with `--apply --copy-images`. It ends by re-counting every model; any
+   `MISMATCH` or `MISSING` exits non-zero.
+5. **Push the secrets:** `npm run configure-env -- staging --file secrets/merqify-staging.vars`,
+   then the hand-set Worker secrets.
+6. **Re-run `deploy-staging`.** Its route check compares `wrangler.toml` with the new database's
+   `VendorDomain` rows.
+7. **Check the new hosts:**
+   - `https://aheed-staging.merqify.com/api/health` shows the commit, `db.ok`,
+     `reference.reachable` and non-empty `reference.sources`;
+   - both storefronts load, and an image under `images-staging.merqify.com` returns 200;
+   - `docs-shoplocal.merqify.com` shows the Access login, not a document. The
+     `deploy-docs-internal` run's `--post` step checks the same thing on every deploy.
+8. **Give yourself an admin login.** Sign up on `aheed-staging.merqify.com`, then:
+   - `npx tsx scripts/grant-role.ts --env-file secrets/merqify-staging.vars --email <you> --platform-admin`
+     (dry run first, then `--apply`);
+   - store roles use `--vendor aheed-food-centre --role ADMIN`;
+   - **demo logins**: allowed in **every** environment, production included, until go-live,
+     when they are deleted (owner, 2026-10-29). The migration never copies them, because old
+     staging's roles are stale. Re-create the roster fresh against the new database:
+     `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<new direct url> npm run demo:accounts -- add`
+     (it reads `DIRECT_URL` and `DEMO_ACCOUNT_PASSWORD` from the environment).
+   - **At go-live** remove them in each environment with `npm run demo:accounts -- remove`
+     (`#1332`).
+9. **Replace the copied `nocaped` addresses.** The migration's plan lists them under "WARNING:
+   copied values still naming nocaped". On old staging these are the two stores'
+   `VendorConfig.senderEmail` values. Set real addresses at `/staff/storefront` on each store's new
+   host once the sending domain is set up with Cloudflare Email Service in the Merqify account
+   (`#1217`, `#104`). Until then the stopgap Resend sender applies.
+
+### Sanity check: the copy rolls back (`#1333`)
+
+Run it after any change to `scripts/migrate-to-new-neon.ts` and **before every real `--apply`
+against a database you cannot reset** (production, `#1341`). Spec:
+`specs/2026-10-31-atomic-neon-copy/`. Last run: 2026-10-31, all steps passed (`committed: 720 ms` for the staging sample).
+
+**Quick (no database, 1 minute):**
+
+| # | Run | Expect |
+|---|-----|--------|
+| 1 | `npx vitest run tests/neon-migration-apply.test.ts` | `10 passed` |
+| 2 | `npx tsx scripts/migrate-to-new-neon.ts --from x --to x --target staging --simulate-failure` | `REFUSING: --simulate-failure needs --apply …`, exit 1 |
+
+**Live (needs a throwaway database):** the owner creates an empty database on `Shoplocal Staging`
+→ `scratch` and puts its direct URL in `secrets/validate-1333.vars` (one `DIRECT_URL="…"` line).
+It must be **truly empty**: a "schema only" branch has the tables but no migration history and no
+seeded store, so `migrate deploy` fails and step 4 skips the store delete. Use a new database, or
+drop and recreate its `public` schema first.
+Prefix every command with `env -u DIRECT_URL -u DATABASE_URL`. `C` below stands for
+`npx tsx scripts/migrate-to-new-neon.ts --from secrets/staging.vars --to secrets/validate-1333.vars --target staging`.
+
+| # | Run | Expect |
+|---|-----|--------|
+| 3 | `DIRECT_URL=<validate url> DATABASE_URL=<validate url> npx prisma migrate deploy` (read `migrate status`'s host first) | host is the validate one; migrations applied |
+| 4 | `C --apply --simulate-failure` | `ROLLED BACK: simulated failure …`, exit 1 |
+| 5 | `C` (dry run) | `target vendors: seeded-only`, no `REFUSING:` (nothing was left behind) |
+| 6 | `C --apply` | `committed: <n> ms`, then `OK: every copied model matches the plan.`, exit 0 |
+| 7 | Drop the validate database in the Neon console | gone |
+
+Any other result: stop, do not run the real copy, and reopen `#1333`. Update "Last run" above
+when you run it.
+
+### Dev database
+
+Local development also leaves the old Neon account **and** the Nocaped dev bucket
+(`aheed-images-dev`, served at `images.dev.aheedfoodcentre.nocaped.com`).
+- **Create** a `dev` branch on the `Shoplocal Staging` Neon project (a branch, not a separate
+  project: one fewer compute to pay for, and resettable from staging), and a `shoplocal-images-dev`
+  R2 bucket in the Merqify account with custom domain `images-dev.merqify.com` and its own S3 API
+  token.
+- **Point both `.env` and `.dev.vars` at them:**
+  - `DATABASE_URL` (pooled) and `DIRECT_URL` (direct);
+  - the reference URLs from the shared reference project;
+  - `S3_*` for the new dev bucket, with `CDN_BASE_URL=https://images-dev.merqify.com`;
+  - in `.dev.vars`, the Merqify `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` for Workers AI;
+  - email keys: unchanged (in dev a missing key only skips sending); `#1217` replaces them.
+
+  Keep `.env` comments on their own line (`CLAUDE.md`): today's `S3_BUCKET` and `CDN_BASE_URL`
+  lines carry trailing comments.
+
+Then:
+
+```bash
+# per-variable check first (CLAUDE.md): nothing exported may override the files
+npx prisma migrate status          # the datasource line must name the NEW dev host
+npx prisma migrate deploy
+npm run db:seed                    # local stores, localhost hosts, hand-seeded catalogue
+npm run demo:accounts -- add       # local demo logins
+```
+
+Dev is filled by the seed, not by `migrate-to-new-neon.ts`, whose hosts are the deployed
+`merqify.com` names. The seed writes the `localhost` hosts that `npm run preview` resolves.
+
+### Production cut-over (owner approval at every step)
+
+Production deploys when `staging` is promoted to `main`, so do these **before** merging the
+promotion PR:
+- steps 1–5 above with `secrets/merqify-production.vars` and `--target production`;
+- step 8: the owner's own account, and the demo roster (allowed in production until go-live,
+  `#1332`): `env -u DIRECT_URL -u DATABASE_URL DIRECT_URL=<new production direct url> npm run demo:accounts -- add`.
+
+Then merge the promotion and run step 7 on the production hosts. Old production (`#1289`) is never
+read, and the new production database is filled from old staging (owner decision, 2026-10-29).
+
+### Rollback
+
+- **Before the cut-over:** nothing to undo. A deploy that fails on the new account changes nothing,
+  and the Nocaped Workers keep serving their last build.
+- **After the cut-over:** push the old values back with
+  `npm run configure-env -- staging --file secrets/staging.vars` (the same for production). The old
+  Neon projects are untouched.
+- **Deploying to Nocaped again** also needs this slice's `wrangler.toml` routes reverted, and
+  Workers Paid restored on that account.
+- **Revoke the old login-wide token** only after both environments run on Merqify.
+
+### Freeing Nocaped
+
+Remove these **only after both staging and production are validated on Merqify, and only with the
+owner's approval, one item at a time**. Until then they are the rollback.
+
+| Where | What | Notes |
+|---|---|---|
+| Nocaped Cloudflare account | Workers `aheed-store-staging`, `aheed-store-production`, `aheed-scheduler-staging`, `aheed-scheduler-production`, `aheed-kms-internal` | The schedulers still fire their crons against the old hosts until deleted. |
+| Nocaped Cloudflare account | R2 buckets `aheed-images-dev`, `aheed-images-staging`, `aheed-images-production` | Only after the image copy is verified on both environments and dev points at the Merqify dev bucket. |
+| Nocaped Cloudflare account | The Cloudflare Access application for `docs.internal.aheedfoodcentre.nocaped.com` | Delete the docs Worker's route first. |
+| Nocaped login | The login-wide `CLOUDFLARE_API_TOKEN` in the old `secrets/*.vars` and `.dev.vars` | It also reaches the Aheed Food Centre account. |
+| Old Neon account | Projects dev (`ep-dry-morning`), staging (`ep-empty-scene`), production (`ep-young-glitter`), reference | Production is unreadable (`#1289`); take a backup if the quota allows, or confirm nothing in it is wanted. |
+| Stripe | Webhook endpoints on `aheedfoodcentre.nocaped.com` and `staging.aheedfoodcentre.nocaped.com` | Keep until no checkout can return to an old host. |
+| Google Cloud console | OAuth redirect URIs on `nocaped.com` hosts | |
+| Resend | The account, API key and any domain or sender on `aheedfoodcentre.nocaped.com` | Resend is retired: remove it once `#1217`'s Cloudflare Email Service adapter is live in both environments and the `RESEND_*` keys are gone. |
+| Cloudflare | The `nocaped.com` zone and domain registration | Owner decision. It also appears in `lib/running-costs.ts` as a running cost. |
+
+After the deletions, switch the local files over too: rename or replace `secrets/staging.vars` and
+`secrets/production.vars` with the Merqify values. `scripts/lib/protected-hosts.ts` reads exactly
+those two paths, so once they name the Merqify databases, those are the protected ones.
 
 ## One Neon project per environment (isolation)
 
@@ -414,24 +722,28 @@ DIRECT_URL="<branch-direct-url>" npx prisma migrate deploy   # or `migrate dev` 
 This runs from your machine via the Node Prisma CLI, not the Worker — consistent with `CLAUDE.md`'s
 "migrations never run on the Worker, never at request time."
 
-**Object storage**: one **shared** R2 bucket, `aheed-images-dev` — used by *every* developer, not one
+**Object storage**: one **shared** R2 bucket, `shoplocal-images-dev` (`aheed-images-dev` in the old
+Nocaped account) — used by *every* developer, not one
 per developer. Object storage isn't where concurrent local test writes actually collide; the worst
 case is a stale test image, not corrupted state, so a per-developer bucket isn't worth provisioning.
 
-**Pair it with the DEV CDN host, not staging's.** `aheed-images-dev` is served by
-`images.dev.aheedfoodcentre.nocaped.com`, which is the only one of the three CDN hostnames with **no
+**Pair it with the DEV CDN host, not staging's.** `shoplocal-images-dev` is served by
+`images-dev.merqify.com` (the old bucket by `images.dev.aheedfoodcentre.nocaped.com`), which is the only one of the three CDN hostnames with **no
 hotlink/referer rule** — that is what lets an image load under `npm run preview`, where the referer
 is `http://localhost:3000`. The three hosts and their buckets are strictly paired:
 
-| Environment | `S3_BUCKET` | `CDN_BASE_URL` | Hotlink rule |
-|---|---|---|---|
-| local dev | `aheed-images-dev` | `https://images.dev.aheedfoodcentre.nocaped.com` | none |
-| staging | `aheed-images-staging` | `https://images.staging.aheedfoodcentre.nocaped.com` | yes |
-| production | `aheed-images-production` | `https://images.aheedfoodcentre.nocaped.com` | yes |
+| Environment | `S3_BUCKET` (Merqify account) | `CDN_BASE_URL` (Merqify account, #1323) | Was (Nocaped bucket, host) | Hotlink rule |
+|---|---|---|---|---|
+| local dev | `shoplocal-images-dev` | `https://images-dev.merqify.com` | `aheed-images-dev`, `images.dev.aheedfoodcentre.nocaped.com` | none |
+| staging | `shoplocal-images-staging` | `https://images-staging.merqify.com` | `aheed-images-staging`, `images.staging.aheedfoodcentre.nocaped.com` | yes |
+| production | `shoplocal-images-production` | `https://images.merqify.com` | `aheed-images-production`, `images.aheedfoodcentre.nocaped.com` | yes |
+
+The Merqify hosts must repeat this pairing: a referer rule on the staging and production image
+hosts, and **none** on the dev host (`env-setup.md`, "Merqify account").
 
 ```bash
-S3_BUCKET="aheed-images-dev"
-CDN_BASE_URL="https://images.dev.aheedfoodcentre.nocaped.com"
+S3_BUCKET="shoplocal-images-dev"
+CDN_BASE_URL="https://images-dev.merqify.com"
 ```
 
 Mixing a row — the state `.env` and `.dev.vars` shipped in until P8.1b (#277) — gives you a bucket
@@ -563,6 +875,53 @@ not set it, so rotating it is a `wrangler` operation that needs no deploy.
 the token is absent under `NODE_ENV=production`, and the route returns `503` rather than running an
 unauthenticated sweep. Locally, leaving it unset is fine and the route simply refuses.
 
+#### Gated ticks and the `JOB_SIGNALS` KV namespace (#1324)
+
+Every job touches the main Neon database, and Neon stays awake for five minutes after any query. An
+unconditional 15-minute tick therefore kept each database awake about 8 hours a day with no traffic
+at all. The scheduler now has **two Cron Triggers** and decides per invocation which jobs to call:
+
+| Cron | Calls |
+|---|---|
+| `*/15 * * * *` (the tick) | `/api/jobs/reconcile-payments` and `/api/jobs/check-error-rate`, each **only when its marker says there is work**; never the reaper |
+| `0 3 * * *` (the daily run) | all three jobs, **ungated**, including `/api/jobs/reap-guest-carts`, which runs nowhere else |
+
+The markers live in a Cloudflare KV namespace bound as **`JOB_SIGNALS`** to **both** Workers. The app
+writes them only through `lib/job-signals.ts`, and the key names live in `lib/job-signal-keys.ts`:
+
+| Key | Written by | The tick calls the job when |
+|---|---|---|
+| `payment-sweep:due-at` | checkout (now + 40 min, only ever brought forward), staff Retry (now), and the sweep itself at the end of every run (the next instant anything is due, or the key is deleted) | the stored instant is at or before now |
+| `error-events:last-at` | every `ErrorEvent` write path, at most once per 5 minutes | the stored instant is within the last 20 minutes |
+
+**Every failure mode fails open.** If the binding is missing, a read throws, or a value does not parse,
+the tick calls the job, exactly as before #1324. A failed marker *write* is logged
+(`job-signal … failed`) and never fails the checkout or error capture that made it. Its cost is a
+skipped job, which the daily run bounds to a day. Each invocation logs one
+`scheduler tick cron=… ran=… skipped=…` line, so in `wrangler tail` a quiet tick (`ran=none`) is
+distinguishable from a dead one (no line).
+
+**Both namespaces exist (2026-10-31, `#1325`)** in the Merqify account: `aheed-jobs-staging` and
+`aheed-jobs-production`. Their ids are in **both** `wrangler.toml` files, under each environment's
+`[[env.<env>.kv_namespaces]]` block, so gating is on from the first deploy that carries them. To
+recreate one (a new account or cell), run this once per environment on the account the Workers
+deploy to:
+
+```bash
+wrangler kv namespace create aheed-jobs-staging
+wrangler kv namespace create aheed-jobs-production
+```
+
+Put each printed id into **both** `wrangler.toml` (the application Worker) and
+`workers/scheduler/wrangler.toml`, under `[[env.<env>.kv_namespaces]]` with `binding = "JOB_SIGNALS"`.
+**It must be the same id in both files.** Two different namespaces would leave the scheduler reading
+markers nobody writes, so it would skip the sweep forever and only the daily run would remain. The
+top-level (non-`--env`) block in each
+file holds a placeholder id that only `npm run preview` / `wrangler dev` use; no deploy reads it.
+
+**Cron Trigger budget:** the scheduler uses **4** of the Workers Free plan's **5** Cron Triggers per
+account (two per environment). The application Worker has none.
+
 ## Prerequisites (one-time)
 
 1. **Authenticate the GitHub CLI** — this is where GitHub issues the **one-time device code**:
@@ -617,12 +976,31 @@ standing directive, keep these present in **both production and staging until al
 complete**, and re-run `add` after any DB reset (e.g. the staging Neon-project move, or the ADR-004
 `vendorId` migration) so they aren't lost.
 
-It manages a **fixed roster of five** (`DEMO_ACCOUNTS` in the script, one per RBAC/vendor-scope
-case): `demo-admin@example.com` (platform ADMIN), `demo-staff@example.com` (vendor STAFF),
-`demo-customer@example.com` (plain shopper), `demo-store-admin@example.com` (vendor ADMIN — needed
-because a platform admin's `vendorRole` is never actually read, `#190`), and
-`demo-srimart-admin@example.com` (vendor ADMIN on SriMart specifically, the platform's second
-vendor — needed to test a cross-vendor write refusal in both directions, `#141`). They are created
+It manages a **fixed roster of six** (`DEMO_ACCOUNTS` in `scripts/lib/demo-roster.ts`, one per
+RBAC/vendor-scope case). **Since `#1356` (2026-10-31) the addresses are `demo-*@merqify.com`**, so
+their mail can be forwarded (see "Demo mail forwarding" below). The old `demo-*@example.com` form is
+the *legacy* address. `add` renames a legacy account in place, keeping its id, password, roles and
+orders, and refuses before any write if both forms exist. `remove` deletes both forms.
+
+The roster:
+
+- `demo-platform-admin@merqify.com`: platform ADMIN, the **only** platform admin, with no store
+  membership (`requireVendorRole` admits it at every store).
+- `demo-admin@merqify.com`: store (vendor) ADMIN only. **It was a platform admin until `#1319`
+  (2026-10-28).** Re-run `add` to demote it in an existing database, which keeps its store
+  membership.
+- `demo-staff@merqify.com`: vendor STAFF.
+- `demo-customer@merqify.com`: plain shopper.
+- `demo-store-admin@merqify.com`: vendor ADMIN. It was added because a platform admin's
+  `vendorRole` is never read (`#190`), and since `#1319` it does the same job as `demo-admin`.
+- `demo-srimart-admin@merqify.com`: vendor ADMIN on SriMart specifically, the platform's second
+  vendor. It is needed to test a cross-vendor write refusal in both directions (`#141`).
+
+After sign-in, `/signed-in` sends each account to its home: the platform admin to `/staff/platform`,
+staff and store admins of the host's store to `/staff`, and everyone else to `/account`.
+
+All six share **one password, `DEMO_ACCOUNT_PASSWORD`**, which is held in `.dev.vars` and
+`secrets/<env>.vars` and is never written into the repository or any document. They are created
 **through Better Auth** (hashed password, real sign-in) with `emailVerified` forced true and **no**
 verification email sent.
 
@@ -664,6 +1042,35 @@ DIRECT_URL=<env-direct-url> npm run demo:accounts -- remove
   **Don't assume local dev's demo roster matches `.dev.vars` just because one account signs in** —
   each account's password is set only once, at its own creation or last reset, so a partial drift
   across the five-account roster is exactly as possible locally as it is on staging.
+
+### Demo mail forwarding
+
+**Since `#1356`, mail to the six `demo-*@merqify.com` addresses is forwarded to the owner's
+forwarding inbox** by Cloudflare Email Routing. The destination address is deliberately not
+written here, because this repository is public. The owner sets it up once, in the Merqify
+Cloudflare account:
+
+1. **Enable Email Routing** on `merqify.com` (dashboard: `merqify.com` → Email → Email Routing).
+   It adds Cloudflare's MX records and an SPF record. `merqify.com` had no MX or TXT records on
+   2026-10-31, so nothing clashes.
+2. **Add the owner's forwarding inbox as a destination address** and click the verification link
+   Cloudflare sends to it.
+3. **Add one routing rule per roster address**, each forwarding to that destination. A catch-all
+   rule is acceptable instead, at the owner's choice, but it also forwards mail to any other
+   `@merqify.com` address.
+4. **If the destination is a Google Group, it must accept mail from non-members.** Otherwise
+   Cloudflare's verification email and every forwarded message wait in the group's moderation
+   queue.
+
+Check the MX records:
+`curl -sS -H "accept: application/dns-json" "https://cloudflare-dns.com/dns-query?name=merqify.com&type=MX"`
+lists `route1/2/3.mx.cloudflare.net`. Then send a message from a personal mailbox to
+`demo-customer@merqify.com` and confirm it arrives.
+
+**App emails do not arrive yet.** The app sends through Resend, which rejects recipients on
+unverified domains (see "Resend's API rejects `to` addresses" below). Forwarding starts carrying
+order and status emails once the sending domain lands (`#1217`, Cloudflare Email Service, or
+`#104`).
 
 ## Troubleshooting
 
@@ -865,6 +1272,8 @@ failures that section does not prevent, moved here from `CLAUDE.md` in #786.
   P7.5b's `/validate` (#262): the full webhook→confirm→email pipeline was proven live up to the
   point of the real Resend call; the literal HTML bytes still have to come from a unit test that
   parses the outbound request body, not from watching a real send succeed.
+  Since `#1356` the demo addresses are `demo-*@merqify.com`, which *can* receive mail (see "Demo
+  mail forwarding"). Resend still rejects them until the sending domain is verified (`#1217`/`#104`).
 - **`npm run preview`'s local Worker exposes a queryable log of its own `console.*` output — use it
   instead of trying to read `npm run preview`'s own terminal, which interleaves the dev server's own
   noise with application logs and scrolls past whatever a webhook call just printed.** `wrangler dev`

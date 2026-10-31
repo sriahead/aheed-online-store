@@ -15,6 +15,13 @@ export interface PlatformNavItem {
 
 export const PLATFORM_NAV_ITEMS: readonly PlatformNavItem[] = [
   {
+    // #1319 — the platform admin's home, where /signed-in lands them.
+    href: "/staff/platform",
+    label: "Platform overview",
+    description: "Platform-wide figures and every operator control in one place.",
+    icon: "shield-check",
+  },
+  {
     href: "/staff/platform/vendors",
     label: "Vendors & Tenants",
     description: "Manage registered store vendors, active catalogues, and status.",
@@ -43,6 +50,13 @@ export const PLATFORM_NAV_ITEMS: readonly PlatformNavItem[] = [
     label: "System Health",
     description: "Database connectivity, ping latency, and environment diagnostics.",
     icon: "gauge",
+  },
+  {
+    href: "/staff/platform/costs",
+    label: "Costs, Pricing & Business Model",
+    description:
+      "Running costs, competitor pricing, proposed pricing, profitability and business models.",
+    icon: "coins",
   },
   {
     href: "/staff/errors",

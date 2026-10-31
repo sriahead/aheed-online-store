@@ -17,7 +17,7 @@ import {
   type NetContentReviewRowData,
 } from "@/components/staff/NetContentReviewRow";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { Icon } from "@/components/icons/Icon";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 
 // Reads the session and this vendor's suggestions — must render per-request.
 export const dynamic = "force-dynamic";
@@ -110,7 +110,7 @@ export default async function StaffNetContentPage() {
         </h2>
         {rows.length === 0 ? (
           <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
-            <Icon name="ruler" className="mx-auto mb-3 h-8 w-8 text-primary-subtle" />
+            <IconMedallion icon="ruler" size={32} className="mx-auto mb-3" decorative />
             <p className="text-sm text-primary-muted">
               No suggestions waiting. New ones appear here when a store admin asks the AI.
             </p>

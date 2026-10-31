@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/icons/Icon";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 import { parseCsvToGrid } from "@/lib/catalogue-import/csv";
 import {
   validateStockFileAction,
@@ -163,7 +164,7 @@ export function StockFileImporter() {
       {/* Upload Box */}
       {!receipt && (
         <div className="rounded-2xl border-2 border-dashed border-black/15 bg-surface-muted p-8 text-center transition hover:border-primary/50">
-          <Icon name="upload" className="mx-auto mb-3 h-10 w-10 text-primary" />
+          <IconMedallion icon="upload" size={40} className="mx-auto mb-3" decorative />
           <h2 className="text-lg font-semibold text-primary">Upload Stock File</h2>
           <p className="mt-1 text-sm text-primary-muted">
             Drag and drop your catalogue file (.csv, .xlsx, .xls) up to 10,000 rows.
@@ -383,7 +384,7 @@ export function StockFileImporter() {
       {receipt && (
         <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-xs">
           <div className="flex items-center gap-3 text-action">
-            <Icon name="circle-check" className="h-8 w-8" />
+            <IconMedallion icon="circle-check" size={32} decorative />
             <div>
               <h3 className="text-xl font-bold text-primary">Import Completed Successfully</h3>
               <p className="text-xs text-primary-muted">

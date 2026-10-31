@@ -134,6 +134,14 @@ export const STAFF_NAV_GROUPS: readonly StaffNavGroup[] = [
         tone: "accent",
       },
       {
+        href: "/staff/icons",
+        label: "Visual Asset Gallery",
+        description: "Browse, preview, select, and manage all category images and UI icons.",
+        icon: "sparkles",
+        tier: "staff",
+        tone: "accent",
+      },
+      {
         href: "/staff/brands",
         label: "Brands",
         description: "The brands shoppers can filter by, and which products carry them.",
