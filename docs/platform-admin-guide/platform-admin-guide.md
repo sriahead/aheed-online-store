@@ -4,8 +4,8 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.6.0"
-updated: "2026-10-28"
+version: "1.7.0"
+updated: "2026-10-31"
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
 tags: ["admin", "platform", "technical", "multi-tenancy"]
@@ -30,8 +30,9 @@ If the sign-in link carried a `next` page on the same site, that page wins; a `n
 another site is ignored. Every page and action still checks the role on the server, so typing a
 URL never grants access the role does not have.
 
-The demo platform admin is `demo-platform-admin@example.com`. Since `#1319`,
-`demo-admin@example.com` is a store admin only (`docs/developer-portal/env-setup.md`).
+The demo platform admin is `demo-platform-admin@merqify.com`. Since `#1319`,
+`demo-admin@merqify.com` is a store admin only (`docs/developer-portal/env-setup.md`). The demo
+addresses moved from `@example.com` to `@merqify.com` on 2026-10-31 (`#1356`).
 
 ## Managing Vendors (Tenants)
 The platform is designed to host multiple independent store fronts (vendors) from a single database.

@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.26.0"
-updated: 2026-10-30
+version: "1.27.0"
+updated: 2026-10-31
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -937,19 +937,24 @@ standing directive, keep these present in **both production and staging until al
 complete**, and re-run `add` after any DB reset (e.g. the staging Neon-project move, or the ADR-004
 `vendorId` migration) so they aren't lost.
 
-It manages a **fixed roster of six** (`DEMO_ACCOUNTS` in the script, one per RBAC/vendor-scope
-case):
+It manages a **fixed roster of six** (`DEMO_ACCOUNTS` in `scripts/lib/demo-roster.ts`, one per
+RBAC/vendor-scope case). **Since `#1356` (2026-10-31) the addresses are `demo-*@merqify.com`**, so
+their mail can be forwarded (see "Demo mail forwarding" below). The old `demo-*@example.com` form is
+the *legacy* address. `add` renames a legacy account in place, keeping its id, password, roles and
+orders, and refuses before any write if both forms exist. `remove` deletes both forms.
 
-- `demo-platform-admin@example.com`: platform ADMIN, the **only** platform admin, with no store
+The roster:
+
+- `demo-platform-admin@merqify.com`: platform ADMIN, the **only** platform admin, with no store
   membership (`requireVendorRole` admits it at every store).
-- `demo-admin@example.com`: store (vendor) ADMIN only. **It was a platform admin until `#1319`
+- `demo-admin@merqify.com`: store (vendor) ADMIN only. **It was a platform admin until `#1319`
   (2026-10-28).** Re-run `add` to demote it in an existing database, which keeps its store
   membership.
-- `demo-staff@example.com`: vendor STAFF.
-- `demo-customer@example.com`: plain shopper.
-- `demo-store-admin@example.com`: vendor ADMIN. It was added because a platform admin's
+- `demo-staff@merqify.com`: vendor STAFF.
+- `demo-customer@merqify.com`: plain shopper.
+- `demo-store-admin@merqify.com`: vendor ADMIN. It was added because a platform admin's
   `vendorRole` is never read (`#190`), and since `#1319` it does the same job as `demo-admin`.
-- `demo-srimart-admin@example.com`: vendor ADMIN on SriMart specifically, the platform's second
+- `demo-srimart-admin@merqify.com`: vendor ADMIN on SriMart specifically, the platform's second
   vendor. It is needed to test a cross-vendor write refusal in both directions (`#141`).
 
 After sign-in, `/signed-in` sends each account to its home: the platform admin to `/staff/platform`,
@@ -998,6 +1003,35 @@ DIRECT_URL=<env-direct-url> npm run demo:accounts -- remove
   **Don't assume local dev's demo roster matches `.dev.vars` just because one account signs in** —
   each account's password is set only once, at its own creation or last reset, so a partial drift
   across the five-account roster is exactly as possible locally as it is on staging.
+
+### Demo mail forwarding
+
+**Since `#1356`, mail to the six `demo-*@merqify.com` addresses is forwarded to the owner's
+forwarding inbox** by Cloudflare Email Routing. The destination address is deliberately not
+written here, because this repository is public. The owner sets it up once, in the Merqify
+Cloudflare account:
+
+1. **Enable Email Routing** on `merqify.com` (dashboard: `merqify.com` → Email → Email Routing).
+   It adds Cloudflare's MX records and an SPF record. `merqify.com` had no MX or TXT records on
+   2026-10-31, so nothing clashes.
+2. **Add the owner's forwarding inbox as a destination address** and click the verification link
+   Cloudflare sends to it.
+3. **Add one routing rule per roster address**, each forwarding to that destination. A catch-all
+   rule is acceptable instead, at the owner's choice, but it also forwards mail to any other
+   `@merqify.com` address.
+4. **If the destination is a Google Group, it must accept mail from non-members.** Otherwise
+   Cloudflare's verification email and every forwarded message wait in the group's moderation
+   queue.
+
+Check the MX records:
+`curl -sS -H "accept: application/dns-json" "https://cloudflare-dns.com/dns-query?name=merqify.com&type=MX"`
+lists `route1/2/3.mx.cloudflare.net`. Then send a message from a personal mailbox to
+`demo-customer@merqify.com` and confirm it arrives.
+
+**App emails do not arrive yet.** The app sends through Resend, which rejects recipients on
+unverified domains (see "Resend's API rejects `to` addresses" below). Forwarding starts carrying
+order and status emails once the sending domain lands (`#1217`, Cloudflare Email Service, or
+`#104`).
 
 ## Troubleshooting
 
@@ -1199,6 +1233,8 @@ failures that section does not prevent, moved here from `CLAUDE.md` in #786.
   P7.5b's `/validate` (#262): the full webhook→confirm→email pipeline was proven live up to the
   point of the real Resend call; the literal HTML bytes still have to come from a unit test that
   parses the outbound request body, not from watching a real send succeed.
+  Since `#1356` the demo addresses are `demo-*@merqify.com`, which *can* receive mail (see "Demo
+  mail forwarding"). Resend still rejects them until the sending domain is verified (`#1217`/`#104`).
 - **`npm run preview`'s local Worker exposes a queryable log of its own `console.*` output — use it
   instead of trying to read `npm run preview`'s own terminal, which interleaves the dev server's own
   noise with application logs and scrolls past whatever a webhook call just printed.** `wrangler dev`
