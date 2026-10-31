@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.156.0"
+version: "1.157.0"
 updated: 2026-10-31
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -38,6 +38,26 @@ Build Notes across the pre-validation Clear. Remove or replace stale information
 reconciliation. If overall project state did not materially change, leave this file untouched.
 
 ## Last Verified
+
+- **2026-10-31 (`#1341` + `#1325`): PRODUCTION IS ON MERQIFY.** Promotion PR #1366, merge
+  `ff1c13b`. `main` and `staging` are level again.
+  - **Hosts.** `aheed.merqify.com` and `srimart.merqify.com` report `ff1c13b`, `db.ok`, and the
+    reference database reachable. The database is Neon `ep-dry-mouse`, filled from old staging.
+    Images are on `images.merqify.com`.
+  - **Scheduler gating is on in both environments.** `JOB_SIGNALS` KV namespaces are bound; idle
+    ticks log `ran=none`.
+  - **The six demo logins exist on production** (until go-live, `#1332`).
+  - **Still owed by the owner:**
+    - sign up on `aheed.merqify.com`, then `grant-role --platform-admin` against
+      `secrets/merqify-production.vars`;
+    - replace the two `nocaped` sender emails (runbook step 9, after `#1217`);
+    - confirm the 2026-11-03 `sync-reference-data` run (`#1123`).
+  - **Next in P12:** workstream C, freeing Nocaped (`#1338`). Remove things one at a time, with
+    approval. Old production (`#1289`) is untouched.
+  - **Follow-ups:** `#1367`, `#1368`, `#1369`.
+  - **This machine's network drops IPv6 connections to Cloudflare.** Use
+    `NODE_OPTIONS=--dns-result-order=ipv4first`; see `env-setup.md`.
+  - **Sanity check:** `env-setup.md`, "Sanity check: production after the cut-over".
 
 - **2026-10-31 (`#1356` Document): STAGING IS LIVE ON MERQIFY, and the docs guard passes.**
   - **Staging serves `a9685fa`** on `aheed-staging.merqify.com` and `srimart-staging.merqify.com`

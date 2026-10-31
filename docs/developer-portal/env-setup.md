@@ -4,7 +4,7 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.31.0"
+version: "1.32.0"
 updated: 2026-10-31
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
@@ -232,9 +232,14 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.
      runs inside one transaction: on any error the script prints `ROLLED BACK:` and the target is
      exactly as step 2 left it. On success it prints `committed: <n> ms` before re-counting.
    - **The image copy (`--copy-images`) runs after the commit and cannot be rolled back.** If it
-     fails after `committed:`, the rows stay, and a re-run refuses as `occupied`. Finish the images
-     by hand, or reset the target (`scratch`: Neon "Reset from parent"; otherwise recreate the
-     database) and run step 2 again.
+     fails after `committed:`, the rows stay, and a re-run of `--apply` refuses as `occupied`.
+     **Resume with the same command, `--verify-only --copy-images` instead of `--apply`:** it
+     re-plans, re-counts and copies every image again (writes are by key, so repeats are
+     harmless). This happened in production on 2026-10-31 (a network timeout) and the resume
+     copied 151/151.
+   - **On a flaky connection, prefer IPv4:** `NODE_OPTIONS=--dns-result-order=ipv4first`. Every
+     timeout on 2026-10-31 (image copy, two Worker secrets, `wrangler tail`) was an IPv6 connect
+     to Cloudflare from this machine; re-running with IPv4 first succeeded each time.
    - The image copy reads the old bucket with the `S3_*` keys already in `secrets/staging.vars`
      (bucket `aheed-images-staging` in the Nocaped account). Those keys must still work there.
 4. **Copy:** the same command with `--apply --copy-images`. It ends by re-counting every model; any
@@ -339,6 +344,29 @@ promotion PR:
 
 Then merge the promotion and run step 7 on the production hosts. Old production (`#1289`) is never
 read, and the new production database is filled from old staging (owner decision, 2026-10-29).
+
+**Also set by hand before the promotion:** `configure-env` ignores `JOB_INVOCATION_TOKEN` and
+`WORKERS_AI_PLAN`. Put the token on **both** production Workers (app and
+`--config workers/scheduler/wrangler.toml`) and the plan on the app, piping each value to
+`wrangler secret put` with the Merqify account variables. `grant-role` for the owner's account comes
+**after** the promotion: the account must exist, and sign-up needs the live host.
+
+### Sanity check: production after the cut-over (`#1341`)
+
+Run straight after any promotion to `main`, or whenever production is in doubt. Last run:
+2026-10-31, after PR #1366 (`ff1c13b`): all passed.
+
+| # | Check | Expect |
+|---|-------|--------|
+| 1 | `gh run list --branch main --limit 2` | `deploy-production` and `deploy-docs-internal` succeeded on the merge commit |
+| 2 | `curl -sS https://aheed.merqify.com/api/health`, then the same for `srimart.merqify.com` | `status: ok`, `commit` = the merge, `db.ok: true`, `reference.reachable: true`, 2 `sources`, `cdnBase` `https://images.merqify.com` |
+| 3 | `curl -sS -D - https://aheed.merqify.com/login`, and `/search?q=rice` | `HTTP/1.1 200` |
+| 4 | `POST /api/auth/sign-in/email` as `demo-platform-admin@merqify.com` (aheed) and `demo-srimart-admin@merqify.com` (srimart), body built from `DEMO_ACCOUNT_PASSWORD` in `secrets/merqify-production.vars` without echoing it | `HTTP/1.1 200`; an `@example.com` address gives `401` |
+| 5 | `wrangler tail aheed-scheduler-production` with the production file's Cloudflare variables, across a quarter hour | `scheduler tick cron=*/15 * * * * ran=none …` when idle |
+
+Any other result: stop, check `deploy-production`'s log and the Worker secrets, and reopen `#1341`.
+A `curl: (35) Connection was reset` from this machine is the local network: test
+`https://www.cloudflare.com/cdn-cgi/trace` the same way before blaming the site.
 
 ### Rollback
 
