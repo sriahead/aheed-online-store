@@ -117,7 +117,7 @@ describe("Icon Credits & Cart Tooltip Polish (#1257)", () => {
 
     // Page title and breadcrumbs
     expect(screen.getByRole("heading", { level: 1 }).textContent).toContain(
-      "Icon Credits & Licences",
+      "Third-Party Credits & Licences",
     );
 
     // All 4 required third-party libraries

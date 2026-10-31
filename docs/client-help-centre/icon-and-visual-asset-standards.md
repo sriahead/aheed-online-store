@@ -168,7 +168,7 @@ The table lists every slot (the source of truth is `lib/icon-slots.ts`; a test k
 | `halal-certified` | 3D icon | Landing trust strip |
 | `postcode-search` | 3D icon | Delivery location dialog |
 | `contact-follow` | 3D icon | Floating contact button |
-| `rewards-gift` | 3D icon | Icon credits page |
+| `rewards-gift` | 3D icon | Third-party credits page |
 | `fruit-veg` | Department (3D) | Managed per category: generate or deactivate it on the category's page |
 | `halal-meat` | Department (3D) | Managed per category: generate or deactivate it on the category's page |
 | `bakery` | Department (3D) | Managed per category: generate or deactivate it on the category's page |

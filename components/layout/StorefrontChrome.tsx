@@ -45,6 +45,7 @@ export async function StorefrontChrome({
   // both FloatingContact and the footer's channel row (#1060), so they always list the same set.
   const assistantAvailable = profile.assistantEnabled && profile.whatsappNumber !== null;
   const activeSlotIcons = await getActiveSlotAssetsForVendor(profile.id).catch(() => ({}));
+  const platformBranding = getPlatformBrandingEnv();
 
   return (
     <ActiveSlotIconsProvider initialIcons={activeSlotIcons}>
@@ -63,7 +64,8 @@ export async function StorefrontChrome({
               {/* #1055 — vendor-configured footer; every value comes from `profile` (no extra query). */}
               <StorefrontFooter
                 profile={profile}
-                platformName={getPlatformBrandingEnv().PLATFORM_NAME}
+                platformName={platformBranding.PLATFORM_NAME}
+                platformTagline={platformBranding.PLATFORM_TAGLINE}
                 assistantAvailable={assistantAvailable}
               />
               <FloatingContact

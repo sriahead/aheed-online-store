@@ -113,20 +113,31 @@ export function getEmailEnv(): EmailEnv {
 }
 
 // #1055 — the storefront footer's "Powered by {name}" line. Its own schema, like email and
-// payments above, so reading it never depends on DATABASE_URL or BETTER_AUTH_SECRET. Optional
-// everywhere: unset (or blank) HIDES the line rather than falling back to a written-in name. The
-// value lives in wrangler.toml's per-environment `[vars]`, not in code.
-const platformBrandingSchema = z.object({
-  PLATFORM_NAME: z
+// payments above, so reading it never depends on DATABASE_URL or BETTER_AUTH_SECRET. The platform
+// is Merqify (the operator, not a vendor), so unset or blank falls back to the platform's own name
+// and tagline in every environment, local included. wrangler.toml's per-environment `[vars]` sets
+// both explicitly; a value there overrides the default.
+export const DEFAULT_PLATFORM_NAME = "Merqify";
+export const DEFAULT_PLATFORM_TAGLINE = "Your Merchandise, Digitised Quickly";
+
+const orDefault = (fallback: string) =>
+  z
     .string()
     .optional()
-    .transform((v) => (v && v.trim() !== "" ? v.trim() : undefined)),
+    .transform((v) => (v && v.trim() !== "" ? v.trim() : fallback));
+
+const platformBrandingSchema = z.object({
+  PLATFORM_NAME: orDefault(DEFAULT_PLATFORM_NAME),
+  PLATFORM_TAGLINE: orDefault(DEFAULT_PLATFORM_TAGLINE),
 });
 
 export type PlatformBrandingEnv = z.infer<typeof platformBrandingSchema>;
 
 export function getPlatformBrandingEnv(): PlatformBrandingEnv {
-  return platformBrandingSchema.parse({ PLATFORM_NAME: readEnv("PLATFORM_NAME") });
+  return platformBrandingSchema.parse({
+    PLATFORM_NAME: readEnv("PLATFORM_NAME"),
+    PLATFORM_TAGLINE: readEnv("PLATFORM_TAGLINE"),
+  });
 }
 
 const paymentSchema = z

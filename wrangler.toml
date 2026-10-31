@@ -82,9 +82,10 @@ id = "20aab8dee7f342809679d36f1d96fc6c"
 # secrets) — a `[vars]` entry here is what makes it durable.
 [env.staging.vars]
 UK_LOCATION_REF_POSTCODE_AREAS = "MK,RG"
-# #1055 — the storefront footer's "Powered by" name. Placeholder until the owner supplies it;
-# unset hides the line. Non-secret config, so it lives here (see the note above).
-PLATFORM_NAME = "[PLATFORM NAME]"
+# #1055 — the storefront footer's "Powered by" line: the platform's name and tagline. lib/config.ts
+# falls back to the same two values when unset. Non-secret config, so it lives here (see above).
+PLATFORM_NAME = "Merqify"
+PLATFORM_TAGLINE = "Your Merchandise, Digitised Quickly"
 
 # ---- Production ----------------------------------------------------------
 [env.production]
@@ -120,7 +121,8 @@ id = "ba3dd6efb50445bc9cf856664fe6c1c5"
 [env.production.vars]
 UK_LOCATION_REF_POSTCODE_AREAS = "MK,RG"
 SEO_INDEXABLE = "true"
-PLATFORM_NAME = "[PLATFORM NAME]"
+PLATFORM_NAME = "Merqify"
+PLATFORM_TAGLINE = "Your Merchandise, Digitised Quickly"
 
 # NOTE: secrets (DATABASE_URL, UK_LOCATION_REF_DATABASE_URL, S3_*, STRIPE_*, BETTER_AUTH_SECRET)
 # are NOT set here. Add them per environment with:  wrangler secret put NAME --env staging|production
