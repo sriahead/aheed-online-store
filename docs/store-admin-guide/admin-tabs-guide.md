@@ -692,3 +692,16 @@ this page lists them but does not grant access to them.
 
 **What happens after changes are saved:** Nothing is saved here. The page changes only when a
 developer edits the catalogue and deploys it.
+
+### Sanity check: Feature Catalogue (`#1374`)
+
+Run after deploying changes to `/staff/feature-catalogue` or `features/feature-catalogue/`. Last run: 2026-10-31, after PR #1375 (`14b61da`): all passed.
+
+| # | Check | Expect |
+|---|---|---|
+| 1 | `npx vitest run --maxWorkers=4 tests/feature-catalogue.test.ts` | 95 tests pass; all routes and menu pages verified |
+| 2 | `npx vitest run --maxWorkers=4 tests/operator-doc-coverage.test.ts` | All operator doc coverage tests pass |
+| 3 | `curl.exe -sS -I https://aheed-staging.merqify.com/staff/feature-catalogue` | Anonymous request returns `307 Temporary Redirect` to `/login` |
+| 4 | Sign in to staging as `demo-admin@merqify.com` and open `/staff/feature-catalogue` | HTTP 200; renders Customer, Admin, Staff, Platform Admin sections and 'Not ready to demonstrate' table |
+| 5 | Sign in to staging as `demo-staff@merqify.com` and open `/staff/feature-catalogue` | HTTP 200; renders 'Admin only' PanelRefusal ('This area is restricted to store administrators') |
+

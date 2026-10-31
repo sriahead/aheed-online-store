@@ -8,6 +8,8 @@ every branch merges.
 
 ### Added
 
+- **Sanity check for the Feature Catalogue and roadmap recording** (issue `#1374`, spec `specs/2026-10-31-feature-catalogue/`). Document pass records the staging merge in `specs/roadmap.md` and adds the canonical sanity check guide to `docs/store-admin-guide/admin-tabs-guide.md`.
+
 - **Feature Catalogue under the Admin menu** (issue `#1374`, spec `specs/2026-10-31-feature-catalogue/`). `/staff/feature-catalogue` is a demo reference of what the platform really does, organised by role (Customer, Admin, Staff, Platform Admin) and business area. Each feature gives what it does, its business value and a demo talking point, with an honest Live / Partial / Unavailable status and a "Not ready to demonstrate" table. Store admins and above see it under Insights & Help. The content is `features/feature-catalogue/catalogue.ts`; `tests/feature-catalogue.test.ts` fails if a named route disappears or a menu page is left out.
 
 ### Changed
