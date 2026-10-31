@@ -88,6 +88,20 @@ describe("StorefrontFooter (#1055)", () => {
     expect(footer.textContent).not.toContain("Registered office");
   });
 
+  it("shows the platform tagline after the name on the Powered by line", () => {
+    render(
+      <StorefrontFooter
+        profile={BARE as unknown as VendorProfile}
+        platformName="Merqify"
+        platformTagline="Your Merchandise, Digitised Quickly"
+        assistantAvailable={false}
+      />,
+    );
+    expect(screen.getByRole("contentinfo").textContent).toContain(
+      "Powered by Merqify · Your Merchandise, Digitised Quickly",
+    );
+  });
+
   it("builds the directions link from name and address", () => {
     const footer = renderFooter(SEEDED);
     const links = within(footer).getAllByRole("link", { name: /get directions/i });
@@ -270,16 +284,16 @@ describe("StorefrontFooter Legal row (#1107 R12)", () => {
   });
 });
 
-describe("StorefrontFooter icon credits (#1223 R67, #1257)", () => {
-  it("links to the icon credits page for a vendor with no optional data and no platform name", () => {
+describe("StorefrontFooter third-party credits (#1223 R67, #1257)", () => {
+  it("links to the credits page for a vendor with no optional data and no platform name", () => {
     const footer = renderFooter(BARE);
-    const link = within(footer).getByRole("link", { name: "Icon credits" });
+    const link = within(footer).getByRole("link", { name: "Third-party credits" });
     expect(link.getAttribute("href")).toBe("/icon-credits");
   });
 
   it("keeps the 44px tap height below md and sits outside the Legal nav", () => {
     const footer = renderFooter(BARE);
-    const link = within(footer).getByRole("link", { name: "Icon credits" });
+    const link = within(footer).getByRole("link", { name: "Third-party credits" });
     expect(link.className).toContain("min-h-tap");
     expect(link.closest("nav[aria-label='Legal']")).toBeNull();
   });

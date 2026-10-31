@@ -12,8 +12,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const profile = await getCurrentVendorProfile();
   const vendorName = profile?.name ?? "Aheed Food Centre";
   return {
-    title: `Icon Credits & Third-Party Licences — ${vendorName}`,
-    description: `Licensing information, third-party attributions, and design acknowledgments for icons and artwork used at ${vendorName}.`,
+    title: `Third-Party Credits & Licences — ${vendorName}`,
+    description: `Licensing information and attributions for the third-party libraries, icons and artwork used at ${vendorName}.`,
   };
 }
 
@@ -116,8 +116,7 @@ const GENERATED_ICONS = [
 export default async function IconCreditsPage() {
   const profile = await getCurrentVendorProfile();
   const vendorName = profile?.name ?? "Aheed Food Centre";
-  const { PLATFORM_NAME } = getPlatformBrandingEnv();
-  const platformName = PLATFORM_NAME || vendorName || "Aheed Platform";
+  const { PLATFORM_NAME: platformName } = getPlatformBrandingEnv();
 
   return (
     <PageContainer width="standard" className="text-primary">
@@ -126,15 +125,15 @@ export default async function IconCreditsPage() {
         <Link href="/" className="hover:underline">
           Home
         </Link>{" "}
-        / <span className="text-primary font-medium">Icon Credits</span>
+        / <span className="text-primary font-medium">Third-Party Credits</span>
       </nav>
 
       {/* Page Header */}
       <header className="border-b border-black/10 pb-6 mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight">Icon Credits & Licences</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">Third-Party Credits & Licences</h1>
         <p className="mt-2 text-sm text-primary-muted leading-relaxed max-w-2xl">
           We believe in attribution and transparency. Below is a comprehensive record of all
-          third-party icon libraries and generated artwork that enhance {vendorName}.
+          third-party libraries, icon sets and generated artwork that enhance {vendorName}.
         </p>
       </header>
 

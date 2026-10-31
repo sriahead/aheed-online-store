@@ -8,7 +8,11 @@ every branch merges.
 
 ### Changed
 
+- **The platform is named Merqify by default, and "Icon credits" becomes "Third-party credits"** (issue `#1371`). The footer reads "Powered by Merqify · Your Merchandise, Digitised Quickly" in every environment: `PLATFORM_NAME` and a new `PLATFORM_TAGLINE` fall back to those values when unset (unset used to hide the line), and both `wrangler.toml` environments set them explicitly. The credits page heading and title are now "Third-Party Credits & Licences"; its `/icon-credits` URL is unchanged.
+
 - **Scheduler gating is switched on, and production moves to Merqify** (issues `#1325` and `#1341`, spec `specs/2026-10-31-production-cutover/`). The `JOB_SIGNALS` KV namespaces `aheed-jobs-staging` and `aheed-jobs-production` now exist in the Merqify account and are bound in both `wrangler.toml` files, so an idle 15-minute tick no longer wakes the database (`ran=none`). The production cut-over (new database filled from old staging, secrets, promotion) follows the runbook, `env-setup.md`, "Production cut-over".
+
+  **Promoted to production (PR #1366, `ff1c13b`):** `aheed.merqify.com` and `srimart.merqify.com` now serve from the Merqify account and the new Neon database, with health, sign-in and gated ticks verified. The runbook gains a production sanity check, the image-copy resume (`--verify-only --copy-images`) and the IPv4-first workaround for this machine's network.
 
 - **A failed `migrate-to-new-neon --apply` now rolls back** (issue `#1333`, spec `specs/2026-10-31-atomic-neon-copy/`). The seeded-vendor delete and every insert run inside one transaction (`scripts/lib/neon-migration-apply.ts`), so the target is left exactly as `migrate deploy` made it and the same command can be re-run. This makes the copy safe against the real production database in `#1341`, which cannot be reset from a parent branch. `--simulate-failure` (only with `--apply`) proves the rollback on a disposable target. The image copy still runs after the commit and is not rolled back.
 

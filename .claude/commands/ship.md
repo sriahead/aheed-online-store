@@ -26,7 +26,9 @@ Follow the **Ship** stage of `specs/sdd-workflow.md` (read it if not already in 
    line** (`closes #93` newline `closes #96`, not `Closes #93, #96`) — GitHub only honours the
    first in a comma-separated list (#112), and on PR #953 even `closes #A, closes #B` on one line
    linked nothing. **Before asking for the merge**, check
-   `gh pr view <N> --json closingIssuesReferences` lists every issue; after the deploy, confirm
+   `gh pr view <N> --json closingIssuesReferences` lists every issue — **and nothing else**: GitHub
+   ignores negation, so "Does NOT close #104" closes `#104` (PR #1366, caught before merge). Name
+   issues you are leaving open without a keyword ("Left open: 104, 113"). After the deploy, confirm
    each one is actually closed.
 7. After merging, confirm the relevant deploy workflow (`deploy-staging`/`deploy-production`)
    actually completed — don't assume success from the merge alone. Then read that host's
