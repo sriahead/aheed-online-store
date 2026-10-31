@@ -63,8 +63,9 @@ R7. When the transaction rejects for any reason, the script:
 
 R8. `--simulate-failure` without `--apply`, or together with `--verify-only`, prints a line
     starting `REFUSING:` that names `--simulate-failure`, and exits 1. It does this before any env
-    file is read, so it holds with non-existent `--from`/`--to` paths and prints no `from:`/`to:`
-    host line. With `--apply`, the flag reaches `applyPlan` as `simulateFailure: true`.
+    file is read, so it holds with non-existent `--from`/`--to` paths and prints no `source (read only):` or
+    `target (…):` line. (Amended at Build: the script's host lines carry those labels, not
+    `from:`/`to:`.) With `--apply`, the flag reaches `applyPlan` as `simulateFailure: true`.
 
 R9. **Live rollback.** On a fresh target (`secrets/validate-1333.vars`, see `plan.md`), with source
     `secrets/staging.vars`, `--apply --simulate-failure` (no `--copy-images`):
@@ -73,7 +74,7 @@ R9. **Live rollback.** On a fresh target (`secrets/validate-1333.vars`, see `pla
     - exits non-zero.
 
     A dry run against the same target straight after again prints `target vendors: seeded-only`
-    and no `REFUSING:`. The printed `to:` host equals the host in `secrets/validate-1333.vars`, and
+    and no `REFUSING:`. The host on the printed `target (staging):` line equals the host in `secrets/validate-1333.vars`, and
     differs from both `DIRECT_URL` hosts in `secrets/merqify-staging.vars` and
     `secrets/merqify-production.vars`.
 

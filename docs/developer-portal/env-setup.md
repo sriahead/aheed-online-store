@@ -4,7 +4,7 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.27.0"
+version: "1.28.0"
 updated: 2026-10-31
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
@@ -228,9 +228,13 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.
      nothing references it. A database holding any other store, or a seeded vendor that already
      owns rows, is refused. Do not hand-empty a target to get past a refusal: deleting a vendor
      cascades into the rows it owns.
-   - **A failed `--apply` leaves a partial target. Reset it, do not re-run it:** on the `scratch`
-     branch use Neon "Reset from parent", then run step 2 again. Without a `scratch` branch,
-     recreate the database first, then run step 2 again.
+   - **A failed `--apply` rolls back, so the same command can be re-run** (`#1333`). Every write
+     runs inside one transaction: on any error the script prints `ROLLED BACK:` and the target is
+     exactly as step 2 left it. On success it prints `committed: <n> ms` before re-counting.
+   - **The image copy (`--copy-images`) runs after the commit and cannot be rolled back.** If it
+     fails after `committed:`, the rows stay, and a re-run refuses as `occupied`. Finish the images
+     by hand, or reset the target (`scratch`: Neon "Reset from parent"; otherwise recreate the
+     database) and run step 2 again.
    - The image copy reads the old bucket with the `S3_*` keys already in `secrets/staging.vars`
      (bucket `aheed-images-staging` in the Nocaped account). Those keys must still work there.
 4. **Copy:** the same command with `--apply --copy-images`. It ends by re-counting every model; any
