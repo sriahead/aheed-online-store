@@ -6,6 +6,10 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Feature Catalogue under the Admin menu** (issue `#1374`, spec `specs/2026-10-31-feature-catalogue/`). `/staff/feature-catalogue` is a demo reference of what the platform really does, organised by role (Customer, Admin, Staff, Platform Admin) and business area. Each feature gives what it does, its business value and a demo talking point, with an honest Live / Partial / Unavailable status and a "Not ready to demonstrate" table. Store admins and above see it under Insights & Help. The content is `features/feature-catalogue/catalogue.ts`; `tests/feature-catalogue.test.ts` fails if a named route disappears or a menu page is left out.
+
 ### Changed
 
 - **The platform is named Merqify by default, and "Icon credits" becomes "Third-party credits"** (issue `#1371`). The footer reads "Powered by Merqify · Your Merchandise, Digitised Quickly" in every environment: `PLATFORM_NAME` and a new `PLATFORM_TAGLINE` fall back to those values when unset (unset used to hide the line), and both `wrangler.toml` environments set them explicitly. The credits page heading and title are now "Third-Party Credits & Licences"; its `/icon-credits` URL is unchanged.

@@ -315,6 +315,15 @@ export const STAFF_NAV_GROUPS: readonly StaffNavGroup[] = [
         tone: "accent",
       },
       {
+        href: "/staff/feature-catalogue",
+        label: "Feature Catalogue",
+        description:
+          "What the platform does for each role, with its status and a demo talking point.",
+        icon: "list-checks",
+        tier: "admin",
+        tone: "accent",
+      },
+      {
         href: "/staff/runbook",
         label: "Runbook",
         description: "Zero-trust guide to store operations and procedures.",
