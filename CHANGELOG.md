@@ -8,6 +8,8 @@ every branch merges.
 
 ### Changed
 
+- **Scheduler gating is switched on, and production moves to Merqify** (issues `#1325` and `#1341`, spec `specs/2026-10-31-production-cutover/`). The `JOB_SIGNALS` KV namespaces `aheed-jobs-staging` and `aheed-jobs-production` now exist in the Merqify account and are bound in both `wrangler.toml` files, so an idle 15-minute tick no longer wakes the database (`ran=none`). The production cut-over (new database filled from old staging, secrets, promotion) follows the runbook, `env-setup.md`, "Production cut-over".
+
 - **A failed `migrate-to-new-neon --apply` now rolls back** (issue `#1333`, spec `specs/2026-10-31-atomic-neon-copy/`). The seeded-vendor delete and every insert run inside one transaction (`scripts/lib/neon-migration-apply.ts`), so the target is left exactly as `migrate deploy` made it and the same command can be re-run. This makes the copy safe against the real production database in `#1341`, which cannot be reset from a parent branch. `--simulate-failure` (only with `--apply`) proves the rollback on a disposable target. The image copy still runs after the commit and is not rolled back.
 
   Merged to staging (PR #1360). The live rollback check passed on Neon on 2026-10-31: a forced failure rolled everything back, and a clean re-run committed in 720 ms with every model matching the plan.

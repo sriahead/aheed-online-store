@@ -39,15 +39,11 @@ name = "aheed-scheduler-staging"
 [env.staging.triggers]
 crons = ["*/15 * * * *", "0 3 * * *"]
 
-# JOB_SIGNALS for staging: NOT YET CREATED — owner action (#1324, plan.md).
-# Until it exists this Worker deploys without the binding and every tick runs
-# every job, exactly as before #1324. To enable gating:
-#   wrangler kv namespace create aheed-jobs-staging
-# then put the printed id in BOTH files — here and the application Worker's
-# root wrangler.toml — under the same binding name:
-#   [[env.staging.kv_namespaces]]
-#   binding = "JOB_SIGNALS"
-#   id = "<the id wrangler printed>"
+# #1324/#1325 — JOB_SIGNALS for staging: KV namespace `aheed-jobs-staging` in the Merqify account
+# (created 2026-10-31). The SAME id is in both this file and the other wrangler.toml.
+[[env.staging.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "20aab8dee7f342809679d36f1d96fc6c"
 
 [env.staging.vars]
 APP_BASE_URL = "https://aheed-staging.merqify.com"
@@ -59,15 +55,11 @@ name = "aheed-scheduler-production"
 [env.production.triggers]
 crons = ["*/15 * * * *", "0 3 * * *"]
 
-# JOB_SIGNALS for production: NOT YET CREATED — owner action (#1324, plan.md).
-# Until it exists this Worker deploys without the binding and every tick runs
-# every job, exactly as before #1324. To enable gating:
-#   wrangler kv namespace create aheed-jobs-production
-# then put the printed id in BOTH files — here and the application Worker's
-# root wrangler.toml — under the same binding name:
-#   [[env.production.kv_namespaces]]
-#   binding = "JOB_SIGNALS"
-#   id = "<the id wrangler printed>"
+# #1324/#1325 — JOB_SIGNALS for production: KV namespace `aheed-jobs-production` in the Merqify account
+# (created 2026-10-31). The SAME id is in both this file and the other wrangler.toml.
+[[env.production.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "ba3dd6efb50445bc9cf856664fe6c1c5"
 
 [env.production.vars]
 APP_BASE_URL = "https://aheed.merqify.com"
