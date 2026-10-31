@@ -190,7 +190,7 @@ neutral decorative `tag` glyph, never a picture of food on a non-grocery vendor 
 
 Licences for every set in use, and the Noto Emoji note (its upstream licence URL returns 404, so the
 canonical Apache 2.0 text is used), are in `public/third-party-icon-licenses.txt`, linked from the storefront
-footer as "Icon credits".
+footer as "Third-party credits".
 
 ### The circular medallion — the only frame (#1288)
 

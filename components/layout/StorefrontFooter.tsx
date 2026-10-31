@@ -58,10 +58,13 @@ function Column({ title, children }: { title: string; children: ReactNode }) {
 export function StorefrontFooter({
   profile,
   platformName,
+  platformTagline,
   assistantAvailable,
 }: {
   profile: VendorProfile;
   platformName: string | undefined;
+  /** Shown after the name on the "Powered by" line; ignored when there is no name. */
+  platformTagline?: string;
   /** #1015 — the same value `StorefrontChrome` gives `FloatingContact`, so both list one set. */
   assistantAvailable: boolean;
 }) {
@@ -287,12 +290,17 @@ export function StorefrontFooter({
                 <span key={part}> · {part}</span>
               ))}
             </p>
-            {platformName && <p>Powered by {platformName}</p>}
-            {/* #1223 R67 — attribution for the icon sets, a static file the generator writes. Platform
-                attribution rather than vendor copy, so unlike the elements above it is never hidden
-                (#239 is about vendor fields). A plain anchor: the target is a file, not a route. */}
+            {platformName && (
+              <p>
+                Powered by {platformName}
+                {platformTagline && <span> · {platformTagline}</span>}
+              </p>
+            )}
+            {/* #1223 R67 — attribution for third-party libraries (icon sets and their licences).
+                Platform attribution rather than vendor copy, so unlike the elements above it is
+                never hidden (#239 is about vendor fields). The route keeps its original path. */}
             <Link href="/icon-credits" className={LINK}>
-              Icon credits
+              Third-party credits
             </Link>
           </div>
 

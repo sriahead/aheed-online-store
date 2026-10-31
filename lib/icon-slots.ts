@@ -158,7 +158,7 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
     kind: "3d",
     label: "Rewards gift",
     icon3d: "rewards-gift",
-    surfaces: ["Icon credits page"],
+    surfaces: ["Third-party credits page"],
   },
 ];
 
