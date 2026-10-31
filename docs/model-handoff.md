@@ -54,8 +54,9 @@ reconciliation. If overall project state did not materially change, leave this f
   - **Old Nocaped production is still down:** `/api/health` `degraded`, Neon HTTP 402 quota (`#1289`);
     replaced by the move, not repaired.
   - **`#1333` (atomic `migrate-to-new-neon --apply`, blocker of `#1341`) is MERGED TO STAGING (PR
-    #1360, `c929975`), board `In Review`; staging serves `c929975`.** Its live rollback check (R9/R10)
-    is UNVERIFIED and must pass before `#1341`'s production copy. It needs the owner to
+    #1360, `c929975`), board `In Review`.** Its live rollback check (R9/R10) PASSED on 2026-10-31 on a
+    throwaway database (`committed: 720 ms`), so `#1341` may use the copy. Guide: `env-setup.md`,
+    "Sanity check: the copy rolls back". The earlier blocker was that it needed the owner to
     create an empty database on `Shoplocal Staging` → `scratch` and put its URL in
     `secrets/validate-1333.vars`. `scratch`'s "Reset from parent" now copies filled staging, so it
     is no longer a clean target for the copy. Detail: `specs/2026-10-31-atomic-neon-copy/build-notes.md`.
