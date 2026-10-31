@@ -73,3 +73,34 @@ branch `feature/1333-atomic-neon-copy` (from `staging` at `9d59b74`). Issue `#13
 - **Locally green, CI not yet run:** `lint`, `typecheck`, prettier, and the full suite with
   `npx vitest run --maxWorkers=4` run alone (366 files, 5,343 tests).
 - **Deferred:** a write guard for the NEW Merqify hosts is `#1359` (P12, needs `/propose`).
+
+## Validation record
+
+**Pass 1, 2026-10-31, NOT independent.** It ran in the same Opus 5.5 context that built the slice:
+the owner continued without `/clear` (the standing "validate in place under 60% context" preference).
+Commit under test: `d47e20d`.
+
+- **Pre-flight:** `npm run lint`, `npm run format:check`, `npx tsc --noEmit` and `npm run build`
+  exit 0. `npx vitest run --maxWorkers=4`, run alone, passes 366 files and 5,343 tests.
+- **R1–R5 pass.**
+  - R1: no `import` line; `applyPlan`, `SimulatedFailure extends Error`, and
+    `APPLY_TRANSACTION_OPTIONS` `{ maxWait: 30_000, timeout: 600_000 }` are exported.
+  - R2: the `try`/`catch` word-boundary grep matches nothing.
+  - R3: the `throw new SimulatedFailure()` is the last statement, after the `VendorDomain` write.
+  - R4 and R5(a)–(c): all 10 named tests pass.
+  - R5(d): the diff touches no `PrismaNeon`/`new PrismaClient` line.
+- **R6, R7: structure checked; live output is R9/R10's.** The `catch` prints `ROLLED BACK:` and
+  the exact sentence, sets exit 1 and `return`s before `verifyCounts`/`copyImages`.
+  `committed:` prints after the transaction and before them.
+- **R8 passes.** Both invocations print `REFUSING: --simulate-failure needs --apply and cannot be
+  combined with --verify-only`, exit 1, and print no `source`/`target` line. With `--apply`, the
+  flag is passed as `simulateFailure` (line 466).
+- **R11–R13 pass.**
+  - R11: zero `do not re-run`; the ATOMIC paragraph and the usage line are present.
+  - R12: zero `Reset it, do not re-run it`; both statements are present; version 1.27.0 → 1.28.0.
+    `updated` was already 2026-10-31.
+  - R13: the CHANGELOG names `#1333`.
+- **P3 met:** a read-only `vendor.count()` on old staging (`ep-empty-scene`) returned 3.
+- **R9, R10: UNVERIFIED (blocked on owner precondition P1).** `secrets/validate-1333.vars` does
+  not exist. The real transaction on Neon through `PrismaNeon` is still unproven.
+- **R14: local half passes; CI runs at Ship** (no PR yet).
