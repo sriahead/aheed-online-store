@@ -12,6 +12,8 @@
  * so a new model forces a decision instead of defaulting either way.
  */
 
+import { DEMO_EMAILS, LEGACY_DEMO_EMAILS } from "./demo-roster";
+
 export type Classification = "copy" | "copy-filtered" | "skip";
 
 /**
@@ -21,8 +23,8 @@ export type Classification = "copy" | "copy-filtered" | "skip";
  * rule of its own.
  */
 export const MODEL_PLAN: Record<string, { class: Classification; reason: string }> = {
-  // Identity: real people only, never the @example.com demo and test roster (R14).
-  User: { class: "copy-filtered", reason: "only users whose email is not @example.com" },
+  // Identity: real people only, never the demo roster or @example.com test users (R14, #1356).
+  User: { class: "copy-filtered", reason: "only users isDemoEmail() does not match" },
   Account: { class: "copy-filtered", reason: "only for copied users (sign-in credentials)" },
   Session: { class: "skip", reason: "sessions are re-created at sign-in" },
   Verification: { class: "skip", reason: "short-lived verification tokens" },
@@ -167,9 +169,17 @@ export const VENDOR_HOSTS: Record<Target, Record<string, string>> = {
   },
 };
 
-/** Demo and test accounts. Never copied: their roles on old staging are stale; the roster is re-created with `demo:accounts add` (R14). */
+const DEMO_ROSTER = new Set([...DEMO_EMAILS, ...LEGACY_DEMO_EMAILS]);
+
+/**
+ * Demo and test accounts. Never copied: their roles on old staging are stale; the roster is re-created with `demo:accounts add` (R14).
+ * #1356 — the roster is matched by its exact addresses (new `@merqify.com` and legacy `@example.com`), never by the
+ * `merqify.com` domain, so a real Merqify person is copied and can be granted a role. Any other `@example.com`
+ * address is still a test account.
+ */
 export function isDemoEmail(email: string): boolean {
-  return email.trim().toLowerCase().endsWith("@example.com");
+  const normalised = email.trim().toLowerCase();
+  return DEMO_ROSTER.has(normalised) || normalised.endsWith("@example.com");
 }
 
 const GENERATED_PREFIX = "gen-";

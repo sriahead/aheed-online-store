@@ -120,7 +120,7 @@ import { join } from "node:path";
  *   rather than measuring a signed-out page and reporting an empty surface.
  *   **The password is passed on the command line, so this is for local `npm run preview` only** —
  *   never a deployed host, and never a real customer's credentials. The dev demo shopper is
- *   `demo-customer@example.com` with `DEMO_ACCOUNT_PASSWORD` from `.dev.vars`. The split is on the
+ *   `demo-customer@merqify.com` with `DEMO_ACCOUNT_PASSWORD` from `.dev.vars`. The split is on the
  *   FIRST colon, so a password containing `:` still works.
  *
  * #1142 adds:

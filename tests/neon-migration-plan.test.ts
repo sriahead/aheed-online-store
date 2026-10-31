@@ -14,6 +14,7 @@ import {
   vendorDependents,
   type ForeignKey,
 } from "../scripts/lib/neon-migration-plan";
+import { DEMO_EMAILS, LEGACY_DEMO_EMAILS } from "../scripts/lib/demo-roster";
 
 /**
  * #1323 — the copy plan for the move to a new Neon account
@@ -117,15 +118,26 @@ describe("selectProducts — the 10% sample (R11)", () => {
   });
 });
 
-describe("isDemoEmail (R14)", () => {
+describe("isDemoEmail (R14, #1356 R8)", () => {
   it("matches the demo and test roster regardless of case", () => {
     expect(isDemoEmail("demo-admin@example.com")).toBe(true);
     expect(isDemoEmail("Someone@EXAMPLE.com")).toBe(true);
+    expect(isDemoEmail("someone@example.com")).toBe(true);
   });
 
-  it("does not match a real address", () => {
+  it("matches all twelve roster addresses, new and legacy", () => {
+    const all = [...DEMO_EMAILS, ...LEGACY_DEMO_EMAILS];
+    expect(all).toHaveLength(12);
+    for (const email of all) expect(isDemoEmail(email)).toBe(true);
+    expect(isDemoEmail("  Demo-Customer@MERQIFY.com ")).toBe(true);
+  });
+
+  it("does not match a real address, including other merqify.com addresses", () => {
     expect(isDemoEmail("owner@aheedfoodcentre.co.uk")).toBe(false);
     expect(isDemoEmail("x@example.com.evil.test")).toBe(false);
+    expect(isDemoEmail("owner@merqify.com")).toBe(false);
+    expect(isDemoEmail("info@merqify.com")).toBe(false);
+    expect(isDemoEmail("demo@merqify.com")).toBe(false);
   });
 });
 
