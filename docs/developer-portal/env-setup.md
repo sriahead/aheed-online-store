@@ -4,7 +4,7 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.30.0"
+version: "1.31.0"
 updated: 2026-10-31
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
@@ -901,7 +901,10 @@ skipped job, which the daily run bounds to a day. Each invocation logs one
 `scheduler tick cron=… ran=… skipped=…` line, so in `wrangler tail` a quiet tick (`ran=none`) is
 distinguishable from a dead one (no line).
 
-**Creating the namespaces is an owner step.** Run it once per environment, on the account the Workers
+**Both namespaces exist (2026-10-31, `#1325`)** in the Merqify account: `aheed-jobs-staging` and
+`aheed-jobs-production`. Their ids are in **both** `wrangler.toml` files, under each environment's
+`[[env.<env>.kv_namespaces]]` block, so gating is on from the first deploy that carries them. To
+recreate one (a new account or cell), run this once per environment on the account the Workers
 deploy to:
 
 ```bash
@@ -912,8 +915,8 @@ wrangler kv namespace create aheed-jobs-production
 Put each printed id into **both** `wrangler.toml` (the application Worker) and
 `workers/scheduler/wrangler.toml`, under `[[env.<env>.kv_namespaces]]` with `binding = "JOB_SIGNALS"`.
 **It must be the same id in both files.** Two different namespaces would leave the scheduler reading
-markers nobody writes, so it would skip the sweep forever and only the daily run would remain. Both
-files carry a commented placeholder block at the right spot. The top-level (non-`--env`) block in each
+markers nobody writes, so it would skip the sweep forever and only the daily run would remain. The
+top-level (non-`--env`) block in each
 file holds a placeholder id that only `npm run preview` / `wrangler dev` use; no deploy reads it.
 
 **Cron Trigger budget:** the scheduler uses **4** of the Workers Free plan's **5** Cron Triggers per

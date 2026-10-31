@@ -68,14 +68,11 @@ custom_domain = true
 binding = "IMAGES"
 bucket_name = "shoplocal-images-staging"
 
-# #1324 — JOB_SIGNALS for staging: NOT YET CREATED — owner action. Until it exists
-# this Worker deploys without the binding and every marker write is skipped,
-# which leaves the scheduler running every job on every tick, as before #1324.
-# To enable gating, `wrangler kv namespace create aheed-jobs-staging`, then put the
-# printed id in BOTH this file and workers/scheduler/wrangler.toml:
-#   [[env.staging.kv_namespaces]]
-#   binding = "JOB_SIGNALS"
-#   id = "<the id wrangler printed>"
+# #1324/#1325 — JOB_SIGNALS for staging: KV namespace `aheed-jobs-staging` in the Merqify account
+# (created 2026-10-31). The SAME id is in both this file and the other wrangler.toml.
+[[env.staging.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "20aab8dee7f342809679d36f1d96fc6c"
 
 # #767/#771 — NOT a secret, just non-sensitive config, so it belongs in committed config rather
 # than a dashboard-only binding. A dashboard-added plain-text var (no `[vars]` entry, no
@@ -106,14 +103,11 @@ custom_domain = true
 binding = "IMAGES"
 bucket_name = "shoplocal-images-production"
 
-# #1324 — JOB_SIGNALS for production: NOT YET CREATED — owner action. Until it exists
-# this Worker deploys without the binding and every marker write is skipped,
-# which leaves the scheduler running every job on every tick, as before #1324.
-# To enable gating, `wrangler kv namespace create aheed-jobs-production`, then put the
-# printed id in BOTH this file and workers/scheduler/wrangler.toml:
-#   [[env.production.kv_namespaces]]
-#   binding = "JOB_SIGNALS"
-#   id = "<the id wrangler printed>"
+# #1324/#1325 — JOB_SIGNALS for production: KV namespace `aheed-jobs-production` in the Merqify account
+# (created 2026-10-31). The SAME id is in both this file and the other wrangler.toml.
+[[env.production.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "ba3dd6efb50445bc9cf856664fe6c1c5"
 
 # See the identical [env.staging.vars] block above for why this is committed config rather than
 # a dashboard binding.
