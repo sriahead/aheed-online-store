@@ -13,6 +13,8 @@ every branch merges.
   - **Demo accounts are recognised by their exact addresses.** The new-Neon copy and `grant-role` treat the twelve roster addresses and any other `@example.com` address as demo or test accounts. Every other `@merqify.com` address is a real person. The roster now lives in `scripts/lib/demo-roster.ts`.
   - **App emails to these addresses still do not arrive**, because Resend rejects unverified domains. That changes with `#1217`/`#104`.
 
+  Merged to staging (PR #1357) and deployed: both staging hosts serve `a9685fa`. It merged without an independent Validate pass.
+
 - **The Merqify image buckets are named after the ShopLocal platform cell** (`#1339`, amendment 7 to `specs/2026-10-29-merqify-platform-move/`). `wrangler.toml` binds `shoplocal-images-staging` and `shoplocal-images-production`, the buckets the owner created, instead of `aheed-images-*`, which do not exist in the Merqify account and would have failed the first deploy. The dev bucket is `shoplocal-images-dev`. The runbook and `.env.example`/`.dev.vars.example` follow; `.dev.vars.example` also pointed local dev at the production image host, which has a hotlink rule. Store hosts are unchanged (`aheed[-staging].merqify.com`, `srimart[-staging].merqify.com`).
 
 ### Added
