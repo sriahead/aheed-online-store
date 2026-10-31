@@ -5,6 +5,7 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 import type { StorageService } from "@/lib/storage";
 import { parseEnvFile } from "./lib/env-file";
 import { assertNotDeployedDatabase, normalizeHost } from "./lib/protected-hosts";
+import { APPLY_TRANSACTION_OPTIONS, applyPlan } from "./lib/neon-migration-apply";
 import {
   IMAGE_KEY_FIELDS,
   MODEL_PLAN,
@@ -33,6 +34,7 @@ import {
  *   ... --apply                    # write, then re-count every model (R17)
  *   ... --apply --copy-images      # also copy the R2 objects the copied rows reference (R18)
  *   ... --verify-only [--copy-images]   # re-plan from the source and compare with a filled target
+ *   ... --apply --simulate-failure # validation aid (#1333): write everything, then roll it back
  *
  * WHAT IT DOES. Reads every row of every model `scripts/lib/neon-migration-plan.ts` does not skip,
  * keeps the rows its rules allow (two stores, real users, a 10% product sample), drops or nulls
@@ -49,8 +51,14 @@ import {
  *
  * THE TARGET IS A FRESHLY MIGRATED DATABASE, not an empty one: `prisma migrate deploy` inserts the
  * Aheed vendor (`SEEDED_VENDOR`). `--apply` deletes that one row, only once nothing references it,
- * and then inserts the copied vendors, so the target ends with each vendor once (R8c). A failed
- * `--apply` leaves a partial target: reset the branch and re-migrate, do not re-run.
+ * and then inserts the copied vendors, so the target ends with each vendor once (R8c).
+ *
+ * ATOMIC (#1333, specs/2026-10-31-atomic-neon-copy/). The delete and every insert run inside ONE
+ * interactive transaction (`scripts/lib/neon-migration-apply.ts`), so a failed `--apply` rolls the
+ * target back to what `migrate deploy` left and the same command can be re-run. The image copy runs
+ * after the commit and cannot be rolled back: if it fails, the rows stay and a re-run refuses as
+ * occupied. `--simulate-failure` (only with `--apply`) throws after the last write, to prove the
+ * rollback on a disposable target.
  */
 
 function flag(name: string): boolean {
@@ -96,7 +104,7 @@ function masked(url: string): string {
 }
 
 /** Prisma delegate name: `VendorFaq` -> `vendorFaq`. */
-function delegate(client: PrismaClient, model: string) {
+function delegate(client: object, model: string) {
   const name = model.charAt(0).toLowerCase() + model.slice(1);
   return (
     client as unknown as Record<
@@ -372,6 +380,10 @@ function contentTypeOf(key: string): string {
 }
 
 async function main() {
+  const simulateFailure = flag("--simulate-failure");
+  if (simulateFailure && (!flag("--apply") || flag("--verify-only"))) {
+    fail("--simulate-failure needs --apply and cannot be combined with --verify-only");
+  }
   const target = flagValue("--target");
   if (target !== "staging" && target !== "production")
     fail("--target staging|production is required");
@@ -442,21 +454,27 @@ async function main() {
     }
 
     if (apply) {
-      // R8c — before any copied row: the copied `aheed-food-centre` would otherwise collide with
-      // the seeded one on both its primary key and its unique slug.
-      if (targetState === "seeded-only") {
-        await delegate(targetDb, "Vendor").deleteMany({ where: { id: SEEDED_VENDOR.id } });
-        console.log(`
-removed the migration-seeded vendor ${SEEDED_VENDOR.slug}.`);
+      // #1333: every target write (R8c's seeded-vendor delete included) happens inside this one
+      // interactive transaction on the WebSocket client, so a failure rolls all of it back.
+      const started = Date.now();
+      try {
+        await targetDb.$transaction(
+          (tx) =>
+            applyPlan((model) => delegate(tx, model), plan, {
+              replaceSeeded: targetState === "seeded-only",
+              seededVendorId: SEEDED_VENDOR.id,
+              simulateFailure,
+              log: (line) => console.log(`\n${line}`),
+            }),
+          APPLY_TRANSACTION_OPTIONS,
+        );
+      } catch (error) {
+        console.error(`\nROLLED BACK: ${(error as Error).message}`);
+        console.error("The target is as migrate deploy left it; re-running is safe.");
+        process.exitCode = 1;
+        return;
       }
-      for (const model of plan.order) {
-        const data = plan.rows.get(model)!;
-        for (let i = 0; i < data.length; i += 500) {
-          await delegate(targetDb, model).createMany({ data: data.slice(i, i + 500) });
-        }
-      }
-      await delegate(targetDb, "VendorDomain").createMany({ data: plan.domains });
-      console.log("\nrows written.");
+      console.log(`committed: ${Date.now() - started} ms`);
     }
 
     // A verify-only run regenerates domain ids, but compares counts only, so that is harmless.

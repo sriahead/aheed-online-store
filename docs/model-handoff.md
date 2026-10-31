@@ -53,6 +53,11 @@ reconciliation. If overall project state did not materially change, leave this f
     staging walk and the `#1321` onboarding check (comment on `#1319`).
   - **Old Nocaped production is still down:** `/api/health` `degraded`, Neon HTTP 402 quota (`#1289`);
     replaced by the move, not repaired.
+  - **`#1333` (atomic `migrate-to-new-neon --apply`, blocker of `#1341`) is BUILT on
+    `feature/1333-atomic-neon-copy`, not yet validated or merged.** Its live check needs the owner to
+    create an empty database on `Shoplocal Staging` → `scratch` and put its URL in
+    `secrets/validate-1333.vars`. `scratch`'s "Reset from parent" now copies filled staging, so it
+    is no longer a clean target for the copy. Detail: `specs/2026-10-31-atomic-neon-copy/build-notes.md`.
   - **The Merqify reference DB is no longer empty:** staging health shows `os-open-names` synced
     2026-10-30 23:34 (23,551 rows). Still confirm the 2026-11-03 `sync-reference-data` run (`#1123`).
 
