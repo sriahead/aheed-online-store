@@ -8,6 +8,7 @@ import { DEFAULT_BRAND_PRIMITIVES } from "@/lib/repositories/vendor";
 import { brandStyle } from "@/lib/vendor-theme";
 import {
   applyStorefrontTheme,
+  deleteStorefrontTheme,
   saveStorefrontTheme,
   updateCatalogueSettings,
   updateDeliveryRules,
@@ -159,6 +160,8 @@ export function StorefrontConfigForm({
   const [savingTheme, setSavingTheme] = useState(false);
   const [saveThemeName, setSaveThemeName] = useState("");
   const [saveThemeError, setSaveThemeError] = useState("");
+  const [deletingTheme, setDeletingTheme] = useState(false);
+  const [deleteThemeError, setDeleteThemeError] = useState("");
 
   const [mainColor, setMainColor] = useState(colors.brandGreen || "#467339");
 
@@ -206,6 +209,32 @@ export function StorefrontConfigForm({
       await applyStorefrontTheme(selectedThemeRef);
       router.refresh();
     });
+  }
+
+  async function handleDeleteTheme() {
+    if (!selectedThemeRef.startsWith("vendor:")) return;
+    const themeId = selectedThemeRef.replace("vendor:", "");
+    if (!themeId) return;
+
+    if (!window.confirm("Are you sure you want to delete this saved theme?")) {
+      return;
+    }
+
+    setDeletingTheme(true);
+    setDeleteThemeError("");
+    try {
+      const result = await deleteStorefrontTheme(themeId);
+      if (!result.ok) {
+        setDeleteThemeError(result.error || "Failed to delete theme.");
+      } else {
+        setSelectedThemeRef("");
+        router.refresh();
+      }
+    } catch {
+      setDeleteThemeError("An unexpected error occurred while deleting the theme.");
+    } finally {
+      setDeletingTheme(false);
+    }
   }
 
   async function handleSaveTheme() {
@@ -368,7 +397,20 @@ export function StorefrontConfigForm({
             >
               {themePending ? "Applying…" : "Apply Theme"}
             </button>
+            {selectedThemeRef.startsWith("vendor:") && (
+              <button
+                type="button"
+                onClick={handleDeleteTheme}
+                disabled={deletingTheme || themePending}
+                className="rounded-full border border-danger/30 bg-danger-tint px-5 py-3 font-bold text-danger hover:bg-danger-tint/80 disabled:opacity-50"
+              >
+                {deletingTheme ? "Deleting…" : "Delete Theme"}
+              </button>
+            )}
           </div>
+          {deleteThemeError && (
+            <p className="mt-2 text-sm font-semibold text-danger">{deleteThemeError}</p>
+          )}
         </div>
       )}
 

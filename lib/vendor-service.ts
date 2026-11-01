@@ -12,6 +12,7 @@ import {
   replaceVendorFooterHours as replaceVendorFooterHoursRepo,
   saveVendorHoursOverride as saveVendorHoursOverrideRepo,
   deleteVendorHoursOverride as deleteVendorHoursOverrideRepo,
+  deleteVendorTheme as deleteVendorThemeRepo,
   saveVendorTheme as saveVendorThemeRepo,
   updateVendorMarkKey as updateVendorMarkKeyRepo,
   updateVendorLogoKey as updateVendorLogoKeyRepo,
@@ -149,6 +150,10 @@ export async function listVendorThemes(vendorId: string) {
 
 export async function saveVendorTheme(vendorId: string, name: string, primitives: BrandPrimitives) {
   return saveVendorThemeRepo(getPrisma(), vendorId, name, primitives);
+}
+
+export async function deleteVendorTheme(vendorId: string, themeId: string) {
+  return deleteVendorThemeRepo(getPrisma(), vendorId, themeId);
 }
 
 /** Copies a theme's eight brand primitives onto a vendor's `VendorBranding` row (#75, #714). */

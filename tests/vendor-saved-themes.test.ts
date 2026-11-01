@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   listVendorThemes,
   saveVendorTheme,
+  deleteVendorTheme,
   applyThemeToVendor,
   listThemes,
 } from "@/lib/repositories/vendor";
@@ -18,12 +19,17 @@ function makeStub() {
     { id: "vendor-1", name: "Custom", brandGreen: "#222" },
   ]);
   const vendorThemeCreate = vi.fn(async ({ data }: any) => ({ ...data, id: "vendor-new" }));
+  const vendorThemeDeleteMany = vi.fn(async () => ({ count: 1 }));
 
   const vendorBrandingUpdate = vi.fn(async () => ({}));
 
   const client = {
     theme: { findMany: themeFindMany, findUnique: themeFindUnique },
-    vendorTheme: { findMany: vendorThemeFindMany, create: vendorThemeCreate },
+    vendorTheme: {
+      findMany: vendorThemeFindMany,
+      create: vendorThemeCreate,
+      deleteMany: vendorThemeDeleteMany,
+    },
     vendorBranding: { update: vendorBrandingUpdate },
   } as never;
 
@@ -33,6 +39,7 @@ function makeStub() {
     themeFindUnique,
     vendorThemeFindMany,
     vendorThemeCreate,
+    vendorThemeDeleteMany,
     vendorBrandingUpdate,
   };
 }
@@ -105,6 +112,15 @@ describe("Vendor saved themes", () => {
     expect(vendorThemeFindMany).toHaveBeenCalledWith({
       where: { id: "foreign-id", vendorId: vendorAId },
       take: 1,
+    });
+  });
+
+  it("deleteVendorTheme deletes vendor theme strictly scoped by vendorId", async () => {
+    const { client, vendorThemeDeleteMany } = makeStub();
+    await deleteVendorTheme(client, vendorAId, "vendor-1");
+
+    expect(vendorThemeDeleteMany).toHaveBeenCalledWith({
+      where: { id: "vendor-1", vendorId: vendorAId },
     });
   });
 });

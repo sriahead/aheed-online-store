@@ -799,6 +799,20 @@ export async function saveVendorTheme(
 }
 
 /**
+ * Delete a custom theme saved by this vendor (#1385).
+ * Uses deleteMany with explicit vendorId scoping so another vendor's theme cannot be touched.
+ */
+export async function deleteVendorTheme(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  themeId: string,
+) {
+  return prisma.vendorTheme.deleteMany({
+    where: { id: themeId, vendorId },
+  });
+}
+
+/**
  * Apply a theme to a vendor's branding (#75, #714) — COPIES the theme's eight brand
  * primitives onto `VendorBranding`. Resolves `themeRef` explicitly:
  * - `global:<id>` → queries the global `Theme` table
