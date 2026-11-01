@@ -340,7 +340,7 @@ describe("costs section unchanged (R27)", () => {
     const ids = [...container.querySelectorAll("[data-owner-to-confirm]")].map((li) =>
       li.getAttribute("data-owner-to-confirm"),
     );
-    expect(ids.sort()).toEqual(["claude", "cloudflare-email", "gemini-pro", "stripe"]);
+    expect(ids.sort()).toEqual(["claude", "gemini-pro", "stripe"]);
     const card = container.querySelector('[data-costs-item="open-food-facts"]')!;
     expect(card.textContent).toContain("Free (open licence)");
   });

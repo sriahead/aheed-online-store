@@ -4,8 +4,8 @@ title: "ADR-004 — Multi-Tenancy (DB-driven vendors, regions & branding)"
 audience: [dev]
 type: adr
 status: approved
-version: "1.14.0"
-updated: 2026-10-21
+version: "1.15.0"
+updated: 2026-11-01
 visibility: internal
 summary: Evolve from single-vendor to a multi-tenant platform where vendors, regions, locations, delivery areas, and branding come from the database, sharing one business-logic and data layer. Row-level vendorId isolation, subdomain resolution, isolated-by-default auth (family SSO config-gated).
 tags: [adr, multi-tenancy, vendors, branding, architecture]
@@ -408,6 +408,10 @@ exceptions are allowlisted **with reasons** in that file: `countOtherVendorData`
 `hasVendorMembership` (both deliberately cross-vendor), `findOrderForWebhook`/`confirmPayment`
 (webhooks arrive with no host to scope by), and `upsertReview`/`deleteReview`, which resolve the
 vendor from the `Product` row inside their own transaction rather than taking it.
+`findInboundAddress` (`#1217`) is allowlisted for the same reason as a host lookup: the receiving
+email address is itself the vendor key, so there is no vendor to scope by yet. Its only caller is
+`/api/inbound-email/resolve`, which is authenticated by `INBOUND_EMAIL_TOKEN`. The allowlist in
+the test file is the authority; this paragraph has drifted from it before.
 
 `tests/repository-purity.test.ts` (P8.1b, closing #252) asserts the *location* half: no file in
 `lib/repositories/` may contain a value import of `next/headers`, `@/lib/tenant`, `@/lib/auth` or

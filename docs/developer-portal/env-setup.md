@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.32.0"
-updated: 2026-10-31
+version: "1.33.0"
+updated: 2026-11-01
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -23,7 +23,7 @@ all values are present, and **never prints secret values**.
 | Store | Set by | Consumed by | Variables |
 |---|---|---|---|
 | **GitHub environment secrets** | `gh secret set … --env <env>` | CI deploy workflows (`.github/workflows/deploy-*.yml`) | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `DIRECT_URL` |
-| **Cloudflare Worker secrets** | `wrangler secret put … --env <env>` | the running app at runtime (`lib/config`) | `DATABASE_URL`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION`, `CDN_BASE_URL`, `AUTH_COOKIE_FAMILY_DOMAIN` *(optional — see slice 3c)*, `STRIPE_SECRET_KEY` *(optional)*, `STRIPE_WEBHOOK_SECRET` *(optional)*, `JOB_INVOCATION_TOKEN` |
+| **Cloudflare Worker secrets** | `wrangler secret put … --env <env>` | the running app at runtime (`lib/config`) | `DATABASE_URL`, `INBOUND_EMAIL_TOKEN` *(also pushed to the inbound-email Worker, `#1217`)*, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION`, `CDN_BASE_URL`, `AUTH_COOKIE_FAMILY_DOMAIN` *(optional — see slice 3c)*, `STRIPE_SECRET_KEY` *(optional)*, `STRIPE_WEBHOOK_SECRET` *(optional)*, `RESEND_API_KEY`, `EMAIL_VERIFIED_DOMAINS`, `EMAIL_ALLOWED_RECIPIENTS` *(all optional, `#1217`)*, `JOB_INVOCATION_TOKEN` |
 
 Beyond the original list: **`S3_REGION`** is required by ADR-003's storage contract, and
 **`BETTER_AUTH_URL`** is now only a **fallback** origin — since ADR-004 slice 3c, `getAuth()` derives
@@ -168,10 +168,10 @@ npm run configure-env -- staging --file secrets/merqify-staging.vars
   - `BETTER_AUTH_URL` and `CDN_BASE_URL` for the new hosts;
   - the new Neon URLs, R2 values and scoped token.
 - **Carry over unchanged:** Google and Stripe keys (`STRIPE_WEBHOOK_SECRET` excepted).
-- **Email is a stopgap.** Copy today's `RESEND_API_KEY` and `RESEND_FROM_EMAIL` unchanged:
-  production refuses to send without them (`lib/config.ts`). Register **nothing** new with Resend.
-  Resend is being retired. Outgoing email moves to a provider-agnostic `EmailService` with
-  **Cloudflare Email Service** in the Merqify account (`#1217`), which replaces both keys.
+- **Email (updated 2026-11-01, `#1217`).** The Resend keys are no longer required. Outgoing email
+  goes through Cloudflare Email Service (the `EMAIL` binding in `wrangler.toml`), and `EMAIL_FROM`
+  is committed config there. `configure-env` now requires `INBOUND_EMAIL_TOKEN` instead. Setup:
+  "Email: sending and receiving" below. Register **nothing** new with Resend.
 - **`configure-env` pushes to the account the FILE names.** It runs every `wrangler` command with
   that file's `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, never the machine's login, and
   prints `Cloudflare target: account …<last 6>` first. Check that suffix against the Merqify
@@ -267,9 +267,9 @@ npx tsx scripts/verify-reference-coverage.ts --env-file secrets/merqify-staging.
      (`#1332`).
 9. **Replace the copied `nocaped` addresses.** The migration's plan lists them under "WARNING:
    copied values still naming nocaped". On old staging these are the two stores'
-   `VendorConfig.senderEmail` values. Set real addresses at `/staff/storefront` on each store's new
-   host once the sending domain is set up with Cloudflare Email Service in the Merqify account
-   (`#1217`, `#104`). Until then the stopgap Resend sender applies.
+   `VendorConfig.senderEmail` values. Set real addresses in Client Setup
+   (`/staff/platform/client-setup`, `#1217`). Until a store's domain is verified for sending, its
+   mail goes out from `EMAIL_FROM` with Reply-To set to the store ("Email: sending and receiving").
 
 ### Sanity check: the copy rolls back (`#1333`)
 
@@ -950,6 +950,95 @@ file holds a placeholder id that only `npm run preview` / `wrangler dev` use; no
 **Cron Trigger budget:** the scheduler uses **4** of the Workers Free plan's **5** Cron Triggers per
 account (two per environment). The application Worker has none.
 
+## Email: sending and receiving (`#1217`)
+
+Outgoing email goes through a provider-agnostic port, `lib/email.ts`, with one adapter per provider
+under `lib/email/`:
+
+- **Cloudflare Email Service** is the default. Its credential is the `EMAIL` `send_email` binding in
+  `wrangler.toml`, so there is no API key.
+- **Resend** is a fallback. Set `EMAIL_PROVIDER=resend` plus `RESEND_API_KEY`; no code change is
+  needed.
+- **Log only** is used when nothing is configured (local dev, CI). Nothing is sent.
+
+Incoming mail is handled by a third Worker, `workers/inbound-email`. Cloudflare Email Routing sends
+each store address to it. It asks the app (`/api/inbound-email/resolve`) which store owns the
+address, forwards the message to that store's real mailbox, and logs whether it was order-related.
+No email body is stored or logged.
+
+Stores are configured in **Client Setup** (`/staff/platform/client-setup`, platform admins): the
+sender name and address, and the receiving addresses with the mailbox each forwards to.
+
+### Keys
+
+| Key | Where | Meaning |
+|---|---|---|
+| `EMAIL_FROM` | `wrangler.toml` `[vars]` (both envs) | The platform sender, used whenever a store's own domain is not verified. Required in production builds. |
+| `EMAIL_RECIPIENT_MODE` | `wrangler.toml` `[env.production.vars]` only | `open` mails anyone. **Unset means allowlist**, so staging only mails `EMAIL_ALLOWED_RECIPIENTS`. `NODE_ENV` cannot tell staging from production, so this is the only switch. |
+| `EMAIL_ALLOWED_RECIPIENTS` | Worker secret (staging) | Comma list of tester inboxes. Empty means staging sends nothing. A secret, so no personal address is committed. |
+| `EMAIL_VERIFIED_DOMAINS` | Worker secret (per env) | Comma list of domains onboarded in Email Sending. A store whose `senderEmail` domain is listed sends as itself; otherwise it sends from `EMAIL_FROM` with Reply-To set to the store. A secret rather than `[vars]`, so adding a domain needs no commit (secrets survive `wrangler deploy`). |
+| `EMAIL_PROVIDER` | Worker secret or unset | `cloudflare`, `resend` or `log`. Unset means Cloudflare when the binding exists. |
+| `RESEND_API_KEY` | Worker secret, optional | Read only when `EMAIL_PROVIDER=resend`. |
+| `INBOUND_EMAIL_TOKEN` | Worker secret on **both** the app and `aheed-inbound-email[-staging]` | Proves to the resolve route that a call came from the inbound Worker. `configure-env` pushes it to both. |
+| `INBOUND_FALLBACK_FORWARD` | Secret on the inbound Worker only | A verified destination mailbox that receives mail whenever the app cannot be asked (outage, bad token). |
+
+Set a secret by hand with `wrangler secret put <KEY> --env <env>`. For the inbound Worker, add
+`--config workers/inbound-email/wrangler.toml`.
+
+### Setting up a store, in order
+
+Client Setup shows these as a checklist per store, with links.
+
+1. **Onboard the sending domain.** In the Cloudflare dashboard (Merqify account), open Email
+   Sending and add the domain of the store's sender address. Cloudflare adds the SPF and DKIM
+   records. `aheedfoodcentre.co.uk` waits for its zone to move under the Merqify login (`#1342`).
+2. **List it in `EMAIL_VERIFIED_DOMAINS`** for each environment that should send as the store.
+3. **Set the sender name and email** in Client Setup.
+4. **Verify the forward-to mailbox.** In Email Routing → Destination addresses, add the store's real
+   mailbox and confirm Cloudflare's email. Do the same for `INBOUND_FALLBACK_FORWARD`.
+5. **Register the receiving addresses** in Client Setup (for example `orders@`, purpose Orders, and
+   `support@`, purpose Support), each with its forward-to mailbox. Client Setup refuses an address
+   another store already has, and a forward-to that is itself a receiving address (a loop).
+6. **Route each address to the inbound Worker.** In Email Routing → Routing rules, create a custom
+   address with the action "Send to a Worker", choosing `aheed-inbound-email-staging` or
+   `aheed-inbound-email`. **One address routes to one Worker**, so staging and production need
+   different addresses. `merqify.com` already has Email Routing on for the demo accounts ("Demo
+   mail forwarding"); add rules beside those.
+7. **Send a test email** from Client Setup. It goes to your own signed-in address only. On staging
+   your address must be on `EMAIL_ALLOWED_RECIPIENTS`.
+
+A message counts as **order-related** when it is sent to an Orders address, or when its subject
+carries one of that store's own order numbers. `#1390` (WhatsApp alerts) builds on this.
+
+### Limits (Cloudflare docs, read 2026-11-01)
+
+| | Outgoing (Email Sending) | Incoming (Email Routing) |
+|---|---|---|
+| Plan | Workers Paid only | Free and Paid |
+| Volume | 3,000 a month included per account, then $0.35 per 1,000 | Unlimited, free |
+| Daily | Starts low on a new account and grows with reputation. No number is published: read it in the dashboard, and raise it with Cloudflare's Limit Increase Request Form. | No cap |
+| Per message | 50 recipients, 25 MiB | 25 MiB |
+| Other | Bounces count toward the quota; API rejections don't. Sends to verified addresses are free. Before a domain is onboarded, only verified addresses can receive. Public beta. | 200 rules per domain, 200 verified destinations per account, 30 routing + sending domains per zone |
+
+The account's actual daily quota: **not yet recorded** (the owner reads it in the dashboard).
+
+### Sanity check: email after a deploy (`#1217`)
+
+**Last run:** not yet run (written at Build, 2026-11-01).
+
+1. `npx wrangler deploy --dry-run --env staging` lists `env.EMAIL (unrestricted)  Send Email`.
+   Expected: the binding is present.
+2. In Client Setup on `aheed-staging.merqify.com`, open the Email section. Expected: Provider
+   `cloudflare`, Platform sender `no-reply@merqify.com`, Recipients "Allowlist only".
+3. Click **Send test email** with your address on `EMAIL_ALLOWED_RECIPIENTS`. Expected: "Sent to …",
+   and the message arrives. From is the store's address if its domain is verified, otherwise
+   `no-reply@merqify.com` with Reply-To the store.
+4. Remove your address from the allowlist and repeat. Expected: "Skipped by recipient policy", and no
+   email.
+5. Send a message from a personal mailbox to a staging Orders address. Expected: it arrives at that
+   address's forward-to mailbox, and `npx wrangler tail aheed-inbound-email-staging` prints
+   `inbound-email vendorId=… purpose=ORDERS orderRelated=true …`.
+
 ## Prerequisites (one-time)
 
 1. **Authenticate the GitHub CLI** — this is where GitHub issues the **one-time device code**:
@@ -1095,10 +1184,10 @@ Check the MX records:
 lists `route1/2/3.mx.cloudflare.net`. Then send a message from a personal mailbox to
 `demo-customer@merqify.com` and confirm it arrives.
 
-**App emails do not arrive yet.** The app sends through Resend, which rejects recipients on
-unverified domains (see "Resend's API rejects `to` addresses" below). Forwarding starts carrying
-order and status emails once the sending domain lands (`#1217`, Cloudflare Email Service, or
-`#104`).
+**App emails need the sending domain.** Since `#1217` the app sends through Cloudflare Email
+Service. Until `merqify.com` is onboarded in Email Sending, Cloudflare rejects every send and the
+app logs it ("Email: sending and receiving"). On staging, a recipient must also be on
+`EMAIL_ALLOWED_RECIPIENTS`.
 
 ## Troubleshooting
 

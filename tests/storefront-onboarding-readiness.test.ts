@@ -182,9 +182,10 @@ describe("Storefront Onboarding Readiness Evaluation (Issue #1267)", () => {
     expect(infraCat).toBeDefined();
 
     const plannedItems = infraCat?.items.filter((i) => i.isPlanned);
-    expect(plannedItems).toHaveLength(3);
+    // #1217 — outgoing email is integrated, so it is no longer a planned item.
+    expect(plannedItems).toHaveLength(2);
     const plannedIds = plannedItems?.map((i) => i.id);
-    expect(plannedIds).toContain("outgoing_email_service");
+    expect(plannedIds).not.toContain("outgoing_email_service");
     expect(plannedIds).toContain("live_stripe_keys");
     expect(plannedIds).toContain("external_apex_dns");
 
@@ -193,6 +194,23 @@ describe("Storefront Onboarding Readiness Evaluation (Issue #1267)", () => {
       expect(item.required).toBe(false);
       expect(item.editHref).toBeNull();
     }
+  });
+
+  it("#1217 — the store email sender item links to Client Setup and follows the verified domain", () => {
+    const data = makeReferenceVendorData();
+    const find = (domains: string[]) =>
+      evaluateVendorReadinessData(data, "a4ed-reference", domains)
+        .categories.flatMap((c) => c.items)
+        .find((i) => i.id === "outgoing_email_service")!;
+    const domain = (data.config?.senderEmail ?? "").split("@")[1] ?? "";
+
+    const unverified = find([]);
+    expect(unverified.status).toBe("OPTIONAL");
+    expect(unverified.isPlanned).toBe(false);
+    expect(unverified.required).toBe(false);
+    expect(unverified.editHref).toMatch(/^\/staff\/platform\/client-setup\?vendor=/);
+
+    expect(find([domain.toLowerCase()]).status).toBe("CONFIGURED");
   });
 
   it("generates actionable deep links for configurable items", () => {

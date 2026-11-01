@@ -914,3 +914,25 @@ export async function setVendorMarketingConsentEnabled(
   });
   return 1;
 }
+
+/**
+ * #1217 — the vendor's transactional-email identity, set from the platform admin's Client Setup
+ * dashboard. A singular, childless `update` over the HTTP client (no implicit transaction). Returns
+ * false when the vendor has no VendorConfig row, rather than letting `update` throw P2025.
+ */
+export async function updateVendorSender(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  data: { senderName: string; senderEmail: string },
+): Promise<boolean> {
+  const existing = await prisma.vendorConfig.findUnique({
+    where: { vendorId },
+    select: { vendorId: true },
+  });
+  if (!existing) return false;
+  await prisma.vendorConfig.update({
+    where: { vendorId },
+    data: { senderName: data.senderName, senderEmail: data.senderEmail },
+  });
+  return true;
+}

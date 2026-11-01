@@ -34,6 +34,13 @@ export const PLATFORM_NAV_ITEMS: readonly PlatformNavItem[] = [
     icon: "clipboard-list",
   },
   {
+    // #1217 — one onboarding dashboard per client store; Email is its first section.
+    href: "/staff/platform/client-setup",
+    label: "Client Setup",
+    description: "Configure a client store step by step: email first, more sections to follow.",
+    icon: "list-checks",
+  },
+  {
     href: "/staff/platform/domains",
     label: "Domain Registry",
     description: "Platform-wide host routing, custom domains, and SSL status.",

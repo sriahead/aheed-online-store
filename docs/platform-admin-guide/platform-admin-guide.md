@@ -4,8 +4,8 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.8.0"
-updated: 2026-10-31
+version: "1.9.0"
+updated: 2026-11-01
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
 tags: ["admin", "platform", "technical", "multi-tenancy"]
@@ -135,6 +135,37 @@ reload to see them.
 
 **What happens after changes are saved:** Recalculates dynamically whenever vendor profile, branding, hours, delivery rules, or domain settings are updated.
 
+
+## Client Setup — `/staff/platform/client-setup`
+
+**Purpose:** One onboarding dashboard per client store. Configure what the store needs, follow the step-by-step guide with links to the right Cloudflare pages, and come back to change anything later. Email is the first section; more sections will be added over time.
+
+**Who can access:** Platform admins only
+
+**What you can do:**
+
+- **Pick a store** from the row of store names at the top of the page.
+- **Follow the Email guide.** It has seven numbered steps. Steps the platform can check itself show "Done" or "Not done". Steps only Cloudflare knows about say "Check in Cloudflare", with an **Open** link to the Cloudflare dashboard or docs.
+- **Set the sender.** Edit the store's sender name and sender email, then press **Save sender**. Customers see this name on the store's emails.
+- **Manage receiving addresses.** Add an address (for example the store's orders address), choose its purpose (Orders or Support), and enter the store's real mailbox to forward to, then press **Add address**. Press **Remove** next to an address to delete it.
+- **Read the sending status.** It shows the active provider, the platform sender, whether recipients are open or allowlist-only, whether the store's domain is verified, and the exact address the store's mail goes out as. When the domain is not verified, it also shows where replies go.
+- **Send a test email.** Press **Send test email**. It always goes to your own signed-in address, and the page says whether it was sent, skipped by the recipient policy, or failed, with the reason.
+- **Check the limits.** A table shows Cloudflare's published email limits, with a link to Cloudflare's limits page.
+
+**Important fields and filters:** The store picker (one button per store); the guide's step status (Done, Not done, Check in Cloudflare, Action on this page); Sender name and Sender email; each receiving address with its purpose (Orders or Support) and forward-to mailbox; the sending status (Provider, Platform sender, Recipients, Store domain, Mail goes out as).
+
+**What happens after changes are saved:** A saved sender is used by the store's next email: order confirmations, status updates, password resets and verification emails. A new receiving address takes effect once its Cloudflare routing rule points at the inbound-email Worker; from then on, mail to it is forwarded to its forward-to mailbox. Removing an address stops that forwarding immediately, so mail to it is rejected as an unknown recipient. Each save shows a confirmation message, and the page reloads with the new values.
+
+**Typical workflow:** While onboarding a new store, open its page here and work down the Email guide. Set up the domain in Cloudflare, set the sender, register the receiving addresses, create the routing rules in Cloudflare, then send yourself a test email.
+
+**Common mistakes and limitations:**
+
+- **Store admins cannot open this page**; they see a "Platform admin only" panel.
+- **An address can belong to only one store.** Adding one that is already registered is refused.
+- **A forward-to mailbox must not itself be a receiving address**, because mail would loop. That is refused too.
+- **On staging**, the test email only arrives if your address is on the environment's allowlist; otherwise the page reports "Skipped by recipient policy".
+- **Routing rules are created in Cloudflare, not here.** A registered address receives nothing until its rule sends it to the inbound-email Worker.
+- **Marking a domain as verified is a setting on the Worker**, not a control on this page (see the environment setup guide, "Email: sending and receiving").
 
 ## Platform Domain Registry — `/staff/platform/domains`
 

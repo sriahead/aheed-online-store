@@ -72,32 +72,46 @@ export function getEnv(): AppEnv {
   });
 }
 
-// lib/email — Resend adapter. Kept out of `schema`/`getEnv()` above: email
-// sending has no dependency on DATABASE_URL/BETTER_AUTH_SECRET, and coupling
-// it to that schema meant getEmailService() failed anywhere those unrelated
-// vars weren't set (e.g. CI's `gates` job, which never provides them).
+// lib/email — provider-agnostic outgoing email (#1217). Kept out of `schema`/`getEnv()` above:
+// email sending has no dependency on DATABASE_URL/BETTER_AUTH_SECRET, and coupling it to that
+// schema meant getEmailService() failed anywhere those unrelated vars weren't set (e.g. CI's
+// `gates` job, which never provides them).
+//
+// EMAIL_PROVIDER picks the adapter (lib/email/*): unset means Cloudflare when the `EMAIL`
+// send_email binding exists, otherwise log-only. Resend stays selectable as a fallback
+// (`EMAIL_PROVIDER=resend` + RESEND_API_KEY) and needs no code change. The Resend From-address key is retired:
+// EMAIL_FROM is the platform sender for every provider.
+//
+// EMAIL_RECIPIENT_MODE exists because NODE_ENV cannot tell staging from production (both Workers
+// run a production build). Anything other than "open" is allowlist mode, so a forgotten setting
+// fails safe: staging never mails a real customer.
+export const EMAIL_PROVIDERS = ["cloudflare", "resend", "log"] as const;
+
 const emailSchema = z
   .object({
-    // Optional in dev/CI: no key means email sending degrades (logs, doesn't crash the
-    // request) until the human provisions one.
-    // P9.1 (#430) — Enforced in production via superRefine to prevent silent failures.
+    EMAIL_PROVIDER: z.enum(EMAIL_PROVIDERS).optional(),
+    EMAIL_FROM: z.string().optional(),
+    EMAIL_VERIFIED_DOMAINS: z.string().optional(),
+    EMAIL_RECIPIENT_MODE: z.string().optional(),
+    EMAIL_ALLOWED_RECIPIENTS: z.string().optional(),
+    // Only read when EMAIL_PROVIDER=resend.
     RESEND_API_KEY: z.string().optional(),
-    RESEND_FROM_EMAIL: z.string().optional(),
   })
   .superRefine((data, ctx) => {
+    // P9.1 (#430) — enforced in production so a misconfiguration is loud, not silent.
     if (process.env.NODE_ENV === "production") {
-      if (!data.RESEND_API_KEY) {
+      if (!data.EMAIL_FROM) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "RESEND_API_KEY is required in production",
-          path: ["RESEND_API_KEY"],
+          message: "EMAIL_FROM is required in production",
+          path: ["EMAIL_FROM"],
         });
       }
-      if (!data.RESEND_FROM_EMAIL) {
+      if (data.EMAIL_PROVIDER === "resend" && !data.RESEND_API_KEY) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "RESEND_FROM_EMAIL is required in production",
-          path: ["RESEND_FROM_EMAIL"],
+          message: "RESEND_API_KEY is required in production when EMAIL_PROVIDER=resend",
+          path: ["RESEND_API_KEY"],
         });
       }
     }
@@ -107,9 +121,26 @@ export type EmailEnv = z.infer<typeof emailSchema>;
 
 export function getEmailEnv(): EmailEnv {
   return emailSchema.parse({
+    EMAIL_PROVIDER: readEnv("EMAIL_PROVIDER"),
+    EMAIL_FROM: readEnv("EMAIL_FROM"),
+    EMAIL_VERIFIED_DOMAINS: readEnv("EMAIL_VERIFIED_DOMAINS"),
+    EMAIL_RECIPIENT_MODE: readEnv("EMAIL_RECIPIENT_MODE"),
+    EMAIL_ALLOWED_RECIPIENTS: readEnv("EMAIL_ALLOWED_RECIPIENTS"),
     RESEND_API_KEY: readEnv("RESEND_API_KEY"),
-    RESEND_FROM_EMAIL: readEnv("RESEND_FROM_EMAIL"),
   });
+}
+
+// #1217 — the inbound-email resolve route (app/api/inbound-email/resolve). Its own schema, like
+// jobs below, so a missing token never breaks anything else. Optional on purpose: the route fails
+// closed (503) when it is unset, and reads it through `readOptional`.
+const inboundEmailSchema = z.object({
+  INBOUND_EMAIL_TOKEN: z.string().min(1).optional(),
+});
+
+export type InboundEmailEnv = z.infer<typeof inboundEmailSchema>;
+
+export function getInboundEmailEnv(): InboundEmailEnv {
+  return inboundEmailSchema.parse({ INBOUND_EMAIL_TOKEN: readEnv("INBOUND_EMAIL_TOKEN") });
 }
 
 // #1055 — the storefront footer's "Powered by {name}" line. Its own schema, like email and

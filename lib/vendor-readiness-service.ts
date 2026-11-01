@@ -1,4 +1,6 @@
 import { getPrisma } from "@/lib/db";
+import { getEmailEnv, readOptional } from "@/lib/config";
+import { emailDomain, parseEmailList } from "@/lib/email/policy";
 import {
   fetchRawVendorOnboardingData,
   type RawVendorOnboardingData,
@@ -75,10 +77,14 @@ function hexColorValid(c: string | undefined): boolean {
 export function evaluateVendorReadinessData(
   data: RawVendorOnboardingData,
   vendorId: string,
+  /** #1217 — EMAIL_VERIFIED_DOMAINS, parsed. Passed in so this function stays pure. */
+  emailVerifiedDomains: readonly string[] = [],
 ): VendorReadinessReport {
   const vendor = data.vendor;
   const branding = data.branding;
   const config = data.config;
+  const senderDomain = emailDomain(config?.senderEmail ?? "");
+  const senderDomainVerified = senderDomain !== "" && emailVerifiedDomains.includes(senderDomain);
   const location = data.location;
   const deliveryAreas = data.deliveryAreas;
   const weeklyHours = data.weeklyHours;
@@ -685,16 +691,23 @@ export function evaluateVendorReadinessData(
       isPlanned: false,
     },
     {
+      // #1217 — integrated: Cloudflare Email Service behind the provider-agnostic port. Configured
+      // once this store's sender domain is verified for sending; until then its mail goes out from
+      // the platform address with Reply-To set to the store. Not required, so the score is unchanged.
       id: "outgoing_email_service",
-      name: "Cloudflare Email Sending Adapter",
+      name: "Store Email Sender",
       category: "Platform Infrastructure & Governance",
-      currentValue: "Platform Shared Sender / Resend Fallback",
-      referenceValue: "Provider-agnostic EmailService with CF Sending (#1217)",
-      status: "PLANNED",
+      currentValue: senderDomainVerified
+        ? `Sends as ${config?.senderEmail}`
+        : config?.senderEmail
+          ? `Platform sender, replies to ${config.senderEmail}`
+          : "Platform sender (no store address)",
+      referenceValue: "Store's own address on a verified sending domain",
+      status: senderDomainVerified ? "CONFIGURED" : "OPTIONAL",
       required: false,
-      validationRule: "Planned feature #1217 (per-vendor sender isolation)",
-      editHref: null,
-      isPlanned: true,
+      validationRule: "Sender domain listed in EMAIL_VERIFIED_DOMAINS (Client Setup, #1217)",
+      editHref: `/staff/platform/client-setup?vendor=${encodeURIComponent(vendor?.slug ?? "")}`,
+      isPlanned: false,
     },
     {
       id: "live_stripe_keys",
@@ -841,5 +854,6 @@ export function evaluateVendorReadinessData(
 export async function evaluateVendorReadiness(vendorId: string): Promise<VendorReadinessReport> {
   const prisma = getPrisma();
   const rawData = await fetchRawVendorOnboardingData(prisma, vendorId);
-  return evaluateVendorReadinessData(rawData, vendorId);
+  const verifiedDomains = parseEmailList(readOptional(getEmailEnv)?.EMAIL_VERIFIED_DOMAINS);
+  return evaluateVendorReadinessData(rawData, vendorId, verifiedDomains);
 }

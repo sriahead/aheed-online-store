@@ -8,6 +8,16 @@ every branch merges.
 
 ### Added
 
+- **Email through Cloudflare Email Service, a store inbox Worker, and the Client Setup dashboard** (issue `#1217`, spec `specs/2026-11-01-cloudflare-email-service/`).
+  - **Provider-agnostic email:** `lib/email.ts` is a port with one adapter per provider under `lib/email/`: Cloudflare (`EMAIL` send_email binding, the default), Resend (fallback, `EMAIL_PROVIDER=resend` + `RESEND_API_KEY`) and log-only. `send()` never throws and returns sent, skipped or failed.
+  - **Per-store sender:** every email (confirmation, status, reset, verification) is sent on behalf of the store. A store sends from its own `senderEmail` once its domain is in `EMAIL_VERIFIED_DOMAINS`, otherwise from `EMAIL_FROM` with Reply-To set to the store.
+  - **Staging allowlist:** `EMAIL_RECIPIENT_MODE` is `open` in production only; unset means only `EMAIL_ALLOWED_RECIPIENTS` receive mail.
+  - **Config:** `RESEND_FROM_EMAIL` is retired, `EMAIL_FROM` is committed in `wrangler.toml`, and the Resend keys are no longer required in production. `configure-env` requires `INBOUND_EMAIL_TOKEN` and pushes it to both Workers.
+  - **Incoming mail:** new `VendorInboundAddress` table (hand-authored migration, `#895`), `POST /api/inbound-email/resolve` (token-authenticated, read-only), and a third Worker, `workers/inbound-email`. It forwards each message to the store's mailbox, rejects unknown addresses, falls back to `INBOUND_FALLBACK_FORWARD` when the app cannot be asked, and logs whether the message is order-related without logging sender, subject or body. Both deploy workflows deploy it.
+  - **Client Setup (`/staff/platform/client-setup`, platform admins):** one onboarding dashboard per store, built from a section list (`lib/client-setup/sections.ts`). Email is the first section: sender name and email, receiving addresses, sending status, a seven-step guide with Cloudflare links, Cloudflare's limits, and a test email to your own address. The readiness checklist's email item links here.
+  - **Costs:** the running-costs and cost-driver registries carry Cloudflare Email Service pricing (3,000 a month included, then $0.35 per 1,000).
+  - **Docs:** `env-setup.md` "Email: sending and receiving" (keys, setup order, limits, sanity check), a Client Setup section in the platform admin guide (now enforced by `tests/operator-doc-coverage.test.ts`), and `specs/architecture.md` and ADR-004 updates.
+
 - **Storefront polish: customer feedback demo visibility, delete custom theme, role-based user journeys on /help** (issue `#1385`, spec `specs/2026-11-01-p1385-storefront-polish-journeys/`).
   - **Customer Feedback demo visibility:** Added `scripts/seed-demo-feedback.ts` to approve pending feedback and seed showcase reviews for demo environments so the homepage 3D carousel renders with 4.7 stars across reviews and interactive pagination.
   - **Storefront theme deletion:** Added `deleteStorefrontTheme` Server Action, `deleteVendorTheme` in `lib/repositories/vendor.ts` and `lib/vendor-service.ts`, and a "Delete Theme" button in `/staff/storefront` allowing store admins to prune custom saved themes while keeping global presets protected.

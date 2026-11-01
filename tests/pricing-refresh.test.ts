@@ -83,12 +83,15 @@ describe("refreshSources (R17)", () => {
       "https://neon.com/pricing",
       "https://developers.cloudflare.com/r2/pricing/",
       "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+      // #1217 — Cloudflare Email Service gained a priced limits block.
+      "https://developers.cloudflare.com/email-service/platform/pricing/",
     ]);
     expect(refreshSources("all")).toEqual([
       "https://developers.cloudflare.com/workers/platform/pricing/",
       "https://neon.com/pricing",
       "https://developers.cloudflare.com/r2/pricing/",
       "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+      "https://developers.cloudflare.com/email-service/platform/pricing/",
       "https://www.shopify.com/uk/pricing",
       "https://squareup.com/gb/en/online-store/plans",
       "https://www.ecwid.com/pricing",

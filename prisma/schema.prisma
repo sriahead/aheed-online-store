@@ -153,6 +153,7 @@ model Vendor {
   reviews                   Review[]
   memberships               VendorMembership[]
   domains                   VendorDomain[]
+  inboundAddresses          VendorInboundAddress[]
   carts                     Cart[]
   cartItems                 CartItem[]
   addresses                 Address[]
@@ -327,6 +328,27 @@ model VendorDomain {
   host        String   @unique // exact request host, e.g. "srimart.nocaped.com"
   isCanonical Boolean  @default(true) // the vendor's primary host (for links / future redirects)
   createdAt   DateTime @default(now())
+
+  @@index([vendorId])
+}
+
+// #1217 — a store's receiving address (orders@, support@ …), routed by Cloudflare Email Routing to
+// workers/inbound-email, which asks /api/inbound-email/resolve where to forward it. Like
+// VendorDomain, the address itself resolves the vendor, so it is globally unique. `forwardTo` is
+// the store's real mailbox; no email body is ever stored. Managed from /staff/platform/client-setup.
+enum InboundAddressPurpose {
+  ORDERS
+  SUPPORT
+}
+
+model VendorInboundAddress {
+  id        String                @id @default(uuid())
+  vendorId  String
+  vendor    Vendor                @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  address   String                @unique // stored lower-case, e.g. "orders@example.com"
+  purpose   InboundAddressPurpose
+  forwardTo String
+  createdAt DateTime              @default(now())
 
   @@index([vendorId])
 }

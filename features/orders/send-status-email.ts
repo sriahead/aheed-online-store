@@ -77,6 +77,7 @@ export async function sendOrderStatusEmail(order: WebhookOrder, status: string):
 
     await getEmailService().send({
       to: order.buyerEmail,
+      sender: { name: vendor.senderName, email: vendor.senderEmail },
       subject: `${vendor.senderName} — order ${order.orderNumber} ${copy.subject}`,
       html: `
         <p>${copy.heading}</p>
