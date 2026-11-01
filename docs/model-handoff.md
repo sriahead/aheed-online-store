@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.157.0"
-updated: 2026-10-31
+version: "1.158.0"
+updated: 2026-11-01
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -38,6 +38,23 @@ Build Notes across the pre-validation Clear. Remove or replace stale information
 reconciliation. If overall project state did not materially change, leave this file untouched.
 
 ## Last Verified
+
+- **2026-11-01 (`#1217` Build): email moves to Cloudflare, plus Client Setup. Built on
+  `feature/1217-cloudflare-email-service`, NOT merged; Validate is next, from a fresh context.**
+  - **On promotion, production sends through Cloudflare Email Service, and every send fails
+    (logged) until `merqify.com` is onboarded in Email Sending.** That is no regression: Resend was
+    sandboxed and never reached real customers (`#104`). `EMAIL_PROVIDER=resend` restores Resend
+    with no code change.
+  - **New owner steps** (`env-setup.md`, "Email: sending and receiving"):
+    - onboard the sending domain;
+    - set the secrets `EMAIL_VERIFIED_DOMAINS`, `EMAIL_ALLOWED_RECIPIENTS` (staging) and
+      `INBOUND_EMAIL_TOKEN` (both Workers), plus `INBOUND_FALLBACK_FORWARD` (the inbound Worker);
+    - verify the destination mailboxes;
+    - create the Email Routing rules to `aheed-inbound-email[-staging]`, a third Worker.
+  - **Client Setup** (`/staff/platform/client-setup`) is the per-client onboarding dashboard the
+    owner asked for. Email is its first section; more are `#1391`. WhatsApp alerts for order mail
+    are `#1390`.
+  - Dev (`ep-dry-morning`) now has every migration through `20261101120000_vendor_inbound_address`.
 
 - **2026-10-31 (`#1341` + `#1325`): PRODUCTION IS ON MERQIFY.** Promotion PR #1366, merge
   `ff1c13b`. `main` and `staging` are level again.

@@ -56,6 +56,20 @@ export async function getCurrentVendorSenderName(): Promise<string> {
   return (await fetchVendorProfileRepo(getPrisma(), vendorId)).senderName;
 }
 
+/**
+ * Vendor sender identity — name AND address — for transactional email (#1217). Same request-host
+ * resolution and non-`cache()` reasoning as `getCurrentVendorSenderName`. `undefined` when the host
+ * resolves to no vendor, which the email port treats as the platform itself.
+ */
+export async function getCurrentVendorSender(): Promise<
+  { name: string; email: string } | undefined
+> {
+  const vendorId = await getCurrentVendorIdOrNull();
+  if (!vendorId) return undefined;
+  const profile = await fetchVendorProfileRepo(getPrisma(), vendorId);
+  return { name: profile.senderName, email: profile.senderEmail };
+}
+
 /* ------------------------------------------------------------------------- *
  * Vendor entry points taking an explicit vendorId (#411)
  *

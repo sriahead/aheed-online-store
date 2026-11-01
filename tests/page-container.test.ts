@@ -58,6 +58,7 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   // #1319 — the platform admin's home: a metrics strip and a card grid, like the hub.
   "app/(admin)/staff/platform/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/platform/vendors/page.tsx": { width: "wide", padY: "default" },
+  "app/(admin)/staff/platform/client-setup/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/platform/domains/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/platform/onboarding/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/platform/settings/page.tsx": { width: "wide", padY: "default" },

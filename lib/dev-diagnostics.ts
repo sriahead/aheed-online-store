@@ -27,7 +27,8 @@ export function getDevDiagnostics(): DevDiagnostics {
     integrations: {
       googleSignIn: has("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
       storage: has("S3_ENDPOINT", "S3_BUCKET", "S3_ACCESS_KEY", "S3_SECRET_KEY"),
-      email: has("RESEND_API_KEY", "RESEND_FROM_EMAIL"),
+      // #1217 — the platform sender is the one email key every provider needs.
+      email: has("EMAIL_FROM"),
       cdn: has("CDN_BASE_URL"),
       betterAuthUrl: has("BETTER_AUTH_URL"),
     },

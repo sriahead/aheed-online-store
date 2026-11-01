@@ -50,8 +50,11 @@ const order = (overrides: Partial<WebhookOrder> = {}): WebhookOrder => ({
 let fetchSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
+  // #1217 — the Resend adapter is now selected explicitly; recipients are open so the buyer is sent to.
+  process.env.EMAIL_PROVIDER = "resend";
   process.env.RESEND_API_KEY = "re_test_key";
-  process.env.RESEND_FROM_EMAIL = "no-reply@example.com";
+  process.env.EMAIL_FROM = "no-reply@example.com";
+  process.env.EMAIL_RECIPIENT_MODE = "open";
   fetchSpy = vi.fn().mockResolvedValue({ ok: true, text: async () => "" });
   vi.stubGlobal("fetch", fetchSpy);
   senderName.mockReturnValue("Aheed Food Centre");

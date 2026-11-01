@@ -670,6 +670,15 @@ export const PLATFORM: RoleCatalogue = {
           status: "live",
         },
         {
+          name: "Client setup",
+          what: "One dashboard per client store with a step-by-step setup guide. Email is the first section: sender, receiving addresses, sending status and a test email.",
+          value: "Onboard a client in one place, with links to the right Cloudflare pages.",
+          demo: "Pick a store, change its sender name, and send a test email to yourself.",
+          route: "/staff/platform/client-setup",
+          status: "partial",
+          note: "Email only so far; more sections (domains, payments, branding) follow (#1217).",
+        },
+        {
           name: "Domain registry",
           what: "Lists every host and custom domain the platform serves.",
           value: "Clear view of where each store is reachable.",

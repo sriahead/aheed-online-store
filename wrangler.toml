@@ -86,6 +86,16 @@ UK_LOCATION_REF_POSTCODE_AREAS = "MK,RG"
 # falls back to the same two values when unset. Non-secret config, so it lives here (see above).
 PLATFORM_NAME = "Merqify"
 PLATFORM_TAGLINE = "Your Merchandise, Digitised Quickly"
+# #1217 — the platform sender every provider uses when a vendor's own domain is not yet verified.
+# EMAIL_RECIPIENT_MODE is deliberately NOT set here: unset means allowlist, so staging only mails
+# EMAIL_ALLOWED_RECIPIENTS. EMAIL_VERIFIED_DOMAINS and EMAIL_ALLOWED_RECIPIENTS are set with
+# `wrangler secret put` (not here) so onboarding a domain or a tester needs no commit or deploy,
+# and secrets survive `wrangler deploy` where dashboard vars do not.
+EMAIL_FROM = "no-reply@merqify.com"
+
+# #1217 — Cloudflare Email Service. The binding is the credential: no API key secret.
+[[env.staging.send_email]]
+name = "EMAIL"
 
 # ---- Production ----------------------------------------------------------
 [env.production]
@@ -123,6 +133,13 @@ UK_LOCATION_REF_POSTCODE_AREAS = "MK,RG"
 SEO_INDEXABLE = "true"
 PLATFORM_NAME = "Merqify"
 PLATFORM_TAGLINE = "Your Merchandise, Digitised Quickly"
+# #1217 — see the staging block. "open" HERE AND NOWHERE ELSE: only production mails arbitrary
+# recipients.
+EMAIL_FROM = "no-reply@merqify.com"
+EMAIL_RECIPIENT_MODE = "open"
+
+[[env.production.send_email]]
+name = "EMAIL"
 
 # NOTE: secrets (DATABASE_URL, UK_LOCATION_REF_DATABASE_URL, S3_*, STRIPE_*, BETTER_AUTH_SECRET)
 # are NOT set here. Add them per environment with:  wrangler secret put NAME --env staging|production
