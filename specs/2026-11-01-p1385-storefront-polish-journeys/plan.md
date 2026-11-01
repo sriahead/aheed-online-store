@@ -42,6 +42,7 @@ Closes `#1385`. Addresses four user requirements:
 - Create `components/help/RoleJourneyMaps.tsx` ("use client") rendering interactive tabs for all 4 roles, defaulting to the viewer's detected role.
 - Each journey presents clear numbered steps, visual badges, route links, and action summaries.
 
-### 4. Documentation updates
-- Expand `docs/client-help-centre/user-journeys.md` with detailed walkthroughs and action steps for all four roles.
-- Run `npm run kms:build-index`.
+### 5. Help Centre visual polish & icon medallion upgrade
+- Role journey step outcomes styled with high-contrast `text-action bg-action-tint border-action/20` badges.
+- Upgraded role switcher tabs in `RoleJourneyMaps.tsx` to `IconMedallion` with 3D slots (`view-shopper`, `view-staff`, `view-admin`, `secure-checkout`), integrated into the Icon & Visual Asset Gallery at `/staff/icons`.
+- Retired redundant static facts panels on `/help` (`Delivery & Minimums`, `Click & Collect`, `Loyalty Points`, `Discount Codes`, `Privacy & Data Rights`, and `Detailed Shopping Guide`), retaining the `#delivery` anchor container for footer link continuity.

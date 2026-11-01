@@ -95,7 +95,11 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
     kind: "3d",
     label: "Secure checkout shield",
     icon3d: "secure-checkout",
-    surfaces: ["Checkout page heading", "Landing feature card: secure checkout"],
+    surfaces: [
+      "Checkout page heading",
+      "Landing feature card: secure checkout",
+      "Help Centre: Platform Admin journey",
+    ],
   },
   {
     id: "order-updates",
