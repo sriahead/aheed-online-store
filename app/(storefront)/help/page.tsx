@@ -11,6 +11,7 @@ import { DocumentSectionRenderer } from "@/components/ui/DocumentSectionRenderer
 import { getPublicShopperGuide } from "@/lib/public-docs";
 import { HelpContactCard } from "@/components/assistant/HelpContactCard";
 import { Icon } from "@/components/icons/Icon";
+import { IconMedallion } from "@/components/icons/IconMedallion";
 import { RoleJourneyMaps, type UserJourneyRole } from "@/components/help/RoleJourneyMaps";
 
 export const metadata: Metadata = {
@@ -149,7 +150,7 @@ export default async function HelpPage() {
           className="scroll-mt-24 bg-white rounded-2xl p-6 border border-black/10"
         >
           <div className="flex items-center gap-3 mb-4">
-            <Icon name="map-pin" className="w-5 h-5 text-action-tint" />
+            <IconMedallion icon3d="postcode-search" size={32} tint="action" decorative />
             <h2 className="font-bold text-lg">Delivery &amp; Minimums</h2>
           </div>
           <div className="space-y-3 text-sm text-black/70">
@@ -233,7 +234,7 @@ export default async function HelpPage() {
         {offersCollection && (
           <section className="bg-white rounded-2xl p-6 border border-black/10">
             <div className="flex items-center gap-3 mb-4">
-              <Icon name="store" className="w-5 h-5 text-action-tint" />
+              <IconMedallion icon3d="storefront" size={32} tint="action" decorative />
               <h2 className="font-bold text-lg">Click &amp; Collect</h2>
             </div>
             <div className="space-y-3 text-sm text-black/70">
@@ -258,7 +259,7 @@ export default async function HelpPage() {
         {loyalty.loyaltyEnabled && (
           <section className="bg-white rounded-2xl p-6 border border-black/10">
             <div className="flex items-center gap-3 mb-4">
-              <Icon name="sparkles" className="w-5 h-5 text-amber-500" />
+              <IconMedallion icon3d="rewards-coin" size={32} tint="accent" decorative />
               <h2 className="font-bold text-lg">Loyalty Points</h2>
             </div>
             <div className="space-y-3 text-sm text-black/70">
@@ -295,7 +296,7 @@ export default async function HelpPage() {
 
         <section className="bg-white rounded-2xl p-6 border border-black/10">
           <div className="flex items-center gap-3 mb-4">
-            <Icon name="ticket-percent" className="w-5 h-5 text-accent" />
+            <IconMedallion icon="ticket-percent" size={32} tint="accent" decorative />
             <h2 className="font-bold text-lg">Discount Codes</h2>
           </div>
           <div className="space-y-3 text-sm text-black/70">
@@ -312,7 +313,7 @@ export default async function HelpPage() {
 
         <section className="bg-white rounded-2xl p-6 border border-black/10">
           <div className="flex items-center gap-3 mb-4">
-            <Icon name="lock" className="w-5 h-5 text-black/60" />
+            <IconMedallion icon="lock" size={32} tint="action" decorative />
             <h2 className="font-bold text-lg">Privacy &amp; Data Rights</h2>
           </div>
           <div className="space-y-3 text-sm text-black/70">
