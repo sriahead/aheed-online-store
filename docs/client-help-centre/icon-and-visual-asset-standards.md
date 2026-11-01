@@ -155,18 +155,18 @@ The table lists every slot (the source of truth is `lib/icon-slots.ts`; a test k
 | Slot | Kind | Where it appears |
 | :--- | :--- | :--- |
 | `delivery-van` | 3D icon | Landing trust strip; Landing feature card: local delivery |
-| `storefront` | 3D icon | Header: Shop link |
+| `storefront` | 3D icon | Header: Shop link; Help Centre: Click & Collect |
 | `quick-shop` | 3D icon | Header: Quick Shop link |
 | `user-profile` | 3D icon | Header: Sign in / Account |
 | `cart-floating` | 3D icon | Header cart button; Cart drawer heading; Empty cart |
 | `secure-checkout` | 3D icon | Checkout page heading; Landing feature card: secure checkout |
 | `order-updates` | 3D icon | Landing feature card: order updates |
-| `view-shopper` | 3D icon | Header role switcher |
-| `view-staff` | 3D icon | Header role switcher |
-| `view-admin` | 3D icon | Header role switcher |
-| `rewards-coin` | 3D icon | Floating rewards launcher |
+| `view-shopper` | 3D icon | Header role switcher; Help Centre: Shopper journey |
+| `view-staff` | 3D icon | Header role switcher; Help Centre: Staff journey |
+| `view-admin` | 3D icon | Header role switcher; Help Centre: Store Admin journey |
+| `rewards-coin` | 3D icon | Floating rewards launcher; Help Centre: Loyalty Points |
 | `halal-certified` | 3D icon | Landing trust strip |
-| `postcode-search` | 3D icon | Delivery location dialog |
+| `postcode-search` | 3D icon | Delivery location dialog; Help Centre: Delivery & Minimums |
 | `contact-follow` | 3D icon | Floating contact button |
 | `rewards-gift` | 3D icon | Third-party credits page |
 | `fruit-veg` | Department (3D) | Managed per category: generate or deactivate it on the category's page |

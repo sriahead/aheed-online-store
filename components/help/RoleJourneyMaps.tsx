@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/icons/Icon";
+import { IconMedallion } from "@/components/icons/IconMedallion";
+import type { Icon3DName } from "@/components/icons/Icon3D";
 import type { IconName } from "@/components/icons/registry";
 
 export type UserJourneyRole = "customer" | "staff" | "store-admin" | "platform-admin";
@@ -21,6 +23,8 @@ interface RoleJourneyData {
   title: string;
   badge: string;
   icon: IconName;
+  icon3d?: Icon3DName;
+  tint?: "action" | "accent" | "danger";
   goal: string;
   startingPoint: string;
   features: { name: string; route?: string; description: string }[];
@@ -34,6 +38,8 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
     title: "Customer (Shopper)",
     badge: "Public & Shopper",
     icon: "shopping-bag",
+    icon3d: "view-shopper",
+    tint: "action",
     goal: "Discover products, verify local delivery eligibility, build baskets, apply discounts and promotions, checkout securely, and track orders.",
     startingPoint: "Store homepage (e.g. aheed.merqify.com or srimart.merqify.com).",
     features: [
@@ -141,6 +147,8 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
     title: "Store Staff",
     badge: "Store Operations",
     icon: "clipboard-list",
+    icon3d: "view-staff",
+    tint: "action",
     goal: "Fulfill incoming customer orders, manage live stock availability, handle item substitutions, moderate feedback, and follow operational runbooks.",
     startingPoint: "Staff Portal at /staff/orders.",
     features: [
@@ -240,6 +248,8 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
     title: "Store Admin",
     badge: "Store Management",
     icon: "store",
+    icon3d: "view-admin",
+    tint: "action",
     goal: "Autonomously manage store branding, delivery postcodes, catalogue imports, pricing, discounts, loyalty programmes, team staff, and FAQs.",
     startingPoint: "Admin Portal at /staff/storefront and /staff/onboarding.",
     features: [
@@ -354,6 +364,8 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
     title: "Platform Admin",
     badge: "Platform Governance",
     icon: "shield-alert",
+    icon3d: "secure-checkout",
+    tint: "accent",
     goal: "Oversee multi-tenant infrastructure, verify tenant onboarding readiness, manage domain routing, monitor Neon PostgreSQL latency, review error logs, and govern AI budgets.",
     startingPoint: "Platform Administration hub at /staff/platform/vendors.",
     features: [
@@ -515,9 +527,12 @@ export function RoleJourneyMaps({ detectedRole = "customer" }: { detectedRole?: 
         <div className="border-b border-black/10 pb-6 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-3">
-              <span className="p-2.5 rounded-xl bg-primary/10 text-primary">
-                <Icon name={journey.icon} className="w-6 h-6" />
-              </span>
+              <IconMedallion
+                {...(journey.icon3d ? { icon3d: journey.icon3d } : { icon: journey.icon })}
+                size={44}
+                tint={journey.tint ?? "action"}
+                decorative
+              />
               <div>
                 <h3 className="text-xl font-bold text-black/90">{journey.title} Journey</h3>
                 <span className="text-xs font-semibold text-black/60">{journey.badge}</span>
@@ -607,8 +622,9 @@ export function RoleJourneyMaps({ detectedRole = "customer" }: { detectedRole?: 
                     ))}
                   </ul>
 
-                  <div className="text-xs font-medium text-action-tint bg-action-tint/10 px-3 py-1.5 rounded-lg inline-block">
-                    <strong>Outcome:</strong> {step.keyOutcome}
+                  <div className="text-xs font-semibold text-action bg-action-tint border border-action/20 px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5">
+                    <span className="font-bold">Outcome:</span>
+                    <span>{step.keyOutcome}</span>
                   </div>
                 </div>
               </div>
