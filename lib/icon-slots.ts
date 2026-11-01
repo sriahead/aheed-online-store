@@ -67,7 +67,7 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
     kind: "3d",
     label: "Shop / storefront",
     icon3d: "storefront",
-    surfaces: ["Header: Shop link"],
+    surfaces: ["Header: Shop link", "Help Centre: Click & Collect"],
   },
   {
     id: "quick-shop",
@@ -95,7 +95,11 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
     kind: "3d",
     label: "Secure checkout shield",
     icon3d: "secure-checkout",
-    surfaces: ["Checkout page heading", "Landing feature card: secure checkout"],
+    surfaces: [
+      "Checkout page heading",
+      "Landing feature card: secure checkout",
+      "Help Centre: Platform Admin journey",
+    ],
   },
   {
     id: "order-updates",
@@ -109,28 +113,28 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
     kind: "3d",
     label: "Role switcher: shopper view",
     icon3d: "view-shopper",
-    surfaces: ["Header role switcher"],
+    surfaces: ["Header role switcher", "Help Centre: Shopper journey"],
   },
   {
     id: "view-staff",
     kind: "3d",
     label: "Role switcher: staff view",
     icon3d: "view-staff",
-    surfaces: ["Header role switcher"],
+    surfaces: ["Header role switcher", "Help Centre: Staff journey"],
   },
   {
     id: "view-admin",
     kind: "3d",
     label: "Role switcher: admin view",
     icon3d: "view-admin",
-    surfaces: ["Header role switcher"],
+    surfaces: ["Header role switcher", "Help Centre: Store Admin journey"],
   },
   {
     id: "rewards-coin",
     kind: "3d",
     label: "Rewards launcher coin",
     icon3d: "rewards-coin",
-    surfaces: ["Floating rewards launcher"],
+    surfaces: ["Floating rewards launcher", "Help Centre: Loyalty Points"],
   },
   {
     id: "halal-certified",
@@ -144,7 +148,7 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
     kind: "3d",
     label: "Postcode / location pin",
     icon3d: "postcode-search",
-    surfaces: ["Delivery location dialog"],
+    surfaces: ["Delivery location dialog", "Help Centre: Delivery & Minimums"],
   },
   {
     id: "contact-follow",

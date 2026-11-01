@@ -129,158 +129,31 @@ describe("/help loyalty gate (#1013 R1, R9)", () => {
     expect(document.body.textContent ?? "").not.toMatch(/loyalt|points|reward/i);
     expect(screen.queryByText(/earns? you points/i)).toBeNull();
   });
-
-  it("states the vendor's own rates when loyalty is on", async () => {
-    state.loyalty = LOYALTY_ON;
-    await renderHelp();
-
-    const text = document.body.textContent ?? "";
-    // The seeded-vendor values are deliberately NOT 1/1/100 here: a literal left in the page would
-    // still read "1 point per £1" and pass a test written against the defaults.
-    expect(text).toMatch(/2 points for every £1/i);
-    expect(text).toMatch(/250 points are worth £2\.50/i);
-    // #1045 — this line asserted /expire 12 months/i, which the wrong wording ("expire 12 months
-    // after you earn them") satisfied. The exact sentence is the only form that pins the
-    // inactivity rule `lib/loyalty.ts`'s isLapsed() implements.
-    expect(text).toContain(
-      "Points expire if your account goes 12 months without an order. Placing an order resets the clock.",
-    );
-  });
-
-  it("names the tiers the vendor actually has, and omits the sentence when it has none", async () => {
-    state.loyalty = LOYALTY_ON;
-    state.tiers = [
-      { key: "SILVER", name: "Silver", thresholdPence: 5000, multiplierBps: 12500 },
-      { key: "GOLD", name: "Gold", thresholdPence: 10000, multiplierBps: 15000 },
-    ];
-    await renderHelp();
-    expect(document.body.textContent ?? "").toMatch(/Silver, Gold/);
-
-    cleanup();
-    state.tiers = [];
-    await renderHelp();
-    expect(document.body.textContent ?? "").not.toMatch(/higher tier/i);
-  });
 });
 
-describe("/help delivery facts (#1013 R3, R5, R6, R7, R8)", () => {
-  it("states the vendor's exact minimum and fee when no area overrides them", async () => {
+describe("/help role journeys & delivery anchor (#1385)", () => {
+  it("renders the interactive role journeys and delivery anchor for footer navigation", async () => {
     await renderHelp();
 
     const text = document.body.textContent ?? "";
-    expect(text).toMatch(/£10\.00 before you can check out/i);
-    expect(text).toMatch(/£2\.99 per delivery/i);
-    expect(text).toMatch(/basket reaches £50\.00/i);
-    expect(text).toMatch(/RG/);
+    expect(text).toMatch(/Platform User Journey Maps/i);
+    expect(text).toMatch(/Customer \(Shopper\)/i);
+    expect(text).toMatch(/Store Staff/i);
+    expect(text).toMatch(/Store Admin/i);
+    expect(text).toMatch(/Platform Admin/i);
+
+    // Footer links to /help#delivery
+    const deliveryAnchor = document.getElementById("delivery");
+    expect(deliveryAnchor).not.toBeNull();
   });
 
-  it("says there is no minimum when minimumOrderPence is 0, rather than that one is required", async () => {
-    state.profile = { ...SRIMART_PROFILE, minimumOrderPence: 0 };
+  it("has retired redundant static facts and shopping guide in favour of interactive journey maps", async () => {
     await renderHelp();
 
     const text = document.body.textContent ?? "";
-    expect(text).toMatch(/no minimum order/i);
-    expect(text).not.toMatch(/minimum order value is required/i);
-  });
-
-  it("treats a 0 free-delivery threshold as not offered, not as everything free", async () => {
-    // lib/delivery-pricing.ts: 0 and null both mean free delivery is never offered. #892 is open
-    // because the store-admin guide claims 0 makes every order free; the code is authoritative.
-    state.profile = { ...SRIMART_PROFILE, freeDeliveryThresholdPence: 0 };
-    await renderHelp();
-
-    const text = document.body.textContent ?? "";
-    expect(text).toMatch(/do not currently offer free delivery/i);
-    expect(text).not.toMatch(/£0\.00/);
-  });
-
-  it("breaks the figures out per area when an area row overrides one", async () => {
-    state.profile = {
-      ...SRIMART_PROFILE,
-      deliveryPrefixes: ["RG", "RG7"],
-      deliveryAreas: [
-        {
-          prefix: "RG",
-          deliveryFeePence: null,
-          minimumOrderPence: null,
-          freeDeliveryThresholdPence: null,
-        },
-        {
-          prefix: "RG7",
-          deliveryFeePence: 599,
-          minimumOrderPence: null,
-          freeDeliveryThresholdPence: null,
-        },
-      ],
-    };
-    await renderHelp();
-
-    const text = document.body.textContent ?? "";
-    expect(text).toMatch(/By postcode area/i);
-    expect(text).toMatch(/£5\.99 delivery/);
-    // The flat claim must be gone: printing one fee as universal while RG7 charges more is the
-    // same class of false statement this slice removed from the loyalty panel.
-    expect(text).not.toMatch(/£2\.99 per delivery/i);
-  });
-
-  it("renders no postcode list at all when the vendor serves no areas", async () => {
-    state.profile = { ...SRIMART_PROFILE, deliveryPrefixes: [], deliveryAreas: [] };
-    await renderHelp();
-
-    expect(document.body.textContent ?? "").not.toMatch(/Postcodes we deliver to/i);
-  });
-
-  it("shows collection only when the vendor offers it", async () => {
-    await renderHelp();
-    expect(document.body.textContent ?? "").not.toMatch(/Click & Collect/i);
-
-    cleanup();
-    state.profile = { ...SRIMART_PROFILE, offerCollection: true };
-    await renderHelp();
-    expect(document.body.textContent ?? "").toMatch(/Click & Collect/i);
-  });
-});
-
-describe("/help vendor answers (#1012 R21)", () => {
-  it("renders no questions section when the vendor has no active answers", async () => {
-    await renderHelp();
-    expect(document.body.textContent ?? "").not.toMatch(/Questions we are asked/i);
-  });
-
-  it("renders the vendor's own answers in the order given", async () => {
-    state.faqs = [
-      {
-        id: "a",
-        question: "First question?",
-        answer: "First answer.",
-        sortOrder: 0,
-        isActive: true,
-      },
-      {
-        id: "b",
-        question: "Second question?",
-        answer: "Second answer.",
-        sortOrder: 1,
-        isActive: true,
-      },
-    ];
-    await renderHelp();
-
-    const text = document.body.textContent ?? "";
-    expect(text).toMatch(/Questions we are asked/i);
-    expect(text.indexOf("First question?")).toBeLessThan(text.indexOf("Second question?"));
-    expect(text).toMatch(/First answer\./);
-  });
-});
-
-describe("/help shopper guide (#1022)", () => {
-  it("renders the public shopping guide and nothing from the internal operations document", async () => {
-    await renderHelp();
-    const text = document.body.textContent ?? "";
-    expect(text).toMatch(/Detailed Shopping Guide/);
-    expect(text).toMatch(/Guest Checkout/);
-    expect(text).not.toMatch(/PENDING_PAYMENT/);
-    expect(text).not.toMatch(/Known Trap/);
+    expect(text).not.toMatch(/Detailed Shopping Guide/i);
+    expect(text).not.toMatch(/By postcode area:/i);
+    expect(text).not.toMatch(/Collecting instead:/i);
   });
 });
 

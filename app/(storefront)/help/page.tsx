@@ -1,85 +1,56 @@
 import { Metadata } from "next";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
-import { getLoyaltyRepository } from "@/lib/loyalty-service";
 import { getVendorFaqRepository } from "@/lib/vendor-faqs-service";
-import { helpDeliveryFacts, freeDeliveryOffered, pointsExpirySentence } from "@/lib/help-facts";
-import { formatPrice } from "@/components/product/format-price";
 import { PageContainer } from "@/components/layout/PageContainer";
 import Link from "next/link";
-import { DocumentSectionRenderer } from "@/components/ui/DocumentSectionRenderer";
-import { getPublicShopperGuide } from "@/lib/public-docs";
 import { HelpContactCard } from "@/components/assistant/HelpContactCard";
 import { Icon } from "@/components/icons/Icon";
+import { RoleJourneyMaps, type UserJourneyRole } from "@/components/help/RoleJourneyMaps";
 
 export const metadata: Metadata = {
   title: "Help Centre",
 };
 
 /**
- * The shopper Help Centre (#1013, #1012).
+ * The shopper & multi-role Help Centre (#1013, #1012, #1385).
  *
- * EVERY DELIVERY, COLLECTION AND LOYALTY FACT ON THIS PAGE IS COMPUTED, never written here. Until
- * #1013 this page asserted "A minimum order value is required for delivery" and "Every purchase
- * earns you points automatically" as platform prose. `minimumOrderPence` defaults to `0` and
- * `loyaltyEnabled` defaults to `false`, so both were false for some tenant — and the loyalty
- * promise was live in production on SriMart, a store with loyalty switched off. Every other
- * loyalty surface already gated on the flag (`/account/loyalty` 404s, `/account` and `/checkout`
- * branch); this page was the one that did not.
- *
- * Money comes from `lib/help-facts.ts`, which resolves it through `resolveDeliveryRules` — the page
- * never reads the three vendor-wide money fields directly, because any `VendorDeliveryArea` row may
- * override them per area (#890).
- *
- * Everything the database cannot answer is the vendor's own words, from `/staff/faqs` (#1012). No
- * answer is authored here or seeded; a vendor with none gets no questions section (#239).
+ * User journeys are presented through interactive role maps (Shopper, Staff, Store Admin, Platform Admin).
+ * Store-specific answers come from `/staff/faqs` (#1012). No answer is hardcoded; a vendor with none gets
+ * no questions section (#239).
  */
 export default async function HelpPage() {
-  const loyaltyRepository = getLoyaltyRepository();
-  const [auth, profile, loyalty, tiers, faqs] = await Promise.all([
+  const [auth, profile, faqs] = await Promise.all([
     requireVendorRole("STAFF", "ADMIN"),
     getCurrentVendorProfile(),
-    loyaltyRepository.config(),
-    // Read so the tier explanation this page inherited from the shopping guide survives #1013's
-    // gate instead of being dropped with it. `tiers()` already exists; nothing new is queried for
-    // a vendor that has none, and the sentence is hidden when the list is empty.
-    loyaltyRepository.tiers(),
     getVendorFaqRepository().listActive(),
   ]);
   const isStaff = auth.ok;
-  const localityName = profile?.localityName.trim() ?? "";
 
-  const facts = helpDeliveryFacts(
-    {
-      deliveryFeePence: profile?.deliveryFeePence ?? 0,
-      minimumOrderPence: profile?.minimumOrderPence ?? 0,
-      freeDeliveryThresholdPence: profile?.freeDeliveryThresholdPence ?? null,
-      collectionMinimumOrderPence: profile?.collectionMinimumOrderPence ?? 0,
-    },
-    profile?.deliveryAreas ?? [],
-  );
-
-  const prefixes = profile?.deliveryPrefixes ?? [];
-  const offersCollection = profile?.offerCollection ?? false;
-  const { defaults, varies } = facts;
-
-  /*
-   * The shopper guide comes from `lib/public-docs.ts`, selected by id and only when it is
-   * `visibility: public` (#1022). This page used to filter the whole KMS corpus by audience and
-   * render the first match; an internal operations document sorted first and served on every
-   * vendor's public Help Centre. `tests/public-docs-boundary.test.ts` now stops any non-staff file
-   * other than that helper from importing the corpus at all.
-   */
-  const shopperGuide = getPublicShopperGuide();
+  let detectedRole: UserJourneyRole = "customer";
+  if (auth.ok) {
+    if (auth.via === "platform-admin") {
+      detectedRole = "platform-admin";
+    } else if (auth.via === "ADMIN") {
+      detectedRole = "store-admin";
+    } else if (auth.via === "STAFF") {
+      detectedRole = "staff";
+    }
+  }
 
   return (
     <PageContainer width="narrow" className="space-y-12">
       <header className="space-y-2">
         <h1 className="text-3xl font-bold text-black/90">Help Centre</h1>
         <p className="text-black/60">
-          Everything you need to know about shopping, delivery, and your data.
+          Everything you need to know about shopping, delivery, platform features, and your data.
         </p>
       </header>
+
+      {/* #1385 — Interactive role-based user journey maps with delivery anchor */}
+      <div id="delivery" className="scroll-mt-24">
+        <RoleJourneyMaps detectedRole={detectedRole} />
+      </div>
 
       {isStaff && (
         <section className="bg-primary/5 rounded-2xl p-6 sm:p-8 border border-primary/20">
@@ -127,193 +98,6 @@ export default async function HelpPage() {
         />
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* #1055 — the footer's "Delivery areas & slots" link lands here. */}
-        <section
-          id="delivery"
-          className="scroll-mt-24 bg-white rounded-2xl p-6 border border-black/10"
-        >
-          <div className="flex items-center gap-3 mb-4">
-            <Icon name="map-pin" className="w-5 h-5 text-action-tint" />
-            <h2 className="font-bold text-lg">Delivery &amp; Minimums</h2>
-          </div>
-          <div className="space-y-3 text-sm text-black/70">
-            <p>
-              {/* #905 — the vendor's own locality, never a fixed town: this sentence used to name
-                  one vendor's town on every storefront, including a Reading store's. */}
-              <strong>Delivery Zones:</strong>{" "}
-              {localityName
-                ? `We currently deliver across ${localityName} and surrounding local areas.`
-                : "We deliver to the postcode areas this store serves."}{" "}
-              Eligibility is verified at checkout using your postcode.
-            </p>
-
-            {/* #239's null-hides rule: a vendor with no delivery areas gets no list, not an
-                empty one and not a placeholder. */}
-            {prefixes.length > 0 && (
-              <p>
-                <strong>Postcodes we deliver to:</strong> {prefixes.join(", ")}.
-              </p>
-            )}
-
-            <p>
-              <strong>Minimum Order:</strong>{" "}
-              {varies.minimum
-                ? "This depends on where you are — see the breakdown below."
-                : defaults.minimumOrderPence > 0
-                  ? `Orders must reach ${formatPrice(defaults.minimumOrderPence)} before you can check out.`
-                  : "There is no minimum order — order as little as you like."}
-            </p>
-
-            <p>
-              <strong>Delivery Fee:</strong>{" "}
-              {varies.fee
-                ? "This depends on where you are — see the breakdown below."
-                : defaults.deliveryFeePence > 0
-                  ? `${formatPrice(defaults.deliveryFeePence)} per delivery.`
-                  : "Delivery is free."}
-            </p>
-
-            <p>
-              <strong>Free Delivery:</strong>{" "}
-              {varies.threshold
-                ? "This depends on where you are — see the breakdown below."
-                : freeDeliveryOffered(defaults.freeDeliveryThresholdPence)
-                  ? `Your delivery fee is waived once your basket reaches ${formatPrice(
-                      defaults.freeDeliveryThresholdPence as number,
-                    )}.`
-                  : "We do not currently offer free delivery on larger orders."}
-            </p>
-
-            {/* Per-area breakdown, shown only where a VendorDeliveryArea row actually overrides
-                something. Printing one figure as universal while an area charges differently is
-                the same class of false claim this slice removed. */}
-            {(varies.fee || varies.minimum || varies.threshold) && facts.areas.length > 0 && (
-              <div className="pt-1">
-                <p className="font-semibold text-black/80">By postcode area:</p>
-                <ul className="mt-1 space-y-1">
-                  {facts.areas.map((area) => (
-                    <li key={area.prefix}>
-                      <strong>{area.prefix}:</strong>{" "}
-                      {area.deliveryFeePence > 0
-                        ? `${formatPrice(area.deliveryFeePence)} delivery`
-                        : "free delivery"}
-                      {area.minimumOrderPence > 0
-                        ? `, ${formatPrice(area.minimumOrderPence)} minimum`
-                        : ", no minimum"}
-                      {freeDeliveryOffered(area.freeDeliveryThresholdPence)
-                        ? `, free over ${formatPrice(area.freeDeliveryThresholdPence as number)}`
-                        : ""}
-                      .
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Collection exists only where the vendor offers it. Click & Collect shipped in #402 and
-            this page never mentioned it at all until #1013. */}
-        {offersCollection && (
-          <section className="bg-white rounded-2xl p-6 border border-black/10">
-            <div className="flex items-center gap-3 mb-4">
-              <Icon name="store" className="w-5 h-5 text-action-tint" />
-              <h2 className="font-bold text-lg">Click &amp; Collect</h2>
-            </div>
-            <div className="space-y-3 text-sm text-black/70">
-              <p>
-                <strong>Collecting instead:</strong> You can choose to collect your order from the
-                store at checkout rather than have it delivered. There is no delivery fee on a
-                collection order.
-              </p>
-              <p>
-                <strong>Minimum Order:</strong>{" "}
-                {facts.collectionMinimumOrderPence > 0
-                  ? `Collection orders must reach ${formatPrice(facts.collectionMinimumOrderPence)}.`
-                  : "There is no minimum for collection orders."}
-              </p>
-            </div>
-          </section>
-        )}
-
-        {/* The gate this slice exists for. loyaltyEnabled defaults to false, and every other
-            loyalty surface already respected it — this page promised points to stores that do not
-            run a loyalty scheme. Rates are the vendor's own, never literals. */}
-        {loyalty.loyaltyEnabled && (
-          <section className="bg-white rounded-2xl p-6 border border-black/10">
-            <div className="flex items-center gap-3 mb-4">
-              <Icon name="sparkles" className="w-5 h-5 text-amber-500" />
-              <h2 className="font-bold text-lg">Loyalty Points</h2>
-            </div>
-            <div className="space-y-3 text-sm text-black/70">
-              <p>
-                <strong>Earning Points:</strong> You earn {loyalty.pointsPerPoundEarned}{" "}
-                {loyalty.pointsPerPoundEarned === 1 ? "point" : "points"} for every £1 you spend.
-                Points are credited once your order is confirmed by the store.
-              </p>
-              <p>
-                <strong>Redeeming Points:</strong> {loyalty.minRedeemPoints} points are worth{" "}
-                {formatPrice(loyalty.minRedeemPoints * loyalty.pencePerPointRedeemed)} off a future
-                order. You can redeem once you have at least {loyalty.minRedeemPoints} points. The
-                checkout total updates as you enter them, and tells you if this order can only take
-                some of them.
-              </p>
-              {tiers.length > 0 && (
-                <p>
-                  <strong>Tiers:</strong> Spend more over a rolling {loyalty.tierWindowDays}-day
-                  period and you move into a higher tier
-                  {" ("}
-                  {tiers.map((tier) => tier.name).join(", ")}
-                  {"), "}
-                  which earns points faster.
-                </p>
-              )}
-              {loyalty.pointsExpiryMonths !== null && (
-                <p>
-                  <strong>Expiry:</strong> {pointsExpirySentence(loyalty.pointsExpiryMonths)}
-                </p>
-              )}
-            </div>
-          </section>
-        )}
-
-        <section className="bg-white rounded-2xl p-6 border border-black/10">
-          <div className="flex items-center gap-3 mb-4">
-            <Icon name="ticket-percent" className="w-5 h-5 text-accent" />
-            <h2 className="font-bold text-lg">Discount Codes</h2>
-          </div>
-          <div className="space-y-3 text-sm text-black/70">
-            <p>
-              <strong>How to use:</strong> Enter your promo code at checkout before payment.
-            </p>
-            <p>
-              <strong>Limitations:</strong> Only one discount code can be used per order. Discount
-              codes cannot be stacked
-              {loyalty.loyaltyEnabled ? ", but they can be used alongside your earned points" : ""}.
-            </p>
-          </div>
-        </section>
-
-        <section className="bg-white rounded-2xl p-6 border border-black/10">
-          <div className="flex items-center gap-3 mb-4">
-            <Icon name="lock" className="w-5 h-5 text-black/60" />
-            <h2 className="font-bold text-lg">Privacy &amp; Data Rights</h2>
-          </div>
-          <div className="space-y-3 text-sm text-black/70">
-            <p>
-              <strong>Data Portability:</strong> If you are an account holder, you can request a
-              machine-readable export of your data from your Account Settings page.
-            </p>
-            <p>
-              <strong>Right to Erasure:</strong> You can permanently delete your account and
-              anonymize your historical order data via your Account Settings. Guest shoppers can
-              also request erasure using their order details.
-            </p>
-          </div>
-        </section>
-      </div>
-
       {/* #1012 — the vendor's own answers. Nothing is authored by the platform, so a store with no
           active rows gets no section here rather than an empty heading. */}
       {faqs.length > 0 && (
@@ -330,13 +114,6 @@ export default async function HelpPage() {
               </div>
             ))}
           </dl>
-        </section>
-      )}
-
-      {shopperGuide && (
-        <section className="mt-12">
-          <h2 className="text-2xl font-bold mb-6 px-4 sm:px-0">Detailed Shopping Guide</h2>
-          <DocumentSectionRenderer content={shopperGuide.content} />
         </section>
       )}
     </PageContainer>

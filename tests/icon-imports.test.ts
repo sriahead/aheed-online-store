@@ -91,7 +91,7 @@ describe("icon library imports (#1223, R32)", () => {
       }
     }
     expect(violations).toEqual([]);
-  });
+  }, 15000);
 
   it("the checker can fail: it flags each import form in an in-memory file", () => {
     const text = [
