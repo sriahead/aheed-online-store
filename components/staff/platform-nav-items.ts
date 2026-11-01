@@ -59,6 +59,12 @@ export const PLATFORM_NAV_ITEMS: readonly PlatformNavItem[] = [
     icon: "coins",
   },
   {
+    href: "/staff/feature-catalogue",
+    label: "Feature Catalogue",
+    description: "What the platform does for each role, with its status and a demo talking point.",
+    icon: "list-checks",
+  },
+  {
     href: "/staff/errors",
     label: "Error Events",
     description: "Recent server-side exceptions and stack traces across all stores.",
