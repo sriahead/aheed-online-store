@@ -11,6 +11,7 @@ import { DocumentSectionRenderer } from "@/components/ui/DocumentSectionRenderer
 import { getPublicShopperGuide } from "@/lib/public-docs";
 import { HelpContactCard } from "@/components/assistant/HelpContactCard";
 import { Icon } from "@/components/icons/Icon";
+import { RoleJourneyMaps, type UserJourneyRole } from "@/components/help/RoleJourneyMaps";
 
 export const metadata: Metadata = {
   title: "Help Centre",
@@ -72,14 +73,28 @@ export default async function HelpPage() {
    */
   const shopperGuide = getPublicShopperGuide();
 
+  let detectedRole: UserJourneyRole = "customer";
+  if (auth.ok) {
+    if (auth.via === "platform-admin") {
+      detectedRole = "platform-admin";
+    } else if (auth.via === "ADMIN") {
+      detectedRole = "store-admin";
+    } else if (auth.via === "STAFF") {
+      detectedRole = "staff";
+    }
+  }
+
   return (
     <PageContainer width="narrow" className="space-y-12">
       <header className="space-y-2">
         <h1 className="text-3xl font-bold text-black/90">Help Centre</h1>
         <p className="text-black/60">
-          Everything you need to know about shopping, delivery, and your data.
+          Everything you need to know about shopping, delivery, platform features, and your data.
         </p>
       </header>
+
+      {/* #1385 — Interactive role-based user journey maps */}
+      <RoleJourneyMaps detectedRole={detectedRole} />
 
       {isStaff && (
         <section className="bg-primary/5 rounded-2xl p-6 sm:p-8 border border-primary/20">

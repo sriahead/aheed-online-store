@@ -386,6 +386,28 @@ export async function saveStorefrontTheme(
 }
 
 /**
+ * Delete a custom vendor theme (#1385).
+ * Only custom vendor themes can be deleted; global presets are protected.
+ */
+export async function deleteStorefrontTheme(
+  themeId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  if (!themeId || themeId.trim() === "") {
+    return { ok: false, error: "Theme ID is required." };
+  }
+
+  await import("@/lib/vendor-service").then((m) =>
+    m.deleteVendorTheme(auth.vendorId, themeId.trim()),
+  );
+
+  revalidatePath("/staff/storefront");
+  return { ok: true };
+}
+
+/**
  * Save this store's delivery rules (P9.2, #634).
  *
  * Separate from `updateStorefrontConfig` above rather than folded into it, for two reasons. The
