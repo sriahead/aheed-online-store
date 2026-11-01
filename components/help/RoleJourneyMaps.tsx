@@ -503,13 +503,18 @@ export function RoleJourneyMaps({ detectedRole = "customer" }: { detectedRole?: 
               role="tab"
               aria-selected={isSelected}
               onClick={() => setActiveRole(roleKey)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+              className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl font-medium text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                 isSelected
                   ? "bg-white text-primary shadow-sm font-semibold border border-black/10"
                   : "text-black/70 hover:text-black hover:bg-black/5"
               }`}
             >
-              <Icon name={item.icon} className="w-4 h-4" />
+              <IconMedallion
+                {...(item.icon3d ? { icon3d: item.icon3d } : { icon: item.icon })}
+                size={22}
+                tint={item.tint ?? "action"}
+                decorative
+              />
               <span>{item.title}</span>
               {isDetected && (
                 <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">

@@ -159,7 +159,7 @@ The table lists every slot (the source of truth is `lib/icon-slots.ts`; a test k
 | `quick-shop` | 3D icon | Header: Quick Shop link |
 | `user-profile` | 3D icon | Header: Sign in / Account |
 | `cart-floating` | 3D icon | Header cart button; Cart drawer heading; Empty cart |
-| `secure-checkout` | 3D icon | Checkout page heading; Landing feature card: secure checkout |
+| `secure-checkout` | 3D icon | Checkout page heading; Landing feature card: secure checkout; Help Centre: Platform Admin journey |
 | `order-updates` | 3D icon | Landing feature card: order updates |
 | `view-shopper` | 3D icon | Header role switcher; Help Centre: Shopper journey |
 | `view-staff` | 3D icon | Header role switcher; Help Centre: Staff journey |
