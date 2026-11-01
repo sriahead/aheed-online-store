@@ -227,7 +227,7 @@ describe("registry content (R3)", () => {
       github: ["actual", "owner-stated", 0, "month", null, null, null],
       "workers-ai": ["estimate", "provider-pricing-page", null, null, null, null, null],
       stripe: ["unverified", "not-confirmed", null, null, null, null, null],
-      "cloudflare-email": ["unverified", "not-confirmed", null, null, null, null, null],
+      "cloudflare-email": ["estimate", "provider-pricing-page", null, null, null, null, null],
     };
     for (const [id, want] of Object.entries(expected)) {
       const got = find(id);
@@ -409,7 +409,7 @@ describe("buildCostReport groups, staleness and owner confirmations (#1309 R4)",
 
   it("lists the unverified items for the owner to confirm", () => {
     expect(buildCostReport(RUNNING_COST_ITEMS, NOW).ownerToConfirm.sort()).toEqual(
-      ["stripe", "cloudflare-email", "claude", "gemini-pro"].sort(),
+      ["stripe", "claude", "gemini-pro"].sort(),
     );
   });
 });

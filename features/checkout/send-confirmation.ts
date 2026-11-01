@@ -40,6 +40,7 @@ export async function sendOrderConfirmationEmail(order: WebhookOrder): Promise<v
 
     await getEmailService().send({
       to: order.buyerEmail,
+      sender: { name: vendor.senderName, email: vendor.senderEmail },
       subject: `${vendor.senderName} — order ${order.orderNumber} confirmed`,
       html: `
         <p>Thanks — we've received your payment and your order is confirmed.</p>

@@ -12,7 +12,7 @@ import type { WebhookOrder } from "@/lib/repositories/orders";
  *
  * Same mocking posture as tests/order-status-email.test.ts: stub the vendor
  * lookup so the module loads without @prisma/client/wasm, leave lib/email real
- * so the assertion is against the actual outbound Resend request.
+ * so the assertion is against the actual outbound Resend request (the Resend adapter, #1217).
  *
  * The mock target moved to `@/lib/vendor-service` in #411. That is where the
  * Prisma client is now resolved — `lib/repositories/vendor.ts` takes one as a
@@ -20,7 +20,10 @@ import type { WebhookOrder } from "@/lib/repositories/orders";
  * longer intercepts anything that loads the WASM client.
  */
 vi.mock("@/lib/vendor-service", () => ({
-  fetchVendorProfile: async () => ({ senderName: "Aheed Food Centre" }),
+  fetchVendorProfile: async () => ({
+    senderName: "Aheed Food Centre",
+    senderEmail: "orders@vendor.test",
+  }),
 }));
 
 const { sendOrderConfirmationEmail } = await import("@/features/checkout/send-confirmation");
@@ -59,8 +62,11 @@ const order = (overrides: Partial<WebhookOrder> = {}): WebhookOrder => ({
 let fetchSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
+  // #1217 — the Resend adapter is now selected explicitly; recipients are open so the buyer is sent to.
+  process.env.EMAIL_PROVIDER = "resend";
   process.env.RESEND_API_KEY = "re_test_key";
-  process.env.RESEND_FROM_EMAIL = "no-reply@example.com";
+  process.env.EMAIL_FROM = "no-reply@example.com";
+  process.env.EMAIL_RECIPIENT_MODE = "open";
   fetchSpy = vi.fn().mockResolvedValue({ ok: true, text: async () => "" });
   vi.stubGlobal("fetch", fetchSpy);
 });
@@ -207,5 +213,22 @@ describe("order confirmation email — custom item notes", () => {
   it("renders no note element for a line without one", async () => {
     await sendOrderConfirmationEmail(order());
     expect(sentHtml()).not.toContain("Note:");
+  });
+});
+
+describe("order confirmation email — vendor sender (#1217 R10)", () => {
+  it("sends on behalf of the vendor: its name, and replies to its address until the domain is verified", async () => {
+    await sendOrderConfirmationEmail(order());
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(body.from).toBe("Aheed Food Centre <no-reply@example.com>");
+    expect(body.reply_to).toBe("orders@vendor.test");
+  });
+
+  it("sends from the vendor's own address once its domain is verified", async () => {
+    process.env.EMAIL_VERIFIED_DOMAINS = "vendor.test";
+    await sendOrderConfirmationEmail(order());
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(body.from).toBe("Aheed Food Centre <orders@vendor.test>");
+    expect(body).not.toHaveProperty("reply_to");
   });
 });

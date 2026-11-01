@@ -113,6 +113,10 @@ const ALLOWED = new Map<string, string>([
     "Platform-admin-wide domain registry (#1269): lists all registered hostnames across all vendors for multi-tenant routing management (/staff/platform/domains). Gated strictly on requirePlatformAdmin() server-side.",
   ],
   [
+    "inbound-address.ts:findInboundAddress",
+    "The address IS the vendor key (#1217), exactly as a request host is for VendorDomain: workers/inbound-email receives mail for an address and must learn which vendor owns it, so there is no vendor to scope by yet. Returns the one row for that exact address. Its only caller is /api/inbound-email/resolve, which is authenticated by INBOUND_EMAIL_TOKEN — never reachable from unauthenticated user input.",
+  ],
+  [
     "platform-admin.ts:getPlatformOverviewMetrics",
     "Platform-admin-wide metrics (#1269): aggregates platform-wide tenant counts, catalogue totals, and active users for platform administration overview (/staff/platform/settings). Gated strictly on requirePlatformAdmin() server-side.",
   ],

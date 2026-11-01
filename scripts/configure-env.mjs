@@ -28,10 +28,15 @@ const GITHUB_ENV_SECRETS = ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "DI
 // (BETTER_AUTH_URL and S3_REGION are required too, though not in the original
 // request: BETTER_AUTH_URL is per-environment and OAuth/session break without it;
 // S3_REGION is required by ADR-003's storage contract.)
+//
+// #1217 — the two Resend keys (API key and From address) are no longer required: Cloudflare Email Service is
+// the provider (a binding, not a key) and EMAIL_FROM is committed config in wrangler.toml [vars].
+// RESEND_API_KEY stays pushable below for the Resend fallback (EMAIL_PROVIDER=resend).
+// INBOUND_EMAIL_TOKEN authenticates workers/inbound-email to the app, so it also goes to that
+// Worker (INBOUND_WORKER_ALSO).
 const WORKER_SECRETS = [
   "DATABASE_URL",
-  "RESEND_API_KEY",
-  "RESEND_FROM_EMAIL",
+  "INBOUND_EMAIL_TOKEN",
   "BETTER_AUTH_SECRET",
   "BETTER_AUTH_URL",
   "GOOGLE_CLIENT_ID",
@@ -59,7 +64,14 @@ const WORKER_SECRETS = [
 // #1323 — UK_LOCATION_REF_DATABASE_URL (pooled, read at runtime by lib/reference/) is optional
 // here for the same reason: an older env file without it must still push. Its direct twin is the
 // optional GitHub secret below.
+//
+// #1217 — RESEND_API_KEY (the Resend fallback), EMAIL_VERIFIED_DOMAINS and
+// EMAIL_ALLOWED_RECIPIENTS are optional too: secrets rather than [vars] so a newly verified domain
+// or tester needs no commit, and an unset allowlist simply sends nothing on staging.
 const OPTIONAL_WORKER_SECRETS = [
+  "RESEND_API_KEY",
+  "EMAIL_VERIFIED_DOMAINS",
+  "EMAIL_ALLOWED_RECIPIENTS",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "UK_LOCATION_REF_DATABASE_URL",
@@ -82,6 +94,11 @@ const PRODUCTION_GITHUB_ALSO = [
   "S3_REGION",
   "CDN_BASE_URL",
 ];
+
+// #1217 — secrets the inbound-email Worker (workers/inbound-email) needs as well. Already
+// required above; this adds a second destination.
+const INBOUND_WORKER_ALSO = ["INBOUND_EMAIL_TOKEN"];
+const INBOUND_WORKER_CONFIG = "workers/inbound-email/wrangler.toml";
 
 const REQUIRED = [...GITHUB_ENV_SECRETS, ...WORKER_SECRETS];
 const KNOWN = [...REQUIRED, ...OPTIONAL_WORKER_SECRETS, ...OPTIONAL_GITHUB_ENV_SECRETS];

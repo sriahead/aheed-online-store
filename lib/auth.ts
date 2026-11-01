@@ -3,7 +3,8 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { getPrisma } from "./db";
 import { getEnv, type AppEnv } from "./config";
 import { getEmailService } from "./email";
-import { getCurrentVendorProfile, getCurrentVendorSenderName } from "./vendor-service";
+import { getCurrentVendorProfile, getCurrentVendorSender } from "./vendor-service";
+import { DEFAULT_SENDER_NAME } from "./repositories/vendor";
 import { resolveAuthOrigin } from "./auth-origin";
 import { recordSignUpMarketingConsent } from "./marketing-consent-signup";
 import { recordMarketingConsent } from "./repositories/marketing-consent";
@@ -221,11 +222,13 @@ export async function getAuth() {
       enabled: true,
       requireEmailVerification: true,
       sendResetPassword: async ({ user, url }) => {
-        // Sender identity is the resolved vendor's (ADR-004 slice 4); the From
-        // address stays the platform-verified Resend identity.
-        const senderName = await getCurrentVendorSenderName();
+        // Sender identity is the resolved vendor's (ADR-004 slice 4). The From address is the
+        // vendor's own once its domain is verified, else the platform's with Reply-To (#1217).
+        const sender = await getCurrentVendorSender();
+        const senderName = sender?.name ?? DEFAULT_SENDER_NAME;
         await email.send({
           to: user.email,
+          sender,
           subject: `Reset your ${senderName} password`,
           html: `<p>Click <a href="${url}">here</a> to reset your password. If you didn't request this, ignore this email.</p>`,
         });
@@ -233,9 +236,11 @@ export async function getAuth() {
     },
     emailVerification: {
       sendVerificationEmail: async ({ user, url }) => {
-        const senderName = await getCurrentVendorSenderName();
+        const sender = await getCurrentVendorSender();
+        const senderName = sender?.name ?? DEFAULT_SENDER_NAME;
         await email.send({
           to: user.email,
+          sender,
           subject: `Verify your ${senderName} email`,
           html: `<p>Click <a href="${url}">here</a> to verify your email.</p>`,
         });

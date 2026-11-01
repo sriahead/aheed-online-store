@@ -99,3 +99,14 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # #1217 — the inbound-email Worker: Email Routing's target for store addresses. A THIRD
+      # Worker for the same reason as the scheduler (the generated app entry has no `email`
+      # export). After the app deploy, because it calls /api/inbound-email/resolve on it. Its two
+      # secrets (INBOUND_EMAIL_TOKEN, INBOUND_FALLBACK_FORWARD) are set with `wrangler secret put`,
+      # never through CI.
+      - name: Deploy inbound email worker
+        run: npx wrangler deploy --config workers/inbound-email/wrangler.toml --env production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

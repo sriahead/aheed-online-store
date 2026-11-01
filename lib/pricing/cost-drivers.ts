@@ -241,9 +241,11 @@ export const COST_DRIVERS: readonly CostDriver[] = [
   {
     id: "email-transactional",
     name: "Order and delivery emails",
-    provider: "Resend",
+    // #1217 — Cloudflare Email Service replaced Resend as the provider (Resend stays a config
+    // fallback). Included in Workers Paid, so no fixed fee of its own.
+    provider: "Cloudflare Email Service",
     group: "messaging",
-    fixed: { amount: usd(2000), period: "month" },
+    fixed: null,
     oneOff: null,
     usage: [
       {
@@ -251,14 +253,15 @@ export const COST_DRIVERS: readonly CostDriver[] = [
         baseUnits: 200,
         perShopUnits: 50,
         perOrderUnits: 3,
-        freeUnits: 50_000,
-        price: { minor: 90, perUnits: 1_000, currency: "USD" },
+        freeUnits: 3_000,
+        price: { minor: 35, perUnits: 1_000, currency: "USD" },
       },
     ],
     basis: "published-source",
-    sourceUrl: "https://resend.com/pricing",
+    sourceUrl: "https://developers.cloudflare.com/email-service/platform/pricing/",
+    // The registry's shared read date; the Cloudflare price itself was read on 2026-11-01 (#1217).
     asOf: READ,
-    note: `Pro: $20 a month for 50,000 emails, then $0.90 per 1,000. The Free plan's 100-a-day limit is reached at about 33 orders a day across all shops, so production needs Pro. Three emails per order (confirmation, dispatch, delivered). ${USAGE_NOTE}`,
+    note: `Workers Paid includes 3,000 emails a month per account, then $0.35 per 1,000. Incoming mail (Email Routing) is free. Three emails per order (confirmation, dispatch, delivered). ${USAGE_NOTE}`,
   },
   {
     id: "sms",

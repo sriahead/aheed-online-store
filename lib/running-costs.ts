@@ -106,6 +106,8 @@ const WORKERS_PRICING = "https://developers.cloudflare.com/workers/platform/pric
 const NEON_PRICING = "https://neon.com/pricing";
 const R2_PRICING = "https://developers.cloudflare.com/r2/pricing/";
 const WORKERS_AI_PRICING = "https://developers.cloudflare.com/workers-ai/platform/pricing/";
+const CLOUDFLARE_EMAIL_PRICING =
+  "https://developers.cloudflare.com/email-service/platform/pricing/";
 
 /** Verisign's `.com` increase, announced on the Cloudflare Registrar page on 2026-10-27. */
 const COM_PRICE_CHANGE: CostPriceChange = {
@@ -372,9 +374,11 @@ export const RUNNING_COST_ITEMS: readonly CostItem[] = [
     provider: "Cloudflare",
     category: "email",
     role: "Transactional email",
-    plan: "Planned, not yet integrated",
-    costStatus: "unverified",
-    basis: "not-confirmed",
+    // #1217 — integrated: the default provider behind lib/email.ts. Usage-priced, so no fixed amount.
+    plan: "Workers Paid: 3,000 emails a month included, then pay per email",
+    costStatus: "estimate",
+    basis: "provider-pricing-page",
+    // The registry's review date; the price itself was read on 2026-11-01 (limits.retrievedOn).
     asOf: "2026-10-27",
     amountCents: null,
     period: null,
@@ -382,9 +386,15 @@ export const RUNNING_COST_ITEMS: readonly CostItem[] = [
     renewsOn: null,
     autoRenew: null,
     priceChange: null,
-    limits: null,
+    limits: {
+      allowance: "3,000 outgoing emails per month per account; incoming (Email Routing) is free",
+      overage: "$0.35 per 1,000 emails beyond the monthly allowance (Workers Paid plan)",
+      sourceUrl: CLOUDFLARE_EMAIL_PRICING,
+      retrievedOn: "2026-11-01",
+      confirmedByOwner: false,
+    },
     usage: null,
-    note: "Planned replacement for the current email provider setting. Its price is not confirmed.",
+    note: "3,000 emails a month included, then $0.35 per 1,000. Sending needs Workers Paid; the daily sending quota starts low on a new account and is not published. Sends to verified addresses are free.",
   },
   // #1309 - the rest of the brief's audit list. Nothing here is a guess: the open-licence rows link
   // their licence, and Claude and Gemini Pro stay unpriced until the owner states the plan.
