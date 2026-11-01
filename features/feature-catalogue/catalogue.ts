@@ -481,14 +481,6 @@ export const ADMIN: RoleCatalogue = {
           status: "live",
         },
         {
-          name: "Feature Catalogue",
-          what: "This page: a structured reference of what the platform does for each role.",
-          value: "A shared script for demonstrations.",
-          demo: "Use it to choose what to show next.",
-          route: "/staff/feature-catalogue",
-          status: "live",
-        },
-        {
           name: "Refunds in the panel",
           what: "Not built: there is no in-panel refund action.",
           value: "Do not promise it in a demo.",
@@ -731,6 +723,14 @@ export const PLATFORM: RoleCatalogue = {
           route: "/staff/platform/costs",
           status: "live",
           note: "No realised revenue yet: the platform has not traded, so profit figures are projections.",
+        },
+        {
+          name: "Feature Catalogue",
+          what: "This page: a structured reference of what the platform does for each role.",
+          value: "A shared script for demonstrations.",
+          demo: "Use it to choose what to show next.",
+          route: "/staff/feature-catalogue",
+          status: "live",
         },
         {
           name: "Multi-store foundation",

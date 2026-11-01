@@ -14,6 +14,8 @@ every branch merges.
 
 ### Changed
 
+- **The Feature Catalogue is for platform admins only** (issue `#1379`, spec `specs/2026-10-31-feature-catalogue-platform-only/`). `/staff/feature-catalogue` now refuses store admins and staff ("Platform admin only"); its menu entry moves to the Platform menu, and its guide section to `platform-admin-guide.md`. The URL is unchanged.
+
 - **The platform is named Merqify by default, and "Icon credits" becomes "Third-party credits"** (issue `#1371`). The footer reads "Powered by Merqify · Your Merchandise, Digitised Quickly" in every environment: `PLATFORM_NAME` and a new `PLATFORM_TAGLINE` fall back to those values when unset (unset used to hide the line), and both `wrangler.toml` environments set them explicitly. The credits page heading and title are now "Third-Party Credits & Licences"; its `/icon-credits` URL is unchanged.
 
 - **Scheduler gating is switched on, and production moves to Merqify** (issues `#1325` and `#1341`, spec `specs/2026-10-31-production-cutover/`). The `JOB_SIGNALS` KV namespaces `aheed-jobs-staging` and `aheed-jobs-production` now exist in the Merqify account and are bound in both `wrangler.toml` files, so an idle 15-minute tick no longer wakes the database (`ran=none`). The production cut-over (new database filled from old staging, secrets, promotion) follows the runbook, `env-setup.md`, "Production cut-over".
