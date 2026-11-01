@@ -4,8 +4,8 @@ title: System Architecture — Aheed Online Store
 audience: [dev]
 type: doc
 status: approved
-version: "1.45.0"
-updated: 2026-10-30
+version: "1.46.0"
+updated: 2026-11-01
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -38,13 +38,14 @@ environment-configured seam so the platform can move clouds without a rewrite.
 | Object storage | **Cloudflare R2**, accessed **only via the S3-compatible API** (AWS SDK v3 S3 client) | `StorageService` port; `S3_*` env vars. No R2-specific SDK or feature. |
 | Image delivery | CDN in front of the bucket | DB stores **relative keys**; `CDN_BASE_URL` resolved at runtime. |
 | Payments | **Stripe** (Elements/Checkout + webhooks) | `PaymentService` port; card data never touches our servers. |
-| Transactional email | **Resend** | `EmailService` port; swappable for SES/SendGrid. |
+| Transactional email | **Cloudflare Email Service** (Email Sending + Email Routing), since `#1217` | Provider-agnostic `EmailService` port (`lib/email.ts`), one adapter per provider under `lib/email/`, chosen by `EMAIL_PROVIDER`. Resend stays a selectable fallback. Each store sends from its own address once its domain is verified; incoming mail reaches `workers/inbound-email`, which forwards it to the store's mailbox. |
 | Auth | **Better Auth** (self-hosted, bearer tokens, RBAC) | Unchanged from ADR-002. |
 | Validation | **zod** (shared client/server, plus env parsing) | — |
 | Caching | Next.js Data/Route cache (portable) + optional edge KV behind a `CacheService` port | Degrades to DB-only; KV ↔ Redis swap. |
 
 **Where it runs (#1323, 2026-10-29).**
-- **Cloudflare:** the Workers (the app, the scheduler and the internal docs site) and the R2 image
+- **Cloudflare:** the Workers (the app, `workers/scheduler`, `workers/inbound-email` and the internal
+  docs site) and the R2 image
   buckets run in the **Merqify Cloudflare account**, under flat `merqify.com` hosts. Staging is
   `aheed-staging.merqify.com`, `srimart-staging.merqify.com` and `images-staging.merqify.com`;
   production is `aheed.merqify.com`, `srimart.merqify.com` and `images.merqify.com`; the docs are
@@ -94,7 +95,7 @@ flowchart TD
     PRISMA --> NEON[("Neon Serverless PostgreSQL")]
     SVC --> STORE["StorageService (S3 API port)"] --> R2[("Object Storage — R2 via S3 API")]
     SVC --> PAY["PaymentService port"] --> STRIPE["Stripe"]
-    SVC --> MAIL["EmailService port"] --> RESEND["Resend"]
+    SVC --> MAIL["EmailService port"] --> CFMAIL["Cloudflare Email Service (Resend fallback)"]
 
     R2 --> CDN["CDN (CDN_BASE_URL)"] --> U
     STRIPE -- "webhooks (idempotent)" --> APP
@@ -132,7 +133,7 @@ for free.
 flowchart LR
     P["Presentation<br/>RSC · Server Actions · Route Handlers"] --> A["Application<br/>Use cases / Services"]
     A --> D["Domain<br/>Entities · value objects · ports (interfaces)"]
-    A -. depends on abstractions .-> I["Infrastructure<br/>Prisma repos · S3 storage · Stripe · Resend · Cache"]
+    A -. depends on abstractions .-> I["Infrastructure<br/>Prisma repos · S3 storage · Stripe · Email adapters · Cache"]
     I -. implements ports .-> D
 ```
 
