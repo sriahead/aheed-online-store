@@ -4,7 +4,7 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.33.0"
+version: "1.34.0"
 updated: 2026-11-01
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
@@ -1024,18 +1024,33 @@ The account's actual daily quota: **not yet recorded** (the owner reads it in th
 
 ### Sanity check: email after a deploy (`#1217`)
 
-**Last run:** not yet run (written at Build, 2026-11-01).
+**Last run:** 2026-11-01 (Ship, staging `24ce8b8`). Steps 1-4 passed. Step 5 (the staging resolve-route
+`POST`) was not run: this machine's TLS fails on any POST. Steps 6-9 need the owner's Email Sending
+and Email Routing onboarding and have **not been run**.
 
-1. `npx wrangler deploy --dry-run --env staging` lists `env.EMAIL (unrestricted)  Send Email`.
+Quick checks (no owner setup needed):
+
+1. `gh run view <deploy-staging run> --json jobs` shows "Deploy inbound email worker" `success`, and
+   "Apply migrations" applied `20261101120000_vendor_inbound_address`. Expected: both succeeded.
+2. `curl -s --compressed https://aheed-staging.merqify.com/api/health` shows `commit` equal to the
+   merge, `db.ok` true, `reference.reachable` true and a non-empty `reference.sources`.
+3. `curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" https://aheed-staging.merqify.com/staff/platform/client-setup`
+   signed out. Expected: a 307 to the login page.
+4. `npx wrangler deploy --dry-run --env staging` lists `env.EMAIL (unrestricted)  Send Email`.
    Expected: the binding is present.
-2. In Client Setup on `aheed-staging.merqify.com`, open the Email section. Expected: Provider
+5. `curl -s --compressed -X POST -H "content-type: application/json" -d '{"to":"a@b.c","subject":"x"}' https://aheed-staging.merqify.com/api/inbound-email/resolve`
+   with no token header. Expected: 503 until `INBOUND_EMAIL_TOKEN` is set on the Worker, then 401.
+
+Live checks (after the owner steps):
+
+6. In Client Setup on `aheed-staging.merqify.com`, open the Email section. Expected: Provider
    `cloudflare`, Platform sender `no-reply@merqify.com`, Recipients "Allowlist only".
-3. Click **Send test email** with your address on `EMAIL_ALLOWED_RECIPIENTS`. Expected: "Sent to …",
+7. Click **Send test email** with your address on `EMAIL_ALLOWED_RECIPIENTS`. Expected: "Sent to …",
    and the message arrives. From is the store's address if its domain is verified, otherwise
    `no-reply@merqify.com` with Reply-To the store.
-4. Remove your address from the allowlist and repeat. Expected: "Skipped by recipient policy", and no
+8. Remove your address from the allowlist and repeat. Expected: "Skipped by recipient policy", and no
    email.
-5. Send a message from a personal mailbox to a staging Orders address. Expected: it arrives at that
+9. Send a message from a personal mailbox to a staging Orders address. Expected: it arrives at that
    address's forward-to mailbox, and `npx wrangler tail aheed-inbound-email-staging` prints
    `inbound-email vendorId=… purpose=ORDERS orderRelated=true …`.
 
