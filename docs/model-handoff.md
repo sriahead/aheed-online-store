@@ -39,8 +39,9 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-11-01 (`#1217`): email moves to Cloudflare, plus Client Setup. MERGED TO STAGING (PR #1394,
-  `24ce8b8`), validated, NOT promoted.** `aheed-staging.merqify.com` reports `24ce8b8`, `db.ok`.
+- **2026-11-01 (`#1217`): email moves to Cloudflare, plus Client Setup. PROMOTED TO PRODUCTION
+  (PR #1394 `24ce8b8` to staging, promotion PR #1396 `0842385`).** On 2026-11-02 both production hosts
+  report `0842385`, `db.ok`.
   - **R39 (real mail) is UNVERIFIED until the owner onboards `merqify.com`** in Email Sending. On
     promotion, production sends through Cloudflare and every send fails (logged) until then. That is
     no regression: Resend was sandboxed and never reached real customers (`#104`).

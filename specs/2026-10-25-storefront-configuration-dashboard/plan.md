@@ -20,7 +20,7 @@ Issue [#1267](https://github.com/sriahead/aheed-online-store/issues/1267). Appro
 
 ## Narrative & Scope
 
-The platform is multi-tenant ([ADR-004](file:///E:/GitRepositories/aheed-online-store/docs/developer-portal/client-onboarding-prerequisites.md#L27-L40)). When onboarding a new vendor (e.g. Aheed Superstore), settings span identity, branding, dietary flags, fulfilment rules, delivery postcodes, trading hours, legal company information, and ADR-007 stock controls.
+The platform is multi-tenant ([ADR-004](../decisions/adr-004-multi-tenancy.md)). When onboarding a new vendor (e.g. Aheed Superstore), settings span identity, branding, dietary flags, fulfilment rules, delivery postcodes, trading hours, legal company information, and ADR-007 stock controls.
 
 While individual management screens exist (`/staff/storefront`, `/staff/delivery-areas`, `/staff/fulfilment`, `/staff/assistant`, `/staff/products/import`), there is currently no unified view that:
 1. Audits whether all required fields for a trading storefront are populated.

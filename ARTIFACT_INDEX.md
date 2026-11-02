@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-01T22:53:24.329Z` · commit `24ce8b84` · `305` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-02T08:15:25.919Z` · commit `d7aa15de` · `306` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -331,6 +331,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.9.0 | 2026-11-01 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
 | [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.15.0 | 2026-10-27 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item. |
 | [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.20.0 | 2026-10-31 | approved | internal | How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access. |
+| [Merqify KMS — Knowledge Architecture, Governance and Validation (plan)](specs/2026-11-02-merqify-kms-architecture-governance/plan.md) | spec | 1.0.0 | 2026-11-02 | draft | internal | Review, redesign, and reorganise Merqify KMS into an authoritative single source of truth across 13 canonical domains, with C4 alignment, automated link integrity testing, and Nextra portal restructuring. |
 
 ## Track 3 — Customer / Help Centre (`customer-help`)  ·  audience: customer
 
