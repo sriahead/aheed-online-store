@@ -99,3 +99,28 @@ descriptions ("the slice's component test file", and so on):
   `INBOUND_FALLBACK_FORWARD` was set to the same address on 2026-11-02, by the owner running a
   script. **Production** `INBOUND_EMAIL_TOKEN` / `INBOUND_FALLBACK_FORWARD` are **not set yet**:
   an owner step, not this slice.
+
+## Validation record (2026-11-02, in-session, NOT independent)
+
+The owner chose to validate in the build context, on Opus rather than Sonnet, with no Clear in
+between. Every row was checked against the artifact, not this file.
+
+| Req | Result |
+|---|---|
+| R1, R2, R5, R7, R9, R10 | Pass. The slice tests exist, cover every case `validation.md` lists, and are green. |
+| R3 | **Spec amended** (`54fd4f30`). The original grep matched `app/(admin)/staff/runbook/docs.ts`, the generated KMS bundle that embeds `env-setup.md`. The amended grep (`--exclude=docs.ts`) prints nothing, and `getInboundDefaultForward` has no fallback address. |
+| R4, R11, R12, R13 | Pass, read from the files. |
+| R6 | Pass, live under `npm run preview` (dev DB `ep-dry-morning`, signed in as `demo-platform-admin@example.com`). With `default-inbox@example.com`, the status row shows the address, and the input renders `value=…`, `required`, `aria-describedby` and the hint. With `"nope"`, the row reads "Invalid: check INBOUND_DEFAULT_FORWARD" in `role="alert"`, the input is empty, and there is no hint. |
+| R8 | Pass, live. `a@` and `b@` forwarding to `default-inbox@` and `c@` forwarding to `other@` render as two `data-forward-group` blocks, and the default's block is labelled "Platform default". All three were removed with their Remove buttons, and "No receiving addresses yet." returned. |
+| R14 | Local pass: lint, `format:check`, `tsc --noEmit`, `npx vitest run --maxWorkers=4` (377 files, 5542 tests), `kms:validate`, `kms:coverage`, and the webpack build ("Compiled successfully" under preview). **CI `gates` is still owed at Ship.** |
+
+Observations, not defects:
+- **Every DB write from local `workerd` took 25-60 s here, and two timed out.** `a@` returned a 500,
+  but its row was written. `b@` reported "Adding the address failed", then saved on retry. The DB has
+  no unique index on `forwardTo` (migration `20261101120000_vendor_inbound_address`). These are this
+  machine's known slow Cloudflare and Neon links (`workerd` cannot be told to prefer IPv4), not the
+  slice.
+- **The dev demo roster is still `@example.com`** (staging and production use `@merqify.com`). Its
+  password is the `.dev.vars` `DEMO_ACCOUNT_PASSWORD`, not the `.env` one.
+- **The form-reset behaviour after a successful add was not exercised in a browser.** Posts went
+  through the no-JS form path, which re-renders the page with the prefill.
