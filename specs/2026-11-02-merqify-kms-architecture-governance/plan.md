@@ -29,6 +29,7 @@ related: [client-help-centre-doc-management, client-user-journeys]
 - Author `tests/kms-link-integrity.test.ts` to test all registered markdown documents for broken links and raw `file:///` URLs.
 - Repair all discovered broken links and hardcoded URLs in `docs/` and `specs/`.
 - Update `kms/site-internal/wrangler.toml` and Nextra portal pages (`content/index.mdx`, `content/dev/index.mdx`) with Merqify branding and dual navigation hubs.
+- Migrate `kms/site-internal/content/` metadata from ignored `_meta.json` to Nextra 4 `_meta.ts`, establishing purpose-driven sidebar category titles and section separators. Protect `_meta.ts` in `kms/scripts/assemble.ts`.
 - Update `coverage-baseline.json` and rebuild index with `npm run kms:build-index`.
 
 ## Phase 4 — Verification & Delivery
