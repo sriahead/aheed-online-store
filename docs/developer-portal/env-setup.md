@@ -1002,8 +1002,14 @@ Client Setup shows these as a checklist per store, with links.
 6. **Route each address to the inbound Worker.** In Email Routing → Routing rules, create a custom
    address with the action "Send to a Worker", choosing `aheed-inbound-email-staging` or
    `aheed-inbound-email`. **One address routes to one Worker**, so staging and production need
-   different addresses. `merqify.com` already has Email Routing on for the demo accounts ("Demo
-   mail forwarding"); add rules beside those.
+   different addresses. Email Routing on `merqify.com` was enabled on 2026-11-02 (MX
+   `route1/2/3.mx.cloudflare.net`, SPF `include:_spf.mx.cloudflare.net`). Its first rule sends
+   `info@merqify.com` straight to `info-merqify@googlegroups.com`, with no Worker, because Merqify
+   itself is not a store. The demo-account forwarding ("Demo mail forwarding", `#1369`) was never
+   set up, so there are no demo rules to sit beside.
+   - **Testing tip:** a group does not email a member's own post back to them, so a test sent from
+     the group owner's own mailbox only appears in Sent. Check the group's Conversations page, or
+     send from another address.
 7. **Send a test email** from Client Setup. It goes to your own signed-in address only. On staging
    your address must be on `EMAIL_ALLOWED_RECIPIENTS`.
 
