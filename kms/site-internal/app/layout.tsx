@@ -8,7 +8,10 @@ const platformName =
   process.env.NEXT_PUBLIC_PLATFORM_NAME || process.env.PLATFORM_NAME || "Merqify";
 
 export const metadata = {
-  title: { default: `${platformName} Knowledge Centre — Internal`, template: `%s — ${platformName} Knowledge Centre` },
+  title: {
+    default: `${platformName} Knowledge Centre — Internal`,
+    template: `%s — ${platformName} Knowledge Centre`,
+  },
   description: `${platformName} internal knowledge base — architecture, user guides, runbooks, and specifications.`,
   robots: { index: false, follow: false }, // internal only — never indexed, even if Access is misconfigured
 };
@@ -22,7 +25,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           navbar={<Navbar logo={<b>{platformName} Knowledge Centre</b>} />}
           pageMap={await getPageMap()}
           docsRepositoryBase="https://github.com/sriahead/aheed-online-store"
-          footer={<Footer>{platformName} Knowledge Centre — Internal — not for public distribution.</Footer>}
+          footer={
+            <Footer>
+              {platformName} Knowledge Centre — Internal — not for public distribution.
+            </Footer>
+          }
         >
           {children}
         </Layout>
