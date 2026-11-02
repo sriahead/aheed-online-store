@@ -39,6 +39,39 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
+- **2026-11-02 (Orient + `#1399` Build): incoming email is live on `merqify.com`; outgoing still is
+  not.** Branch `feature/1399-default-forward-inbox` (spec `de070e6c`, build `c3121a26`), not yet
+  pushed or validated. Spec: `specs/2026-11-02-default-forward-inbox/`.
+  - **Email Routing is ENABLED on `merqify.com`** (MX `route1/2/3.mx.cloudflare.net`, SPF,
+    DMARC `p=reject`). `info@merqify.com` goes straight to `info-merqify@googlegroups.com` (no
+    Worker), tested end to end.
+  - **Owner's Google Groups** (all four set to "anyone can post"):
+    - `info-afc@googlegroups.com`: Aheed's forward-to;
+    - `info-srimart@googlegroups.com`: SriMart's;
+    - `info-merqifyhub@googlegroups.com`: the platform default (`#1399`) and the fallback;
+    - `info-merqify@googlegroups.com`: Merqify itself.
+
+    Test from a non-owner mailbox: a group owner's own post shows only in Sent.
+  - **Staging inbound secrets are SET** (owner ran the script, 2026-11-02): `INBOUND_EMAIL_TOKEN`
+    on `aheed-store-staging` and `aheed-inbound-email-staging`, and
+    `INBOUND_FALLBACK_FORWARD=info-merqifyhub@…` on the latter. They are recorded in
+    `secrets/merqify-staging.vars`.
+  - **Production inbound secrets are NOT set.** The same script takes `production`; auto mode
+    refuses secret writes, so the owner runs it. Also still owed:
+    - the store routing rules (`info-aheed[-staging]`, `info-srimart[-staging]` → the inbound
+      Workers);
+    - the Client Setup entries;
+    - the owner's production platform-admin login.
+  - **Outgoing: `merqify.com` is NOT yet onboarded in Email Sending.** Production sends fail until it
+    is (R39). `#1383` (nocaped sender 403) is fixed in code by `#1217`'s sender fallback; close it
+    after a real test send.
+  - **`hooks/pre-push` blocks remote branch deletions (`#1401`)**: `branches:prune --apply` deleted 25
+    local copies, and all 29 origin deletions failed. Local 45, origin 70.
+  - **PR #1382 targets `main` from an outside fork** (`isearchxsolve`, "bounty", `#1289`).
+    Recommended to close; not merged.
+  - Staging carries KMS PRs #1397/#1398 (another session, 2026-11-02). #1397 also carried the `#1217`
+    Document commit and the `#1389`/`#1396` roadmap rows.
+
 - **2026-11-01 (`#1217`): email moves to Cloudflare, plus Client Setup. PROMOTED TO PRODUCTION
   (PR #1394 `24ce8b8` to staging, promotion PR #1396 `0842385`).** On 2026-11-02 both production hosts
   report `0842385`, `db.ok`.
