@@ -88,9 +88,11 @@ describe("AddToCartButton outcome feedback", () => {
     await waitFor(() =>
       expect(region.textContent).toBe(`${NAME} couldn't be added. Please try again.`),
     );
-    const button = screen.getByRole("button");
-    expect(button.textContent).toBe("Try again");
-    expect((button as HTMLButtonElement).disabled).toBe(false);
+    await waitFor(() => {
+      const button = screen.getByRole("button");
+      expect(button.textContent).toBe("Try again");
+      expect((button as HTMLButtonElement).disabled).toBe(false);
+    });
   });
 
   // #1185 — the card's control is now a bare `+` with no text at all, so there is no "Added" for

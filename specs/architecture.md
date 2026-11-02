@@ -1,18 +1,18 @@
 ---
 id: architecture
-title: System Architecture — Aheed Online Store
+title: System Architecture — Merqify Platform
 audience: [dev]
 type: doc
 status: approved
 version: "1.46.0"
-updated: 2026-11-01
+updated: 2026-11-02
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
 related: [adr-001-hosting, adr-002-auth-library, adr-003-storage-abstraction, adr-004-multi-tenancy, adr-007-storefront-scope-restrictions-stock-states, multitenancy-slice1-vendor-schema]
 ---
 
-# System Architecture — Aheed Online Store
+# System Architecture — Merqify Platform
 
 **Status:** Approved architecture baseline. Supersedes the GCP-origin design in the original
 ADR-001. This document is the technical source of truth for infrastructure and layering; it is

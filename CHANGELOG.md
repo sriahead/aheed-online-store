@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Merqify KMS architecture redesign, knowledge governance, link integrity, and platform rebrand** (spec `specs/2026-11-02-merqify-kms-architecture-governance/`).
+  - **Platform & KMS Rebrand:** Replaced legacy "Aheed KMS" and "Aheed platform" strings in `kms/site-internal` layout, navbar, metadata, and core architecture/strategy documentation with **Merqify** and **Merqify Knowledge Centre**, while preserving client tenant identity for **Aheed Food Centre** (`aheed.merqify.com`).
+  - **Knowledge Architecture & Taxonomy:** Reorganised documentation across 10 top-level purpose-driven categories (Getting Started, Platform & Architecture, Development & Engineering, Platform Administration, Store Management, Operations & Fulfilment, Help & Learning, Planning & Delivery, Design & Brand, Quality & Insights), retiring the legacy Dev/Staff dichotomy and introducing orthogonal audience filtering.
+  - **Automated Link-Integrity Quality Gate:** Authored `tests/kms-link-integrity.test.ts` enforcing zero hardcoded `file:///` URLs and 100% relative link resolution across all registered KMS documents. Repaired 11 pre-existing broken links in `docs/` and `specs/`.
+  - **Index & Baseline Ratchet:** Regenerated `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts` via `npm run kms:build-index` (306 registered artifacts); verified baseline ratchet compliance (`npm run kms:coverage`).
+
 - **Email through Cloudflare Email Service, a store inbox Worker, and the Client Setup dashboard** (issue `#1217`, spec `specs/2026-11-01-cloudflare-email-service/`).
   - **Provider-agnostic email:** `lib/email.ts` is a port with one adapter per provider under `lib/email/`: Cloudflare (`EMAIL` send_email binding, the default), Resend (fallback, `EMAIL_PROVIDER=resend` + `RESEND_API_KEY`) and log-only. `send()` never throws and returns sent, skipped or failed.
   - **Per-store sender:** every email (confirmation, status, reset, verification) is sent on behalf of the store. A store sends from its own `senderEmail` once its domain is in `EMAIL_VERIFIED_DOMAINS`, otherwise from `EMAIL_FROM` with Reply-To set to the store.

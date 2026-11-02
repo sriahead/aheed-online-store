@@ -11,8 +11,8 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 
 [vars]
-PLATFORM_NAME = "Aheed"
-NEXT_PUBLIC_PLATFORM_NAME = "Aheed"
+PLATFORM_NAME = "Merqify"
+NEXT_PUBLIC_PLATFORM_NAME = "Merqify"
 
 [assets]
 directory = ".open-next/assets"
