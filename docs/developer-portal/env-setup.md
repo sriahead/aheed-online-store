@@ -987,7 +987,41 @@ sender name and address, and the receiving addresses with the mailbox each forwa
 `INBOUND_FALLBACK_FORWARD` name the **same** inbox by convention, `info-merqifyhub@googlegroups.com`
 (owner, 2026-11-02). One is for new addresses, the other for mail the app could not route. Like every
 forward-to, it must be a **verified** Email Routing destination (Destination addresses), or Cloudflare
-will not forward to it. Client Setup cannot check that yet (`#1392`).
+will not forward to it. Client Setup reads which destinations are verified (below, `#1392`).
+
+**Verified mailboxes in Client Setup (`#1392`).** Client Setup reads the account's Email Routing
+destination addresses with the app Worker's existing `CLOUDFLARE_ACCOUNT_ID` and
+`CLOUDFLARE_API_TOKEN` secrets, the same ones Workers AI uses. For that, each environment's Merqify
+token needs the permission **Account → Email Routing Addresses → Read**, added in the Cloudflare
+dashboard under My Profile → API Tokens → edit the token. No new secret, and no redeploy: the token
+value stays the same.
+
+- **With the permission**, **Forward to** is a dropdown of the verified mailboxes. Pending ones show
+  as disabled, "(awaiting verification)", and **Other…** takes any address, with a warning. The
+  status card's **Verified mailboxes** row counts them, and the guide's "Verify the forward-to
+  mailbox" step reads Done or Not done.
+- **Without it** (or with no credentials, or when Cloudflare cannot be reached), **Forward to** stays a
+  text field, with one line saying why: credentials not set, the token lacks Email Routing Addresses
+  Read, or Cloudflare could not be reached. **Verified mailboxes** reads "Unavailable: …", and the
+  guide step stays "Check in Cloudflare". Nothing else changes, and saving still works.
+
+The read is advisory: the server still accepts any valid forward-to, and a mailbox can lose its
+verification later. The token never reaches the page; only the list of addresses does.
+
+**The suggested sender (`#1403`).** Client Setup's Sender card suggests a sender for each store and
+fills it with **Use suggested sender**. Nothing is saved until **Save sender** is pressed.
+
+- **Name:** the store's name.
+- **Address:** `orders@<the store's own domain>` when the store has a custom domain: a `VendorDomain`
+  host that is not the platform domain or under it. The canonical one wins, and a leading `www.` is
+  dropped. Otherwise, `orders-<slug>@<platform domain>`. The platform domain is `EMAIL_FROM`'s domain
+  (`merqify.com`). Dev hosts (`localhost`, a port, an IP address) are ignored.
+- **No suggestion** when there is neither a custom domain nor `EMAIL_FROM`.
+- **Warning:** when the saved sender's domain is not the platform domain, one of the store's own
+  domains, or listed in `EMAIL_VERIFIED_DOMAINS`, the card warns that replies may not arrive. That is
+  the case for the `nocaped` senders copied at the Merqify cut-over.
+- **Caveat:** a staging store on a custom subdomain would be offered `orders@staging.<domain>`, which
+  needs its own Email Sending onboarding. Type another address in that case.
 
 Set a secret by hand with `wrangler secret put <KEY> --env <env>`. For the inbound Worker, add
 `--config workers/inbound-email/wrangler.toml`.
@@ -1098,6 +1132,38 @@ Live checks (platform admin, `/staff/platform/client-setup`, any store):
    unless they are real.
 7. After promotion, repeat steps 4-6 on `aheed.merqify.com`. There, Recipients reads "Anyone
    (production)".
+
+### Sanity check: verified mailboxes and suggested sender (`#1392`, `#1403`)
+
+**Last run:** not yet run (written at Build, 2026-11-02). Steps 4-6 need the owner to add **Email
+Routing Addresses: Read** to the staging token first.
+
+Quick checks:
+
+1. `gh run list --branch staging --limit 4`. Expected: `deploy-staging` **success** on the merge
+   commit.
+2. `curl -s --compressed https://aheed-staging.merqify.com/api/health`. Expected: `db.ok` true,
+   `reference.reachable` true, a non-empty `reference.sources`. `commit` can lag (see the `#1399`
+   check above).
+3. Check the token's permission without printing it, with `CLOUDFLARE_ACCOUNT_ID` and
+   `CLOUDFLARE_API_TOKEN` exported from `secrets/merqify-staging.vars`:
+   `curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/email/routing/addresses?per_page=50" | grep -o '"success":[a-z]*'`.
+   Expected: `"success":true`. `"success":false` with an authentication error means the permission
+   is missing.
+
+Live checks (platform admin, `/staff/platform/client-setup` on `aheed-staging.merqify.com`):
+
+4. **Sending status** shows **Verified mailboxes** "<v> verified, <p> pending", matching Email
+   Routing → Destination addresses. Without the permission it reads "Unavailable: token lacks Email
+   Routing Addresses Read", and **Forward to** is a text field with the same reason under it.
+5. **Forward to** is a dropdown with `info-merqifyhub@googlegroups.com` preselected. Choosing
+   **Other…** shows a text box and the "forwards only to verified destination addresses" warning.
+6. For a store whose receiving addresses all forward to verified mailboxes, the guide's "Verify the
+   forward-to mailbox" step reads **Done**.
+7. The **Sender** card for a store still on a `nocaped` sender shows the "Replies to … may not
+   arrive" warning and a suggestion such as `orders-<slug>@merqify.com`. **Use suggested sender**
+   fills both fields without saving. Press **Save sender** only if the owner wants the change.
+8. After promotion, repeat steps 3-7 on `aheed.merqify.com` with `secrets/merqify-production.vars`.
 
 ## Prerequisites (one-time)
 

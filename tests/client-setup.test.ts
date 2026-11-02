@@ -4,6 +4,7 @@ import {
   type ClientSetupFacts,
   type EmailSetupFacts,
 } from "@/lib/client-setup/sections";
+import { forwardTargetsVerified } from "@/lib/client-setup/inbound-groups";
 
 /**
  * #1217 — the Client Setup dashboard: its section list (R27, R32) and its server actions
@@ -56,6 +57,7 @@ const facts = (email: Partial<EmailSetupFacts> = {}): ClientSetupFacts => ({
     senderDomainVerified: true,
     platformFromConfigured: true,
     inboundAddressCount: 1,
+    forwardTargetsVerified: true,
     ...email,
   },
 });
@@ -104,10 +106,18 @@ describe("email section guide (R32)", () => {
   });
 
   it("steps only Cloudflare knows are never shown as done", () => {
-    for (const id of ["sending-domain", "destination", "routing-rule"]) {
+    for (const id of ["sending-domain", "routing-rule"]) {
       expect(step(id).done(facts())).toBeNull();
       expect(step(id).href).toBeTruthy();
     }
+  });
+
+  // #1392 R11 — the destination step is computed from Cloudflare's destination addresses.
+  it("destination step: done, not done, or check in Cloudflare", () => {
+    expect(step("destination").done(facts({ forwardTargetsVerified: true }))).toBe(true);
+    expect(step("destination").done(facts({ forwardTargetsVerified: false }))).toBe(false);
+    expect(step("destination").done(facts({ forwardTargetsVerified: null }))).toBeNull();
+    expect(step("destination").href).toBeTruthy();
   });
 
   it("status: blocked without a platform sender, complete when the data steps are done", () => {
@@ -236,5 +246,45 @@ describe("sendTestEmailAction (R33)", () => {
       form({ vendorId: "v1" }),
     );
     expect(result).toEqual({ ok: false, message: "Failed: boom." });
+  });
+});
+
+describe("forwardTargetsVerified (#1392 R11)", () => {
+  const ok = (addresses: { email: string; verified: boolean }[]) => ({
+    status: "ok" as const,
+    addresses,
+  });
+  const rows = (...forwardTo: string[]) => forwardTo.map((f) => ({ forwardTo: f }));
+
+  it("is true when every distinct forward-to is verified", () => {
+    const dest = ok([
+      { email: "hub@inbox.test", verified: true },
+      { email: "shop@inbox.test", verified: true },
+    ]);
+    expect(
+      forwardTargetsVerified(rows("hub@inbox.test", "hub@inbox.test", "shop@inbox.test"), dest),
+    ).toBe(true);
+  });
+
+  it("is false when one forward-to is verified and another is not", () => {
+    const dest = ok([
+      { email: "hub@inbox.test", verified: true },
+      { email: "shop@inbox.test", verified: false },
+    ]);
+    expect(forwardTargetsVerified(rows("hub@inbox.test", "shop@inbox.test"), dest)).toBe(false);
+  });
+
+  it("is false for a forward-to Cloudflare does not list, and for no receiving addresses", () => {
+    const dest = ok([{ email: "hub@inbox.test", verified: true }]);
+    expect(forwardTargetsVerified(rows("typo@inbox.test"), dest)).toBe(false);
+    expect(forwardTargetsVerified([], dest)).toBe(false);
+  });
+
+  it("is null when the destination addresses could not be read", () => {
+    for (const reason of ["not-configured", "forbidden", "error"] as const) {
+      expect(
+        forwardTargetsVerified(rows("hub@inbox.test"), { status: "unavailable", reason }),
+      ).toBeNull();
+    }
   });
 });

@@ -18,6 +18,9 @@ const { AddInboundAddressForm } = await import("@/components/staff/client-setup/
 
 const HINT = /platform default inbox/i;
 
+// #1392 — these #1399 cases are the fallback: Cloudflare's destination addresses unavailable.
+const UNAVAILABLE = { status: "unavailable" as const, reason: "not-configured" as const };
+
 afterEach(() => cleanup());
 
 describe("AddInboundAddressForm forward-to prefill (R5)", () => {
@@ -26,6 +29,7 @@ describe("AddInboundAddressForm forward-to prefill (R5)", () => {
       <AddInboundAddressForm
         vendorId="v1"
         defaultForward={{ status: "set", address: "hub@inbox.test" }}
+        destinations={UNAVAILABLE}
       />,
     );
     const input = screen.getByLabelText(/forward to/i) as HTMLInputElement;
@@ -39,7 +43,13 @@ describe("AddInboundAddressForm forward-to prefill (R5)", () => {
   it.each([{ status: "unset" as const }, { status: "invalid" as const }])(
     "renders an empty field with no hint when the default is $status",
     (defaultForward) => {
-      render(<AddInboundAddressForm vendorId="v1" defaultForward={defaultForward} />);
+      render(
+        <AddInboundAddressForm
+          vendorId="v1"
+          defaultForward={defaultForward}
+          destinations={UNAVAILABLE}
+        />,
+      );
       const input = screen.getByLabelText(/forward to/i) as HTMLInputElement;
       expect(input.value).toBe("");
       expect(input.required).toBe(true);

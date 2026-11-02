@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
 import {
   addInboundAddressAction,
   removeInboundAddressAction,
@@ -14,6 +14,9 @@ import {
 import { buttonClass, inputClass, labelClass } from "@/lib/form-classes";
 import { Icon } from "@/components/icons/Icon";
 import type { InboundDefaultForward } from "@/lib/config";
+import type { DestinationsResult } from "@/lib/email/destinations";
+import type { SuggestedSender } from "@/lib/client-setup/sender-suggestion";
+import { DESTINATIONS_UNAVAILABLE_MESSAGE } from "@/lib/client-setup/destination-copy";
 
 /**
  * #1217 — the Client Setup Email section's four controls. Each posts to a server action that
@@ -40,15 +43,47 @@ export function SenderForm({
   vendorId,
   senderName,
   senderEmail,
+  suggestion,
 }: {
   vendorId: string;
   senderName: string;
   senderEmail: string;
+  /** #1403 — the suggested sender; the button fills the inputs and the admin still saves. */
+  suggestion: SuggestedSender | null;
 }) {
   const [state, action, saving] = useActionState(saveSenderAction, initialClientSetupFormState);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const showSuggestion =
+    suggestion !== null &&
+    (suggestion.name !== senderName ||
+      suggestion.email.toLowerCase() !== senderEmail.trim().toLowerCase());
   return (
     <form action={action} className="space-y-3" data-client-setup-form="sender">
       <FormMessage state={state} />
+      {showSuggestion && (
+        <div
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-accent-tint px-4 py-3 text-sm"
+          data-suggested-sender
+        >
+          <span className="min-w-0">
+            Suggested:{" "}
+            <span className="font-semibold">
+              {suggestion.name} &lt;{suggestion.email}&gt;
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              if (nameRef.current) nameRef.current.value = suggestion.name;
+              if (emailRef.current) emailRef.current.value = suggestion.email;
+            }}
+            className="rounded-lg px-2 py-1 text-xs font-semibold text-action underline"
+          >
+            Use suggested sender
+          </button>
+        </div>
+      )}
       <input type="hidden" name="vendorId" value={vendorId} />
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
@@ -56,6 +91,7 @@ export function SenderForm({
             Sender name
           </label>
           <input
+            ref={nameRef}
             id="senderName"
             name="senderName"
             required
@@ -69,6 +105,7 @@ export function SenderForm({
             Sender email
           </label>
           <input
+            ref={emailRef}
             id="senderEmail"
             name="senderEmail"
             type="email"
@@ -86,13 +123,101 @@ export function SenderForm({
   );
 }
 
+const OTHER = "__other__";
+
+/**
+ * #1392 R6 — the initial dropdown choice: the platform default when Cloudflare has verified it;
+ * the default typed into Other… when it is set but not verified; otherwise the first verified
+ * mailbox, or Other… when there is none.
+ */
+function initialForwardChoice(
+  defaultForward: InboundDefaultForward,
+  verified: readonly string[],
+): { choice: string; other: string } {
+  if (defaultForward.status === "set") {
+    return verified.includes(defaultForward.address)
+      ? { choice: defaultForward.address, other: "" }
+      : { choice: OTHER, other: defaultForward.address };
+  }
+  return verified.length > 0 ? { choice: verified[0], other: "" } : { choice: OTHER, other: "" };
+}
+
+/** #1392 R5 — Forward to as a dropdown of Cloudflare's verified destination addresses. */
+function ForwardToSelect({
+  defaultForward,
+  addresses,
+}: {
+  defaultForward: InboundDefaultForward;
+  addresses: readonly { email: string; verified: boolean }[];
+}) {
+  const verified = addresses.filter((a) => a.verified).map((a) => a.email);
+  const pending = addresses.filter((a) => !a.verified).map((a) => a.email);
+  const [initial] = useState(() => initialForwardChoice(defaultForward, verified));
+  const [choice, setChoice] = useState(initial.choice);
+  const isOther = choice === OTHER;
+  return (
+    <>
+      <label className={labelClass} htmlFor="forwardTo">
+        Forward to (the store&apos;s real mailbox)
+      </label>
+      {/* Exactly one forwardTo is posted: the select's, or the Other… text box's. */}
+      <select
+        id="forwardTo"
+        name={isOther ? undefined : "forwardTo"}
+        value={choice}
+        onChange={(e) => setChoice(e.target.value)}
+        className={inputClass}
+      >
+        {verified.map((email) => (
+          <option key={email} value={email}>
+            {email}
+          </option>
+        ))}
+        {pending.map((email) => (
+          <option key={email} value={email} disabled>
+            {email} (awaiting verification)
+          </option>
+        ))}
+        <option value={OTHER}>Other…</option>
+      </select>
+      {isOther && (
+        <div className="mt-2">
+          <label className="sr-only" htmlFor="forwardToOther">
+            Other mailbox
+          </label>
+          <input
+            id="forwardToOther"
+            name="forwardTo"
+            type="email"
+            required
+            defaultValue={initial.other}
+            aria-describedby="forwardToOther-warning"
+            className={inputClass}
+          />
+          <p
+            id="forwardToOther-warning"
+            className="mt-1 text-xs font-medium text-danger"
+            data-forward-other-warning
+          >
+            Cloudflare forwards only to verified destination addresses. Add and verify this mailbox
+            in Email Routing, or mail to this address will not arrive.
+          </p>
+        </div>
+      )}
+    </>
+  );
+}
+
 export function AddInboundAddressForm({
   vendorId,
   defaultForward,
+  destinations,
 }: {
   vendorId: string;
   /** #1399 — the platform default inbox prefills Forward to; it stays editable and required. */
   defaultForward: InboundDefaultForward;
+  /** #1392 — Cloudflare's destination addresses, or why they could not be read. */
+  destinations: DestinationsResult;
 }) {
   const prefill = defaultForward.status === "set" ? defaultForward.address : "";
   const [state, action, saving] = useActionState(
@@ -120,22 +245,31 @@ export function AddInboundAddressForm({
           </select>
         </div>
         <div>
-          <label className={labelClass} htmlFor="forwardTo">
-            Forward to (the store&apos;s real mailbox)
-          </label>
-          <input
-            id="forwardTo"
-            name="forwardTo"
-            type="email"
-            required
-            defaultValue={prefill}
-            aria-describedby={prefill ? "forwardTo-hint" : undefined}
-            className={inputClass}
-          />
-          {prefill && (
-            <p id="forwardTo-hint" className="mt-1 text-xs text-primary-muted">
-              The platform default inbox. Change it if this store has its own mailbox.
-            </p>
+          {destinations.status === "ok" ? (
+            <ForwardToSelect defaultForward={defaultForward} addresses={destinations.addresses} />
+          ) : (
+            <>
+              <label className={labelClass} htmlFor="forwardTo">
+                Forward to (the store&apos;s real mailbox)
+              </label>
+              <input
+                id="forwardTo"
+                name="forwardTo"
+                type="email"
+                required
+                defaultValue={prefill}
+                aria-describedby={prefill ? "forwardTo-hint" : undefined}
+                className={inputClass}
+              />
+              {prefill && (
+                <p id="forwardTo-hint" className="mt-1 text-xs text-primary-muted">
+                  The platform default inbox. Change it if this store has its own mailbox.
+                </p>
+              )}
+              <p className="mt-1 text-xs text-primary-muted" data-destinations-unavailable>
+                {DESTINATIONS_UNAVAILABLE_MESSAGE[destinations.reason]}
+              </p>
+            </>
           )}
         </div>
       </div>

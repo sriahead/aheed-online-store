@@ -936,3 +936,15 @@ export async function updateVendorSender(
   });
   return true;
 }
+
+/** #1403 — the store's request hosts, for Client Setup's suggested sender. */
+export async function listVendorHosts(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+): Promise<{ host: string; isCanonical: boolean }[]> {
+  return prisma.vendorDomain.findMany({
+    where: { vendorId },
+    select: { host: true, isCanonical: true },
+    orderBy: { host: "asc" },
+  });
+}
