@@ -14,7 +14,7 @@ related: [store-admin-tabs-guide, staff-tabs-guide, shopping-guide]
 
 # Order & Fulfilment Operations
 
-This document establishes the canonical rules and procedures for how orders move through the Aheed platform, how fulfilment slots are allocated, and how cancellations and payment exceptions are handled. 
+This document establishes the canonical rules and procedures for how orders move through the Merqify platform, how fulfilment slots are allocated, and how cancellations and payment exceptions are handled. 
 
 ## 1. Fulfilment Slots & Capacity
 
