@@ -92,6 +92,10 @@ PLATFORM_TAGLINE = "Your Merchandise, Digitised Quickly"
 # `wrangler secret put` (not here) so onboarding a domain or a tester needs no commit or deploy,
 # and secrets survive `wrangler deploy` where dashboard vars do not.
 EMAIL_FROM = "no-reply@merqify.com"
+# #1399 — the platform default inbox, prefilled as Forward to in Client Setup. A business group
+# inbox, not a personal address, so committed config. The inbound Worker's INBOUND_FALLBACK_FORWARD
+# secret names the same inbox by convention; it must be a verified Email Routing destination.
+INBOUND_DEFAULT_FORWARD = "info-merqifyhub@googlegroups.com"
 
 # #1217 — Cloudflare Email Service. The binding is the credential: no API key secret.
 [[env.staging.send_email]]
@@ -137,6 +141,8 @@ PLATFORM_TAGLINE = "Your Merchandise, Digitised Quickly"
 # recipients.
 EMAIL_FROM = "no-reply@merqify.com"
 EMAIL_RECIPIENT_MODE = "open"
+# #1399 — see the staging block.
+INBOUND_DEFAULT_FORWARD = "info-merqifyhub@googlegroups.com"
 
 [[env.production.send_email]]
 name = "EMAIL"

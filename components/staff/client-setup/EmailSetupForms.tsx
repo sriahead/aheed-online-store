@@ -13,6 +13,7 @@ import {
 } from "@/lib/client-setup/form-state";
 import { buttonClass, inputClass, labelClass } from "@/lib/form-classes";
 import { Icon } from "@/components/icons/Icon";
+import type { InboundDefaultForward } from "@/lib/config";
 
 /**
  * #1217 — the Client Setup Email section's four controls. Each posts to a server action that
@@ -85,7 +86,15 @@ export function SenderForm({
   );
 }
 
-export function AddInboundAddressForm({ vendorId }: { vendorId: string }) {
+export function AddInboundAddressForm({
+  vendorId,
+  defaultForward,
+}: {
+  vendorId: string;
+  /** #1399 — the platform default inbox prefills Forward to; it stays editable and required. */
+  defaultForward: InboundDefaultForward;
+}) {
+  const prefill = defaultForward.status === "set" ? defaultForward.address : "";
   const [state, action, saving] = useActionState(
     addInboundAddressAction,
     initialClientSetupFormState,
@@ -114,7 +123,20 @@ export function AddInboundAddressForm({ vendorId }: { vendorId: string }) {
           <label className={labelClass} htmlFor="forwardTo">
             Forward to (the store&apos;s real mailbox)
           </label>
-          <input id="forwardTo" name="forwardTo" type="email" required className={inputClass} />
+          <input
+            id="forwardTo"
+            name="forwardTo"
+            type="email"
+            required
+            defaultValue={prefill}
+            aria-describedby={prefill ? "forwardTo-hint" : undefined}
+            className={inputClass}
+          />
+          {prefill && (
+            <p id="forwardTo-hint" className="mt-1 text-xs text-primary-muted">
+              The platform default inbox. Change it if this store has its own mailbox.
+            </p>
+          )}
         </div>
       </div>
       <button type="submit" disabled={saving} className={buttonClass}>

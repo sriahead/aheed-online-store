@@ -981,6 +981,13 @@ sender name and address, and the receiving addresses with the mailbox each forwa
 | `RESEND_API_KEY` | Worker secret, optional | Read only when `EMAIL_PROVIDER=resend`. |
 | `INBOUND_EMAIL_TOKEN` | Worker secret on **both** the app and `aheed-inbound-email[-staging]` | Proves to the resolve route that a call came from the inbound Worker. `configure-env` pushes it to both. |
 | `INBOUND_FALLBACK_FORWARD` | Secret on the inbound Worker only | A verified destination mailbox that receives mail whenever the app cannot be asked (outage, bad token). |
+| `INBOUND_DEFAULT_FORWARD` | `wrangler.toml` `[vars]` (both envs) | The platform default inbox (`#1399`). It prefills **Forward to** when a receiving address is added in Client Setup, and stays editable. Unset means no prefill; a value that is not an email address prefills nothing, and Client Setup's status card shows "Invalid". |
+
+**The platform inbox (`#1399`).** `INBOUND_DEFAULT_FORWARD` and the inbound Worker's
+`INBOUND_FALLBACK_FORWARD` name the **same** inbox by convention, `info-merqifyhub@googlegroups.com`
+(owner, 2026-11-02). One is for new addresses, the other for mail the app could not route. Like every
+forward-to, it must be a **verified** Email Routing destination (Destination addresses), or Cloudflare
+will not forward to it. Client Setup cannot check that yet (`#1392`).
 
 Set a secret by hand with `wrangler secret put <KEY> --env <env>`. For the inbound Worker, add
 `--config workers/inbound-email/wrangler.toml`.
