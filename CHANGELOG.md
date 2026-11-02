@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Client Setup: a verified forward-to dropdown and a suggested sender per store** (issues `#1392` and `#1403`, spec `specs/2026-11-02-forward-dropdown-default-sender/`). `#1392` stays open for routing-rule and sending-domain state.
+  - **Verified mailboxes:** `lib/email/destinations.ts` reads the account's Email Routing destination addresses through the Cloudflare API, with the app Worker's existing `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` (via `getAiEnv()`). It reads up to 4 pages of 50, aborts each request after 5 s, never throws, and keeps the token off the page. The token needs **Email Routing Addresses: Read** (owner).
+  - **Forward to** is a dropdown of verified mailboxes. Pending ones are disabled ("awaiting verification"), and **Other…** takes any address with a warning. The platform default is preselected when it is verified. It still posts one `forwardTo`, so the server action is unchanged. When the read is unavailable, it falls back to the `#1399` text field with the reason.
+  - **Status and guide:** a **Verified mailboxes** row on the status card, and the "Verify the forward-to mailbox" step computed from real data (`forwardTargetsVerified`).
+  - **Suggested sender** (`lib/client-setup/sender-suggestion.ts`): the store's name with `orders@<own domain>`, else `orders-<slug>@<EMAIL_FROM domain>`; dev hosts are ignored. **Use suggested sender** fills the form without saving. A `role="alert"` warning appears when the saved sender's domain cannot receive replies (the `nocaped` senders).
+  - Docs: `env-setup.md` (token permission, fallback, the suggested-sender rule, sanity check) and the platform admin guide. "New stores start with the suggested sender" is deferred to `#1404`.
+
 - **Client Setup: a default forward-to inbox for receiving addresses** (issue `#1399`, spec `specs/2026-11-02-default-forward-inbox/`).
   - **`INBOUND_DEFAULT_FORWARD`** (`wrangler.toml` `[vars]`, both environments, `info-merqifyhub@googlegroups.com`) prefills **Forward to** when a platform admin adds a receiving address. The field stays required and editable. `getInboundDefaultForward()` in `lib/config.ts` has its own reader, so a bad value cannot break sending or the inbound resolve route. Unset means no prefill, and there is no built-in fallback address.
   - **Status:** the "Sending status" card shows **Default forward-to**: the address, "Not set", or an "Invalid" alert.

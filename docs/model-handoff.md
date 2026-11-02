@@ -44,11 +44,15 @@ reconciliation. If overall project state did not materially change, leave this f
     `In Review`, NOT promoted. It was validated in-session, not independently. The owner confirmed
     it on staging. Spec `specs/2026-11-02-default-forward-inbox/`. Sanity check: `env-setup.md`,
     "Sanity check: default forward-to inbox".
-  - **Next, agreed with the owner:** `/propose` for `#1392`, re-scoped:
-    - Forward to becomes a dropdown of the Cloudflare-verified destination addresses (API read);
-      it needs **Email Routing Addresses: Read** added to the per-environment Merqify tokens.
-    - A per-store default sender: the vendor name, and an address on the store's own domain,
-      replacing the copied `nocaped` sender values.
+  - **`#1392` + `#1403` are BUILT, NOT VALIDATED** on `feature/1392-1403-forward-dropdown-default-sender`
+    (spec `specs/2026-11-02-forward-dropdown-default-sender/`, build `00805263`; read its
+    `build-notes.md`). They add a Forward to dropdown of Cloudflare-verified destinations (text
+    fallback) and a suggested sender per store. Next step: `/validate` from a fresh context.
+    - **Owner prerequisite for the live dropdown:** add **Email Routing Addresses: Read** to the
+      staging and production Merqify tokens (same token values, no redeploy). Until then Client
+      Setup falls back to the text field, as designed.
+    - The PR closes `#1403` only. `#1392` stays open for routing-rule and sending-domain state.
+      "New stores start with the suggested sender" is `#1404` (P12).
   - **On staging, both Aheed receiving addresses** (`info-aheed@`, `orders-aheed@merqify.com`)
     forward to the hub group, not `info-afc@`. The owner may re-add them.
   - **Email Routing is ENABLED on `merqify.com`** (MX `route1/2/3.mx.cloudflare.net`, SPF,
