@@ -1067,6 +1067,38 @@ Live checks (after the owner steps):
    address's forward-to mailbox, and `npx wrangler tail aheed-inbound-email-staging` prints
    `inbound-email vendorId=… purpose=ORDERS orderRelated=true …`.
 
+### Sanity check: default forward-to inbox (`#1399`)
+
+**Last run:** 2026-11-02, staging `924a6ec` (PR #1402). Steps 1-3 ran from the dev machine; the
+owner confirmed steps 4-6 on staging. Step 7 (production) has not run yet. The same steps are posted
+on `#1399`.
+
+Quick checks (no sign-in):
+
+1. `gh run list --branch staging --limit 4`. Expected: `deploy-staging` **success** on the merge
+   commit.
+2. `npx wrangler versions view <current version id> --env staging`, with `CLOUDFLARE_ACCOUNT_ID` and
+   `CLOUDFLARE_API_TOKEN` from `secrets/merqify-staging.vars`. Take the id from
+   `wrangler deployments list`. Expected: `env.INBOUND_DEFAULT_FORWARD
+   ("info-merqifyhub@googlegroups.com")` and `env.GIT_COMMIT_SHA ("<merge>")`.
+3. `curl -s --compressed https://aheed-staging.merqify.com/api/health`. Expected: `db.ok` true,
+   `reference.reachable` true, and a non-empty `reference.sources`.
+   - **`commit` can lag the deploy.** On 2026-11-02 it kept reporting the previous commit for about
+     45 minutes after Cloudflare listed the new version at 100% (read from the dev machine). The page
+     was already serving the new code. If `commit` disagrees with step 2, trust step 2 and the page,
+     and re-read later rather than redeploying.
+
+Live checks (platform admin, `/staff/platform/client-setup`, any store):
+
+4. **Sending status** shows **Default forward-to** `info-merqifyhub@googlegroups.com`.
+5. **Forward to** in the Add address form is prefilled with it, with the hint "The platform default
+   inbox. Change it if this store has its own mailbox."
+6. Add two addresses with the default forward-to. Expected: they appear under one "Forwards to
+   info-merqifyhub@googlegroups.com" heading labelled **Platform default**. Remove them afterwards
+   unless they are real.
+7. After promotion, repeat steps 4-6 on `aheed.merqify.com`. There, Recipients reads "Anyone
+   (production)".
+
 ## Prerequisites (one-time)
 
 1. **Authenticate the GitHub CLI** — this is where GitHub issues the **one-time device code**:

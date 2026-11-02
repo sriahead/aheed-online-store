@@ -925,6 +925,9 @@ the forwarded proto, so over plain local `http` it computes an `https://` origin
 after that really is the credential — most often the account simply is not in the dev database;
 `npx tsx scripts/demo-accounts.ts add` seeds the roster, `demo-srimart-admin@merqify.com` included
 (since `#1356` the roster is `@merqify.com`; `add` renames a legacy `@example.com` account in place).
+**Measured 2026-11-02 (`#1399` Validate):** the dev database still holds the legacy roster
+(`demo-platform-admin@example.com` is its only platform admin). `add` has not been re-run there, so
+a `@merqify.com` sign-in returns 401 on dev until it is.
 
 **But a 401 with the account present means you are using the wrong password file (`#1187`).** `.env`
 and `.dev.vars` hold **different** `DEMO_ACCOUNT_PASSWORD` values, and `.dev.vars` is the one in
