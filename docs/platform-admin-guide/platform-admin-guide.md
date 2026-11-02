@@ -147,12 +147,12 @@ reload to see them.
 - **Pick a store** from the row of store names at the top of the page.
 - **Follow the Email guide.** It has seven numbered steps. Steps the platform can check itself show "Done" or "Not done". Steps only Cloudflare knows about say "Check in Cloudflare", with an **Open** link to the Cloudflare dashboard or docs.
 - **Set the sender.** Edit the store's sender name and sender email, then press **Save sender**. Customers see this name on the store's emails.
-- **Manage receiving addresses.** Add an address (for example the store's orders address), choose its purpose (Orders or Support), and enter the store's real mailbox to forward to, then press **Add address**. Press **Remove** next to an address to delete it.
-- **Read the sending status.** It shows the active provider, the platform sender, whether recipients are open or allowlist-only, whether the store's domain is verified, and the exact address the store's mail goes out as. When the domain is not verified, it also shows where replies go.
+- **Manage receiving addresses.** Add an address (for example the store's orders address), choose its purpose (Orders or Support), and enter the mailbox to forward to, then press **Add address**. **Forward to** starts filled in with the platform default inbox; type over it when the store has its own mailbox. Several addresses can forward to the same mailbox. The list groups the store's addresses under the mailbox each one forwards to, and labels the platform default inbox's group **Platform default**. Press **Remove** next to an address to delete it.
+- **Read the sending status.** It shows the active provider, the platform sender, whether recipients are open or allowlist-only, whether the store's domain is verified, and the exact address the store's mail goes out as. When the domain is not verified, it also shows where replies go. **Default forward-to** shows the platform default inbox, "Not set" when there is none, or an "Invalid" warning when its setting is not an email address (Forward to then starts empty).
 - **Send a test email.** Press **Send test email**. It always goes to your own signed-in address, and the page says whether it was sent, skipped by the recipient policy, or failed, with the reason.
 - **Check the limits.** A table shows Cloudflare's published email limits, with a link to Cloudflare's limits page.
 
-**Important fields and filters:** The store picker (one button per store); the guide's step status (Done, Not done, Check in Cloudflare, Action on this page); Sender name and Sender email; each receiving address with its purpose (Orders or Support) and forward-to mailbox; the sending status (Provider, Platform sender, Recipients, Store domain, Mail goes out as).
+**Important fields and filters:** The store picker (one button per store); the guide's step status (Done, Not done, Check in Cloudflare, Action on this page); Sender name and Sender email; each receiving address with its purpose (Orders or Support), grouped by its forward-to mailbox; the sending status (Provider, Platform sender, Recipients, Store domain, Mail goes out as, Default forward-to).
 
 **What happens after changes are saved:** A saved sender is used by the store's next email: order confirmations, status updates, password resets and verification emails. A new receiving address takes effect once its Cloudflare routing rule points at the inbound-email Worker; from then on, mail to it is forwarded to its forward-to mailbox. Removing an address stops that forwarding immediately, so mail to it is rejected as an unknown recipient. Each save shows a confirmation message, and the page reloads with the new values.
 
@@ -165,6 +165,8 @@ reload to see them.
 - **A forward-to mailbox must not itself be a receiving address**, because mail would loop. That is refused too.
 - **On staging**, the test email only arrives if your address is on the environment's allowlist; otherwise the page reports "Skipped by recipient policy".
 - **Routing rules are created in Cloudflare, not here.** A registered address receives nothing until its rule sends it to the inbound-email Worker.
+- **The platform default inbox is a setting on the Worker** (`INBOUND_DEFAULT_FORWARD`), not a control on this page. Like any forward-to mailbox, it must be verified in Cloudflare before mail can reach it.
+- **To change an existing address's forward-to**, remove the address and add it again.
 - **Marking a domain as verified is a setting on the Worker**, not a control on this page (see the environment setup guide, "Email: sending and receiving").
 
 ## Platform Domain Registry — `/staff/platform/domains`

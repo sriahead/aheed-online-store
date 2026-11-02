@@ -143,6 +143,23 @@ export function getInboundEmailEnv(): InboundEmailEnv {
   return inboundEmailSchema.parse({ INBOUND_EMAIL_TOKEN: readEnv("INBOUND_EMAIL_TOKEN") });
 }
 
+// #1399 — the platform's default forward-to inbox, prefilled in Client Setup's receiving-address
+// form. Its own reader, outside both schemas above, so a bad value can never break sending or the
+// inbound resolve route. No built-in fallback: the inbox is deployment data (wrangler.toml
+// `[vars]`), so local dev and CI simply have no default.
+export type InboundDefaultForward =
+  { status: "set"; address: string } | { status: "unset" } | { status: "invalid" };
+
+const forwardAddressSchema = z.string().email();
+
+export function getInboundDefaultForward(): InboundDefaultForward {
+  const raw = (readEnv("INBOUND_DEFAULT_FORWARD") ?? "").trim().toLowerCase();
+  if (raw === "") return { status: "unset" };
+  return forwardAddressSchema.safeParse(raw).success
+    ? { status: "set", address: raw }
+    : { status: "invalid" };
+}
+
 // #1055 — the storefront footer's "Powered by {name}" line. Its own schema, like email and
 // payments above, so reading it never depends on DATABASE_URL or BETTER_AUTH_SECRET. The platform
 // is Merqify (the operator, not a vendor), so unset or blank falls back to the platform's own name

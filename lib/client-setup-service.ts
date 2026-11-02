@@ -1,5 +1,10 @@
 import { getPrisma } from "@/lib/db";
-import { getEmailEnv, readOptional } from "@/lib/config";
+import {
+  getEmailEnv,
+  getInboundDefaultForward,
+  readOptional,
+  type InboundDefaultForward,
+} from "@/lib/config";
 import {
   getEmailBinding,
   getEmailService,
@@ -42,6 +47,8 @@ export interface EmailPlatformStatus {
   recipientMode: "open" | "allowlist";
   verifiedDomains: string[];
   configError: boolean;
+  /** #1399 — INBOUND_DEFAULT_FORWARD, prefilled as a new receiving address's forward-to. */
+  defaultForward: InboundDefaultForward;
 }
 
 export interface EmailSectionData {
@@ -71,6 +78,7 @@ export function getEmailPlatformStatus(): EmailPlatformStatus {
     recipientMode: mode,
     verifiedDomains: parseEmailList(env?.EMAIL_VERIFIED_DOMAINS),
     configError: env === undefined,
+    defaultForward: getInboundDefaultForward(),
   };
 }
 
