@@ -25,7 +25,7 @@ const TRACK_SUBDIR: Record<Track, string> = {
   "customer-help": "customer",
 };
 
-const RESERVED = new Set(["index.mdx", "_meta.json"]);
+const RESERVED = new Set(["index.mdx", "_meta.json", "_meta.ts", "_meta.js"]);
 
 /**
  * The whole routing rule, as a pure function, so it can be proven from a plain test with no
