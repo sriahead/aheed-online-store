@@ -106,3 +106,38 @@ None. One note on R2's "a fetch that only settles when aborted": the test advanc
   rule as written: the dev database still holds the pre-cut-over hosts. Staging and production carry
   the merqify hosts and should give `orders-<slug>@merqify.com`. Record what each environment shows
   at validation.
+
+## Validation record (in-session, NOT independent)
+
+Run 2026-11-02 in the same context that built the slice, on Opus, at the owner's request (no Clear,
+no model switch). Treat it as a self-check, not an independent validation.
+
+**Pre-flight:** `lint`, `format:check`, `tsc --noEmit` and `kms:validate` all exit 0.
+`npx vitest run --maxWorkers=4` alone: 5,590/5,590 passing. `npm run build` exits 0.
+
+**Local `npm run preview`** (dev database `ep-dry-morning`). For the run only, `.dev.vars` gained
+`EMAIL_FROM="no-reply@merqify.com"` and `INBOUND_DEFAULT_FORWARD="info-merqifyhub@googlegroups.com"`.
+It was restored byte for byte from a backup afterwards. The page was driven with curl as
+`demo-platform-admin@example.com`.
+
+| Req | Result |
+|---|---|
+| R1, R2 | Pass. The module and its 11 test cases were read; the per-request abort signal and 5 s timer are present. |
+| R3 | Pass, with the row amended: the literal grep matched the generated `docs.ts` (documentation text). Excluding it gives 0. |
+| R4 | Pass. Typecheck exits 0; the dev token (53 chars) appears **0** times in the saved page. |
+| R5, R6 | Component tests pass. **Live: unverified.** The slice is not on staging, and the owner has not yet added Email Routing Addresses: Read. |
+| R7 | Pass. One `forwardTo` in both cases (component test). The `client-setup.test.ts` action cases are unchanged (the only removed line is the old `destination` null assertion). |
+| R8 | Pass for `forbidden` and `not-configured` on the page. Dev's token (account `…077cd`) returned **forbidden**: "the Cloudflare token lacks Email Routing Addresses Read". This answers the build note's open question: a missing permission comes back as 401/403. With both `CLOUDFLARE_*` removed (none in `.env`) the page showed "Cloudflare credentials are not set for this environment." `error` is covered by the component test only. |
+| R9 | Pass (component tests). |
+| R10 | Pass locally: "Unavailable: token lacks Email Routing Addresses Read" and "Unavailable: credentials not set". The `ok` count is **unverified** (staging). |
+| R11 | Unit tests pass. Locally the step read "Check in Cloudflare" (null). The staging "Done" case is **unverified**. |
+| R12, R13 | Pass (16 unit tests). |
+| R14 | Pass. **SriMart:** hosts `srimart-staging.nocaped.com` (canonical) and `srimart.localhost:8787`, suggestion "SriMart <orders@srimart-staging.nocaped.com>". That matches R12: the `nocaped` host is custom under `merqify.com`, and the port host is ignored. **A test vendor with no domains:** "orders-express-test-4d6e1400@merqify.com", the flat form. |
+| R15 | Pass. SriMart (`orders@srimart.nocaped.com`) shows the `role="alert"` warning naming `srimart.nocaped.com`. Reverse case: the test vendor's sender was set to `orders-test@merqify.com` **by a direct dev-database update, not through Save sender** (the action is unchanged, R7). On reload the warning was gone and the suggestion still showed, then the sender was restored to `test@example.com`. The first reload returned 500 after 30 s: outbound Neon fetches took 22-35 s on this machine's network, and renders were already 15-25 s. The retry rendered 200. |
+| R16 | Pass. `vendor-neutral-copy.test.ts` passes; the strings added under `components/` and `app/` name no vendor or product. |
+| R17, R18 | Pass. Every listed item is present. |
+| R19 | Pass. The CHANGELOG entry names `#1392` and `#1403`. |
+| R20 | Pass locally. `kms:coverage` "baseline matches". CI `gates` not yet run (not pushed). |
+
+**Still open for Ship:** the staging rows R5, R6, R10 `ok` and R11 `true`, after the merge and the
+owner's token permission. Plus CI `gates` on the PR.
