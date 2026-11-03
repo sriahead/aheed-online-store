@@ -21,6 +21,11 @@ export interface EmailSetupFacts {
   /** EMAIL_FROM is set, so the platform can send at all. */
   platformFromConfigured: boolean;
   inboundAddressCount: number;
+  /**
+   * #1392 — every distinct forward-to is a verified Cloudflare destination (and there is at least
+   * one receiving address). `null` when the destination addresses could not be read.
+   */
+  forwardTargetsVerified: boolean | null;
 }
 
 export interface ClientSetupFacts {
@@ -93,7 +98,7 @@ const EMAIL_SECTION: ClientSetupSection = {
       detail:
         "In Email Routing, add the store's real mailbox as a destination address and confirm the email Cloudflare sends to it.",
       href: CF_EMAIL_ROUTING_DOCS,
-      done: () => null,
+      done: (f) => f.email.forwardTargetsVerified,
     },
     {
       id: "inbound-addresses",

@@ -14,6 +14,7 @@ import {
   type SectionStatus,
 } from "@/lib/client-setup/sections";
 import { groupAddressesByForwardTo } from "@/lib/client-setup/inbound-groups";
+import { DESTINATIONS_UNAVAILABLE_SHORT } from "@/lib/client-setup/destination-copy";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Icon } from "@/components/icons/Icon";
@@ -211,10 +212,21 @@ async function ClientSetupSections({
           {section.id === "email" && (
             <div className="grid gap-4 lg:grid-cols-2">
               <Card title="Sender">
+                {email.senderEmail.trim() !== "" && !email.senderRoutable && (
+                  <p
+                    role="alert"
+                    className="mb-3 rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger"
+                    data-sender-unroutable
+                  >
+                    Replies to {email.senderDomain || email.senderEmail} may not arrive: it is not
+                    the platform domain or one of this store&apos;s domains.
+                  </p>
+                )}
                 <SenderForm
                   vendorId={vendorId}
                   senderName={email.senderName}
                   senderEmail={email.senderEmail}
+                  suggestion={email.suggestedSender}
                 />
               </Card>
 
@@ -258,6 +270,14 @@ async function ClientSetupSections({
                     ) : (
                       "Not set"
                     )}
+                  </dd>
+                  <dt className="text-primary-muted">Verified mailboxes</dt>
+                  <dd className="font-semibold" data-verified-mailboxes>
+                    {email.destinations.status === "ok"
+                      ? `${email.destinations.addresses.filter((d) => d.verified).length} verified, ${
+                          email.destinations.addresses.filter((d) => !d.verified).length
+                        } pending`
+                      : `Unavailable: ${DESTINATIONS_UNAVAILABLE_SHORT[email.destinations.reason]}`}
                   </dd>
                 </dl>
                 {email.platform.configError && (
@@ -310,6 +330,7 @@ async function ClientSetupSections({
                 <AddInboundAddressForm
                   vendorId={vendorId}
                   defaultForward={email.platform.defaultForward}
+                  destinations={email.destinations}
                 />
               </Card>
 
