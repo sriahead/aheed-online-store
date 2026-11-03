@@ -1207,10 +1207,14 @@ Quick checks:
 
 Live checks (staging):
 
-5. As a guest, send an **Enquiry**. Expected: "Thank you. Your message to the store has been
-   received." Until `merqify.com` is onboarded for sending, the send fails, so a `ContactOutbox`
-   row exists and the next 15-minute tick logs `scheduled job /api/jobs/retry-contact-outbox ok`
-   with `failed` 1.
+5. Run `npx wrangler tail aheed-store-staging --format pretty`, then as a guest send an
+   **Enquiry**. Expected: "Thank you. Your message to the store has been received.", and the tail
+   prints the subject as `[STAGING] Enquiry · <store> · <subject>`. Which line it is depends on the
+   store's forward-to. **Not on `EMAIL_ALLOWED_RECIPIENTS`:** `email send skipped (recipient is not
+   on EMAIL_ALLOWED_RECIPIENTS …)`, and no `ContactOutbox` row is written. A skip is not retried.
+   **On it, but sending not working yet:** `email send failed …`, then a `ContactOutbox` row is
+   written, and the next 15-minute tick logs `scheduled job /api/jobs/retry-contact-outbox ok`
+   (scheduler Worker `aheed-scheduler-staging`).
 6. Once sending works and the forward-to is on `EMAIL_ALLOWED_RECIPIENTS`, the email arrives in the
    store's **Support** forward-to with subject `[STAGING] Enquiry · <store> · <subject>`, and
    pressing Reply addresses the shopper.
