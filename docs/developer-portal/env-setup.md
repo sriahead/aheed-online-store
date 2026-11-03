@@ -1157,7 +1157,7 @@ Quick checks:
 
 Live checks (platform admin, `/staff/platform/client-setup` on `aheed-staging.merqify.com`):
 
-4. **Sending status** shows **Verified mailboxes** "<v> verified, <p> pending", matching Email
+4. **Sending status** shows **Verified mailboxes** `<v> verified, <p> pending`, matching Email
    Routing → Destination addresses. Without the permission it reads "Unavailable: token lacks Email
    Routing Addresses Read", and **Forward to** is a text field with the same reason under it.
 5. **Forward to** is a dropdown with `info-merqifyhub@googlegroups.com` preselected. Choosing

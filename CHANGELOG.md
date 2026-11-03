@@ -146,6 +146,8 @@ every branch merges.
 
 ### Fixed
 
+- **The internal docs deploy builds again (`#1392`/`#1403` follow-up).** The `env-setup.md` sanity check for verified mailboxes quoted `"<v> verified, <p> pending"` outside a code span, so MDX read `<p>` as an unclosed tag and `deploy-docs-internal` failed on `6b169cd`. It is now in backticks. As before, CI `docs-gates` passed because it does not build the docs site.
+
 - **The internal docs deploy builds again.** `specs/sdd-workflow.md` 2.53.0 carried a bare `<date>` placeholder, which MDX read as an unclosed tag, so `deploy-docs-internal` failed on `81ab8ac`. It is now in backticks (2.53.1). CI `docs-gates` does not build the docs site, so it passed; the real `kms/site-internal` build is green locally.
 
 - **Staff users saw asset buttons that always failed** — `/staff/icons` is now read-only for STAFF; the mutation routes were already ADMIN-only (issue `#1288`).
