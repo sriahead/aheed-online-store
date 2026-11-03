@@ -154,6 +154,8 @@ model Vendor {
   memberships               VendorMembership[]
   domains                   VendorDomain[]
   inboundAddresses          VendorInboundAddress[]
+  contactAttempts           ContactAttempt[]
+  contactOutbox             ContactOutbox[]
   carts                     Cart[]
   cartItems                 CartItem[]
   addresses                 Address[]
@@ -351,6 +353,36 @@ model VendorInboundAddress {
   createdAt DateTime              @default(now())
 
   @@index([vendorId])
+}
+
+// #1409 — one row per accepted storefront contact-form submission, counted per store and hashed IP
+// for the rate limit (5 an hour). The OrderLookupAttempt shape: a counter only, so no raw IP at rest.
+model ContactAttempt {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  ipHash    String
+  createdAt DateTime @default(now())
+
+  @@index([vendorId, ipHash, createdAt])
+}
+
+// #1409 — a contact-form email whose send FAILED, kept only until it sends. The retry job
+// (/api/jobs/retry-contact-outbox) deletes a row once delivered, or after 7 days, so a shopper's
+// message never sits here indefinitely. `subject` is untagged; the send path adds [STAGING]/[DEV].
+model ContactOutbox {
+  id        String   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  toAddress String
+  subject   String
+  html      String
+  replyTo   String
+  attempts  Int      @default(0)
+  lastError String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 // Per-vendor staff/admin grant (ADR-004 slice 3a). Identity stays global (User); this

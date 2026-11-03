@@ -165,6 +165,7 @@ reload to see them.
 - **An address can belong to only one store.** Adding one that is already registered is refused.
 - **A forward-to mailbox must not itself be a receiving address**, because mail would loop. That is refused too.
 - **On staging**, the test email only arrives if your address is on the environment's allowlist; otherwise the page reports "Skipped by recipient policy".
+- **The storefront Contact us form uses these addresses too.** A shopper's complaint, or any message about an order, is emailed to the store's **Orders** address's forward-to mailbox; an enquiry goes to its **Support** one. With neither, it goes to the platform default inbox. Register both so the hub inbox is only the fallback.
 - **Routing rules are created in Cloudflare, not here.** A registered address receives nothing until its rule sends it to the inbound-email Worker.
 - **The platform default inbox is a setting on the Worker** (`INBOUND_DEFAULT_FORWARD`), not a control on this page. Like any forward-to mailbox, it must be verified in Cloudflare before mail can reach it.
 - **The verified-mailbox list needs a Cloudflare permission.** Until the environment's Cloudflare token can read Email Routing addresses, Forward to stays a text field (see the environment setup guide, "Email: sending and receiving").

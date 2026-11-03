@@ -1,5 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
+  CONTACT_OUTBOX_PENDING_KEY,
   ERROR_EVENTS_LAST_AT_KEY,
   ERROR_SIGNAL_THROTTLE_MS,
   JOB_SIGNALS_BINDING,
@@ -114,5 +115,30 @@ export async function markErrorEvent(now: Date): Promise<void> {
     await store.put(ERROR_EVENTS_LAST_AT_KEY, now.toISOString());
   } catch (error) {
     logFailure("mark", ERROR_EVENTS_LAST_AT_KEY, error);
+  }
+}
+
+/**
+ * #1409 — a contact-form email failed and was queued, or the retry job left rows behind. One write
+ * per call: contact submissions are rare, so no throttle is needed.
+ */
+export async function markContactOutboxPending(): Promise<void> {
+  const store = resolveStore();
+  if (!store) return;
+  try {
+    await store.put(CONTACT_OUTBOX_PENDING_KEY, new Date().toISOString());
+  } catch (error) {
+    logFailure("mark", CONTACT_OUTBOX_PENDING_KEY, error);
+  }
+}
+
+/** #1409 — the retry job emptied the outbox. */
+export async function clearContactOutboxPending(): Promise<void> {
+  const store = resolveStore();
+  if (!store) return;
+  try {
+    await store.delete(CONTACT_OUTBOX_PENDING_KEY);
+  } catch (error) {
+    logFailure("clear", CONTACT_OUTBOX_PENDING_KEY, error);
   }
 }

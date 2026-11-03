@@ -110,8 +110,9 @@ labels & store description** form at the bottom of the page, choose which of the
 form, and write what your store sells. In the **Product grid layout** form below that, choose how
 many product cards sit side by side on your category, search and bundle pages. A shopper who hides the
 filter sidebar on a category or search page sees one more card per row on wide screens. Three footer forms
-follow: in **Footer contact & legal**, enter your phone number, email address, company number, VAT
-number, registered office, a one-line note under your opening hours, and whether to show "Secure
+follow: in **Footer contact & legal**, enter your phone number, email address (shown in the footer only
+when your store is on its own web address; on a shared platform address shoppers use the **Contact
+us** form instead), company number, VAT number, registered office, a one-line note under your opening hours, and whether to show "Secure
 checkout powered by Stripe". In **Opening hours & payment badges**, set your usual opening and
 closing time for each day of the week (or tick **Closed all day**) and tick which payment-method
 badges (Visa, Mastercard, American Express, Apple Pay, Google Pay) appear in the footer. In

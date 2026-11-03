@@ -88,3 +88,14 @@ export function isRoutableSenderDomain(input: {
   }
   return input.verifiedDomains.some((d) => d.trim().toLowerCase() === domain);
 }
+
+/**
+ * #1409 — true when a storefront is being served on the store's own domain rather than the shared
+ * platform. The same eligibility and platform test as `customHosts`, applied to one request host,
+ * so the footer and the sender suggestion agree on what "own domain" means.
+ */
+export function isOwnDomainHost(host: string, platformDomain: string | undefined): boolean {
+  return (
+    customHosts([{ host, isCanonical: true }], normalisePlatformDomain(platformDomain)).length > 0
+  );
+}

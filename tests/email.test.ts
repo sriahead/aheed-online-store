@@ -39,6 +39,7 @@ beforeEach(() => {
     "EMAIL_ALLOWED_RECIPIENTS",
     "RESEND_API_KEY",
     "PLATFORM_NAME",
+    "APP_ENV",
   ]) {
     delete process.env[k];
   }
@@ -297,5 +298,60 @@ describe("failures never throw (R7)", () => {
     expect((await send(MESSAGE)).status).toBe("failed");
     expect(error).toHaveBeenCalledOnce();
     vi.unstubAllEnvs();
+  });
+});
+
+describe("#1409 environment tag and replyTo override", () => {
+  it("R4: unset APP_ENV tags the subject [DEV] before delivery", async () => {
+    const binding = fakeBinding();
+    cfEnv.current = { EMAIL: binding };
+    expect(await send(MESSAGE)).toEqual({ status: "sent" });
+    expect(binding.send).toHaveBeenCalledWith(expect.objectContaining({ subject: "[DEV] Hello" }));
+  });
+
+  it("R4: staging tags [STAGING]; production leaves the subject alone", async () => {
+    const binding = fakeBinding();
+    cfEnv.current = { EMAIL: binding, APP_ENV: "staging" };
+    await send(MESSAGE);
+    expect(binding.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({ subject: "[STAGING] Hello" }),
+    );
+    cfEnv.current = { EMAIL: binding, APP_ENV: "production" };
+    await send(MESSAGE);
+    expect(binding.send).toHaveBeenLastCalledWith(expect.objectContaining({ subject: "Hello" }));
+  });
+
+  it("R4: the skipped log line carries the tagged subject", async () => {
+    process.env.EMAIL_RECIPIENT_MODE = "allowlist";
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect((await send(MESSAGE)).status).toBe("skipped");
+    expect(warn.mock.calls[0]?.[0]).toContain("[DEV] Hello");
+  });
+
+  it("R5: replyTo overrides the vendor reply-to of an unverified sender", async () => {
+    const binding = fakeBinding();
+    cfEnv.current = { EMAIL: binding };
+    await send({
+      ...MESSAGE,
+      sender: { name: "Corner Shop", email: "orders@shop.test" },
+      replyTo: "shopper@example.com",
+    });
+    expect(binding.send).toHaveBeenCalledWith(
+      expect.objectContaining({ replyTo: "shopper@example.com" }),
+    );
+  });
+
+  it("R5: without replyTo the vendor reply-to is kept, and a blank one is ignored", async () => {
+    const binding = fakeBinding();
+    cfEnv.current = { EMAIL: binding };
+    const sender = { name: "Corner Shop", email: "orders@shop.test" };
+    await send({ ...MESSAGE, sender });
+    expect(binding.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({ replyTo: "orders@shop.test" }),
+    );
+    await send({ ...MESSAGE, sender, replyTo: "   " });
+    expect(binding.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({ replyTo: "orders@shop.test" }),
+    );
   });
 });
