@@ -1135,8 +1135,12 @@ Live checks (platform admin, `/staff/platform/client-setup`, any store):
 
 ### Sanity check: verified mailboxes and suggested sender (`#1392`, `#1403`)
 
-**Last run:** not yet run (written at Build, 2026-11-02). Steps 4-6 need the owner to add **Email
-Routing Addresses: Read** to the staging token first.
+**Last run:** 2026-11-03 on staging, after PR `#1405` (`6b169cd`). Steps 1-3 ran. Step 1: `deploy-staging`
+run `41607173627` **success**. Step 2: `commit` `6b169cd`, `db.ok` true, `reference.reachable`
+true, two sources. Step 3: **HTTP 403**, `"success":false`, error `10000`, so the permission is
+still missing and the page falls back with "token lacks Email Routing Addresses Read". Steps 4-7
+not yet run; 4-6 need the owner to add **Email Routing Addresses: Read** to the staging token
+first.
 
 Quick checks:
 
