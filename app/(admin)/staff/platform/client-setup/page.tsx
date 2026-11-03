@@ -13,6 +13,8 @@ import {
   EMAIL_LIMITS_SOURCE,
   type SectionStatus,
 } from "@/lib/client-setup/sections";
+import { groupAddressesByForwardTo } from "@/lib/client-setup/inbound-groups";
+import { DESTINATIONS_UNAVAILABLE_SHORT } from "@/lib/client-setup/destination-copy";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Icon } from "@/components/icons/Icon";
@@ -210,10 +212,21 @@ async function ClientSetupSections({
           {section.id === "email" && (
             <div className="grid gap-4 lg:grid-cols-2">
               <Card title="Sender">
+                {email.senderEmail.trim() !== "" && !email.senderRoutable && (
+                  <p
+                    role="alert"
+                    className="mb-3 rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger"
+                    data-sender-unroutable
+                  >
+                    Replies to {email.senderDomain || email.senderEmail} may not arrive: it is not
+                    the platform domain or one of this store&apos;s domains.
+                  </p>
+                )}
                 <SenderForm
                   vendorId={vendorId}
                   senderName={email.senderName}
                   senderEmail={email.senderEmail}
+                  suggestion={email.suggestedSender}
                 />
               </Card>
 
@@ -246,6 +259,26 @@ async function ClientSetupSections({
                       </span>
                     )}
                   </dd>
+                  <dt className="text-primary-muted">Default forward-to</dt>
+                  <dd className="font-semibold" data-default-forward>
+                    {email.platform.defaultForward.status === "set" ? (
+                      email.platform.defaultForward.address
+                    ) : email.platform.defaultForward.status === "invalid" ? (
+                      <span role="alert" className="text-danger">
+                        Invalid: check INBOUND_DEFAULT_FORWARD
+                      </span>
+                    ) : (
+                      "Not set"
+                    )}
+                  </dd>
+                  <dt className="text-primary-muted">Verified mailboxes</dt>
+                  <dd className="font-semibold" data-verified-mailboxes>
+                    {email.destinations.status === "ok"
+                      ? `${email.destinations.addresses.filter((d) => d.verified).length} verified, ${
+                          email.destinations.addresses.filter((d) => !d.verified).length
+                        } pending`
+                      : `Unavailable: ${DESTINATIONS_UNAVAILABLE_SHORT[email.destinations.reason]}`}
+                  </dd>
                 </dl>
                 {email.platform.configError && (
                   <p role="alert" className="mt-3 text-xs text-danger">
@@ -258,24 +291,47 @@ async function ClientSetupSections({
                 {email.addresses.length === 0 ? (
                   <p className="mb-3 text-sm text-primary-muted">No receiving addresses yet.</p>
                 ) : (
-                  <ul className="mb-4 divide-y divide-slate-100 text-sm" data-inbound-addresses>
-                    {email.addresses.map((a) => (
-                      <li
-                        key={a.id}
-                        className="flex flex-wrap items-center justify-between gap-2 py-2"
-                      >
-                        <span className="min-w-0">
-                          <span className="font-semibold">{a.address}</span>
-                          <span className="ml-2 text-xs text-primary-muted">
-                            {a.purpose === "ORDERS" ? "Orders" : "Support"} → {a.forwardTo}
-                          </span>
-                        </span>
-                        <RemoveInboundAddressButton vendorId={vendorId} id={a.id} />
+                  <ul className="mb-4 space-y-3 text-sm" data-inbound-addresses>
+                    {groupAddressesByForwardTo(
+                      email.addresses,
+                      email.platform.defaultForward.status === "set"
+                        ? email.platform.defaultForward.address
+                        : null,
+                    ).map((group) => (
+                      <li key={group.forwardTo} data-forward-group={group.forwardTo}>
+                        <p className="text-xs font-semibold text-primary-muted">
+                          Forwards to <span className="text-primary">{group.forwardTo}</span>
+                          {group.isDefault && (
+                            <span className="ml-2 rounded-full bg-accent-tint px-2 py-0.5 text-xs font-bold text-primary">
+                              Platform default
+                            </span>
+                          )}
+                        </p>
+                        <ul className="divide-y divide-slate-100">
+                          {group.addresses.map((a) => (
+                            <li
+                              key={a.id}
+                              className="flex flex-wrap items-center justify-between gap-2 py-2"
+                            >
+                              <span className="min-w-0">
+                                <span className="font-semibold">{a.address}</span>
+                                <span className="ml-2 text-xs text-primary-muted">
+                                  {a.purpose === "ORDERS" ? "Orders" : "Support"}
+                                </span>
+                              </span>
+                              <RemoveInboundAddressButton vendorId={vendorId} id={a.id} />
+                            </li>
+                          ))}
+                        </ul>
                       </li>
                     ))}
                   </ul>
                 )}
-                <AddInboundAddressForm vendorId={vendorId} />
+                <AddInboundAddressForm
+                  vendorId={vendorId}
+                  defaultForward={email.platform.defaultForward}
+                  destinations={email.destinations}
+                />
               </Card>
 
               <Card title="Test email">

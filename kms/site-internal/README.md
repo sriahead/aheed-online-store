@@ -1,4 +1,4 @@
-# Aheed KMS — internal site
+# Merqify Knowledge Centre — internal site
 
 Nextra 4 docs site (App Router). Independent Next.js app — own `package.json`, own dependency
 tree, own Cloudflare Worker — deliberately isolated from the main storefront app.

@@ -1,5 +1,11 @@
 import { getPrisma } from "@/lib/db";
-import { getEmailEnv, readOptional } from "@/lib/config";
+import {
+  getAiEnv,
+  getEmailEnv,
+  getInboundDefaultForward,
+  readOptional,
+  type InboundDefaultForward,
+} from "@/lib/config";
 import {
   getEmailBinding,
   getEmailService,
@@ -9,6 +15,7 @@ import {
   type EmailSendResult,
 } from "@/lib/email";
 import { emailDomain, parseEmailList, resolveSender } from "@/lib/email/policy";
+import { readDestinationAddresses, type DestinationsResult } from "@/lib/email/destinations";
 import { fetchPlatformVendors } from "@/lib/platform-admin-service";
 import {
   createInboundAddress,
@@ -19,8 +26,14 @@ import {
   type InboundAddressPurposeValue,
   type InboundAddressRow,
 } from "@/lib/repositories/inbound-address";
-import { fetchVendorProfile, updateVendorSender } from "@/lib/repositories/vendor";
+import { fetchVendorProfile, listVendorHosts, updateVendorSender } from "@/lib/repositories/vendor";
 import type { ClientSetupFacts } from "@/lib/client-setup/sections";
+import { forwardTargetsVerified } from "@/lib/client-setup/inbound-groups";
+import {
+  isRoutableSenderDomain,
+  suggestSender,
+  type SuggestedSender,
+} from "@/lib/client-setup/sender-suggestion";
 
 /**
  * Request-scoped facade for /staff/platform/client-setup (#1217). The page and its server actions
@@ -42,6 +55,8 @@ export interface EmailPlatformStatus {
   recipientMode: "open" | "allowlist";
   verifiedDomains: string[];
   configError: boolean;
+  /** #1399 — INBOUND_DEFAULT_FORWARD, prefilled as a new receiving address's forward-to. */
+  defaultForward: InboundDefaultForward;
 }
 
 export interface EmailSectionData {
@@ -54,6 +69,15 @@ export interface EmailSectionData {
   effectiveReplyTo: string | null;
   addresses: InboundAddressRow[];
   platform: EmailPlatformStatus;
+  /**
+   * #1392 — the account's Email Routing destination addresses, or why they could not be read. Only
+   * this result reaches the page; the Cloudflare token never does.
+   */
+  destinations: DestinationsResult;
+  /** #1403 — the sender Client Setup suggests for this store, or null when none can be derived. */
+  suggestedSender: SuggestedSender | null;
+  /** #1403 — the saved sender's domain can receive replies (platform, store or verified domain). */
+  senderRoutable: boolean;
 }
 
 export async function listClientSetupVendors(): Promise<ClientSetupVendor[]> {
@@ -71,16 +95,25 @@ export function getEmailPlatformStatus(): EmailPlatformStatus {
     recipientMode: mode,
     verifiedDomains: parseEmailList(env?.EMAIL_VERIFIED_DOMAINS),
     configError: env === undefined,
+    defaultForward: getInboundDefaultForward(),
   };
 }
 
 export async function getEmailSectionData(vendorId: string): Promise<EmailSectionData> {
   const prisma = getPrisma();
-  const [profile, addresses] = await Promise.all([
+  const ai = readOptional(getAiEnv);
+  const [profile, addresses, hosts, destinations] = await Promise.all([
     fetchVendorProfile(prisma, vendorId),
     listInboundAddresses(prisma, vendorId),
+    listVendorHosts(prisma, vendorId),
+    readDestinationAddresses(
+      { accountId: ai?.CLOUDFLARE_ACCOUNT_ID, token: ai?.CLOUDFLARE_API_TOKEN },
+      // Wrapped rather than passed bare: workerd can reject a detached fetch ("Illegal invocation").
+      (input, init) => fetch(input, init),
+    ),
   ]);
   const platform = getEmailPlatformStatus();
+  const platformDomain = emailDomain(platform.platformFrom ?? "") || undefined;
   const senderDomain = emailDomain(profile.senderEmail);
   const resolved = resolveSender({
     sender: { name: profile.senderName, email: profile.senderEmail },
@@ -97,6 +130,19 @@ export async function getEmailSectionData(vendorId: string): Promise<EmailSectio
     effectiveReplyTo: resolved.replyTo ?? null,
     addresses,
     platform,
+    destinations,
+    suggestedSender: suggestSender({
+      vendorName: profile.name,
+      slug: profile.slug,
+      hosts,
+      platformDomain,
+    }),
+    senderRoutable: isRoutableSenderDomain({
+      senderEmail: profile.senderEmail,
+      hosts,
+      platformDomain,
+      verifiedDomains: platform.verifiedDomains,
+    }),
   };
 }
 
@@ -108,6 +154,7 @@ export function toClientSetupFacts(email: EmailSectionData): ClientSetupFacts {
       senderDomainVerified: email.senderDomainVerified,
       platformFromConfigured: Boolean(email.platform.platformFrom),
       inboundAddressCount: email.addresses.length,
+      forwardTargetsVerified: forwardTargetsVerified(email.addresses, email.destinations),
     },
   };
 }

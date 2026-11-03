@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.158.0"
+version: "1.159.0"
 updated: 2026-11-01
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -39,22 +39,75 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-11-01 (`#1217` Build): email moves to Cloudflare, plus Client Setup. Built on
-  `feature/1217-cloudflare-email-service`, NOT merged; Validate is next, from a fresh context.**
-  - **On promotion, production sends through Cloudflare Email Service, and every send fails
-    (logged) until `merqify.com` is onboarded in Email Sending.** That is no regression: Resend was
-    sandboxed and never reached real customers (`#104`). `EMAIL_PROVIDER=resend` restores Resend
-    with no code change.
-  - **New owner steps** (`env-setup.md`, "Email: sending and receiving"):
+- **2026-11-03 (`#1399`, `#1392` + `#1403`): incoming email is live on `merqify.com`; outgoing still is not.**
+  - **`#1399` (default forward-to inbox) is MERGED TO STAGING** (PR #1402, `924a6ec`), board
+    `In Review`, NOT promoted. It was validated in-session, not independently. The owner confirmed
+    it on staging. Spec `specs/2026-11-02-default-forward-inbox/`. Sanity check: `env-setup.md`,
+    "Sanity check: default forward-to inbox".
+  - **`#1392` + `#1403` are MERGED TO STAGING** (PR #1405, `6b169cd`), board `In Review`, NOT
+    promoted. Spec `specs/2026-11-02-forward-dropdown-default-sender/`. They add a Forward to
+    dropdown of Cloudflare-verified destinations (text fallback) and a suggested sender per store.
+    Validated in-session, not independently. The staging rows R5, R6, R10 `ok` and R11 `true` are
+    unverified. Sanity check: `env-setup.md`, "Sanity check: verified mailboxes and suggested
+    sender".
+    - **Owner prerequisite for the live dropdown:** add **Email Routing Addresses: Read** to the
+      staging and production Merqify tokens (same token values, no redeploy). On 2026-11-03 the
+      staging token still answered **403** (error 10000), so staging shows the text-field fallback,
+      as designed. Re-run sanity steps 3-6 once it is added.
+    - The promotion PR must close `#1403` only. `#1392` stays open for routing-rule and
+      sending-domain state.
+      "New stores start with the suggested sender" is `#1404` (P12).
+  - **On staging, both Aheed receiving addresses** (`info-aheed@`, `orders-aheed@merqify.com`)
+    forward to the hub group, not `info-afc@`. The owner may re-add them.
+  - **Email Routing is ENABLED on `merqify.com`** (MX `route1/2/3.mx.cloudflare.net`, SPF,
+    DMARC `p=reject`). `info@merqify.com` goes straight to `info-merqify@googlegroups.com` (no
+    Worker), tested end to end.
+  - **Owner's Google Groups** (all four set to "anyone can post"):
+    - `info-afc@googlegroups.com`: Aheed's forward-to;
+    - `info-srimart@googlegroups.com`: SriMart's;
+    - `info-merqifyhub@googlegroups.com`: the platform default (`#1399`) and the fallback;
+    - `info-merqify@googlegroups.com`: Merqify itself.
+
+    Test from a non-owner mailbox: a group owner's own post shows only in Sent.
+  - **Staging inbound secrets are SET** (owner ran the script, 2026-11-02): `INBOUND_EMAIL_TOKEN`
+    on `aheed-store-staging` and `aheed-inbound-email-staging`, and
+    `INBOUND_FALLBACK_FORWARD=info-merqifyhub@…` on the latter. They are recorded in
+    `secrets/merqify-staging.vars`.
+  - **Production inbound secrets are NOT set.** The same script takes `production`; auto mode
+    refuses secret writes, so the owner runs it. Also still owed:
+    - the store routing rules (`info-aheed[-staging]`, `info-srimart[-staging]` → the inbound
+      Workers);
+    - the Client Setup entries;
+    - the owner's production platform-admin login.
+  - **Outgoing: `merqify.com` is NOT yet onboarded in Email Sending.** Production sends fail until it
+    is (R39). `#1383` (nocaped sender 403) is fixed in code by `#1217`'s sender fallback; close it
+    after a real test send.
+  - **`hooks/pre-push` blocks remote branch deletions (`#1401`)**: `branches:prune --apply` deleted 25
+    local copies, and all 29 origin deletions failed. Local 45, origin 70.
+  - **PR #1382 targets `main` from an outside fork** (`isearchxsolve`, "bounty", `#1289`).
+    Recommended to close; not merged.
+  - Staging carries KMS PRs #1397/#1398 (another session, 2026-11-02). #1397 also carried the `#1217`
+    Document commit and the `#1389`/`#1396` roadmap rows.
+
+- **2026-11-01 (`#1217`): email moves to Cloudflare, plus Client Setup. PROMOTED TO PRODUCTION
+  (PR #1394 `24ce8b8` to staging, promotion PR #1396 `0842385`).** On 2026-11-02 both production hosts
+  report `0842385`, `db.ok`.
+  - **R39 (real mail) is UNVERIFIED until the owner onboards `merqify.com`** in Email Sending. On
+    promotion, production sends through Cloudflare and every send fails (logged) until then. That is
+    no regression: Resend was sandboxed and never reached real customers (`#104`).
+    `EMAIL_PROVIDER=resend` restores Resend with no code change.
+  - **Owner steps** (`env-setup.md`, "Email: sending and receiving", with its sanity check):
     - onboard the sending domain;
-    - set the secrets `EMAIL_VERIFIED_DOMAINS`, `EMAIL_ALLOWED_RECIPIENTS` (staging) and
-      `INBOUND_EMAIL_TOKEN` (both Workers), plus `INBOUND_FALLBACK_FORWARD` (the inbound Worker);
-    - verify the destination mailboxes;
-    - create the Email Routing rules to `aheed-inbound-email[-staging]`, a third Worker.
-  - **Client Setup** (`/staff/platform/client-setup`) is the per-client onboarding dashboard the
-    owner asked for. Email is its first section; more are `#1391`. WhatsApp alerts for order mail
-    are `#1390`.
-  - Dev (`ep-dry-morning`) now has every migration through `20261101120000_vendor_inbound_address`.
+    - set `EMAIL_VERIFIED_DOMAINS`, `EMAIL_ALLOWED_RECIPIENTS` (staging) and `INBOUND_EMAIL_TOKEN`
+      (both Workers), plus `INBOUND_FALLBACK_FORWARD` (the inbound Worker);
+    - verify the destination mailboxes, then create the Email Routing rules to
+      `aheed-inbound-email[-staging]`, a third Worker.
+  - **Open decision:** R12 (`configure-env` does not require `EMAIL_FROM`; it is committed in
+    `wrangler.toml`, `no-reply@merqify.com`, not yet owner-confirmed).
+  - **Client Setup** (`/staff/platform/client-setup`): more sections are `#1391`, WhatsApp alerts
+    `#1390`, a cosmetic test-email message `#1395`.
+  - **This machine's TLS fails on any POST to Cloudflare hosts**, so POST checks against staging must
+    run from elsewhere.
 
 - **2026-10-31 (`#1341` + `#1325`): PRODUCTION IS ON MERQIFY.** Promotion PR #1366, merge
   `ff1c13b`. `main` and `staging` are level again.
@@ -67,7 +120,7 @@ reconciliation. If overall project state did not materially change, leave this f
   - **Still owed by the owner:**
     - sign up on `aheed.merqify.com`, then `grant-role --platform-admin` against
       `secrets/merqify-production.vars`;
-    - replace the two `nocaped` sender emails (runbook step 9, after `#1217`);
+    - replace the two `nocaped` sender emails (runbook step 9; Client Setup now edits them, after `#1217` is promoted);
     - confirm the 2026-11-03 `sync-reference-data` run (`#1123`).
   - **Next in P12:** workstream C, freeing Nocaped (`#1338`). Remove things one at a time, with
     approval. Old production (`#1289`) is untouched.

@@ -1,17 +1,17 @@
 ---
 id: kms-design
-title: Aheed KMS — Design (structure, deployment, schema)
+title: Merqify KMS — Design (structure, deployment, schema)
 audience: [dev]
 type: spec
 status: draft
 version: 0.1.0
-updated: 2026-08-06
+updated: 2026-11-02
 visibility: internal
 tags: [kms, docs-as-code, nextra, rag, governance]
-summary: Folder structure, deployment plan, and front-matter schema for the Aheed knowledge system — phased to M0 reality, with a generated index and an internal/public publication split.
+summary: Folder structure, deployment plan, and front-matter schema for the Merqify knowledge system — phased to M0 reality, with a generated index and an internal/public publication split.
 ---
 
-# Aheed KMS — Design
+# Merqify KMS — Design
 
 > Council-shaped design. Three principles override the original proposal:
 > **(1)** the `ARTIFACT_INDEX.md` is *generated + gated*, never hand-authored;

@@ -95,6 +95,6 @@ If you identify missing documentation, inaccurate steps, or broken links:
 ---
 
 ## 7. Related Guides & Journey Steps
-- **Vendor Admin Journey:** [Vendor Admin Store Setup & Operations](file:///E:/GitRepositories/aheed-online-store/docs/client-help-centre/user-journeys.md)
-- **Store Operations Tutorials:** [Tutorials & In-App FAQs](file:///E:/GitRepositories/aheed-online-store/docs/client-help-centre/tutorials-and-faqs.md)
-- **Platform Glossary:** [Glossary & Release Notes](file:///E:/GitRepositories/aheed-online-store/docs/client-help-centre/glossary-and-release-notes.md)
+- **Vendor Admin Journey:** [Vendor Admin Store Setup & Operations](./user-journeys.md)
+- **Store Operations Tutorials:** [Tutorials & In-App FAQs](./tutorials-and-faqs.md)
+- **Platform Glossary:** [Glossary & Release Notes](./glossary-and-release-notes.md)

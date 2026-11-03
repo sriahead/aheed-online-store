@@ -7,7 +7,7 @@ status: approved
 version: "1.0.0"
 updated: 2026-09-16
 visibility: internal
-summary: "The stakeholder-facing commercial case for the Aheed platform — what is built, what it costs to run, what it saves against Shopify, how it can earn, and what remains to be invested. Reviewed and updated at every milestone close."
+summary: "The stakeholder-facing commercial case for the Merqify platform — what is built, what it costs to run, what it saves against Shopify, how it can earn, and what remains to be invested. Reviewed and updated at every milestone close."
 tags: [business-case, stakeholder, commercial, strategy, shopify, costs]
 related: [mission, roadmap, architecture, tech-stack, product-requirements-guide]
 ---

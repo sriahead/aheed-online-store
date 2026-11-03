@@ -35,7 +35,7 @@ const EXCLUDE_DIRS = new Set([
 // be built on a denominator that differs between the two places it is checked (#861).
 // Root-anchored, matching .gitignore: a directory named `graft` nested elsewhere is not ours
 // to skip.
-const EXCLUDE_PATH_PATTERN = /^(kms\/site-[^/]+\/content|specs\/templates|graft)(\/|$)/;
+const EXCLUDE_PATH_PATTERN = /^(kms\/site-[^/]+\/content|specs\/templates|graft|misc)(\/|$)/;
 
 /**
  * The three per-slice files that deliberately carry NO front-matter and get NO

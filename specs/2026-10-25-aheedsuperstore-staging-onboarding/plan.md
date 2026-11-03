@@ -20,7 +20,7 @@ Issue [#1265](https://github.com/sriahead/aheed-online-store/issues/1265). Appro
 
 ## Narrative & Scope
 
-The platform is built on multi-tenancy ([ADR-004](file:///E:/GitRepositories/aheed-online-store/docs/developer-portal/client-onboarding-prerequisites.md#L27-L40)). Staging currently serves two vendors (`staging.aheedfoodcentre.nocaped.com` and `srimart-staging.nocaped.com`) through a single Cloudflare Worker deployment by resolving the request `Host` header against the `VendorDomain` table.
+The platform is built on multi-tenancy ([ADR-004](../decisions/ADR-004-multi-tenancy.md)). Staging currently serves two vendors (`staging.aheedfoodcentre.nocaped.com` and `srimart-staging.nocaped.com`) through a single Cloudflare Worker deployment by resolving the request `Host` header against the `VendorDomain` table.
 
 This slice adds **Aheed Superstore** as the third tenant on staging:
 
