@@ -1191,7 +1191,11 @@ Live checks (platform admin, `/staff/platform/client-setup` on `aheed-staging.me
 
 **Last run:** 2026-11-03 on staging after PR #1410 (`d5819f5`, deploy run `41730552632`): quick
 checks 1-4 passed (migration applied, health OK, form and honeypot rendered, 0 `mailto:` on the
-`merqify.com` host, Contact us before Leave a review). Live checks 5-9 not yet run.
+`merqify.com` host, Contact us before Leave a review). Step 5/7 (owner, 23:17): a signed-in
+Enquiry naming an order logged `email send skipped (recipient is not on EMAIL_ALLOWED_RECIPIENTS …):
+[STAGING] Enquiry · Aheed Food Centre · Order AHE-20261103-ZC7DTP · Test` — the live tag is
+confirmed; Aheed's forward-to is not allowlisted on staging, so nothing was queued. Steps 6, 8 and
+9 not yet run.
 
 Quick checks:
 
