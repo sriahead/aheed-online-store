@@ -97,7 +97,7 @@ None. Three notes:
 
 ## Known-shaky areas
 
-- **The migration is not applied anywhere yet.** `npm run preview` against dev needs
+- **The migration is applied on dev only** (`ep-dry-morning`, by the owner, 2026-11-03, after `migrate status` named that host). Staging and production get it from the deploy workflows. The note below is kept for the record. **Before that:** the migration was not applied anywhere. `npm run preview` against dev needs
   `20261103120000_contact_form` applied first. Auto mode refuses `prisma migrate deploy` even on
   dev, so the owner runs it as `! <command>`. Check `DIRECT_URL`/`DATABASE_URL` one at a time
   first. Until it is applied, `/contact` submissions and the outbox job fail on dev with a missing

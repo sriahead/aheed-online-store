@@ -60,9 +60,9 @@ reconciliation. If overall project state did not materially change, leave this f
     `feature/1409-storefront-contact-form` (spec `specs/2026-11-03-storefront-contact-form/`, build
     `a2724a30`; read its `build-notes.md`). It adds `/contact` routed to the Client Setup ORDERS/SUPPORT
     forward-to, `APP_ENV` tagging of every outgoing subject (`[STAGING]`/`[DEV]`), a `ContactOutbox`
-    retried by the scheduler, and it hides the footer email on platform hosts. **Its migration
-    `20261103120000_contact_form` is not applied to dev yet**: the owner runs `prisma migrate deploy`
-    (auto mode refuses it) before any preview check. The branch also carries the `#1406` promotion
+    retried by the scheduler, and it hides the footer email on platform hosts. Its migration
+    `20261103120000_contact_form` is applied on dev (owner, 2026-11-03); staging and production get
+    it from the deploy workflows. The branch also carries the `#1406` promotion
     docs commit.
   - **Email Routing on `merqify.com`, as the owner's dashboard showed it on 2026-11-03:** a
     **catch-all** to `info-merqifyhub@googlegroups.com` and one rule, `info@merqify.com` to
