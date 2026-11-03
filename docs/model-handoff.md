@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.159.0"
-updated: 2026-11-01
+version: "1.160.0"
+updated: 2026-11-03
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -56,14 +56,16 @@ reconciliation. If overall project state did not materially change, leave this f
       fallback, as designed. Re-run sanity steps 3-8 once it is added.
     - `#1392` stays open for routing-rule and sending-domain state.
       "New stores start with the suggested sender" is `#1404` (P12).
-  - **`#1409` (storefront Contact us form) is BUILT, NOT VALIDATED** on
-    `feature/1409-storefront-contact-form` (spec `specs/2026-11-03-storefront-contact-form/`, build
-    `a2724a30`; read its `build-notes.md`). It adds `/contact` routed to the Client Setup ORDERS/SUPPORT
-    forward-to, `APP_ENV` tagging of every outgoing subject (`[STAGING]`/`[DEV]`), a `ContactOutbox`
-    retried by the scheduler, and it hides the footer email on platform hosts. Its migration
-    `20261103120000_contact_form` is applied on dev (owner, 2026-11-03); staging and production get
-    it from the deploy workflows. The branch also carries the `#1406` promotion
-    docs commit.
+  - **`#1409` (storefront Contact us form) is ON STAGING, NOT PROMOTED** (PR #1410, squash
+    `d5819f5`, `In Review`). Spec `specs/2026-11-03-storefront-contact-form/`. It adds `/contact`,
+    routed to the Client Setup ORDERS/SUPPORT forward-to; tags every outgoing subject by `APP_ENV`
+    (`[STAGING]`/`[DEV]`, none in production); keeps a `ContactOutbox` (failed sends only) that the
+    scheduler retries; and hides the footer email on platform hosts. It was validated in-session,
+    not independently, and the live sent-subject tag is unverified. Migration
+    `20261103120000_contact_form` is applied on dev and staging (deploy run `41730552632`);
+    production gets it at promotion. Sanity check: `env-setup.md`, "Sanity check: storefront
+    contact form". Quick checks 1-4 passed on staging; live sends 5-9 have not been run. Until
+    `merqify.com` is onboarded for sending, every message waits in the outbox.
   - **Email Routing on `merqify.com`, as the owner's dashboard showed it on 2026-11-03:** a
     **catch-all** to `info-merqifyhub@googlegroups.com` and one rule, `info@merqify.com` to
     `info-merqify@googlegroups.com`. There are **no Worker rules**, so the inbound Worker and every

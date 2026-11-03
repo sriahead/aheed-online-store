@@ -1189,7 +1189,9 @@ Live checks (platform admin, `/staff/platform/client-setup` on `aheed-staging.me
 
 ### Sanity check: storefront contact form (`#1409`)
 
-**Last run:** not yet run (written at Build, 2026-11-03).
+**Last run:** 2026-11-03 on staging after PR #1410 (`d5819f5`, deploy run `41730552632`): quick
+checks 1-4 passed (migration applied, health OK, form and honeypot rendered, 0 `mailto:` on the
+`merqify.com` host, Contact us before Leave a review). Live checks 5-9 not yet run.
 
 Quick checks:
 
