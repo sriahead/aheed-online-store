@@ -8,6 +8,14 @@ every branch merges.
 
 ### Added
 
+- **Storefront Contact us form, environment-tagged email subjects and a retry outbox** (issue `#1409`, spec `specs/2026-11-03-storefront-contact-form/`).
+  - **Form:** `/contact` on every storefront (guests and signed-in shoppers). It takes a complaint or enquiry, with name, email, optional phone, subject and message. A signed-in shopper also gets an optional picker of their recent orders at that store. It has a honeypot and a limit of 5 messages an hour per store and IP (`ContactAttempt`).
+  - **Recipient (Client Setup):** a complaint, or anything about an order, goes to the store's Orders receiving address's forward-to. An enquiry goes to Support. Each falls back to the other, then to `INBOUND_DEFAULT_FORWARD`. The email is from `EMAIL_FROM` with Reply-To the shopper, and its subject names the type, the store and the order.
+  - **Outbox:** a send that fails is kept in `ContactOutbox`. The scheduler retries it through `/api/jobs/retry-contact-outbox` on the 15-minute tick (gated by `contact-outbox:pending`) and daily. It is deleted once sent, or after 7 days.
+  - **`APP_ENV`** (`wrangler.toml` `[vars]`): every outgoing subject gets `[STAGING]` or `[DEV]` (unset means `[DEV]`), and production is unchanged. `OutgoingEmail` gains an optional `replyTo`.
+  - **Footer:** the store's contact email is shown only on the store's own domain, with a tagged `mailto:` subject. Every storefront links **Contact us**.
+  - **Migration:** one additive migration, `20261103120000_contact_form`.
+
 - **Client Setup: a verified forward-to dropdown and a suggested sender per store** (issues `#1392` and `#1403`, spec `specs/2026-11-02-forward-dropdown-default-sender/`). `#1392` stays open for routing-rule and sending-domain state.
   - **Verified mailboxes:** `lib/email/destinations.ts` reads the account's Email Routing destination addresses through the Cloudflare API, with the app Worker's existing `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` (via `getAiEnv()`). It reads up to 4 pages of 50, aborts each request after 5 s, never throws, and keeps the token off the page. The token needs **Email Routing Addresses: Read** (owner).
   - **Forward to** is a dropdown of verified mailboxes. Pending ones are disabled ("awaiting verification"), and **Other…** takes any address with a warning. The platform default is preselected when it is verified. It still posts one `forwardTo`, so the server action is unchanged. When the read is unavailable, it falls back to the `#1399` text field with the reason.

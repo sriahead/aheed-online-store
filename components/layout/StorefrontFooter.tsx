@@ -10,6 +10,7 @@ import { buildOpeningHoursView } from "@/lib/footer-hours";
 import { contactChannels } from "@/lib/contact-channels";
 import { FooterContactChannels } from "@/components/layout/FooterContactChannels";
 import { Icon } from "@/components/icons/Icon";
+import { contactMailtoHref } from "@/lib/contact/mailto";
 
 /**
  * The storefront footer (#1055) — three columns on desktop, stacked on mobile, then a bottom bar.
@@ -60,6 +61,7 @@ export function StorefrontFooter({
   platformName,
   platformTagline,
   assistantAvailable,
+  ownDomain,
 }: {
   profile: VendorProfile;
   platformName: string | undefined;
@@ -67,11 +69,20 @@ export function StorefrontFooter({
   platformTagline?: string;
   /** #1015 — the same value `StorefrontChrome` gives `FloatingContact`, so both list one set. */
   assistantAvailable: boolean;
+  /**
+   * #1409 — true when the request host is the store's own domain. On the shared platform the
+   * store's email is never printed; shoppers use the Contact us form instead.
+   */
+  ownDomain: boolean;
 }) {
   const palette = footerPalette(profile.primitives);
-  const { location, contactPhone, contactEmail, openingHoursNote } = profile;
+  const { location, contactPhone, openingHoursNote } = profile;
+  const contactEmail = ownDomain ? profile.contactEmail : null;
   const phoneHref = contactPhone && isDiallablePhone(contactPhone) ? telHref(contactPhone) : null;
-  const emailHref = contactEmail && isEmailAddress(contactEmail) ? `mailto:${contactEmail}` : null;
+  const emailHref =
+    contactEmail && isEmailAddress(contactEmail)
+      ? contactMailtoHref(contactEmail, `Enquiry: ${profile.name}`)
+      : null;
   const directions = location ? directionsHref(profile.name, location) : null;
   const hasAddressDetails = Boolean(location || contactPhone || contactEmail);
 
@@ -267,6 +278,11 @@ export function StorefrontFooter({
                   </Link>
                 </li>
               )}
+              <li>
+                <Link href="/contact" className={LINK}>
+                  Contact us
+                </Link>
+              </li>
               <li>
                 <Link href="/feedback" className={LINK}>
                   Leave a review

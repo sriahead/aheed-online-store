@@ -911,8 +911,8 @@ at all. The scheduler now has **two Cron Triggers** and decides per invocation w
 
 | Cron | Calls |
 |---|---|
-| `*/15 * * * *` (the tick) | `/api/jobs/reconcile-payments` and `/api/jobs/check-error-rate`, each **only when its marker says there is work**; never the reaper |
-| `0 3 * * *` (the daily run) | all three jobs, **ungated**, including `/api/jobs/reap-guest-carts`, which runs nowhere else |
+| `*/15 * * * *` (the tick) | `/api/jobs/reconcile-payments`, `/api/jobs/check-error-rate` and `/api/jobs/retry-contact-outbox` (`#1409`), each **only when its marker says there is work**; never the reaper |
+| `0 3 * * *` (the daily run) | every job, **ungated**, including `/api/jobs/reap-guest-carts`, which runs nowhere else |
 
 The markers live in a Cloudflare KV namespace bound as **`JOB_SIGNALS`** to **both** Workers. The app
 writes them only through `lib/job-signals.ts`, and the key names live in `lib/job-signal-keys.ts`:
@@ -921,6 +921,7 @@ writes them only through `lib/job-signals.ts`, and the key names live in `lib/jo
 |---|---|---|
 | `payment-sweep:due-at` | checkout (now + 40 min, only ever brought forward), staff Retry (now), and the sweep itself at the end of every run (the next instant anything is due, or the key is deleted) | the stored instant is at or before now |
 | `error-events:last-at` | every `ErrorEvent` write path, at most once per 5 minutes | the stored instant is within the last 20 minutes |
+| `contact-outbox:pending` | a contact-form email whose send failed (`#1409`), and the retry job at the end of a run that left rows (deleted when the outbox is empty) | the key is present |
 
 **Every failure mode fails open.** If the binding is missing, a read throws, or a value does not parse,
 the tick calls the job, exactly as before #1324. A failed marker *write* is logged
@@ -982,6 +983,23 @@ sender name and address, and the receiving addresses with the mailbox each forwa
 | `INBOUND_EMAIL_TOKEN` | Worker secret on **both** the app and `aheed-inbound-email[-staging]` | Proves to the resolve route that a call came from the inbound Worker. `configure-env` pushes it to both. |
 | `INBOUND_FALLBACK_FORWARD` | Secret on the inbound Worker only | A verified destination mailbox that receives mail whenever the app cannot be asked (outage, bad token). |
 | `INBOUND_DEFAULT_FORWARD` | `wrangler.toml` `[vars]` (both envs) | The platform default inbox (`#1399`). It prefills **Forward to** when a receiving address is added in Client Setup, and stays editable. Unset means no prefill; a value that is not an email address prefills nothing, and Client Setup's status card shows "Invalid". |
+| `APP_ENV` | `wrangler.toml` `[vars]` (both envs) | Names the deployment (`#1409`): `staging` or `production`. Every outgoing subject, and the footer's `mailto:` subjects, gets `[STAGING] ` or `[DEV] `; production is untouched. **Anything else, unset included, means development**, so a forgotten value shows `[DEV]` rather than passing for production. |
+
+**The contact form (`#1409`).** Each storefront has a **Contact us** page (`/contact`) for complaints
+and enquiries; the footer links to it. A message is emailed to the store's Client Setup receiving
+address: a complaint, or anything naming an order, goes to the **Orders** address's forward-to
+mailbox, an enquiry to the **Support** one. Each falls back to the other, then to
+`INBOUND_DEFAULT_FORWARD`. With none of those configured the shopper sees an error and nothing is
+stored. The email comes from `EMAIL_FROM` with **Reply-To the shopper**, and its subject names the
+type, the store and the order, for example `Complaint · <store> · Order <number> · <subject>`.
+Only a send that returns **failed** is kept, in the `ContactOutbox` table, and the scheduler's
+`/api/jobs/retry-contact-outbox` retries it (the `contact-outbox:pending` marker below), deleting it
+once sent. After **7 days** unsent it is deleted and logged by id and store only. A **skipped** send
+is not kept: in dev that is the log provider, and on staging an unlisted recipient, so add the
+forward-to to `EMAIL_ALLOWED_RECIPIENTS` to receive contact mail there. The rate limit is 5
+messages an hour per store and IP (`ContactAttempt`). The footer prints the store's contact email
+only on the store's **own domain**; on a platform (`merqify.com`) host it is hidden, and shoppers use
+the form.
 
 **The platform inbox (`#1399`).** `INBOUND_DEFAULT_FORWARD` and the inbound Worker's
 `INBOUND_FALLBACK_FORWARD` name the **same** inbox by convention, `info-merqifyhub@googlegroups.com`
@@ -1168,6 +1186,37 @@ Live checks (platform admin, `/staff/platform/client-setup` on `aheed-staging.me
    arrive" warning and a suggestion such as `orders-<slug>@merqify.com`. **Use suggested sender**
    fills both fields without saving. Press **Save sender** only if the owner wants the change.
 8. After promotion, repeat steps 3-7 on `aheed.merqify.com` with `secrets/merqify-production.vars`.
+
+### Sanity check: storefront contact form (`#1409`)
+
+**Last run:** not yet run (written at Build, 2026-11-03).
+
+Quick checks:
+
+1. `gh run list --branch staging --limit 4`. Expected: `deploy-staging` **success** on the merge
+   commit, which applied the `*_contact_form` migration.
+2. `curl -s --compressed https://aheed-staging.merqify.com/api/health`. Expected: `db.ok` true,
+   `reference.reachable` true, a non-empty `reference.sources`.
+3. `curl -s --compressed https://aheed-staging.merqify.com/contact | grep -c 'name="website"'`.
+   Expected: `1` (the form rendered, honeypot included). In a browser the page shows **Complaint**
+   and **Enquiry**.
+4. Save the staging home page and `grep -c 'mailto:'` it. Expected: `0`, because a `merqify.com`
+   host never prints the store's email. The footer has **Contact us** before **Leave a review**.
+
+Live checks (staging):
+
+5. As a guest, send an **Enquiry**. Expected: "Thank you. Your message to the store has been
+   received." Until `merqify.com` is onboarded for sending, the send fails, so a `ContactOutbox`
+   row exists and the next 15-minute tick logs `scheduled job /api/jobs/retry-contact-outbox ok`
+   with `failed` 1.
+6. Once sending works and the forward-to is on `EMAIL_ALLOWED_RECIPIENTS`, the email arrives in the
+   store's **Support** forward-to with subject `[STAGING] Enquiry · <store> · <subject>`, and
+   pressing Reply addresses the shopper.
+7. Signed in as a customer with orders, send a **Complaint** naming an order. Expected: it goes to
+   the **Orders** forward-to and the subject includes `Order <number>`.
+8. Send six valid messages within an hour from one connection. Expected: the sixth says "Too many
+   messages. Please try again later."
+9. After promotion, repeat 2-5 on `aheed.merqify.com`. A production subject has no tag.
 
 ## Prerequisites (one-time)
 

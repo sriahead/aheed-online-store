@@ -51,6 +51,7 @@ const STATIC_PATHS = [
   "/bundles",
   "/whatsapp-offers",
   "/help",
+  "/contact",
   "/privacy",
   "/terms",
 ] as const;

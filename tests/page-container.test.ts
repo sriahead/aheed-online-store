@@ -128,6 +128,7 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   // --- storefront: narrow
   "app/(storefront)/shop-your-list/page.tsx": { width: "narrow", padY: "tight" },
   "app/(storefront)/orders/lookup/page.tsx": { width: "narrow", padY: "default" },
+  "app/(storefront)/contact/page.tsx": { width: "narrow", padY: "default" },
   "app/(storefront)/feedback/page.tsx": { width: "narrow", padY: "default" },
   "app/(storefront)/help/page.tsx": { width: "narrow", padY: "default" },
   "app/(storefront)/privacy/page.tsx": { width: "narrow", padY: "default" },

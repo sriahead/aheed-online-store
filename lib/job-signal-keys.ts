@@ -21,6 +21,12 @@ export const JOB_SIGNALS_BINDING = "JOB_SIGNALS";
  */
 export const PAYMENT_SWEEP_DUE_AT_KEY = "payment-sweep:due-at";
 
+/**
+ * #1409 — present (an ISO instant) while a failed contact-form email waits in `ContactOutbox`.
+ * Absent means the outbox is empty, and the tick skips the retry job.
+ */
+export const CONTACT_OUTBOX_PENDING_KEY = "contact-outbox:pending";
+
 /** When an `ErrorEvent` was last written, as an ISO instant. */
 export const ERROR_EVENTS_LAST_AT_KEY = "error-events:last-at";
 

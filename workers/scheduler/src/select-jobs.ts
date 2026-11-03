@@ -18,6 +18,7 @@ import { ERROR_SIGNAL_WINDOW_MS } from "../../../lib/job-signal-keys";
 export const SWEEP_PATH = "/api/jobs/reconcile-payments";
 export const REAPER_PATH = "/api/jobs/reap-guest-carts";
 export const ERROR_RATE_PATH = "/api/jobs/check-error-rate";
+export const CONTACT_OUTBOX_PATH = "/api/jobs/retry-contact-outbox";
 
 /** The once-a-day ungated run: the backstop for every race in the markers. */
 export const DAILY_CRON = "0 3 * * *";
@@ -37,6 +38,12 @@ function sweepIsDue(read: SignalRead, now: Date): boolean {
   return Number.isNaN(at) || at <= now.getTime();
 }
 
+/** #1409 — any stored value means a queued contact email; an absent key means none. */
+function outboxHasRows(read: SignalRead): boolean {
+  if (!read.ok) return true;
+  return read.value !== null;
+}
+
 function errorsAreRecent(read: SignalRead, now: Date): boolean {
   if (!read.ok) return true;
   const at = instantOf(read);
@@ -49,16 +56,25 @@ export function selectJobs(input: {
   now: Date;
   paymentDueAt: SignalRead;
   errorLastAt: SignalRead;
+  contactOutboxPending: SignalRead;
 }): string[] {
-  if (input.cron === DAILY_CRON) return [SWEEP_PATH, REAPER_PATH, ERROR_RATE_PATH];
+  if (input.cron === DAILY_CRON) {
+    return [SWEEP_PATH, REAPER_PATH, ERROR_RATE_PATH, CONTACT_OUTBOX_PATH];
+  }
 
   // The guest-cart reaper is housekeeping nobody waits on, so it never runs on
   // the tick — only in the daily run above.
   const jobs: string[] = [];
   if (sweepIsDue(input.paymentDueAt, input.now)) jobs.push(SWEEP_PATH);
   if (errorsAreRecent(input.errorLastAt, input.now)) jobs.push(ERROR_RATE_PATH);
+  if (outboxHasRows(input.contactOutboxPending)) jobs.push(CONTACT_OUTBOX_PATH);
   return jobs;
 }
 
 /** Every path the scheduler can call, in invocation order — for the tick's log line. */
-export const ALL_JOB_PATHS: readonly string[] = [SWEEP_PATH, REAPER_PATH, ERROR_RATE_PATH];
+export const ALL_JOB_PATHS: readonly string[] = [
+  SWEEP_PATH,
+  REAPER_PATH,
+  ERROR_RATE_PATH,
+  CONTACT_OUTBOX_PATH,
+];

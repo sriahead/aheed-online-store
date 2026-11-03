@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-03T09:08:28.779Z` · commit `6b169cdf` · `308` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-03T17:14:48.944Z` · commit `ecf1d1d3` · `309` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -297,6 +297,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Storefront polish, theme deletion and role-based user journeys (plan)](specs/2026-11-01-p1385-storefront-polish-journeys/plan.md) | spec | 1.0.0 | 2026-11-01 | draft | internal | #1385: customer feedback demo seed and visibility, delete custom saved theme in /staff/storefront, and role-based user journey maps on /help. |
 | [Client Setup default forward-to inbox (plan)](specs/2026-11-02-default-forward-inbox/plan.md) | spec | 1.0.0 | 2026-11-02 | draft | internal | A platform default forward-to inbox (INBOUND_DEFAULT_FORWARD) prefills Client Setup's receiving-address form, and the address list groups addresses by the mailbox they forward to (#1399). |
 | [Client Setup: verified forward-to dropdown and suggested sender (plan)](specs/2026-11-02-forward-dropdown-default-sender/plan.md) | spec | 1.0.0 | 2026-11-02 | draft | internal | Client Setup reads Cloudflare's verified Email Routing destinations to offer Forward to as a dropdown (text fallback), and suggests each store's sender from its name and domain, flagging an unroutable sender (#1392, |
+| [Storefront contact and complaint form (plan)](specs/2026-11-03-storefront-contact-form/plan.md) | spec | 1.0.0 | 2026-11-03 | draft | internal | A storefront Contact us form for shoppers. Mail goes to the store's Client Setup forward-to, with environment-tagged subjects and a retry outbox for failed sends. Shared stores hide their footer email. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.46.0 | 2026-11-02 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

@@ -98,6 +98,8 @@ export const MODEL_PLAN: Record<string, { class: Classification; reason: string 
   NetContentSuggestion: { class: "skip", reason: "review queue of the old catalogue" },
   DeliveryRefusalCount: { class: "skip", reason: "counter" },
   OrderLookupAttempt: { class: "skip", reason: "rate-limit attempts" },
+  ContactAttempt: { class: "skip", reason: "rate-limit attempts (#1409)" },
+  ContactOutbox: { class: "skip", reason: "failed-send queue, deleted once sent (#1409)" },
   DiscountCodeAttempt: { class: "skip", reason: "rate-limit attempts" },
   AuthenticationAttempt: { class: "skip", reason: "rate-limit attempts" },
   CustomerFeedbackAttempt: { class: "skip", reason: "rate-limit attempts" },

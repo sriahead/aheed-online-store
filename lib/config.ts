@@ -160,6 +160,18 @@ export function getInboundDefaultForward(): InboundDefaultForward {
     : { status: "invalid" };
 }
 
+// #1409 — which deployment this is. NODE_ENV is "production" on both Workers (see
+// EMAIL_RECIPIENT_MODE above), so wrangler.toml `[vars]` names it. Anything but "production" or
+// "staging", unset included, is development: a forgotten var then tags mail [DEV] rather than
+// passing it off as production. Never throws.
+export type AppEnvironment = "production" | "staging" | "development";
+
+export function getAppEnvironment(): AppEnvironment {
+  const raw = (readEnv("APP_ENV") ?? "").trim().toLowerCase();
+  if (raw === "production" || raw === "staging") return raw;
+  return "development";
+}
+
 // #1055 — the storefront footer's "Powered by {name}" line. Its own schema, like email and
 // payments above, so reading it never depends on DATABASE_URL or BETTER_AUTH_SECRET. The platform
 // is Merqify (the operator, not a vendor), so unset or blank falls back to the platform's own name

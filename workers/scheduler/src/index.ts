@@ -31,7 +31,11 @@
  * decision fails open on any doubt — see `select-jobs.ts`.
  */
 
-import { ERROR_EVENTS_LAST_AT_KEY, PAYMENT_SWEEP_DUE_AT_KEY } from "../../../lib/job-signal-keys";
+import {
+  CONTACT_OUTBOX_PENDING_KEY,
+  ERROR_EVENTS_LAST_AT_KEY,
+  PAYMENT_SWEEP_DUE_AT_KEY,
+} from "../../../lib/job-signal-keys";
 import { ALL_JOB_PATHS, selectJobs, type SignalRead } from "./select-jobs";
 
 interface Env {
@@ -98,8 +102,15 @@ const scheduler = {
     // not cost the second its answer.
     const paymentDueAt = await readSignal(env, PAYMENT_SWEEP_DUE_AT_KEY);
     const errorLastAt = await readSignal(env, ERROR_EVENTS_LAST_AT_KEY);
+    const contactOutboxPending = await readSignal(env, CONTACT_OUTBOX_PENDING_KEY);
 
-    const jobs = selectJobs({ cron: controller.cron, now: new Date(), paymentDueAt, errorLastAt });
+    const jobs = selectJobs({
+      cron: controller.cron,
+      now: new Date(),
+      paymentDueAt,
+      errorLastAt,
+      contactOutboxPending,
+    });
     const skipped = ALL_JOB_PATHS.filter((path) => !jobs.includes(path));
 
     // One line per invocation, ran or not: with gating, a quiet tick is now the
