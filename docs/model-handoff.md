@@ -56,6 +56,22 @@ reconciliation. If overall project state did not materially change, leave this f
       fallback, as designed. Re-run sanity steps 3-8 once it is added.
     - `#1392` stays open for routing-rule and sending-domain state.
       "New stores start with the suggested sender" is `#1404` (P12).
+  - **`#1409` (storefront Contact us form) is BUILT, NOT VALIDATED** on
+    `feature/1409-storefront-contact-form` (spec `specs/2026-11-03-storefront-contact-form/`, build
+    `a2724a30`; read its `build-notes.md`). It adds `/contact` routed to the Client Setup ORDERS/SUPPORT
+    forward-to, `APP_ENV` tagging of every outgoing subject (`[STAGING]`/`[DEV]`), a `ContactOutbox`
+    retried by the scheduler, and it hides the footer email on platform hosts. **Its migration
+    `20261103120000_contact_form` is not applied to dev yet**: the owner runs `prisma migrate deploy`
+    (auto mode refuses it) before any preview check. The branch also carries the `#1406` promotion
+    docs commit.
+  - **Email Routing on `merqify.com`, as the owner's dashboard showed it on 2026-11-03:** a
+    **catch-all** to `info-merqifyhub@googlegroups.com` and one rule, `info@merqify.com` to
+    `info-merqify@googlegroups.com`. There are **no Worker rules**, so the inbound Worker and every
+    Client Setup forward-to are unused, and all store mail lands in the hub. Neither Merqify token
+    can read routing rules (error 10000), so this is visible only in the dashboard.
+  - **`#1408`:** CI `docs-gates` does not compile the docs site as MDX, so a bare `<tag>` in
+    `docs/` or `specs/` passes CI and then fails `deploy-docs-internal` after the merge. It happened
+    twice; run the real `kms/site-internal` build until it is fixed.
   - **On staging, both Aheed receiving addresses** (`info-aheed@`, `orders-aheed@merqify.com`)
     forward to the hub group, not `info-afc@`. The owner may re-add them.
   - **Email Routing is ENABLED on `merqify.com`** (MX `route1/2/3.mx.cloudflare.net`, SPF,
