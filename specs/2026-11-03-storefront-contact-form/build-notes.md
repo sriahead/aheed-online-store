@@ -117,3 +117,46 @@ None. Three notes:
 - **Staging allowlist.** Contact mail is `skipped`, not queued, unless the forward-to is on
   `EMAIL_ALLOWED_RECIPIENTS`. The R18 "failed → row" path is only reachable on staging while
   sending itself fails, which it currently does (merqify.com is not onboarded).
+
+## Validation record (in-session, NOT independent)
+
+Run 2026-11-03 in the same context that built the slice, on Opus, with no Clear (the owner invoked
+`/validate` here). Treat it as a self-check, not an independent validation.
+
+**Pre-flight** on `3250c734`: `lint`, `format:check` and `tsc --noEmit` exit 0. `npx vitest run --maxWorkers=4`
+alone gives 383 files and 5,658 tests passing. `npm run build` exits 0 and lists `/contact` and
+`/api/jobs/retry-contact-outbox`. `kms:assemble:internal` plus `next build` in `kms/site-internal`
+gives 313/313 pages.
+
+**Live, `npm run preview` against dev** (`ep-dry-morning`, migration applied by the owner). For the
+run only, `.dev.vars` gained `INBOUND_DEFAULT_FORWARD="hub@inbox.test"`, since dev has no receiving
+addresses. It was restored byte for byte afterwards. Every test row was deleted, and SriMart's
+`contactEmail` was set for a moment and then returned to `null`.
+
+| Req | Result |
+|---|---|
+| R1–R5 | Pass (unit tests, file reads). R2: the diff is exactly the two `APP_ENV` lines plus comments. R5: no existing `.send(` call site changed. |
+| R6, R7 | Pass. The test diff is additions only, and `StorefrontChrome` adds no query. |
+| R8 | Pass live. Aheed's placeholder `[YOUR EMAIL]` appears 0 times on `localhost:8787` (platform host) and 2 times on `staging.aheedfoodcentre.nocaped.com` (own domain on dev, because dev has no `EMAIL_FROM`, so every eligible host counts). Neither page has a `mailto:`. |
+| R9 | Pass live. With SriMart's email set to `shop@example.com` for a moment, `srimart-staging.nocaped.com` rendered `href="mailto:shop@example.com?subject=%5BDEV%5D%20Enquiry%3A%20SriMart"`, and `srimart.localhost:8787` had no link and no email text. |
+| R10 | Pass live: "Contact us" `href="/contact"` sits 115 characters before "Leave a review". |
+| R11 | Pass live (guest, SriMart). Every field carries its `maxLength`/`required`/`type`, and the honeypot has `tabindex="-1"`, `autoComplete="off"` and an `aria-hidden="true"` ancestor. There is no `orderId`, and `"/contact"` is in the sitemap. |
+| R12 | Pass live on `localhost:8787` (Aheed). demo-customer is prefilled (name and email) and has a picker of "Not about an order" plus 20 orders (they have 26). demo-platform-admin (no Aheed orders) has no picker. |
+| R13 | Pass: `"use server"` is first, the only export is `export async function`, and the validator tests pass. |
+| R14 | Pass live. One IP, signed in, Aheed: submissions 1–5 accepted and the 6th answered "Too many messages. Please try again later." `ContactAttempt` held 5 rows for that store and IP hash (the refused one is not counted) and 1 for the earlier SriMart guest. The honeypot is covered by unit tests only. |
+| R15 | Pass live: the customer's own order was accepted, and `AHE-NOT-MINE` gave "That order could not be found." |
+| R16 | Pass (unit), and live via the default inbox: every row's `toAddress` was `hub@inbox.test`. |
+| R17 | Pass. The live outbox subjects were `Complaint · Aheed Food Centre · Order AHE-20261019-74CVQB · Validation run` and `Enquiry · SriMart · Opening hours`, with `replyTo` the shopper. **The live `[DEV]` tag on the sent subject is unverified:** the Worker's console output does not reach the preview log, so the log adapter's line could not be read. R4's unit test covers the tag, and R9 showed `getAppEnvironment()` giving development in the Worker. |
+| R18 | Pass live. The preview build runs as production, and dev has no `EMAIL_FROM`, so `send` returned `failed` ("EMAIL_FROM is required in production"). Each submission wrote one `ContactOutbox` row with the R18 fields and `attempts` 0, and the shopper still saw the success copy. `sent`/`skipped` are covered by unit tests. |
+| R19 | Pass (unit). Locally there is no KV binding, so the marker no-ops, as designed. |
+| R20 | Pass live: GET 405, wrong token 401, authorised `{"sent":0,"failed":5,"expired":0,"remaining":5}` 200. |
+| R21 | Pass live. After the run all 5 rows had `attempts` 1, written by the singular `update` with `{ id, vendorId }` through `getPrisma()`. A row backdated 8 days was deleted on the next run (`expired` 1, `remaining` 4). |
+| R22 | Pass (unit). |
+| R23 | Pass. One `*_contact_form` folder, purely additive, cites `#895`, `prisma validate` passes, and the owner applied it to dev. |
+| R24 | Pass. The grep prints nothing, and `vendor-neutral-copy` passes. |
+| R25, R26 | Pass. Every listed doc item is present, and the CHANGELOG names `#1409`. |
+| R27 | Pass locally. CI not yet run (not pushed). |
+
+**Still open for Ship:** CI on the PR. On staging: the migration through `deploy-staging`, the `[STAGING]`
+tag on a delivered email, and a real Support/Orders forward-to. The last two need merqify.com
+onboarded for sending, plus the forward-to on `EMAIL_ALLOWED_RECIPIENTS`.
