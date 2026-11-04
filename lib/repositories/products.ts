@@ -1754,11 +1754,7 @@ export async function getAvailableFacets(
     flagProbe({ isHmcCertified: true }),
     flagProbe({ OR: [{ originalPrice: { not: null } }, { priceTier: { isNot: null } }] }),
     hasCount
-      ? flagProbe({
-          inventory: {
-            OR: [{ stockMode: "UNTRACKED" }, { stockMode: "TRACKED", quantity: { gt: 0 } }],
-          },
-        })
+      ? flagProbe(buildFilterWhere({ inStockOnly: true }))
       : Promise.resolve<{ available: boolean; count?: number }>({ available: true }),
     hasCount ? prisma.product.count({ where: base }) : Promise.resolve(undefined),
     // `distinct` rather than a groupBy: the facet needs the VALUES, not counts, and a count
