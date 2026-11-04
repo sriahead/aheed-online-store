@@ -1069,6 +1069,17 @@ Client Setup shows these as a checklist per store, with links.
    - **Testing tip:** a group does not email a member's own post back to them, so a test sent from
      the group owner's own mailbox only appears in Sent. Check the group's Conversations page, or
      send from another address.
+   - **Google Groups can hold platform mail in Pending.** Its spam filter flags repeated
+     automated messages from `no-reply@merqify.com` (seen 2026-11-04: seven Client Setup test
+     emails showed Delivered in Email Sending and Forwarded in Email Routing, yet sat unseen in
+     the hub group's Pending queue). Real contact-form mail can be held the same way. In every
+     group that receives store mail (`info-merqifyhub@`, `info-afc@`, `info-srimart@`,
+     `info-merqify@`): set Group settings → Posting policies → **Spam message handling** to
+     **Moderate and notify content moderators** (never "Reject all messages marked as spam": the
+     rejection goes to `no-reply`, so the message is lost unseen), keep **Message moderation** at
+     No moderation, and add `no-reply@merqify.com` as a member with delivery **No email**. When a
+     test seems lost, check in this order: Email Sending → Activity log (Delivered?), Email
+     Routing → Activity log (Forwarded?), then the group's Conversations → **Pending**.
 7. **Send a test email** from Client Setup. It goes to your own signed-in address only. On staging
    your address must be on `EMAIL_ALLOWED_RECIPIENTS`.
 
