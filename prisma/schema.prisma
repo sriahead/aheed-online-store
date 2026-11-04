@@ -173,7 +173,7 @@ model Vendor {
   restrictionAuditLogs      ProductRestrictionAuditLog[]
   lookupAttempts            OrderLookupAttempt[]
   codeAttempts              DiscountCodeAttempt[]
-  campaigns                 DepartmentCampaign[]
+  promotions                Promotion[]
   bundles                   Bundle[]
   priceTiers                ProductPriceTier[]
   authenticationAttempts    AuthenticationAttempt[]
@@ -712,7 +712,7 @@ model Category {
   // #1278 — relative storage key for realistic category photography (ADR-003; never a URL)
   imageKey         String?
   products         Product[]
-  campaign         DepartmentCampaign?
+  promotions       Promotion[]
   assets           CategoryAsset[]
 
   @@unique([vendorId, slug])
@@ -720,35 +720,47 @@ model Category {
   @@index([vendorId, parentId, isActive])
 }
 
-// P8.5e (#356) — staff-editable hero campaign content, one row per top-level
-// Category. Reopens the "general campaign surface" ADR-004 (decision 5, 1.7.0)
-// named as future work, this time with the staff UI that made the deleted
-// VendorPromotion (P8.5b, #346) inert. `headline`/`subtitle` are free text —
-// a deliberate, narrow exception to "promotional content is data" (ADR-004
-// 1.8.0) — while `imageKey`/`linkUrl`/the schedule stay structured, and
-// `DepartmentHero` always renders the real product-price callout alongside a
-// campaign's copy regardless.
-model DepartmentCampaign {
-  id         String    @id @default(uuid())
-  vendorId   String
-  vendor     Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  categoryId String    @unique
-  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  headline   String
-  subtitle   String?
-  imageKey   String? // RELATIVE key only (ADR-003) — never a URL
-  altText    String? // required by jsx-a11y whenever imageKey is set
-  linkUrl    String? // relative path only, e.g. "/categories/household?isOffer=true"
-  isActive   Boolean   @default(true)
-  startsAt   DateTime?
-  endsAt     DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+enum AudienceSegment {
+  ALL
+  NEW_CUSTOMER
+  RETURNING_CUSTOMER
+  LOYALTY_MEMBER
+}
 
-  // Serves both queries this model has: "this vendor's active campaigns" (the
-  // hero read) and "does this category already have a campaign" (categoryId
-  // is unique, so a lookup by it alone is already indexed).
-  @@index([vendorId, isActive])
+// #1412 — Promotions system replacing DepartmentCampaign. Allows store-wide,
+// department, bundle, or discount-code promotions with priority ranking,
+// audience targeting, active toggle, and date scheduling.
+model Promotion {
+  id               String          @id @default(uuid())
+  vendorId         String
+  vendor           Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  headline         String
+  subtitle         String?
+  badgeText        String?
+  callToActionText String?
+  imageKey         String? // RELATIVE key only (ADR-003) — never a URL
+  altText          String? // required by jsx-a11y whenever imageKey is set
+  linkUrl          String? // relative path only, e.g. "/categories/household?isOffer=true"
+  priority         Int             @default(0)
+  isActive         Boolean         @default(true)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  audienceSegment  AudienceSegment @default(ALL)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  // Optional target associations (mutually exclusive or all null for store-wide)
+  categoryId       String?
+  category         Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  bundleId         String?
+  bundle           Bundle?         @relation(fields: [bundleId], references: [id], onDelete: SetNull)
+  discountCodeId   String?
+  discountCode     DiscountCode?   @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
+
+  @@index([vendorId, isActive, priority])
+  @@index([vendorId, categoryId])
+  @@index([vendorId, bundleId])
+  @@index([vendorId, discountCodeId])
 }
 
 // #1285 — multi-candidate category and UI system icon assets (review, select, delete, gallery)
@@ -797,6 +809,7 @@ model Bundle {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   items     BundleItem[]
+  promotions Promotion[]
 
   @@unique([vendorId, slug])
   @@index([vendorId, isActive])
@@ -1756,6 +1769,7 @@ model DiscountCode {
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
   redemptions DiscountRedemption[]
+  promotions  Promotion[]
 
   @@unique([vendorId, code])
   /// At most one referral code per shopper per vendor. Postgres allows many NULLs under a unique

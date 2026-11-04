@@ -10,21 +10,11 @@
  * `getPrisma`) is what lets a unit test reach it directly.
  */
 
-export interface CampaignLivenessFields {
-  isActive: boolean;
-  startsAt: Date | null;
-  endsAt: Date | null;
-}
+import { isPromotionLive, type PromotionLivenessFields } from "@/lib/promotion-liveness";
+
+export type CampaignLivenessFields = PromotionLivenessFields;
 
 /**
- * Is this campaign LIVE right now? `isActive` is the on/off switch;
- * `startsAt`/`endsAt` are an optional window on top of it — a null bound
- * doesn't constrain that side, so "no dates" and "always live once active"
- * are the same case.
+ * Backward-compatible alias for isPromotionLive.
  */
-export function isCampaignLive(campaign: CampaignLivenessFields, now: Date): boolean {
-  if (!campaign.isActive) return false;
-  if (campaign.startsAt !== null && campaign.startsAt > now) return false;
-  if (campaign.endsAt !== null && campaign.endsAt < now) return false;
-  return true;
-}
+export const isCampaignLive = isPromotionLive;
