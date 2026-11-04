@@ -35,6 +35,9 @@ function categoryPageHref(
   overrides: { cursor?: string; back: string[] },
 ): string {
   const qs = new URLSearchParams();
+  if (typeof params.sort === "string" && params.sort !== "") {
+    qs.set("sort", params.sort);
+  }
   // `append`, never `set` (#918): a list filter may carry several values under one key.
   for (const [key, value] of filterEntries(params)) qs.append(key, value);
   if (overrides.cursor) qs.set("cursor", overrides.cursor);
