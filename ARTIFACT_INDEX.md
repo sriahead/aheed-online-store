@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-04T15:09:07.145Z` · commit `0429ed97` · `312` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-04T22:20:23.316Z` · commit `74652611` · `313` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -299,6 +299,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Client Setup: verified forward-to dropdown and suggested sender (plan)](specs/2026-11-02-forward-dropdown-default-sender/plan.md) | spec | 1.0.0 | 2026-11-02 | draft | internal | Client Setup reads Cloudflare's verified Email Routing destinations to offer Forward to as a dropdown (text fallback), and suggests each store's sender from its name and domain, flagging an unroutable sender (#1392, |
 | [Storefront contact and complaint form (plan)](specs/2026-11-03-storefront-contact-form/plan.md) | spec | 1.0.0 | 2026-11-03 | draft | internal | A storefront Contact us form for shoppers. Mail goes to the store's Client Setup forward-to, with environment-tagged subjects and a retry outbox for failed sends. Shared stores hide their footer email. |
 | [Client Setup: info- sender suggestion from the store's subdomain (plan)](specs/2026-11-04-info-sender-suggestion/plan.md) | spec | 1.0.0 | 2026-11-04 | draft | internal | Client Setup's suggested sender becomes info@<own domain>, else info-<subdomain>@<platform domain> from the store's platform subdomain, else info-<slug>@<platform domain>, replacing the orders- forms (#1419). |
+| [Telegram alerts for order-related inquiries (plan)](specs/2026-11-04-order-alerts-telegram/plan.md) | spec | 1.0.0 | 2026-11-04 | draft | internal | A store's staff get a short Telegram message when an order-related email or contact-form message arrives. Built channel-neutral so WhatsApp (#1424) is a later adapter, not a rework. |
 | [Promotions: Marketing Campaign Management, Eligible Offer Items & AI Generation (plan)](specs/2026-11-04-p1415-promotions-campaign-marketing/plan.md) | spec | 1.0.0 | 2026-11-04 | approved | internal | Separation of offer configuration from marketing campaign management, eligible promotional product selection, department scoping, checkout auto-application, psychology-led AI generation, and multi-channel publishing architecture. |
 | [Promotion Intelligence Platform & Storefront Experience (plan)](specs/2026-11-04-promotions-landing-overhaul/plan.md) | spec | 2.0.0 | 2026-11-04 | draft | internal | Psychology-led promotion platform upgrading staff campaign management and landing hero display with behavioural economics, audience targeting, prioritisation, and phased analytics/experimentation. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.46.0 | 2026-11-02 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
@@ -314,7 +315,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
 | [Roadmap](specs/roadmap.md) | doc | 1.193.0 | 2026-11-01 | approved | internal | Master backlog and phase sequencing (M0, P0-P12, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, onboarding P11, Merqify move P12. |
 | [SDD Workflow](specs/sdd-workflow.md) | doc | 2.53.1 | 2026-10-31 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands. |
-| [Tech Stack](specs/tech-stack.md) | doc | 1.6.0 | 2026-10-22 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
+| [Tech Stack](specs/tech-stack.md) | doc | 1.7.0 | 2026-11-04 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
 
 ## Track 2 — Staff / Operations (`staff-ops`)  ·  audience: staff
 

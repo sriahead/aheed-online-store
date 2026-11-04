@@ -4,8 +4,8 @@ title: Tech Stack
 audience: [dev]
 type: doc
 status: approved
-version: "1.6.0"
-updated: 2026-10-22
+version: "1.7.0"
+updated: 2026-11-04
 visibility: internal
 summary: Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal.
 tags: [tech-stack, guardrails]
@@ -88,6 +88,17 @@ environment-configured seam.
 
 - **Resend** — transactional email (order confirmation, delivery-status notifications), behind an
   `EmailService` port so it can be swapped for SES/SendGrid.
+
+## Staff alerts
+
+- **Telegram Bot API** (`#1390`), the free, official route: one platform bot, token in the Worker
+  secret `TELEGRAM_BOT_TOKEN` (optional; unset means alerts skip). It sits behind the
+  `OrderAlertChannelAdapter` port in `lib/order-alert/`, with recipients per vendor and channel in
+  `VendorOrderAlertRecipient`. Alerts are plain text carrying the store name, order number, sender
+  name, subject and route only. A message body, email address or phone number is never sent.
+- **WhatsApp** is a later adapter on the same port (`#1424`, Meta Cloud API with a utility
+  template), not a replacement. Unofficial WhatsApp gateways are ruled out: they break WhatsApp's
+  terms and the number can be banned.
 
 ## Hosting & infrastructure (ADR-001 — revised: Cloudflare + Neon)
 
