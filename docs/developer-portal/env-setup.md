@@ -1026,19 +1026,26 @@ value stays the same.
 The read is advisory: the server still accepts any valid forward-to, and a mailbox can lose its
 verification later. The token never reaches the page; only the list of addresses does.
 
-**The suggested sender (`#1403`).** Client Setup's Sender card suggests a sender for each store and
-fills it with **Use suggested sender**. Nothing is saved until **Save sender** is pressed.
+**The suggested sender (`#1403`, rule changed by `#1419`).** Client Setup's Sender card suggests a
+sender for each store and fills it with **Use suggested sender**. Nothing is saved until **Save
+sender** is pressed.
 
 - **Name:** the store's name.
-- **Address:** `orders@<the store's own domain>` when the store has a custom domain: a `VendorDomain`
-  host that is not the platform domain or under it. The canonical one wins, and a leading `www.` is
-  dropped. Otherwise, `orders-<slug>@<platform domain>`. The platform domain is `EMAIL_FROM`'s domain
-  (`merqify.com`). Dev hosts (`localhost`, a port, an IP address) are ignored.
+- **Address**, first match wins. The platform domain is `EMAIL_FROM`'s domain (`merqify.com`). Dev
+  hosts (`localhost`, a port, an IP address) are ignored. Where a store has several matching
+  `VendorDomain` hosts, the canonical one wins, then the alphabetically first.
+  1. `info@<the store's own domain>` when the store has a custom domain: a host that is not the
+     platform domain or under it. A leading `www.` is dropped.
+  2. `info-<subdomain>@<platform domain>` from a one-level platform subdomain:
+     `aheed.merqify.com` gives `info-aheed@merqify.com`, `aheed-staging.merqify.com` gives
+     `info-aheed-staging@merqify.com`.
+  3. `info-<slug>@<platform domain>` otherwise, including a multi-level host such as
+     `a.b.merqify.com`.
 - **No suggestion** when there is neither a custom domain nor `EMAIL_FROM`.
 - **Warning:** when the saved sender's domain is not the platform domain, one of the store's own
   domains, or listed in `EMAIL_VERIFIED_DOMAINS`, the card warns that replies may not arrive. That is
   the case for the `nocaped` senders copied at the Merqify cut-over.
-- **Caveat:** a staging store on a custom subdomain would be offered `orders@staging.<domain>`, which
+- **Caveat:** a staging store on a custom subdomain would be offered `info@staging.<domain>`, which
   needs its own Email Sending onboarding. Type another address in that case.
 
 Set a secret by hand with `wrangler secret put <KEY> --env <env>`. For the inbound Worker, add
@@ -1194,7 +1201,7 @@ Live checks (platform admin, `/staff/platform/client-setup` on `aheed-staging.me
 6. For a store whose receiving addresses all forward to verified mailboxes, the guide's "Verify the
    forward-to mailbox" step reads **Done**.
 7. The **Sender** card for a store still on a `nocaped` sender shows the "Replies to … may not
-   arrive" warning and a suggestion such as `orders-<slug>@merqify.com`. **Use suggested sender**
+   arrive" warning and a suggestion such as `info-<subdomain>@merqify.com` (`#1419`). **Use suggested sender**
    fills both fields without saving. Press **Save sender** only if the owner wants the change.
 8. After promotion, repeat steps 3-7 on `aheed.merqify.com` with `secrets/merqify-production.vars`.
 

@@ -81,6 +81,8 @@ every branch merges.
 
 ### Changed
 
+- **Client Setup suggests an `info-` sender from the store's subdomain** (issue `#1419`, spec `specs/2026-11-04-info-sender-suggestion/`). The Sender card's suggestion is now `info@<own domain>`, else `info-<subdomain>@<platform domain>` from a one-level platform host (`aheed.merqify.com` gives `info-aheed@merqify.com`), else `info-<slug>@<platform domain>`, replacing `#1403`'s `orders@` / `orders-<slug>@` forms. Saved senders are not changed. Also carries two post-ship `#1409` doc commits (handoff state, Google Groups Pending note).
+
 - **The Feature Catalogue is for platform admins only** (issue `#1379`, spec `specs/2026-10-31-feature-catalogue-platform-only/`). `/staff/feature-catalogue` now refuses store admins and staff ("Platform admin only"); its menu entry moves to the Platform menu, and its guide section to `platform-admin-guide.md`. The URL is unchanged.
 
 - **The platform is named Merqify by default, and "Icon credits" becomes "Third-party credits"** (issue `#1371`). The footer reads "Powered by Merqify · Your Merchandise, Digitised Quickly" in every environment: `PLATFORM_NAME` and a new `PLATFORM_TAGLINE` fall back to those values when unset (unset used to hide the line), and both `wrangler.toml` environments set them explicitly. The credits page heading and title are now "Third-Party Credits & Licences"; its `/icon-credits` URL is unchanged.

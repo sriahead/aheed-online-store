@@ -4,9 +4,10 @@ import { emailDomain } from "@/lib/email/policy";
  * #1403 — the sender Client Setup suggests for a store, and whether a saved sender's domain can
  * receive replies. Pure, so the Sender card and its tests call the same functions.
  *
- * Owner decision (2026-11-02): the store's own domain when it has one (`orders@<domain>`), else a
- * flat address on the platform domain (`orders-<slug>@<platform domain>`). The platform domain is
- * EMAIL_FROM's domain, so there is no new config. This only suggests; nothing is overwritten.
+ * Owner decision (2026-11-04, #1419, replacing #1403's rule): `info@<own domain>` when
+ * the store has one, else `info-<subdomain>@<platform domain>` from a one-level subdomain such as
+ * `aheed.merqify.com`, else `info-<slug>@<platform domain>`. The platform domain is EMAIL_FROM's
+ * domain, so there is no new config. This only suggests; nothing is overwritten.
  */
 
 export interface StoreHost {
@@ -49,6 +50,24 @@ function customHosts(hosts: readonly StoreHost[], platformDomain: string | undef
     .filter((h) => isEligibleHost(h.host) && !isPlatformHost(h.host, platformDomain));
 }
 
+/**
+ * The label of a one-level platform subdomain (`aheed` from `aheed.merqify.com`), or null for the
+ * platform domain itself, a multi-level host or any other host. Expects lower-cased input.
+ */
+function platformSubdomainLabel(host: string, platformDomain: string): string | null {
+  const suffix = `.${platformDomain}`;
+  if (!host.endsWith(suffix)) return null;
+  const label = host.slice(0, -suffix.length);
+  return label === "" || label.includes(".") ? null : label;
+}
+
+/** The canonical host first, then alphabetical, among the ones given. */
+function pickHost<T extends StoreHost>(hosts: readonly T[]): T | undefined {
+  const byName = (a: T, b: T) => a.host.localeCompare(b.host);
+  const canonical = hosts.filter((h) => h.isCanonical).sort(byName);
+  return canonical[0] ?? [...hosts].sort(byName)[0];
+}
+
 export function suggestSender(input: {
   vendorName: string;
   slug: string;
@@ -56,15 +75,19 @@ export function suggestSender(input: {
   platformDomain: string | undefined;
 }): SuggestedSender | null {
   const platformDomain = normalisePlatformDomain(input.platformDomain);
-  const custom = customHosts(input.hosts, platformDomain);
-  if (custom.length > 0) {
-    const byName = (a: StoreHost, b: StoreHost) => a.host.localeCompare(b.host);
-    const canonical = custom.filter((h) => h.isCanonical).sort(byName);
-    const chosen = canonical[0] ?? [...custom].sort(byName)[0];
-    return { name: input.vendorName, email: `orders@${storeDomain(chosen.host)}` };
+  const custom = pickHost(customHosts(input.hosts, platformDomain));
+  if (custom) {
+    return { name: input.vendorName, email: `info@${storeDomain(custom.host)}` };
   }
   if (platformDomain) {
-    return { name: input.vendorName, email: `orders-${input.slug}@${platformDomain}` };
+    const subdomains = input.hosts
+      .map((h) => ({ host: h.host.trim().toLowerCase(), isCanonical: h.isCanonical }))
+      .filter(
+        (h) => isEligibleHost(h.host) && platformSubdomainLabel(h.host, platformDomain) !== null,
+      );
+    const chosen = pickHost(subdomains);
+    const label = chosen ? platformSubdomainLabel(chosen.host, platformDomain) : null;
+    return { name: input.vendorName, email: `info-${label ?? input.slug}@${platformDomain}` };
   }
   return null;
 }
