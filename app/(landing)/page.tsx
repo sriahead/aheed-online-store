@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { getCategoryRepository } from "@/lib/categories-service";
-import { getProductRepository } from "@/lib/products-service";
 import { getEnv } from "@/lib/config";
-import { DepartmentHero } from "@/components/layout/DepartmentHero";
+import { PromotionHero } from "@/components/layout/PromotionHero";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { formatPrice } from "@/components/product/format-price";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { getShopperDeliveryRules } from "@/lib/delivery-pricing-service";
-import { getCampaignsForHero } from "@/lib/campaigns-service";
-import { isCampaignLive } from "@/lib/campaign-liveness";
+import { getLivePromotionsForStorefront } from "@/lib/promotions-service";
 import {
   CustomerFeedbackCards,
   ReviewLinkGroup,
@@ -38,19 +36,11 @@ export async function generateMetadata() {
  * platform-true trust claims.
  */
 export default async function HomePage() {
-  const productsRepo = getProductRepository();
-  const [categories, profile] = await Promise.all([
+  const [categories, profile, livePromotions] = await Promise.all([
     getCategoryRepository().listTopLevel(),
     getCurrentVendorProfile(),
+    getLivePromotionsForStorefront(),
   ]);
-  // P8.5b (#346): one query for every department's headline product, not one
-  // per department. Depends on `categories`, so it cannot join the Promise.all
-  // above.
-  const spotlights = await productsRepo.categorySpotlights(categories.map((c) => c.id));
-  // P8.5e (#356): campaigns are read alongside spotlights, keyed the same way.
-  // Liveness is decided HERE, once, so DepartmentHero never has to re-derive it
-  // from isActive/startsAt/endsAt.
-  const campaigns = await getCampaignsForHero(categories.map((c) => c.id));
 
   // P9.2 (#818) — three reads from this vendor's own database, in parallel with each other.
   // No external call is on this path: the feedback is first-party and the review links are
@@ -62,28 +52,6 @@ export default async function HomePage() {
     getVendorReviewLinkRepository().listActive(),
   ]);
 
-  const now = new Date();
-  const heroDepartments = categories.map((category) => {
-    const campaign = campaigns.get(category.id);
-    return {
-      id: category.id,
-      slug: category.slug,
-      name: category.name,
-      imageKey: category.imageKey ?? null,
-      imageUrl: category.imageUrl ?? null,
-      spotlight: spotlights.get(category.id) ?? null,
-      campaign:
-        campaign && isCampaignLive(campaign, now)
-          ? {
-              headline: campaign.headline,
-              subtitle: campaign.subtitle,
-              imageKey: campaign.imageKey,
-              altText: campaign.altText,
-              linkUrl: campaign.linkUrl,
-            }
-          : null,
-    };
-  });
   const { CDN_BASE_URL } = getEnv();
   const localityName = profile?.localityName ?? "";
   const vendorName = profile?.name ?? "Welcome";
@@ -109,19 +77,10 @@ export default async function HomePage() {
         {/* Background glow placeholder */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Two columns once this vendor has departments to show; a single
-            column when they don't, so the hero never renders an empty well.
-            #496: the department slider was capped at a fixed 28rem regardless
-            of viewport, making it a small corner element rather than a real
-            second half of the hero — now an even lg:grid-cols-2 split.
-
-            `items-stretch`, not `items-center`: centring sized the second column
-            to its own content and parked it mid-row, leaving dead space above
-            and below the panel. Stretching makes the column take the full row
-            height so the carousel can fill it. The hero's own `p-6 md:p-10`
-            still keeps the panel off the section's edges. */}
+        {/* Two columns once this vendor has live promotions to show; a single
+            column when they don't, so the hero never renders an empty well or fallback icons. */}
         <div
-          className={`relative z-10 gap-8 ${heroDepartments.length > 0 ? "lg:grid lg:grid-cols-2 lg:items-stretch" : ""}`}
+          className={`relative z-10 gap-8 ${livePromotions.length > 0 ? "lg:grid lg:grid-cols-2 lg:items-stretch" : ""}`}
         >
           <div className="max-w-2xl space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -183,23 +142,12 @@ export default async function HomePage() {
                 vanishing with the `?postcode=` query string. */}
           </div>
 
-          {/* P8.5b (#346): the hero's second column. This slot has now held
-              three things. A hardcoded unsplash photo, removed in #231 for
-              failing P7a's CSP and for rendering identically for every vendor.
-              Then this vendor's VendorPromotion rows as a carousel (#233) —
-              which never had a staff UI, so the rows stayed seed-only and no
-              vendor could ever edit a campaign. Now the departments themselves,
-              generated from real categories and real product prices, so the
-              panel cannot advertise something the catalogue does not have.
-              VendorPromotion is deleted in this slice; see the spec for why
-              "superseded" rather than "unused" is the accurate reason. */}
-          {heroDepartments.length > 0 && (
+          {/* Promotion Hero (#1412): renders only genuine active promotions within
+              their date window. When 0 promotions are live, no second column renders,
+              omitting fallback department glyphs and regular-price spotlights. */}
+          {livePromotions.length > 0 && (
             <div className="mt-8 lg:mt-0 lg:h-full">
-              <DepartmentHero
-                departments={heroDepartments}
-                cdnBaseUrl={CDN_BASE_URL ?? null}
-                use3D
-              />
+              <PromotionHero promotions={livePromotions} cdnBaseUrl={CDN_BASE_URL ?? null} />
             </div>
           )}
         </div>

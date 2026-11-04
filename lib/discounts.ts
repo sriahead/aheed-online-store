@@ -46,7 +46,11 @@ export type CodeRefusalReason =
    * at all. Decided by the discount-code throttle at the checkout's two entry points, never by
    * `evaluateCode` or the repository.
    */
-  | "TOO_MANY_ATTEMPTS";
+  | "TOO_MANY_ATTEMPTS"
+  /**
+   * Promotion scoped to a department/product where the cart contains no eligible items.
+   */
+  | "NO_ELIGIBLE_ITEMS";
 
 export type CodeEvaluation =
   { ok: true; discountPence: number } | { ok: false; reason: CodeRefusalReason };
@@ -103,6 +107,11 @@ export interface EvaluateCodeInput {
   /** How many times THIS shopper has already used THIS code. */
   customerUseCount: number;
   now: Date;
+  /**
+   * Optional scoped spend limit (e.g. products belonging to a promotion's department or product).
+   * When set, percentage discounts compute against this amount, and fixed discounts are capped by it.
+   */
+  eligibleSubtotalPence?: number;
 }
 
 function refuse(reason: CodeRefusalReason): CodeEvaluation {
@@ -140,20 +149,30 @@ export function evaluateCode(input: EvaluateCodeInput): CodeEvaluation {
   if (input.maxPerCustomer !== null && input.customerUseCount >= input.maxPerCustomer) {
     return refuse("CUSTOMER_LIMIT_REACHED");
   }
-  if (input.subtotalPence < input.minSubtotalPence) return refuse("BELOW_MINIMUM");
+
+  if (typeof input.eligibleSubtotalPence === "number" && input.eligibleSubtotalPence <= 0) {
+    return refuse("NO_ELIGIBLE_ITEMS");
+  }
+
+  const eligibleBase =
+    typeof input.eligibleSubtotalPence === "number"
+      ? Math.max(0, input.eligibleSubtotalPence)
+      : input.subtotalPence;
+
+  if (eligibleBase < input.minSubtotalPence) return refuse("BELOW_MINIMUM");
 
   const face = computeCodeDiscountPence({
     kind: input.kind,
     value: input.value,
-    subtotalPence: input.subtotalPence,
+    subtotalPence: eligibleBase,
   });
 
   // Two caps, the same pair `clampRedemption` applies to points:
-  //  1. never more than the goods — delivery is not discountable, or a code
-  //     would pay for postage the shop still owes a courier;
-  //  2. never a payable total below what the payment provider will accept.
+  //  1. never more than the eligible goods (cannot discount beyond eligible department items);
+  //  2. never more than the total goods;
+  //  3. never a payable total below what the payment provider will accept.
   const headroom = input.subtotalPence + input.deliveryFeePence - MIN_PAYABLE_PENCE;
-  const maxDiscountPence = Math.max(0, Math.min(input.subtotalPence, headroom));
+  const maxDiscountPence = Math.max(0, Math.min(eligibleBase, input.subtotalPence, headroom));
   const discountPence = Math.min(face, maxDiscountPence);
 
   // A zero discount is refused rather than returned as a success. Applying a
@@ -192,5 +211,7 @@ export function refusalMessage(reason: CodeRefusalReason): string {
       return "Referral codes can't be used at this store right now.";
     case "TOO_MANY_ATTEMPTS":
       return "Too many code attempts. Please try again in a minute.";
+    case "NO_ELIGIBLE_ITEMS":
+      return "This discount code only applies to selected department products.";
   }
 }

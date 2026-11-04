@@ -1026,19 +1026,26 @@ value stays the same.
 The read is advisory: the server still accepts any valid forward-to, and a mailbox can lose its
 verification later. The token never reaches the page; only the list of addresses does.
 
-**The suggested sender (`#1403`).** Client Setup's Sender card suggests a sender for each store and
-fills it with **Use suggested sender**. Nothing is saved until **Save sender** is pressed.
+**The suggested sender (`#1403`, rule changed by `#1419`).** Client Setup's Sender card suggests a
+sender for each store and fills it with **Use suggested sender**. Nothing is saved until **Save
+sender** is pressed.
 
 - **Name:** the store's name.
-- **Address:** `orders@<the store's own domain>` when the store has a custom domain: a `VendorDomain`
-  host that is not the platform domain or under it. The canonical one wins, and a leading `www.` is
-  dropped. Otherwise, `orders-<slug>@<platform domain>`. The platform domain is `EMAIL_FROM`'s domain
-  (`merqify.com`). Dev hosts (`localhost`, a port, an IP address) are ignored.
+- **Address**, first match wins. The platform domain is `EMAIL_FROM`'s domain (`merqify.com`). Dev
+  hosts (`localhost`, a port, an IP address) are ignored. Where a store has several matching
+  `VendorDomain` hosts, the canonical one wins, then the alphabetically first.
+  1. `info@<the store's own domain>` when the store has a custom domain: a host that is not the
+     platform domain or under it. A leading `www.` is dropped.
+  2. `info-<subdomain>@<platform domain>` from a one-level platform subdomain:
+     `aheed.merqify.com` gives `info-aheed@merqify.com`, `aheed-staging.merqify.com` gives
+     `info-aheed-staging@merqify.com`.
+  3. `info-<slug>@<platform domain>` otherwise, including a multi-level host such as
+     `a.b.merqify.com`.
 - **No suggestion** when there is neither a custom domain nor `EMAIL_FROM`.
 - **Warning:** when the saved sender's domain is not the platform domain, one of the store's own
   domains, or listed in `EMAIL_VERIFIED_DOMAINS`, the card warns that replies may not arrive. That is
   the case for the `nocaped` senders copied at the Merqify cut-over.
-- **Caveat:** a staging store on a custom subdomain would be offered `orders@staging.<domain>`, which
+- **Caveat:** a staging store on a custom subdomain would be offered `info@staging.<domain>`, which
   needs its own Email Sending onboarding. Type another address in that case.
 
 Set a secret by hand with `wrangler secret put <KEY> --env <env>`. For the inbound Worker, add
@@ -1069,6 +1076,17 @@ Client Setup shows these as a checklist per store, with links.
    - **Testing tip:** a group does not email a member's own post back to them, so a test sent from
      the group owner's own mailbox only appears in Sent. Check the group's Conversations page, or
      send from another address.
+   - **Google Groups can hold platform mail in Pending.** Its spam filter flags repeated
+     automated messages from `no-reply@merqify.com` (seen 2026-11-04: seven Client Setup test
+     emails showed Delivered in Email Sending and Forwarded in Email Routing, yet sat unseen in
+     the hub group's Pending queue). Real contact-form mail can be held the same way. In every
+     group that receives store mail (`info-merqifyhub@`, `info-afc@`, `info-srimart@`,
+     `info-merqify@`): set Group settings → Posting policies → **Spam message handling** to
+     **Moderate and notify content moderators** (never "Reject all messages marked as spam": the
+     rejection goes to `no-reply`, so the message is lost unseen), keep **Message moderation** at
+     No moderation, and add `no-reply@merqify.com` as a member with delivery **No email**. When a
+     test seems lost, check in this order: Email Sending → Activity log (Delivered?), Email
+     Routing → Activity log (Forwarded?), then the group's Conversations → **Pending**.
 7. **Send a test email** from Client Setup. It goes to your own signed-in address only. On staging
    your address must be on `EMAIL_ALLOWED_RECIPIENTS`.
 
@@ -1183,13 +1201,24 @@ Live checks (platform admin, `/staff/platform/client-setup` on `aheed-staging.me
 6. For a store whose receiving addresses all forward to verified mailboxes, the guide's "Verify the
    forward-to mailbox" step reads **Done**.
 7. The **Sender** card for a store still on a `nocaped` sender shows the "Replies to … may not
-   arrive" warning and a suggestion such as `orders-<slug>@merqify.com`. **Use suggested sender**
+   arrive" warning and a suggestion such as `info-<subdomain>@merqify.com` (`#1419`). **Use suggested sender**
    fills both fields without saving. Press **Save sender** only if the owner wants the change.
 8. After promotion, repeat steps 3-7 on `aheed.merqify.com` with `secrets/merqify-production.vars`.
 
 ### Sanity check: storefront contact form (`#1409`)
 
-**Last run:** not yet run (written at Build, 2026-11-03).
+**Last run:** 2026-11-03 on staging after PR #1410 (`d5819f5`, deploy run `41730552632`): quick
+checks 1-4 passed (migration applied, health OK, form and honeypot rendered, 0 `mailto:` on the
+`merqify.com` host, Contact us before Leave a review). Step 5/7 (owner, 23:17): a signed-in
+Enquiry naming an order logged `email send skipped (recipient is not on EMAIL_ALLOWED_RECIPIENTS …):
+[STAGING] Enquiry · Aheed Food Centre · Order AHE-20261103-ZC7DTP · Test` — the live tag is
+confirmed; Aheed's forward-to is not allowlisted on staging, so nothing was queued. Step 6
+(2026-11-04 05:50, after `EMAIL_ALLOWED_RECIPIENTS` gained the hub): delivered to
+`info-merqifyhub@googlegroups.com` from `no-reply@merqify.com` with that `[STAGING]` subject, and
+Reply addressed the shopper. A reply to a `@merqify.com` demo address loops back into the hub via
+the catch-all, so test replies with a shopper address outside the group. Production
+(2026-11-04, PR #1413 `cac3fb9`, deploy run `41785879012`): checks 1-4 passed, and the owner reported the
+live production checks good (2026-11-04). Step 8 (rate limit) has no separate live record.
 
 Quick checks:
 
@@ -1205,10 +1234,14 @@ Quick checks:
 
 Live checks (staging):
 
-5. As a guest, send an **Enquiry**. Expected: "Thank you. Your message to the store has been
-   received." Until `merqify.com` is onboarded for sending, the send fails, so a `ContactOutbox`
-   row exists and the next 15-minute tick logs `scheduled job /api/jobs/retry-contact-outbox ok`
-   with `failed` 1.
+5. Run `npx wrangler tail aheed-store-staging --format pretty`, then as a guest send an
+   **Enquiry**. Expected: "Thank you. Your message to the store has been received.", and the tail
+   prints the subject as `[STAGING] Enquiry · <store> · <subject>`. Which line it is depends on the
+   store's forward-to. **Not on `EMAIL_ALLOWED_RECIPIENTS`:** `email send skipped (recipient is not
+   on EMAIL_ALLOWED_RECIPIENTS …)`, and no `ContactOutbox` row is written. A skip is not retried.
+   **On it, but sending not working yet:** `email send failed …`, then a `ContactOutbox` row is
+   written, and the next 15-minute tick logs `scheduled job /api/jobs/retry-contact-outbox ok`
+   (scheduler Worker `aheed-scheduler-staging`).
 6. Once sending works and the forward-to is on `EMAIL_ALLOWED_RECIPIENTS`, the email arrives in the
    store's **Support** forward-to with subject `[STAGING] Enquiry · <store> · <subject>`, and
    pressing Reply addresses the shopper.
