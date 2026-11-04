@@ -37,6 +37,7 @@ export type SearchHrefParams = {
   featured?: string;
   category?: string;
   packSize?: string;
+  sort?: string;
 };
 
 /**
@@ -50,6 +51,7 @@ export const CARRIED: readonly string[] = ["q", ...FIXED_FILTER_KEYS];
 function carriedQuery(params: SearchHrefParams, omit: readonly string[] = []): URLSearchParams {
   const qs = new URLSearchParams();
   if (typeof params.q === "string" && params.q !== "") qs.set("q", params.q);
+  if (typeof params.sort === "string" && params.sort !== "") qs.set("sort", params.sort);
   // `append`, never `set` (#918): a list filter may carry several values under one key.
   for (const [key, value] of filterEntries(params, omit)) qs.append(key, value);
   return qs;

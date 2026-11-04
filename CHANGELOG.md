@@ -6,6 +6,29 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Product Filtering & Discovery CRO Overhaul** (issue `#1424`, spec `specs/2026-11-04-product-filtering-cro/`).
+  - **Storefront Product Sorting (`lib/repositories/products.ts`, `components/product/sort-params.ts`, `components/product/ProductSortSelect.tsx`):**
+    - Extended `ProductFilters` with `sort?: ProductSortOption` supporting `newest` (default browse), `relevance` (default search), `price_asc` (Price: Low to High), `price_desc` (Price: High to Low), `unit_price_asc` (Best Value per reference unit: kg/L), and `rating_desc` (Customer Rating).
+    - In `findPage()` (browse & category navigation), dynamic keyset ordering leverages existing database indexes (`basePrice`, `unitPricePencePerBaseUnit`, `averageRating`, `createdAt`).
+    - In `searchProducts()`, search candidates sort in memory deterministically when an explicit sort option is requested, while preserving ranked score ordering for `relevance`.
+    - Added `<ProductSortSelect />` component positioned above product grids on both `/categories/[slug]` and `/search`, implemented as an accessible `<form method="GET">` with `<noscript>` fallback for 100% no-JavaScript functionality.
+  - **Quick Filters Bar (`components/product/QuickFiltersRail.tsx`):**
+    - Responsive, horizontal scrollable rail of 1-tap quick filter toggle pills directly above product listings for high-intent grocery attributes (*On Offer*, *In Stock*, *Halal*, *Fresh*, *Organic*, *Vegetarian*, *Gluten Free*).
+    - Each pill shows active/inactive states with clear visual feedback, live result counts, and single-click toggling without expanding mobile drawers or accordions.
+  - **Quick Price Presets (`components/product/ProductFilterForm.tsx`):**
+    - Added 1-click price preset buttons (*Under £2*, *£2 – £5*, *£5 – £10*, *£10+*) in the filter panel to relieve decision fatigue, while preserving custom numeric min/max price inputs.
+  - **Live Product Counts in Filter Options (`lib/repositories/products.ts`, `components/product/ProductFilterForm.tsx`):**
+    - Enhanced `getAvailableFacets()` to compute genuine product counts for boolean facets in the current result context.
+    - Updated `ProductFilterForm` labels to display live item counts (e.g. `Halal (14)`, `On offer (6)`), providing shoppers with result density foresight before applying filters.
+  - **Zero-Result Smart Relaxation (`components/product/FilterZeroRecovery.tsx`):**
+    - When an over-constrained filter combination returns 0 products, an intelligent recovery component replaces dead-end blank states with 1-click links to relax the limiting filter (e.g. `Remove price filter`, `Remove brand filter`) or `Clear all filters`.
+  - **Navigation & Chip Preservation (`components/product/filter-chips.ts`, `category-href.ts`, `search-href.ts`):**
+    - `sort` parameter is preserved across pagination (`nextCategoryPageHref`, `prevCategoryPageHref`, `searchPageHref`, `categoryFilterHref`), when removing individual filter chips, and when clearing all filters.
+    - `sort` is excluded from filter chips so sort order never renders as a removable facet.
+  - **Unit & Integration Tests (`tests/product-sort-and-discovery.test.ts`):** Added comprehensive test coverage asserting sort parsing, URL preservation, chip isolation, Prisma `orderBy` generation, in-memory candidate sorting, and empty state relaxation.
+
 ### Fixed
 
 - **Promotions AI Basis Points Percentage Formatting & Promotion-Focused Image Descriptions** (issue `#1415`).
