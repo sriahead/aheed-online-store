@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.160.0"
-updated: 2026-11-03
+version: "1.161.0"
+updated: 2026-11-04
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -39,7 +39,7 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-11-03 (`#1399`, `#1392` + `#1403`): incoming email is live on `merqify.com`; outgoing still is not.**
+- **2026-11-04 (`#1399`, `#1392` + `#1403`, `#1409`): incoming and outgoing email both work on `merqify.com`.**
   - **`#1399` (default forward-to inbox) is IN PRODUCTION** (PR #1402, promoted in PR #1406,
     `deb6347`), closed and `Done`. It was validated in-session, not independently. The owner confirmed
     it on staging. Spec `specs/2026-11-02-default-forward-inbox/`. Sanity check: `env-setup.md`,
@@ -56,20 +56,26 @@ reconciliation. If overall project state did not materially change, leave this f
       fallback, as designed. Re-run sanity steps 3-8 once it is added.
     - `#1392` stays open for routing-rule and sending-domain state.
       "New stores start with the suggested sender" is `#1404` (P12).
-  - **`#1409` (storefront Contact us form) is ON STAGING, NOT PROMOTED** (PR #1410, squash
-    `d5819f5`, `In Review`). Spec `specs/2026-11-03-storefront-contact-form/`. It adds `/contact`,
-    routed to the Client Setup ORDERS/SUPPORT forward-to; tags every outgoing subject by `APP_ENV`
-    (`[STAGING]`/`[DEV]`, none in production); keeps a `ContactOutbox` (failed sends only) that the
-    scheduler retries; and hides the footer email on platform hosts. It was validated in-session,
-    not independently, and the live sent-subject tag is unverified. Migration
-    `20261103120000_contact_form` is applied on dev and staging (deploy run `41730552632`);
-    production gets it at promotion. Sanity check: `env-setup.md`, "Sanity check: storefront
-    contact form". Quick checks 1-4 passed on staging; live sends 5-9 have not been run. Until
-    `merqify.com` is onboarded for sending, every message waits in the outbox.
+  - **`#1409` (storefront Contact us form) is IN PRODUCTION** (PR #1410 `d5819f5`, promoted in
+    PR #1413 `cac3fb9`), closed and `Done`. Spec `specs/2026-11-03-storefront-contact-form/`. It
+    adds `/contact`, routed to the Client Setup ORDERS/SUPPORT forward-to, then
+    `INBOUND_DEFAULT_FORWARD`; tags outgoing subjects by `APP_ENV` (`[STAGING]`/`[DEV]`, none in
+    production); keeps failed sends in `ContactOutbox` for the scheduler to retry; and hides the
+    footer email on `*.merqify.com` hosts. Validated in-session, not independently. Migration
+    `20261103120000_contact_form` is applied on dev, staging and production. Sanity check:
+    `env-setup.md`, "Sanity check: storefront contact form"; steps 8 (rate limit) and 9 (a
+    production send) are not yet run. Viewing and retrying the outbox is `#1411`.
+    - **Outgoing mail works on both hosts** (owner, 2026-11-04): a production Client Setup test
+      email and a staging contact Enquiry both arrived from `no-reply@merqify.com`.
+    - **Staging only mails `EMAIL_ALLOWED_RECIPIENTS`**, now set to
+      `demo-platform-admin@merqify.com,info-merqifyhub@googlegroups.com` (recorded in
+      `secrets/merqify-staging.vars`; a put replaces the whole list). Any other recipient is
+      skipped: not sent and not queued.
   - **Email Routing on `merqify.com`, as the owner's dashboard showed it on 2026-11-03:** a
     **catch-all** to `info-merqifyhub@googlegroups.com` and one rule, `info@merqify.com` to
-    `info-merqify@googlegroups.com`. There are **no Worker rules**, so the inbound Worker and every
-    Client Setup forward-to are unused, and all store mail lands in the hub. Neither Merqify token
+    `info-merqify@googlegroups.com`. There are **no Worker rules**, so the inbound Worker is unused
+    and all inbound store mail lands in the hub. (The `#1409` contact form does use the Client
+    Setup forward-to, as its send recipient.) Neither Merqify token
     can read routing rules (error 10000), so this is visible only in the dashboard.
   - **`#1408`:** CI `docs-gates` does not compile the docs site as MDX, so a bare `<tag>` in
     `docs/` or `specs/` passes CI and then fails `deploy-docs-internal` after the merge. It happened
@@ -109,9 +115,9 @@ reconciliation. If overall project state did not materially change, leave this f
 - **2026-11-01 (`#1217`): email moves to Cloudflare, plus Client Setup. PROMOTED TO PRODUCTION
   (PR #1394 `24ce8b8` to staging, promotion PR #1396 `0842385`).** On 2026-11-02 both production hosts
   report `0842385`, `db.ok`.
-  - **R39 (real mail) is UNVERIFIED until the owner onboards `merqify.com`** in Email Sending. On
-    promotion, production sends through Cloudflare and every send fails (logged) until then. That is
-    no regression: Resend was sandboxed and never reached real customers (`#104`).
+  - **R39 (real mail) is now met in practice:** both hosts deliver from `no-reply@merqify.com`
+    (owner, 2026-11-04, see `#1409` above). Resend was sandboxed and never reached real customers
+    (`#104`).
     `EMAIL_PROVIDER=resend` restores Resend with no code change.
   - **Owner steps** (`env-setup.md`, "Email: sending and receiving", with its sanity check):
     - onboard the sending domain;
