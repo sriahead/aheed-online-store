@@ -4,6 +4,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { listBundlesForVendor } from "@/lib/bundles-service";
 import { getDiscountRepository } from "@/lib/discounts-service";
+import { listEligiblePromotionalProductsForAdmin } from "@/lib/promotions-service";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { STORE_TIMEZONE } from "@/lib/local-datetime";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
@@ -26,16 +27,13 @@ export default async function NewPromotionPage() {
     );
   }
 
-  const [allCategories, bundles, discountCodes, profile] = await Promise.all([
+  const [allCategories, eligibleProducts, bundles, discountCodes, profile] = await Promise.all([
     listCategoriesForAdmin(auth.vendorId),
+    listEligiblePromotionalProductsForAdmin(auth.vendorId),
     listBundlesForVendor(auth.vendorId),
     getDiscountRepository().list(),
     getCurrentVendorProfile(),
   ]);
-
-  const departments = allCategories
-    .filter((c) => c.parentId === null)
-    .map((c) => ({ id: c.id, name: c.name }));
 
   const bundleOptions = bundles.filter((b) => b.isActive).map((b) => ({ id: b.id, name: b.name }));
 
@@ -55,7 +53,8 @@ export default async function NewPromotionPage() {
       </div>
 
       <PromotionForm
-        categories={departments}
+        categories={allCategories}
+        products={eligibleProducts}
         bundles={bundleOptions}
         discountCodes={discountOptions}
         timezone={timezone}

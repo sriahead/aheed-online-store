@@ -727,6 +727,13 @@ enum AudienceSegment {
   LOYALTY_MEMBER
 }
 
+enum PromotionChannel {
+  WEBSITE
+  WHATSAPP
+  FACEBOOK
+  INSTAGRAM
+}
+
 // #1412 — Promotions system replacing DepartmentCampaign. Allows store-wide,
 // department, bundle, or discount-code promotions with priority ranking,
 // audience targeting, active toggle, and date scheduling.
@@ -745,22 +752,26 @@ model Promotion {
   isActive         Boolean         @default(true)
   startsAt         DateTime?
   endsAt           DateTime?
-  audienceSegment  AudienceSegment @default(ALL)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  audienceSegment  AudienceSegment  @default(ALL)
+  channel          PromotionChannel @default(WEBSITE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   // Optional target associations (mutually exclusive or all null for store-wide)
   categoryId       String?
-  category         Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  category         Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   bundleId         String?
-  bundle           Bundle?         @relation(fields: [bundleId], references: [id], onDelete: SetNull)
+  bundle           Bundle?          @relation(fields: [bundleId], references: [id], onDelete: SetNull)
   discountCodeId   String?
-  discountCode     DiscountCode?   @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
+  discountCode     DiscountCode?    @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
+  productId        String?
+  product          Product?         @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@index([vendorId, isActive, priority])
   @@index([vendorId, categoryId])
   @@index([vendorId, bundleId])
   @@index([vendorId, discountCodeId])
+  @@index([vendorId, productId])
 }
 
 // #1285 — multi-candidate category and UI system icon assets (review, select, delete, gallery)
@@ -893,6 +904,7 @@ model Product {
   cartItems                 CartItem[]
   orderItems                OrderItem[]
   bundleItems               BundleItem[]
+  promotions                Promotion[]
   priceTier                 ProductPriceTier?
   attributeValues           ProductAttributeValue[]
   averageRating             Float                        @default(0) // denormalized, recomputed on every review write

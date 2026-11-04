@@ -8,9 +8,13 @@ import {
   createPromotion as createRepo,
   updatePromotion as updateRepo,
   deletePromotion as deleteRepo,
+  listEligiblePromotionalProducts as listEligibleProductsRepo,
   type PromotionRow,
   type PromotionWriteInput,
   type PromotionWriteResult,
+  type EligiblePromotionalProduct,
+  type AudienceSegment,
+  type PromotionChannel,
 } from "@/lib/repositories/promotions";
 
 /**
@@ -78,4 +82,20 @@ export async function deletePromotionForVendor(
 }
 
 // Re-export types
-export type { PromotionRow, PromotionWriteInput, PromotionWriteResult };
+export type {
+  PromotionRow,
+  PromotionWriteInput,
+  PromotionWriteResult,
+  EligiblePromotionalProduct,
+  AudienceSegment,
+  PromotionChannel,
+};
+
+/**
+ * List eligible promotional products for staff campaign creation.
+ */
+export async function listEligiblePromotionalProductsForAdmin(
+  vendorId: string,
+): Promise<EligiblePromotionalProduct[]> {
+  return listEligibleProductsRepo(getPrisma(), vendorId);
+}

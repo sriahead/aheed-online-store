@@ -1,5 +1,7 @@
 import type { getPrisma } from "@/lib/db";
-import type { AudienceSegment } from "@prisma/client";
+import type { AudienceSegment, PromotionChannel } from "@prisma/client";
+
+export type { AudienceSegment, PromotionChannel } from "@prisma/client";
 
 /**
  * Promotion repository (R3) — pure functions taking `prisma` and `vendorId` explicitly.
@@ -23,11 +25,13 @@ export interface PromotionRow {
   startsAt: Date | null;
   endsAt: Date | null;
   audienceSegment: AudienceSegment;
+  channel: PromotionChannel;
   createdAt: Date;
   updatedAt: Date;
   categoryId: string | null;
   bundleId: string | null;
   discountCodeId: string | null;
+  productId: string | null;
   category?: { id: string; name: string; slug: string } | null;
   bundle?: {
     id: string;
@@ -41,6 +45,14 @@ export interface PromotionRow {
     kind: "PERCENTAGE" | "FIXED_AMOUNT";
     value: number;
     minSubtotalPence: number;
+  } | null;
+  product?: {
+    id: string;
+    name: string;
+    slug: string;
+    basePrice: number;
+    originalPrice: number | null;
+    unitLabel: string;
   } | null;
 }
 
@@ -59,11 +71,13 @@ const PROMOTION_SELECT = {
   startsAt: true,
   endsAt: true,
   audienceSegment: true,
+  channel: true,
   createdAt: true,
   updatedAt: true,
   categoryId: true,
   bundleId: true,
   discountCodeId: true,
+  productId: true,
   category: {
     select: {
       id: true,
@@ -98,6 +112,16 @@ const PROMOTION_SELECT = {
       minSubtotalPence: true,
     },
   },
+  product: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      basePrice: true,
+      originalPrice: true,
+      unitLabel: true,
+    },
+  },
 } as const;
 
 export interface PromotionWriteInput {
@@ -113,9 +137,11 @@ export interface PromotionWriteInput {
   startsAt?: Date | null;
   endsAt?: Date | null;
   audienceSegment?: AudienceSegment;
+  channel?: PromotionChannel;
   categoryId?: string | null;
   bundleId?: string | null;
   discountCodeId?: string | null;
+  productId?: string | null;
 }
 
 export type PromotionWriteResult =
@@ -203,9 +229,11 @@ export async function createPromotion(
         startsAt: input.startsAt ?? null,
         endsAt: input.endsAt ?? null,
         audienceSegment: input.audienceSegment ?? "ALL",
+        channel: input.channel ?? "WEBSITE",
         categoryId: input.categoryId ?? null,
         bundleId: input.bundleId ?? null,
         discountCodeId: input.discountCodeId ?? null,
+        productId: input.productId ?? null,
       },
       select: { id: true },
     });
@@ -249,9 +277,11 @@ export async function updatePromotion(
         startsAt: input.startsAt !== undefined ? input.startsAt : undefined,
         endsAt: input.endsAt !== undefined ? input.endsAt : undefined,
         audienceSegment: input.audienceSegment !== undefined ? input.audienceSegment : undefined,
+        channel: input.channel !== undefined ? input.channel : undefined,
         categoryId: input.categoryId !== undefined ? input.categoryId : undefined,
         bundleId: input.bundleId !== undefined ? input.bundleId : undefined,
         discountCodeId: input.discountCodeId !== undefined ? input.discountCodeId : undefined,
+        productId: input.productId !== undefined ? input.productId : undefined,
       },
       select: { id: true },
     });
@@ -260,6 +290,76 @@ export async function updatePromotion(
     const message = err instanceof Error ? err.message : "Failed to update promotion";
     return { ok: false, error: message };
   }
+}
+
+export interface EligiblePromotionalProduct {
+  id: string;
+  name: string;
+  slug: string;
+  categoryId: string;
+  basePrice: number;
+  originalPrice: number | null;
+  unitLabel: string;
+  isFeatured: boolean;
+  category: {
+    id: string;
+    name: string;
+    parentId: string | null;
+  };
+  priceTier: {
+    groupQuantity: number;
+    groupPricePence: number;
+    isActive: boolean;
+  } | null;
+}
+
+/**
+ * List eligible promotional products for staff campaign selection.
+ * Only returns products with active promotional content:
+ * - Was-price markdown (originalPrice !== null && originalPrice > basePrice)
+ * - Active multi-buy offer (priceTier !== null && priceTier.isActive)
+ * - Featured status (isFeatured === true)
+ */
+export async function listEligiblePromotionalProducts(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+): Promise<EligiblePromotionalProduct[]> {
+  const rows = await prisma.product.findMany({
+    where: {
+      vendorId,
+      OR: [
+        { originalPrice: { not: null } },
+        { priceTier: { is: { isActive: true } } },
+        { isFeatured: true },
+      ],
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      categoryId: true,
+      basePrice: true,
+      originalPrice: true,
+      unitLabel: true,
+      isFeatured: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+          parentId: true,
+        },
+      },
+      priceTier: {
+        select: {
+          groupQuantity: true,
+          groupPricePence: true,
+          isActive: true,
+        },
+      },
+    },
+    orderBy: { name: "asc" },
+  });
+  return rows as EligiblePromotionalProduct[];
 }
 
 /**
