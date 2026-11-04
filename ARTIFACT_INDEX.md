@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-04T11:30:29.475Z` · commit `ecec714d` · `311` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-04T15:09:07.145Z` · commit `0429ed97` · `312` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -298,6 +298,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Client Setup default forward-to inbox (plan)](specs/2026-11-02-default-forward-inbox/plan.md) | spec | 1.0.0 | 2026-11-02 | draft | internal | A platform default forward-to inbox (INBOUND_DEFAULT_FORWARD) prefills Client Setup's receiving-address form, and the address list groups addresses by the mailbox they forward to (#1399). |
 | [Client Setup: verified forward-to dropdown and suggested sender (plan)](specs/2026-11-02-forward-dropdown-default-sender/plan.md) | spec | 1.0.0 | 2026-11-02 | draft | internal | Client Setup reads Cloudflare's verified Email Routing destinations to offer Forward to as a dropdown (text fallback), and suggests each store's sender from its name and domain, flagging an unroutable sender (#1392, |
 | [Storefront contact and complaint form (plan)](specs/2026-11-03-storefront-contact-form/plan.md) | spec | 1.0.0 | 2026-11-03 | draft | internal | A storefront Contact us form for shoppers. Mail goes to the store's Client Setup forward-to, with environment-tagged subjects and a retry outbox for failed sends. Shared stores hide their footer email. |
+| [Client Setup: info- sender suggestion from the store's subdomain (plan)](specs/2026-11-04-info-sender-suggestion/plan.md) | spec | 1.0.0 | 2026-11-04 | draft | internal | Client Setup's suggested sender becomes info@<own domain>, else info-<subdomain>@<platform domain> from the store's platform subdomain, else info-<slug>@<platform domain>, replacing the orders- forms (#1419). |
 | [Promotions: Marketing Campaign Management, Eligible Offer Items & AI Generation (plan)](specs/2026-11-04-p1415-promotions-campaign-marketing/plan.md) | spec | 1.0.0 | 2026-11-04 | approved | internal | Separation of offer configuration from marketing campaign management, eligible promotional product selection, department scoping, checkout auto-application, psychology-led AI generation, and multi-channel publishing architecture. |
 | [Promotion Intelligence Platform & Storefront Experience (plan)](specs/2026-11-04-promotions-landing-overhaul/plan.md) | spec | 2.0.0 | 2026-11-04 | draft | internal | Psychology-led promotion platform upgrading staff campaign management and landing hero display with behavioural economics, audience targeting, prioritisation, and phased analytics/experimentation. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.46.0 | 2026-11-02 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |

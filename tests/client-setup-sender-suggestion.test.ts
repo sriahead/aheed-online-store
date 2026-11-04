@@ -7,7 +7,7 @@ import {
 } from "@/lib/client-setup/sender-suggestion";
 
 /**
- * #1403 R12–R13 — the suggested sender and the routable-sender check. Store names and hosts here
+ * #1403 R12–R13 (the suggested sender rule replaced by #1419) — the suggested sender and the routable-sender check. Store names and hosts here
  * are neutral fixtures.
  */
 
@@ -22,51 +22,76 @@ const suggest = (hosts: StoreHost[], platformDomain: string | null = PLATFORM) =
     platformDomain: platformDomain ?? undefined,
   });
 
-describe("suggestSender (R12)", () => {
-  it("uses a custom canonical host", () => {
+describe("suggestSender (#1419 R1-R4)", () => {
+  it("R1: uses a custom canonical host", () => {
     expect(suggest([host("cornershop.example")])).toEqual({
       name: "Corner Shop",
-      email: "orders@cornershop.example",
+      email: "info@cornershop.example",
     });
   });
 
-  it("strips one leading www.", () => {
-    expect(suggest([host("www.cornershop.example")])?.email).toBe("orders@cornershop.example");
+  it("R1: strips one leading www.", () => {
+    expect(suggest([host("www.cornershop.example")])?.email).toBe("info@cornershop.example");
   });
 
-  it("prefers the canonical custom host over an alphabetically earlier one", () => {
+  it("R1: prefers the canonical custom host over an alphabetically earlier one", () => {
     expect(suggest([host("aaa-shop.example", false), host("zzz-shop.example", true)])?.email).toBe(
-      "orders@zzz-shop.example",
+      "info@zzz-shop.example",
     );
   });
 
-  it("falls back to the alphabetically first custom host when none is canonical", () => {
+  it("R1: falls back to the alphabetically first custom host when none is canonical", () => {
     expect(suggest([host("zzz-shop.example", false), host("bbb-shop.example", false)])?.email).toBe(
-      "orders@bbb-shop.example",
+      "info@bbb-shop.example",
     );
   });
 
-  it("gives the flat form when every host is on the platform domain", () => {
-    expect(suggest([host("corner.platform.test"), host("corner-staging.platform.test")])).toEqual({
+  it("R1: uses the custom host when there is no platform domain", () => {
+    expect(suggest([host("cornershop.example")], null)?.email).toBe("info@cornershop.example");
+  });
+
+  it("R1: a custom host beats a canonical platform subdomain", () => {
+    expect(
+      suggest([host("corner.platform.test", true), host("cornershop.example", false)])?.email,
+    ).toBe("info@cornershop.example");
+  });
+
+  it("R2: uses the platform subdomain's label", () => {
+    expect(suggest([host("corner.platform.test")])).toEqual({
       name: "Corner Shop",
-      email: "orders-corner@platform.test",
+      email: "info-corner@platform.test",
     });
   });
 
-  it("counts a host equal to the platform domain as a platform host", () => {
-    expect(suggest([host("platform.test")])?.email).toBe("orders-corner@platform.test");
+  it("R2: prefers the canonical subdomain over an alphabetically earlier one", () => {
+    expect(
+      suggest([host("corner.platform.test", false), host("corner-staging.platform.test", true)])
+        ?.email,
+    ).toBe("info-corner-staging@platform.test");
   });
 
-  it("returns null with no platform domain and no custom host", () => {
-    expect(suggest([], null)).toBeNull();
-    expect(suggest([host("localhost:8787")], null)).toBeNull();
+  it("R2: falls back to the alphabetically first subdomain when none is canonical", () => {
+    expect(
+      suggest([host("zed.platform.test", false), host("corner-staging.platform.test", false)])
+        ?.email,
+    ).toBe("info-corner-staging@platform.test");
   });
 
-  it("uses the custom host when there is no platform domain", () => {
-    expect(suggest([host("cornershop.example")], null)?.email).toBe("orders@cornershop.example");
+  it("R2: is case-insensitive and lower-cases the label", () => {
+    expect(suggest([host("Corner.PLATFORM.test")], "Platform.Test")?.email).toBe(
+      "info-corner@platform.test",
+    );
   });
 
-  it("ignores dev hosts: ports, localhost, *.localhost and IPv4 literals", () => {
+  it("R3: a host equal to the platform domain falls back to the slug", () => {
+    expect(suggest([host("platform.test")])?.email).toBe("info-corner@platform.test");
+  });
+
+  it("R3: a multi-level platform host falls back to the slug", () => {
+    expect(suggest([host("a.b.platform.test")])?.email).toBe("info-corner@platform.test");
+  });
+
+  it("R3: dev hosts only fall back to the slug", () => {
     expect(
       suggest([
         host("localhost:8787"),
@@ -75,16 +100,16 @@ describe("suggestSender (R12)", () => {
         host("localhost"),
         host("127.0.0.1"),
       ])?.email,
-    ).toBe("orders-corner@platform.test");
+    ).toBe("info-corner@platform.test");
   });
 
-  it("is case-insensitive about hosts and the platform domain", () => {
-    expect(suggest([host("WWW.CornerShop.Example")], "Platform.Test")?.email).toBe(
-      "orders@cornershop.example",
-    );
-    expect(suggest([host("Corner.PLATFORM.test")], "platform.test")?.email).toBe(
-      "orders-corner@platform.test",
-    );
+  it("R3: no hosts falls back to the slug", () => {
+    expect(suggest([])?.email).toBe("info-corner@platform.test");
+  });
+
+  it("R4: returns null with no platform domain and no custom host", () => {
+    expect(suggest([], null)).toBeNull();
+    expect(suggest([host("localhost:8787")], null)).toBeNull();
   });
 });
 

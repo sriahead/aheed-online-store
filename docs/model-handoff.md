@@ -39,7 +39,7 @@ reconciliation. If overall project state did not materially change, leave this f
 
 ## Last Verified
 
-- **2026-11-04 (`#1399`, `#1392` + `#1403`, `#1409`): incoming and outgoing email both work on `merqify.com`.**
+- **2026-11-04 (`#1399`, `#1392` + `#1403`, `#1409`): incoming email works on `merqify.com`; outgoing reaches verified addresses, and reaching ordinary shoppers is unconfirmed.**
   - **`#1399` (default forward-to inbox) is IN PRODUCTION** (PR #1402, promoted in PR #1406,
     `deb6347`), closed and `Done`. It was validated in-session, not independently. The owner confirmed
     it on staging. Spec `specs/2026-11-02-default-forward-inbox/`. Sanity check: `env-setup.md`,
@@ -65,8 +65,12 @@ reconciliation. If overall project state did not materially change, leave this f
     `20261103120000_contact_form` is applied on dev, staging and production. Sanity check:
     `env-setup.md`, "Sanity check: storefront contact form"; the owner reported the production
     checks good (2026-11-04); step 8 (rate limit) has no separate live record. Viewing and retrying the outbox is `#1411`.
-    - **Outgoing mail works on both hosts** (owner, 2026-11-04): a production Client Setup test
-      email and a staging contact Enquiry both arrived from `no-reply@merqify.com`.
+    - **Outgoing mail is proven only to verified addresses** (owner, 2026-11-04): a production
+      Client Setup test email (to `demo-platform-admin@merqify.com`) and a staging contact Enquiry
+      (to the verified hub group) both arrived from `no-reply@merqify.com`. Before a domain is
+      onboarded in Email Sending, Cloudflare delivers only to verified addresses, so delivery to a
+      shopper's own mailbox is unconfirmed until the owner checks the onboarding status and a test
+      order confirmation reaches a non-verified Gmail.
     - **Staging only mails `EMAIL_ALLOWED_RECIPIENTS`**, now set to
       `demo-platform-admin@merqify.com,info-merqifyhub@googlegroups.com` (recorded in
       `secrets/merqify-staging.vars`; a put replaces the whole list). Any other recipient is
@@ -96,14 +100,16 @@ reconciliation. If overall project state did not materially change, leave this f
     on `aheed-store-staging` and `aheed-inbound-email-staging`, and
     `INBOUND_FALLBACK_FORWARD=info-merqifyhub@…` on the latter. They are recorded in
     `secrets/merqify-staging.vars`.
-  - **Production inbound secrets are NOT set.** The same script takes `production`; auto mode
-    refuses secret writes, so the owner runs it. Also still owed:
+  - **Production inbound secrets are SET** (owner, 2026-11-04): `INBOUND_EMAIL_TOKEN` on
+    `aheed-store-production` and `aheed-inbound-email` (a real Worker, first uploaded 2026-11-01),
+    and `INBOUND_FALLBACK_FORWARD=info-merqifyhub@…` on the latter. They are recorded in
+    `secrets/merqify-production.vars`. Still owed:
     - the store routing rules (`info-aheed[-staging]`, `info-srimart[-staging]` → the inbound
       Workers);
     - the Client Setup entries;
     - the owner's production platform-admin login.
-  - **Outgoing: `merqify.com` is NOT yet onboarded in Email Sending.** Production sends fail until it
-    is (R39). `#1383` (nocaped sender 403) is fixed in code by `#1217`'s sender fallback; close it
+  - **Outgoing: `merqify.com`'s Email Sending onboarding status is unrecorded.** Sends to verified
+    addresses work (above); the owner checks the dashboard (R39). `#1383` (nocaped sender 403) is fixed in code by `#1217`'s sender fallback; close it
     after a real test send.
   - **`hooks/pre-push` blocks remote branch deletions (`#1401`)**: `branches:prune --apply` deleted 25
     local copies, and all 29 origin deletions failed. Local 45, origin 70.
@@ -115,9 +121,9 @@ reconciliation. If overall project state did not materially change, leave this f
 - **2026-11-01 (`#1217`): email moves to Cloudflare, plus Client Setup. PROMOTED TO PRODUCTION
   (PR #1394 `24ce8b8` to staging, promotion PR #1396 `0842385`).** On 2026-11-02 both production hosts
   report `0842385`, `db.ok`.
-  - **R39 (real mail) is now met in practice:** both hosts deliver from `no-reply@merqify.com`
-    (owner, 2026-11-04, see `#1409` above). Resend was sandboxed and never reached real customers
-    (`#104`).
+  - **R39 (real mail) is partly met:** both hosts deliver from `no-reply@merqify.com` to verified
+    addresses (owner, 2026-11-04, see `#1409` above); delivery to shoppers is unconfirmed. Resend
+    was sandboxed and never reached real customers (`#104`).
     `EMAIL_PROVIDER=resend` restores Resend with no code change.
   - **Owner steps** (`env-setup.md`, "Email: sending and receiving", with its sanity check):
     - onboard the sending domain;
