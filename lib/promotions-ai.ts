@@ -31,8 +31,10 @@ export interface PromotionAiInput {
     savingsPence?: number | null;
     multiBuyQuantity?: number | null;
     multiBuyPricePence?: number | null;
+    multiBuySavingsPence?: number | null;
     discountKind?: "PERCENTAGE" | "FIXED_AMOUNT";
     discountValue?: number;
+    bundleItems?: Array<{ name: string; quantity: number; pricePence: number }>;
   } | null;
   categoryName?: string | null;
   audienceSegment: AudienceSegment;
@@ -57,8 +59,14 @@ export function buildPromotionPrompt(input: PromotionAiInput): string {
     "Generate engaging, conversion-focused promotional content incorporating these 4 core disciplines:",
     "1. BEHAVIOURAL ECONOMICS: Apply loss aversion (urgency, avoiding regret), choice architecture, and price anchoring.",
     "2. COGNITIVE BIASES: Integrate social proof ('Customer favourite', 'Top rated'), default effect, and reduce decision fatigue.",
-    "3. PRICING PSYCHOLOGY: Emphasize clear transparent value, savings, and multibuy advantages.",
+    "3. PRICING PSYCHOLOGY: Emphasize clear transparent value, verified savings, and multibuy advantages without inflating claims.",
     "4. NEUROMARKETING: Use sensory, emotive, action-oriented language, vibrant visual framing, and high-impact CTAs.",
+    "",
+    "CRITICAL TRUTHFULNESS & ANTI-HALLUCINATION RULES (STRICT COMPLIANCE REQUIRED):",
+    "- NEVER fabricate, invent, or assume any discount percentage, slashed price, or monetary saving that is not explicitly detailed in the Verified Item Details below.",
+    "- If NO discount, savings, or multi-buy offer is explicitly listed in the Verified Item Details, you MUST NOT claim any price cut, discount percentage, or savings in the headline, subtitle, or badge. Instead, frame the value around premium quality, authentic freshness, everyday value, curated convenience, or customer popularity.",
+    "- Only reference the EXACT savings, prices, and multi-buy figures provided in the Verified Item Details.",
+    "- For 'badgeText': Only use a savings or discount badge (e.g. 'Save £1.97', '3 for £10', '10% OFF') if that EXACT offer exists in the details below. If no discount exists, use non-price badges like 'Store Favourite', 'Fresh Daily', 'Curated Pack', 'Top Seller', or 'Chef's Choice'.",
     "",
     `Target Marketing Channel: ${input.channel}`,
     `Target Audience: ${input.audienceSegment}`,
@@ -76,26 +84,41 @@ export function buildPromotionPrompt(input: PromotionAiInput): string {
 
   if (input.itemDetails) {
     const d = input.itemDetails;
-    lines.push(`Item Name: ${d.name}`);
-    if (d.description) lines.push(`Item Details: ${d.description}`);
+    lines.push("Verified Item Details:");
+    lines.push(`- Item Name: ${d.name}`);
+    if (d.description) lines.push(`- Item Details: ${d.description}`);
     if (d.basePricePence) {
-      lines.push(`Current Selling Price: £${(d.basePricePence / 100).toFixed(2)}`);
+      lines.push(`- Current Selling Price: £${(d.basePricePence / 100).toFixed(2)}`);
     }
     if (d.originalPricePence && d.basePricePence && d.originalPricePence > d.basePricePence) {
       const saving = d.originalPricePence - d.basePricePence;
-      lines.push(`Regular/Was Price: £${(d.originalPricePence / 100).toFixed(2)}`);
-      lines.push(`Net Savings: £${(saving / 100).toFixed(2)}`);
+      lines.push(`- Regular/Was Price: £${(d.originalPricePence / 100).toFixed(2)}`);
+      lines.push(`- Markdown Savings: £${(saving / 100).toFixed(2)}`);
     }
     if (d.multiBuyQuantity && d.multiBuyPricePence) {
-      lines.push(
-        `Multi-buy Deal: ${d.multiBuyQuantity} items for £${(d.multiBuyPricePence / 100).toFixed(2)}`,
-      );
+      let multiBuyLine = `- Multi-buy Offer: ${d.multiBuyQuantity} for £${(d.multiBuyPricePence / 100).toFixed(2)}`;
+      if (d.multiBuySavingsPence && d.multiBuySavingsPence > 0) {
+        multiBuyLine += ` (Save £${(d.multiBuySavingsPence / 100).toFixed(2)} compared to single unit price)`;
+      }
+      lines.push(multiBuyLine);
     }
     if (d.discountKind && d.discountValue) {
       lines.push(
-        `Discount: ${d.discountValue}${d.discountKind === "PERCENTAGE" ? "% OFF" : "p OFF"}`,
+        `- Discount Offer: ${d.discountKind === "PERCENTAGE" ? `${d.discountValue}% OFF` : `£${(d.discountValue / 100).toFixed(2)} OFF`}`,
       );
     }
+    if (d.bundleItems && d.bundleItems.length > 0) {
+      lines.push(`- Bundle Contents:`);
+      for (const item of d.bundleItems) {
+        lines.push(
+          `    * ${item.quantity}x ${item.name} (£${(item.pricePence / 100).toFixed(2)} each)`,
+        );
+      }
+    }
+  } else {
+    lines.push(
+      "Verified Item Details: No specific item or discount code selected. Promotion applies store-wide.",
+    );
   }
 
   lines.push(
@@ -104,7 +127,7 @@ export function buildPromotionPrompt(input: PromotionAiInput): string {
     "{",
     '  "headline": "Punchy, persuasive headline under 50 characters",',
     '  "subtitle": "Compelling value proposition under 120 characters",',
-    '  "badgeText": "Short urgency or social proof tag under 20 characters (e.g. Save 20%, Customer Top Pick, Limited Offer)",',
+    '  "badgeText": "Short urgency, social proof, or truthful discount tag under 20 characters (must match verified discount if one exists, otherwise quality/social proof)",',
     '  "callToActionText": "Direct action button label under 20 characters (e.g. Shop Deal, Claim Offer, Order Now)",',
     '  "altText": "Descriptive accessibility text for the banner photograph under 100 characters",',
     '  "imagePrompt": "Detailed commercial photography visual prompt for Flux text-to-image. Appetizing, vibrant, clean studio lighting, shallow depth of field, high contrast, professional e-commerce hero banner."',

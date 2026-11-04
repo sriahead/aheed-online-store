@@ -51,7 +51,23 @@ export async function generatePromotionAiForVendor(
     params.bundleId
       ? prisma.bundle.findFirst({
           where: { id: params.bundleId, vendorId },
-          select: { name: true, tagline: true },
+          select: {
+            name: true,
+            tagline: true,
+            items: {
+              select: {
+                quantity: true,
+                product: {
+                  select: {
+                    name: true,
+                    basePrice: true,
+                    originalPrice: true,
+                  },
+                },
+              },
+              orderBy: { sortOrder: "asc" },
+            },
+          },
         })
       : null,
     params.discountCodeId
@@ -61,6 +77,41 @@ export async function generatePromotionAiForVendor(
         })
       : null,
   ]);
+
+  const hasProductMarkdown =
+    product &&
+    typeof product.originalPrice === "number" &&
+    product.originalPrice > product.basePrice;
+
+  const multiBuyActive = product?.priceTier?.isActive ?? false;
+  const regularMultiBuyCost =
+    product && multiBuyActive ? product.priceTier!.groupQuantity * product.basePrice : 0;
+  const multiBuySavingsPence =
+    product && multiBuyActive && regularMultiBuyCost > product.priceTier!.groupPricePence
+      ? regularMultiBuyCost - product.priceTier!.groupPricePence
+      : null;
+
+  const bundleTotalPence = bundle
+    ? bundle.items.reduce((sum, item) => sum + item.quantity * item.product.basePrice, 0)
+    : 0;
+
+  const bundleWasTotalPence = bundle
+    ? bundle.items.reduce(
+        (sum, item) =>
+          sum +
+          item.quantity *
+            (typeof item.product.originalPrice === "number" &&
+            item.product.originalPrice > item.product.basePrice
+              ? item.product.originalPrice
+              : item.product.basePrice),
+        0,
+      )
+    : 0;
+
+  const bundleSavingsPence =
+    bundle && bundleWasTotalPence > bundleTotalPence
+      ? bundleWasTotalPence - bundleTotalPence
+      : null;
 
   const input: PromotionAiInput = {
     vendorId,
@@ -75,24 +126,27 @@ export async function generatePromotionAiForVendor(
           name: product.name,
           description: product.description,
           basePricePence: product.basePrice,
-          originalPricePence: product.originalPrice,
-          savingsPence:
-            product.originalPrice && product.originalPrice > product.basePrice
-              ? product.originalPrice - product.basePrice
-              : null,
-          multiBuyQuantity: product.priceTier?.isActive ? product.priceTier.groupQuantity : null,
-          multiBuyPricePence: product.priceTier?.isActive
-            ? product.priceTier.groupPricePence
-            : null,
+          originalPricePence: hasProductMarkdown ? product.originalPrice : null,
+          savingsPence: hasProductMarkdown ? product.originalPrice! - product.basePrice : null,
+          multiBuyQuantity: multiBuyActive ? product.priceTier!.groupQuantity : null,
+          multiBuyPricePence: multiBuyActive ? product.priceTier!.groupPricePence : null,
+          multiBuySavingsPence,
         }
       : bundle
         ? {
             name: bundle.name,
             description: bundle.tagline,
+            basePricePence: bundleTotalPence,
+            savingsPence: bundleSavingsPence,
+            bundleItems: bundle.items.map((it) => ({
+              name: it.product.name,
+              quantity: it.quantity,
+              pricePence: it.product.basePrice,
+            })),
           }
         : discountCode
           ? {
-              name: `Code ${discountCode.code}`,
+              name: `Discount Code ${discountCode.code}`,
               discountKind: discountCode.kind,
               discountValue: discountCode.value,
             }
