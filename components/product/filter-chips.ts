@@ -50,6 +50,7 @@ export type FilterChipParams = {
   featured?: string;
   category?: string;
   packSize?: string;
+  sort?: string;
   cursor?: string;
   back?: string;
 };
@@ -88,6 +89,9 @@ function buildHref(
   const qs = new URLSearchParams();
   if (!omit.includes("q") && typeof params.q === "string" && params.q !== "") {
     qs.set("q", params.q);
+  }
+  if (typeof params.sort === "string" && params.sort !== "") {
+    qs.set("sort", params.sort);
   }
   for (const [key, value] of filterEntries(params, omit)) {
     if (omitPair && key === omitPair[0] && value === omitPair[1]) continue;

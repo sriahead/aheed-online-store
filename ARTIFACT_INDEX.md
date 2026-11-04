@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-04T15:09:07.145Z` · commit `0429ed97` · `312` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-04T23:39:33.132Z` · commit `60efef62` · `313` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -300,6 +300,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Storefront contact and complaint form (plan)](specs/2026-11-03-storefront-contact-form/plan.md) | spec | 1.0.0 | 2026-11-03 | draft | internal | A storefront Contact us form for shoppers. Mail goes to the store's Client Setup forward-to, with environment-tagged subjects and a retry outbox for failed sends. Shared stores hide their footer email. |
 | [Client Setup: info- sender suggestion from the store's subdomain (plan)](specs/2026-11-04-info-sender-suggestion/plan.md) | spec | 1.0.0 | 2026-11-04 | draft | internal | Client Setup's suggested sender becomes info@<own domain>, else info-<subdomain>@<platform domain> from the store's platform subdomain, else info-<slug>@<platform domain>, replacing the orders- forms (#1419). |
 | [Promotions: Marketing Campaign Management, Eligible Offer Items & AI Generation (plan)](specs/2026-11-04-p1415-promotions-campaign-marketing/plan.md) | spec | 1.0.0 | 2026-11-04 | approved | internal | Separation of offer configuration from marketing campaign management, eligible promotional product selection, department scoping, checkout auto-application, psychology-led AI generation, and multi-channel publishing architecture. |
+| [Product Filtering Component CRO & UX Improvements (Plan)](specs/2026-11-04-product-filtering-cro/plan.md) | spec | 1.0.0 | 2026-11-04 | draft | internal | Overhaul storefront product filtering and discovery using ethical consumer psychology and CRO. Adds storefront sorting, quick filter pills, price ranges, live counts, and zero-result relaxation with no-JS fallback. |
 | [Promotion Intelligence Platform & Storefront Experience (plan)](specs/2026-11-04-promotions-landing-overhaul/plan.md) | spec | 2.0.0 | 2026-11-04 | draft | internal | Psychology-led promotion platform upgrading staff campaign management and landing hero display with behavioural economics, audience targeting, prioritisation, and phased analytics/experimentation. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.46.0 | 2026-11-02 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |

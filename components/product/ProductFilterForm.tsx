@@ -1,10 +1,34 @@
+import Link from "next/link";
 import { formatPackSize, packSizeParamValue } from "@/components/product/unit-price";
 import type { AvailableFacets } from "@/lib/repositories/products";
 import {
   ATTRIBUTE_PARAM_PREFIX,
   attributeParamValues,
+  filterEntries,
   type FilterParamValue,
 } from "@/components/product/filter-params";
+
+function pricePresetHref(
+  basePath: string,
+  params: Record<string, FilterParamValue>,
+  minPrice?: string,
+  maxPrice?: string,
+): string {
+  const qs = new URLSearchParams();
+  if (typeof params.q === "string" && params.q !== "") {
+    qs.set("q", params.q);
+  }
+  if (typeof params.sort === "string" && params.sort !== "") {
+    qs.set("sort", params.sort);
+  }
+  for (const [key, value] of filterEntries(params, ["minPrice", "maxPrice", "cursor", "back"])) {
+    qs.append(key, value);
+  }
+  if (minPrice) qs.set("minPrice", minPrice);
+  if (maxPrice) qs.set("maxPrice", maxPrice);
+  const query = qs.toString();
+  return query ? `${basePath}?${query}` : basePath;
+}
 
 /**
  * Plain <form method="GET"> — no client-side JS. Submitting it is a real page
@@ -18,10 +42,13 @@ export function ProductFilterForm({
   showQuery,
   searchParams,
   facets,
+  basePath = "",
 }: {
   showQuery?: boolean;
+  basePath?: string;
   searchParams: {
     q?: string;
+    sort?: string;
     minPrice?: string;
     maxPrice?: string;
     inStock?: string;
@@ -71,6 +98,7 @@ export function ProductFilterForm({
         pagination at page 1.
       */}
       {searchParams.featured === "1" && <input type="hidden" name="featured" value="1" />}
+      {searchParams.sort && <input type="hidden" name="sort" value={searchParams.sort} />}
 
       {/*
         #704 — `category`'s hidden passthrough is BACK. #681 had replaced it with a real select
@@ -123,95 +151,183 @@ export function ProductFilterForm({
             className="w-full min-h-tap lg:min-h-0 rounded-lg border border-black/20 px-3 py-2"
           />
         </div>
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          <Link
+            href={pricePresetHref(basePath, searchParams, undefined, "2")}
+            className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+              !searchParams.minPrice && searchParams.maxPrice === "2"
+                ? "bg-action text-white"
+                : "bg-surface-muted text-primary hover:bg-black/5"
+            }`}
+          >
+            Under £2
+          </Link>
+          <Link
+            href={pricePresetHref(basePath, searchParams, "2", "5")}
+            className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+              searchParams.minPrice === "2" && searchParams.maxPrice === "5"
+                ? "bg-action text-white"
+                : "bg-surface-muted text-primary hover:bg-black/5"
+            }`}
+          >
+            £2 – £5
+          </Link>
+          <Link
+            href={pricePresetHref(basePath, searchParams, "5", "10")}
+            className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+              searchParams.minPrice === "5" && searchParams.maxPrice === "10"
+                ? "bg-action text-white"
+                : "bg-surface-muted text-primary hover:bg-black/5"
+            }`}
+          >
+            £5 – £10
+          </Link>
+          <Link
+            href={pricePresetHref(basePath, searchParams, "10", undefined)}
+            className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+              searchParams.minPrice === "10" && !searchParams.maxPrice
+                ? "bg-action text-white"
+                : "bg-surface-muted text-primary hover:bg-black/5"
+            }`}
+          >
+            £10+
+          </Link>
+        </div>
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold text-primary">Filter by</legend>
-        <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
-          <input
-            type="checkbox"
-            name="inStock"
-            value="1"
-            defaultChecked={searchParams.inStock === "1"}
-          />
-          <span className="text-sm text-primary">In stock only</span>
-        </label>
-        {spec.halal && (
-          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
+        <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
+          <div className="flex items-center gap-2">
             <input
               type="checkbox"
-              name="isHalal"
+              name="inStock"
               value="1"
-              defaultChecked={searchParams.isHalal === "1"}
+              defaultChecked={searchParams.inStock === "1"}
             />
-            <span className="text-sm text-primary">Halal</span>
+            <span className="text-sm text-primary">In stock only</span>
+          </div>
+          {spec.inStockCount !== undefined && (
+            <span className="text-xs text-primary-muted font-normal">({spec.inStockCount})</span>
+          )}
+        </label>
+        {spec.halal && (
+          <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="isHalal"
+                value="1"
+                defaultChecked={searchParams.isHalal === "1"}
+              />
+              <span className="text-sm text-primary">Halal</span>
+            </div>
+            {spec.halalCount !== undefined && (
+              <span className="text-xs text-primary-muted font-normal">({spec.halalCount})</span>
+            )}
           </label>
         )}
         {spec.fresh && (
-          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
-            <input
-              type="checkbox"
-              name="isFresh"
-              value="1"
-              defaultChecked={searchParams.isFresh === "1"}
-            />
-            <span className="text-sm text-primary">Fresh</span>
+          <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="isFresh"
+                value="1"
+                defaultChecked={searchParams.isFresh === "1"}
+              />
+              <span className="text-sm text-primary">Fresh</span>
+            </div>
+            {spec.freshCount !== undefined && (
+              <span className="text-xs text-primary-muted font-normal">({spec.freshCount})</span>
+            )}
           </label>
         )}
         {spec.organic && (
-          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
-            <input
-              type="checkbox"
-              name="isOrganic"
-              value="1"
-              defaultChecked={searchParams.isOrganic === "1"}
-            />
-            <span className="text-sm text-primary">Organic</span>
+          <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="isOrganic"
+                value="1"
+                defaultChecked={searchParams.isOrganic === "1"}
+              />
+              <span className="text-sm text-primary">Organic</span>
+            </div>
+            {spec.organicCount !== undefined && (
+              <span className="text-xs text-primary-muted font-normal">({spec.organicCount})</span>
+            )}
           </label>
         )}
         {/* #569 — dietary facets, same conditional-visibility rule as the three above. */}
         {spec.vegetarian && (
-          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
-            <input
-              type="checkbox"
-              name="isVegetarian"
-              value="1"
-              defaultChecked={searchParams.isVegetarian === "1"}
-            />
-            <span className="text-sm text-primary">Vegetarian</span>
+          <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="isVegetarian"
+                value="1"
+                defaultChecked={searchParams.isVegetarian === "1"}
+              />
+              <span className="text-sm text-primary">Vegetarian</span>
+            </div>
+            {spec.vegetarianCount !== undefined && (
+              <span className="text-xs text-primary-muted font-normal">
+                ({spec.vegetarianCount})
+              </span>
+            )}
           </label>
         )}
         {spec.glutenFree && (
-          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
-            <input
-              type="checkbox"
-              name="isGlutenFree"
-              value="1"
-              defaultChecked={searchParams.isGlutenFree === "1"}
-            />
-            <span className="text-sm text-primary">Gluten free</span>
+          <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="isGlutenFree"
+                value="1"
+                defaultChecked={searchParams.isGlutenFree === "1"}
+              />
+              <span className="text-sm text-primary">Gluten free</span>
+            </div>
+            {spec.glutenFreeCount !== undefined && (
+              <span className="text-xs text-primary-muted font-normal">
+                ({spec.glutenFreeCount})
+              </span>
+            )}
           </label>
         )}
         {spec.hmcCertified && (
-          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
-            <input
-              type="checkbox"
-              name="isHmcCertified"
-              value="1"
-              defaultChecked={searchParams.isHmcCertified === "1"}
-            />
-            <span className="text-sm text-primary">HMC certified</span>
+          <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="isHmcCertified"
+                value="1"
+                defaultChecked={searchParams.isHmcCertified === "1"}
+              />
+              <span className="text-sm text-primary">HMC certified</span>
+            </div>
+            {spec.hmcCertifiedCount !== undefined && (
+              <span className="text-xs text-primary-muted font-normal">
+                ({spec.hmcCertifiedCount})
+              </span>
+            )}
           </label>
         )}
         {spec.onOffer && (
-          <label className="flex min-h-tap lg:min-h-0 items-center gap-2">
-            <input
-              type="checkbox"
-              name="onOffer"
-              value="1"
-              defaultChecked={searchParams.onOffer === "1"}
-            />
-            <span className="text-sm text-primary">On offer</span>
+          <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="onOffer"
+                value="1"
+                defaultChecked={searchParams.onOffer === "1"}
+              />
+              <span className="text-sm text-primary">On offer</span>
+            </div>
+            {spec.onOfferCount !== undefined && (
+              <span className="text-xs text-primary-muted font-normal">({spec.onOfferCount})</span>
+            )}
           </label>
         )}
       </fieldset>
