@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Department-Scoped Promotional Discounts at Checkout** (issue `#1415`).
+  - **Scoped Discount Arithmetic (`lib/discounts.ts`):** Added `eligibleSubtotalPence` support to `evaluateCode` and `computeCodeDiscountPence`. When a promotion is scoped to a department (or sub-department), percentage discounts compute strictly against eligible products belonging to that department, and fixed discounts are capped at the department's spend. Refuses with `"NO_ELIGIBLE_ITEMS"` if the cart has no products from the promoted department.
+  - **Line Item Scoping in Preview & Claim (`lib/repositories/discounts.ts`):** `previewCode` and `claimCode` query active promotions linked to the discount code. If a promotion specifies `categoryId` (or `productId`), products in `cartItems` are resolved against the department hierarchy (`categoryId` and `category.parentId`), computing exact eligible spend without spilling discounts to other departments.
+  - **Checkout Integration (`lib/checkout-preview-service.ts` & `lib/repositories/orders.ts`):** Both read-only code preview and transactional order placement pass cart item identifiers and line totals to ensure identical, pure evaluation.
+  - **Unit Tests (`tests/discounts.test.ts` & `tests/discounts-preview.test.ts`):** Added tests verifying that multi-department baskets discount only eligible department lines, zero-eligible baskets are refused with clear copy, and store-wide promotions discount the entire subtotal.
+
 - **Promotions AI Anti-Hallucination Guardrails & Truth Verification** (issue `#1415`).
   - **Anti-Hallucination Prompt Constraints (`lib/promotions-ai.ts`):** Enforced mandatory truthfulness rules in `buildPromotionPrompt`. Forbids hallucinated discount percentages, fabricated was-prices, or artificial savings when none exist on the selected item. Stripped misleading prompt examples (`Save 20%`) and enforced context-appropriate social proof/quality badges (`Customer Favourite`, `Store Pick`) when items lack explicit discounts.
   - **Truthful Item & Bundle Details Provider (`lib/promotions-ai-service.ts`):** Bundles now supply itemized constituents with individual unit prices and derived total bundle pricing. Product queries accurately compute real multi-buy savings (e.g. 3 for £10 vs £3.99 each saves £1.97) and suppress invalid was-price entries (`originalPrice <= basePrice`).

@@ -67,6 +67,10 @@ export async function previewCheckoutCode(rawCode: string | null): Promise<CodeP
       userId,
       subtotalPence: preDiscount.subtotalPence,
       deliveryFeePence: preDiscount.deliveryFeePence,
+      cartItems: summary.lines.map((l) => ({
+        productId: l.productId,
+        lineTotalPence: l.lineTotalPence,
+      })),
     });
     if (!preview.ok && preview.reason === "UNKNOWN") await recordCallerUnknownCode();
     return preview.ok
