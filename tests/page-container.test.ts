@@ -80,7 +80,8 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(admin)/staff/products/new/page.tsx": { width: "narrow", padY: "default" },
   "app/(admin)/staff/categories/[id]/page.tsx": { width: "narrow", padY: "default" },
   "app/(admin)/staff/bundles/[bundleId]/page.tsx": { width: "narrow", padY: "default" },
-  "app/(admin)/staff/promotions/[categoryId]/page.tsx": { width: "narrow", padY: "default" },
+  "app/(admin)/staff/promotions/[id]/page.tsx": { width: "narrow", padY: "default" },
+  "app/(admin)/staff/promotions/new/page.tsx": { width: "narrow", padY: "default" },
   // --- storefront + landing: wide
   "app/(landing)/page.tsx": { width: "wide", padY: "tight" },
   "app/(storefront)/categories/page.tsx": { width: "wide", padY: "tight" },

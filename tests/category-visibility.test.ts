@@ -120,14 +120,9 @@ describe("a hidden department's promotion stays out of the landing carousel (R6a
     expect(slugs).toEqual(["fruit"]);
   });
 
-  it("the landing page asks for campaigns only for the departments that list returned", () => {
-    // The carousel's slides and its campaign lookup are both keyed on `listTopLevel()`'s result, so
-    // a hidden department's DepartmentCampaign is never requested (and never touched).
+  it("the landing page asks for live promotions independently (#1412)", () => {
     const source = readFileSync(join(__dirname, "..", "app", "(landing)", "page.tsx"), "utf8");
-    expect(source).toMatch(
-      /const \[categories, profile\] = await Promise\.all\(\[\s*getCategoryRepository\(\)\.listTopLevel\(\)/,
-    );
-    expect(source).toContain("getCampaignsForHero(categories.map((c) => c.id))");
-    expect(source).toMatch(/const heroDepartments = categories\.map\(/);
+    expect(source).toContain("getLivePromotionsForStorefront()");
+    expect(source).toContain("<PromotionHero");
   });
 });
