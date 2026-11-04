@@ -44,7 +44,7 @@ export default async function NewPromotionPage() {
   const timezone = profile?.timezone ?? STORE_TIMEZONE;
 
   return (
-    <PageContainer width="narrow" className="space-y-6">
+    <PageContainer width="wide" className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-primary">Create Promotion</h1>
         <p className="text-sm text-primary-muted">

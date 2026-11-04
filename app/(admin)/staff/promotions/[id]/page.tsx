@@ -57,7 +57,7 @@ export default async function EditPromotionPage({ params }: { params: Promise<{ 
     promotion.imageKey && CDN_BASE_URL ? composePublicUrl(CDN_BASE_URL, promotion.imageKey) : null;
 
   return (
-    <PageContainer width="narrow" className="space-y-6">
+    <PageContainer width="wide" className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-primary">Edit Promotion</h1>
         <p className="text-sm text-primary-muted">

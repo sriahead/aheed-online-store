@@ -261,485 +261,515 @@ export function PromotionForm({
           </p>
         )}
 
-        {/* 1. Offer & Scope Selection */}
-        <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
-          <h2 className="text-base font-semibold text-primary">1. Offer &amp; Scope Selection</h2>
-          <p className="text-xs text-primary-muted">
-            Configure which existing eligible item, department, or store-wide offer to promote.
-            Commercial pricing, discounts, and bundles are managed separately in their respective
-            modules.
-          </p>
-
-          {/* Department Selection (Optional) */}
-          <div>
-            <label htmlFor="categoryId" className="mb-1 block text-sm font-semibold text-primary">
-              Department / Sub-department (Optional)
-            </label>
-            <p className="mb-2 text-xs text-primary-muted">
-              Scope this promotion to a department or sub-department. Leave unselected to apply
-              store-wide.
-            </p>
-            <select
-              id="categoryId"
-              name="categoryId"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full rounded-xl border border-black/20 p-2.5 text-sm bg-white"
-            >
-              <option value="">-- Store-wide (All Departments) --</option>
-              {toCategoryOptionGroups(categoryOptions).map((group) => (
-                <optgroup key={group.parent.id} label={group.parent.name}>
-                  <option value={group.parent.id}>{group.parent.name} — entire department</option>
-                  {group.children.map((child) => (
-                    <option key={child.id} value={child.id}>
-                      ↳ {child.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-          </div>
-
-          {/* Offer Type Radio */}
-          <div className="pt-2">
-            <span className="mb-2 block text-sm font-semibold text-primary">
-              Promotional Offer Type
-            </span>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <label className="flex items-center gap-2 rounded-xl border border-black/10 p-3 text-sm font-medium text-primary hover:bg-black/5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="targetType"
-                  value="PRODUCT"
-                  checked={targetType === "PRODUCT"}
-                  onChange={() => setTargetType("PRODUCT")}
-                  className="h-4 w-4 text-action"
-                />
-                <span>Product on Offer (markdown or multi-buy)</span>
-              </label>
-
-              <label className="flex items-center gap-2 rounded-xl border border-black/10 p-3 text-sm font-medium text-primary hover:bg-black/5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="targetType"
-                  value="BUNDLE"
-                  checked={targetType === "BUNDLE"}
-                  onChange={() => setTargetType("BUNDLE")}
-                  className="h-4 w-4 text-action"
-                />
-                <span>Product Bundle (/staff/bundles)</span>
-              </label>
-
-              <label className="flex items-center gap-2 rounded-xl border border-black/10 p-3 text-sm font-medium text-primary hover:bg-black/5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="targetType"
-                  value="DISCOUNT_CODE"
-                  checked={targetType === "DISCOUNT_CODE"}
-                  onChange={() => setTargetType("DISCOUNT_CODE")}
-                  className="h-4 w-4 text-action"
-                />
-                <span>Discount Code (/staff/discounts)</span>
-              </label>
-
-              <label className="flex items-center gap-2 rounded-xl border border-black/10 p-3 text-sm font-medium text-primary hover:bg-black/5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="targetType"
-                  value="GENERIC"
-                  checked={targetType === "GENERIC"}
-                  onChange={() => setTargetType("GENERIC")}
-                  className="h-4 w-4 text-action"
-                />
-                <span>General Campaign (No Specific Item)</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Conditional Product Picker */}
-          {targetType === "PRODUCT" && (
-            <div>
-              <label htmlFor="productId" className="mb-1 block text-sm font-semibold text-primary">
-                Select Product on Offer <span className="text-danger">*</span>
-              </label>
-              <p className="mb-2 text-xs text-primary-muted">
-                Displaying only products with active promotional content (Was-price markdown, active
-                multi-buy, or featured)
-                {selectedCategory ? " within the selected department." : "."}
-              </p>
-              {filteredProducts.length === 0 ? (
-                <div className="rounded-xl border border-black/10 bg-black/[0.02] p-3 text-sm text-primary-muted">
-                  No products with active promotional offers found in this department. Configure a
-                  was-price or multi-buy in{" "}
-                  <Link href="/staff/products" className="font-medium text-action underline">
-                    Products
-                  </Link>{" "}
-                  first.
-                </div>
-              ) : (
-                <select
-                  id="productId"
-                  name="productId"
-                  value={selectedProduct}
-                  onChange={(e) => setSelectedProduct(e.target.value)}
-                  className="w-full rounded-xl border border-black/20 p-2.5 text-sm bg-white"
-                >
-                  <option value="">-- Choose an eligible promotional product --</option>
-                  {filteredProducts.map((p) => {
-                    const badges: string[] = [];
-                    if (p.originalPrice) {
-                      const was = (p.originalPrice / 100).toFixed(2);
-                      const now = (p.basePrice / 100).toFixed(2);
-                      if (p.originalPrice > p.basePrice) {
-                        const save = ((p.originalPrice - p.basePrice) / 100).toFixed(2);
-                        badges.push(`Was £${was}, Now £${now} (Save £${save})`);
-                      } else {
-                        badges.push(`Was £${was}, Now £${now}`);
-                      }
-                    }
-                    if (p.priceTier?.isActive) {
-                      badges.push(
-                        `Multi-buy: ${p.priceTier.groupQuantity} for £${(
-                          p.priceTier.groupPricePence / 100
-                        ).toFixed(2)}`,
-                      );
-                    }
-                    if (p.isFeatured && badges.length === 0) {
-                      badges.push("Featured on homepage");
-                    }
-                    const contextLabel = badges.length > 0 ? ` — ${badges.join(" | ")}` : "";
-                    return (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.unitLabel}){contextLabel}
-                      </option>
-                    );
-                  })}
-                </select>
-              )}
-            </div>
-          )}
-
-          {/* Conditional Bundle Picker */}
-          {targetType === "BUNDLE" && (
-            <div>
-              <label htmlFor="bundleId" className="mb-1 block text-sm font-semibold text-primary">
-                Select Product Bundle <span className="text-danger">*</span>
-              </label>
-              <select
-                id="bundleId"
-                name="bundleId"
-                value={selectedBundle}
-                onChange={(e) => setSelectedBundle(e.target.value)}
-                className="w-full rounded-xl border border-black/20 p-2.5 text-sm bg-white"
-              >
-                <option value="">-- Choose an active bundle --</option>
-                {bundles.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Conditional Discount Code Picker */}
-          {targetType === "DISCOUNT_CODE" && (
-            <div>
-              <label
-                htmlFor="discountCodeId"
-                className="mb-1 block text-sm font-semibold text-primary"
-              >
-                Select Discount Code <span className="text-danger">*</span>
-              </label>
-              <select
-                id="discountCodeId"
-                name="discountCodeId"
-                value={selectedDiscountCode}
-                onChange={(e) => setSelectedDiscountCode(e.target.value)}
-                className="w-full rounded-xl border border-black/20 p-2.5 text-sm bg-white"
-              >
-                <option value="">-- Choose an active discount code --</option>
-                {discountCodes.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.code} {d.description ? `(${d.description})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Multi-Channel Destination (Future Architecture) */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2 border-t border-black/10">
-            <div>
-              <label htmlFor="channel" className="mb-1 block text-sm font-semibold text-primary">
-                Marketing Channel
-              </label>
-              <select
-                id="channel"
-                name="channel"
-                value={selectedChannel}
-                onChange={(e) => setSelectedChannel(e.target.value as PromotionChannel)}
-                className="w-full rounded-xl border border-black/20 p-2.5 text-sm bg-white"
-              >
-                <option value="WEBSITE">Website Storefront (Live)</option>
-                <option value="WHATSAPP">WhatsApp Broadcast (Preview)</option>
-                <option value="FACEBOOK">Facebook Post (Preview)</option>
-                <option value="INSTAGRAM">Instagram Promo (Preview)</option>
-              </select>
-            </div>
-
-            <FormField
-              name="linkUrl"
-              label="Custom Link (optional — defaults to target destination)"
-              placeholder="/categories/... or /products/..."
-              defaultValue={promotion?.linkUrl ?? ""}
-              error={isInvalid("linkUrl")}
-              errorId="promotion-form-error"
-            />
-          </div>
-        </section>
-
-        {/* 2. Scheduling & Prioritisation */}
-        <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
-          <h2 className="text-base font-semibold text-primary">
-            2. Scheduling &amp; Prioritisation
-          </h2>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField
-              name="startsAt"
-              label="Starts (optional)"
-              type="datetime-local"
-              defaultValue={formatLocalInput(promotion?.startsAt ?? null, timezone)}
-              error={isInvalid("startsAt")}
-              errorId="promotion-form-error"
-            />
-            <FormField
-              name="endsAt"
-              label="Ends (optional)"
-              type="datetime-local"
-              defaultValue={formatLocalInput(promotion?.endsAt ?? null, timezone)}
-              error={isInvalid("endsAt")}
-              errorId="promotion-form-error"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="priority" className="mb-1 block text-sm font-semibold text-primary">
-                Priority Ranking (higher numbers display first)
-              </label>
-              <input
-                id="priority"
-                name="priority"
-                type="number"
-                min="0"
-                max="1000"
-                defaultValue={promotion?.priority ?? 0}
-                className="w-full rounded-xl border border-black/20 p-2.5 text-sm"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="audienceSegment"
-                className="mb-1 block text-sm font-semibold text-primary"
-              >
-                Audience Segment
-              </label>
-              <select
-                id="audienceSegment"
-                name="audienceSegment"
-                value={selectedAudience}
-                onChange={(e) => setSelectedAudience(e.target.value as AudienceSegment)}
-                className="w-full rounded-xl border border-black/20 p-2.5 text-sm bg-white"
-              >
-                <option value="ALL">All Customers</option>
-                <option value="NEW_CUSTOMER">New Customers Only</option>
-                <option value="RETURNING_CUSTOMER">Returning Customers</option>
-                <option value="LOYALTY_MEMBER">Loyalty Club Members</option>
-              </select>
-            </div>
-          </div>
-
-          <label className="flex items-center gap-2 pt-2 text-sm font-medium text-primary">
-            <input
-              type="checkbox"
-              name="isActive"
-              defaultChecked={promotion?.isActive ?? true}
-              className="h-4 w-4 rounded border-black/20 text-action"
-            />
-            Active (display on storefront when within scheduled dates)
-          </label>
-        </section>
-
-        {/* 3. Promotional Messaging (Reordered after Scheduling & Prioritisation) */}
-        <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
-          <h2 className="text-base font-semibold text-primary">3. Promotional Messaging</h2>
-
-          <div>
-            <label htmlFor="headline" className="mb-1 block text-sm font-semibold text-primary">
-              Headline <span className="text-danger">*</span>
-            </label>
-            <input
-              id="headline"
-              name="headline"
-              required
-              placeholder="e.g. Fresh Weekend Feast"
-              value={headline}
-              onChange={(e) => setHeadline(e.target.value)}
-              className="w-full rounded-xl border border-black/20 p-2.5 text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="subtitle" className="mb-1 block text-sm font-semibold text-primary">
-              Subtitle (optional)
-            </label>
-            <input
-              id="subtitle"
-              name="subtitle"
-              placeholder="e.g. Save 15% on prime butcher cuts this Friday through Sunday"
-              value={subtitle}
-              onChange={(e) => setSubtitle(e.target.value)}
-              className="w-full rounded-xl border border-black/20 p-2.5 text-sm"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="badgeText" className="mb-1 block text-sm font-semibold text-primary">
-                Badge / Tag (optional)
-              </label>
-              <input
-                id="badgeText"
-                name="badgeText"
-                placeholder="e.g. Weekend Deal, Customer Favourite"
-                value={badgeText}
-                onChange={(e) => setBadgeText(e.target.value)}
-                className="w-full rounded-xl border border-black/20 p-2.5 text-sm"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="callToActionText"
-                className="mb-1 block text-sm font-semibold text-primary"
-              >
-                Button Text (optional)
-              </label>
-              <input
-                id="callToActionText"
-                name="callToActionText"
-                placeholder="e.g. Explore Offers, Shop Now"
-                value={callToActionText}
-                onChange={(e) => setCallToActionText(e.target.value)}
-                className="w-full rounded-xl border border-black/20 p-2.5 text-sm"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* 4. Visual Media & AI Generation */}
-        <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
+        {/* Two-column layout on large screens */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          {/* Left Column: Strategy, Targeting & Scope */}
+          <div className="space-y-6">
+            {/* 1. Offer & Scope Selection */}
+            <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
               <h2 className="text-base font-semibold text-primary">
-                4. Promotional Banner &amp; Creative
+                1. Offer &amp; Scope Selection
               </h2>
               <p className="text-xs text-primary-muted">
-                Upload a custom photo or generate conversion-focused messaging and banner imagery
-                using AI.
+                Configure which existing eligible item, department, or store-wide offer to promote.
+                Commercial pricing, discounts, and bundles are managed separately in their
+                respective modules.
               </p>
-            </div>
-          </div>
 
-          {/* Psychology-Led AI Generation Callout & Action */}
-          <div className="rounded-2xl border border-action/20 bg-action-tint/30 p-4 space-y-3">
-            <div className="flex items-start gap-3">
-              <Icon name="sparkles" className="h-5 w-5 text-action shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-primary">
-                  Psychology-Led AI Content Generation
-                </h3>
-                <p className="text-xs text-primary-muted leading-relaxed">
-                  Generates engaging, conversion-focused promotional messages and banners engineered
-                  using{" "}
-                  <strong>
-                    consumer psychology, behavioural economics (loss aversion &amp; anchoring),
-                    cognitive biases (social proof), pricing psychology, and neuromarketing
-                    principles
-                  </strong>{" "}
-                  tailored to your selected offer and target audience.
+              {/* Department Selection (Optional) */}
+              <div>
+                <label
+                  htmlFor="categoryId"
+                  className="mb-1 block text-sm font-semibold text-primary"
+                >
+                  Department / Sub-department (Optional)
+                </label>
+                <p className="mb-2 text-xs text-primary-muted">
+                  Scope this promotion to a department or sub-department. Leave unselected to apply
+                  store-wide.
                 </p>
+                <select
+                  id="categoryId"
+                  name="categoryId"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full rounded-xl border border-black/20 p-2.5 text-sm bg-white"
+                >
+                  <option value="">-- Store-wide (All Departments) --</option>
+                  {toCategoryOptionGroups(categoryOptions).map((group) => (
+                    <optgroup key={group.parent.id} label={group.parent.name}>
+                      <option value={group.parent.id}>
+                        {group.parent.name} — entire department
+                      </option>
+                      {group.children.map((child) => (
+                        <option key={child.id} value={child.id}>
+                          ↳ {child.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
               </div>
-            </div>
 
-            {aiError && (
-              <p className="rounded-xl bg-danger-tint px-3 py-2 text-xs font-medium text-danger">
-                {aiError}
-              </p>
-            )}
+              {/* Offer Type Radio */}
+              <div className="pt-2">
+                <span className="mb-2 block text-sm font-semibold text-primary">
+                  Promotional Offer Type
+                </span>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <label className="flex items-center gap-2 rounded-xl border border-black/10 p-3 text-sm font-medium text-primary hover:bg-black/5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="targetType"
+                      value="PRODUCT"
+                      checked={targetType === "PRODUCT"}
+                      onChange={() => setTargetType("PRODUCT")}
+                      className="h-4 w-4 text-action"
+                    />
+                    <span>Product on Offer (markdown or multi-buy)</span>
+                  </label>
 
-            <Button
-              type="button"
-              variant="action"
-              onClick={handleGenerateAi}
-              disabled={generatingAi || saving}
-              className="text-xs font-semibold"
-            >
-              <Icon name="sparkles" className="h-4 w-4 mr-1.5" />
-              {generatingAi
-                ? "Generating psychology-backed copy & banner…"
-                : "Generate Message and Banner Using AI"}
-            </Button>
-          </div>
+                  <label className="flex items-center gap-2 rounded-xl border border-black/10 p-3 text-sm font-medium text-primary hover:bg-black/5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="targetType"
+                      value="BUNDLE"
+                      checked={targetType === "BUNDLE"}
+                      onChange={() => setTargetType("BUNDLE")}
+                      className="h-4 w-4 text-action"
+                    />
+                    <span>Product Bundle (/staff/bundles)</span>
+                  </label>
 
-          {previewUrl ? (
-            <div className="space-y-3 pt-2">
-              <div className="relative aspect-[16/9] w-full max-w-md overflow-hidden rounded-xl border border-black/10 shadow-sm">
-                <img
-                  src={previewUrl}
-                  alt={altText || "Promotion preview"}
-                  className="h-full w-full object-cover"
+                  <label className="flex items-center gap-2 rounded-xl border border-black/10 p-3 text-sm font-medium text-primary hover:bg-black/5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="targetType"
+                      value="DISCOUNT_CODE"
+                      checked={targetType === "DISCOUNT_CODE"}
+                      onChange={() => setTargetType("DISCOUNT_CODE")}
+                      className="h-4 w-4 text-action"
+                    />
+                    <span>Discount Code (/staff/discounts)</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 rounded-xl border border-black/10 p-3 text-sm font-medium text-primary hover:bg-black/5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="targetType"
+                      value="GENERIC"
+                      checked={targetType === "GENERIC"}
+                      onChange={() => setTargetType("GENERIC")}
+                      className="h-4 w-4 text-action"
+                    />
+                    <span>General Campaign (No Specific Item)</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Conditional Product Picker */}
+              {targetType === "PRODUCT" && (
+                <div>
+                  <label
+                    htmlFor="productId"
+                    className="mb-1 block text-sm font-semibold text-primary"
+                  >
+                    Select Product on Offer <span className="text-danger">*</span>
+                  </label>
+                  <p className="mb-2 text-xs text-primary-muted">
+                    Displaying only products with active promotional content (Was-price markdown,
+                    active multi-buy, or featured)
+                    {selectedCategory ? " within the selected department." : "."}
+                  </p>
+                  {filteredProducts.length === 0 ? (
+                    <div className="rounded-xl border border-black/10 bg-black/[0.02] p-3 text-sm text-primary-muted">
+                      No products with active promotional offers found in this department. Configure
+                      a was-price or multi-buy in{" "}
+                      <Link href="/staff/products" className="font-medium text-action underline">
+                        Products
+                      </Link>{" "}
+                      first.
+                    </div>
+                  ) : (
+                    <select
+                      id="productId"
+                      name="productId"
+                      value={selectedProduct}
+                      onChange={(e) => setSelectedProduct(e.target.value)}
+                      className="w-full rounded-xl border border-black/20 p-2.5 text-sm bg-white"
+                    >
+                      <option value="">-- Choose an eligible promotional product --</option>
+                      {filteredProducts.map((p) => {
+                        const badges: string[] = [];
+                        if (p.originalPrice) {
+                          const was = (p.originalPrice / 100).toFixed(2);
+                          const now = (p.basePrice / 100).toFixed(2);
+                          if (p.originalPrice > p.basePrice) {
+                            const save = ((p.originalPrice - p.basePrice) / 100).toFixed(2);
+                            badges.push(`Was £${was}, Now £${now} (Save £${save})`);
+                          } else {
+                            badges.push(`Was £${was}, Now £${now}`);
+                          }
+                        }
+                        if (p.priceTier?.isActive) {
+                          badges.push(
+                            `Multi-buy: ${p.priceTier.groupQuantity} for £${(
+                              p.priceTier.groupPricePence / 100
+                            ).toFixed(2)}`,
+                          );
+                        }
+                        if (p.isFeatured && badges.length === 0) {
+                          badges.push("Featured on homepage");
+                        }
+                        const contextLabel = badges.length > 0 ? ` — ${badges.join(" | ")}` : "";
+                        return (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.unitLabel}){contextLabel}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  )}
+                </div>
+              )}
+
+              {/* Conditional Bundle Picker */}
+              {targetType === "BUNDLE" && (
+                <div>
+                  <label
+                    htmlFor="bundleId"
+                    className="mb-1 block text-sm font-semibold text-primary"
+                  >
+                    Select Product Bundle <span className="text-danger">*</span>
+                  </label>
+                  <select
+                    id="bundleId"
+                    name="bundleId"
+                    value={selectedBundle}
+                    onChange={(e) => setSelectedBundle(e.target.value)}
+                    className="w-full rounded-xl border border-black/20 p-2.5 text-sm bg-white"
+                  >
+                    <option value="">-- Choose an active bundle --</option>
+                    {bundles.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Conditional Discount Code Picker */}
+              {targetType === "DISCOUNT_CODE" && (
+                <div>
+                  <label
+                    htmlFor="discountCodeId"
+                    className="mb-1 block text-sm font-semibold text-primary"
+                  >
+                    Select Discount Code <span className="text-danger">*</span>
+                  </label>
+                  <select
+                    id="discountCodeId"
+                    name="discountCodeId"
+                    value={selectedDiscountCode}
+                    onChange={(e) => setSelectedDiscountCode(e.target.value)}
+                    className="w-full rounded-xl border border-black/20 p-2.5 text-sm bg-white"
+                  >
+                    <option value="">-- Choose an active discount code --</option>
+                    {discountCodes.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.code} {d.description ? `(${d.description})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Multi-Channel Destination (Future Architecture) */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2 border-t border-black/10">
+                <div>
+                  <label
+                    htmlFor="channel"
+                    className="mb-1 block text-sm font-semibold text-primary"
+                  >
+                    Marketing Channel
+                  </label>
+                  <select
+                    id="channel"
+                    name="channel"
+                    value={selectedChannel}
+                    onChange={(e) => setSelectedChannel(e.target.value as PromotionChannel)}
+                    className="w-full rounded-xl border border-black/20 p-2.5 text-sm bg-white"
+                  >
+                    <option value="WEBSITE">Website Storefront (Live)</option>
+                    <option value="WHATSAPP">WhatsApp Broadcast (Preview)</option>
+                    <option value="FACEBOOK">Facebook Post (Preview)</option>
+                    <option value="INSTAGRAM">Instagram Promo (Preview)</option>
+                  </select>
+                </div>
+
+                <FormField
+                  name="linkUrl"
+                  label="Custom Link (optional — defaults to target destination)"
+                  placeholder="/categories/... or /products/..."
+                  defaultValue={promotion?.linkUrl ?? ""}
+                  error={isInvalid("linkUrl")}
+                  errorId="promotion-form-error"
                 />
               </div>
-              <button
-                type="button"
-                onClick={handleRemoveImage}
-                className="text-xs font-semibold text-danger hover:underline"
-              >
-                Remove photo
-              </button>
-            </div>
-          ) : (
-            <div className="pt-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                disabled={uploading}
-                className="block text-sm text-primary-muted file:mr-4 file:rounded-xl file:border-0 file:bg-primary file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-primary/90"
-              />
-              {uploading && <p className="mt-2 text-xs text-primary-muted">Uploading banner…</p>}
-              {uploadError && <p className="mt-2 text-xs text-danger">{uploadError}</p>}
-            </div>
-          )}
+            </section>
 
-          <div>
-            <label htmlFor="altText" className="mb-1 block text-sm font-semibold text-primary">
-              Image Description (alt text for accessibility)
-            </label>
-            <input
-              id="altText"
-              name="altText"
-              placeholder="e.g. Assorted fresh halal barbecue cuts arranged on slate"
-              value={altText}
-              onChange={(e) => setAltText(e.target.value)}
-              className="w-full rounded-xl border border-black/20 p-2.5 text-sm"
-            />
+            {/* 2. Scheduling & Prioritisation */}
+            <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
+              <h2 className="text-base font-semibold text-primary">
+                2. Scheduling &amp; Prioritisation
+              </h2>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField
+                  name="startsAt"
+                  label="Starts (optional)"
+                  type="datetime-local"
+                  defaultValue={formatLocalInput(promotion?.startsAt ?? null, timezone)}
+                  error={isInvalid("startsAt")}
+                  errorId="promotion-form-error"
+                />
+                <FormField
+                  name="endsAt"
+                  label="Ends (optional)"
+                  type="datetime-local"
+                  defaultValue={formatLocalInput(promotion?.endsAt ?? null, timezone)}
+                  error={isInvalid("endsAt")}
+                  errorId="promotion-form-error"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="priority"
+                    className="mb-1 block text-sm font-semibold text-primary"
+                  >
+                    Priority Ranking (higher numbers display first)
+                  </label>
+                  <input
+                    id="priority"
+                    name="priority"
+                    type="number"
+                    min="0"
+                    max="1000"
+                    defaultValue={promotion?.priority ?? 0}
+                    className="w-full rounded-xl border border-black/20 p-2.5 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="audienceSegment"
+                    className="mb-1 block text-sm font-semibold text-primary"
+                  >
+                    Audience Segment
+                  </label>
+                  <select
+                    id="audienceSegment"
+                    name="audienceSegment"
+                    value={selectedAudience}
+                    onChange={(e) => setSelectedAudience(e.target.value as AudienceSegment)}
+                    className="w-full rounded-xl border border-black/20 p-2.5 text-sm bg-white"
+                  >
+                    <option value="ALL">All Customers</option>
+                    <option value="NEW_CUSTOMER">New Customers Only</option>
+                    <option value="RETURNING_CUSTOMER">Returning Customers</option>
+                    <option value="LOYALTY_MEMBER">Loyalty Club Members</option>
+                  </select>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 pt-2 text-sm font-medium text-primary">
+                <input
+                  type="checkbox"
+                  name="isActive"
+                  defaultChecked={promotion?.isActive ?? true}
+                  className="h-4 w-4 rounded border-black/20 text-action"
+                />
+                Active (display on storefront when within scheduled dates)
+              </label>
+            </section>
           </div>
-        </section>
+
+          {/* Right Column: AI Generation, Messaging & Creative */}
+          <div className="space-y-6">
+            {/* Psychology-Led AI Content Generation (Moved above Promotional messaging) */}
+            <div className="rounded-2xl border border-action/20 bg-action-tint/30 p-5 space-y-3">
+              <div className="flex items-start gap-3">
+                <Icon name="sparkles" className="h-5 w-5 text-action shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h3 className="text-sm font-bold text-primary">
+                    Psychology-Led AI Content Generation
+                  </h3>
+                  <p className="text-xs text-primary-muted leading-relaxed">
+                    Generates engaging, conversion-focused promotional messages and banners
+                    engineered using{" "}
+                    <strong>
+                      consumer psychology, behavioural economics (loss aversion &amp; anchoring),
+                      cognitive biases (social proof), pricing psychology, and neuromarketing
+                      principles
+                    </strong>{" "}
+                    tailored to your selected offer and target audience.
+                  </p>
+                </div>
+              </div>
+
+              {aiError && (
+                <p className="rounded-xl bg-danger-tint px-3 py-2 text-xs font-medium text-danger">
+                  {aiError}
+                </p>
+              )}
+
+              <Button
+                type="button"
+                variant="action"
+                onClick={handleGenerateAi}
+                disabled={generatingAi || saving}
+                className="text-xs font-semibold"
+              >
+                <Icon name="sparkles" className="h-4 w-4 mr-1.5" />
+                {generatingAi
+                  ? "Generating psychology-backed copy & banner…"
+                  : "Generate Message and Banner Using AI"}
+              </Button>
+            </div>
+
+            {/* 3. Promotional Messaging */}
+            <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
+              <h2 className="text-base font-semibold text-primary">3. Promotional Messaging</h2>
+
+              <div>
+                <label htmlFor="headline" className="mb-1 block text-sm font-semibold text-primary">
+                  Headline <span className="text-danger">*</span>
+                </label>
+                <input
+                  id="headline"
+                  name="headline"
+                  required
+                  placeholder="e.g. Fresh Weekend Feast"
+                  value={headline}
+                  onChange={(e) => setHeadline(e.target.value)}
+                  className="w-full rounded-xl border border-black/20 p-2.5 text-sm"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="subtitle" className="mb-1 block text-sm font-semibold text-primary">
+                  Subtitle (optional)
+                </label>
+                <input
+                  id="subtitle"
+                  name="subtitle"
+                  placeholder="e.g. Save 15% on prime butcher cuts this Friday through Sunday"
+                  value={subtitle}
+                  onChange={(e) => setSubtitle(e.target.value)}
+                  className="w-full rounded-xl border border-black/20 p-2.5 text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="badgeText"
+                    className="mb-1 block text-sm font-semibold text-primary"
+                  >
+                    Badge / Tag (optional)
+                  </label>
+                  <input
+                    id="badgeText"
+                    name="badgeText"
+                    placeholder="e.g. Weekend Deal, Customer Favourite"
+                    value={badgeText}
+                    onChange={(e) => setBadgeText(e.target.value)}
+                    className="w-full rounded-xl border border-black/20 p-2.5 text-sm"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="callToActionText"
+                    className="mb-1 block text-sm font-semibold text-primary"
+                  >
+                    Button Text (optional)
+                  </label>
+                  <input
+                    id="callToActionText"
+                    name="callToActionText"
+                    placeholder="e.g. Explore Offers, Shop Now"
+                    value={callToActionText}
+                    onChange={(e) => setCallToActionText(e.target.value)}
+                    className="w-full rounded-xl border border-black/20 p-2.5 text-sm"
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* 4. Visual Media & Banner */}
+            <section className="space-y-4 rounded-2xl border border-black/10 bg-white p-5">
+              <div>
+                <h2 className="text-base font-semibold text-primary">
+                  4. Promotional Banner &amp; Creative
+                </h2>
+                <p className="text-xs text-primary-muted">
+                  Upload a custom photo or preview the AI-generated imagery.
+                </p>
+              </div>
+
+              {previewUrl ? (
+                <div className="space-y-3 pt-2">
+                  <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl border border-black/10 shadow-sm">
+                    <img
+                      src={previewUrl}
+                      alt={altText || "Promotion preview"}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="text-xs font-semibold text-danger hover:underline"
+                  >
+                    Remove photo
+                  </button>
+                </div>
+              ) : (
+                <div className="pt-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    disabled={uploading}
+                    className="block text-sm text-primary-muted file:mr-4 file:rounded-xl file:border-0 file:bg-primary file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-primary/90"
+                  />
+                  {uploading && (
+                    <p className="mt-2 text-xs text-primary-muted">Uploading banner…</p>
+                  )}
+                  {uploadError && <p className="mt-2 text-xs text-danger">{uploadError}</p>}
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="altText" className="mb-1 block text-sm font-semibold text-primary">
+                  Image Description (alt text for accessibility)
+                </label>
+                <input
+                  id="altText"
+                  name="altText"
+                  placeholder="e.g. Assorted fresh halal barbecue cuts arranged on slate"
+                  value={altText}
+                  onChange={(e) => setAltText(e.target.value)}
+                  className="w-full rounded-xl border border-black/20 p-2.5 text-sm"
+                />
+              </div>
+            </section>
+          </div>
+        </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <div className="flex items-center gap-3">
