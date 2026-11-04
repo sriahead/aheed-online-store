@@ -4,7 +4,10 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { listBundlesForVendor } from "@/lib/bundles-service";
 import { getDiscountRepository } from "@/lib/discounts-service";
-import { getPromotionForAdmin } from "@/lib/promotions-service";
+import {
+  getPromotionForAdmin,
+  listEligiblePromotionalProductsForAdmin,
+} from "@/lib/promotions-service";
 import { getCurrentVendorProfile } from "@/lib/vendor-service";
 import { STORE_TIMEZONE } from "@/lib/local-datetime";
 import { getEnv } from "@/lib/config";
@@ -30,19 +33,17 @@ export default async function EditPromotionPage({ params }: { params: Promise<{ 
     );
   }
 
-  const [promotion, allCategories, bundles, discountCodes, profile] = await Promise.all([
-    getPromotionForAdmin(auth.vendorId, id),
-    listCategoriesForAdmin(auth.vendorId),
-    listBundlesForVendor(auth.vendorId),
-    getDiscountRepository().list(),
-    getCurrentVendorProfile(),
-  ]);
+  const [promotion, allCategories, eligibleProducts, bundles, discountCodes, profile] =
+    await Promise.all([
+      getPromotionForAdmin(auth.vendorId, id),
+      listCategoriesForAdmin(auth.vendorId),
+      listEligiblePromotionalProductsForAdmin(auth.vendorId),
+      listBundlesForVendor(auth.vendorId),
+      getDiscountRepository().list(),
+      getCurrentVendorProfile(),
+    ]);
 
   if (!promotion) notFound();
-
-  const departments = allCategories
-    .filter((c) => c.parentId === null)
-    .map((c) => ({ id: c.id, name: c.name }));
 
   const bundleOptions = bundles.filter((b) => b.isActive).map((b) => ({ id: b.id, name: b.name }));
 
@@ -66,7 +67,8 @@ export default async function EditPromotionPage({ params }: { params: Promise<{ 
 
       <PromotionForm
         promotion={promotion}
-        categories={departments}
+        categories={allCategories}
+        products={eligibleProducts}
         bundles={bundleOptions}
         discountCodes={discountOptions}
         currentImageUrl={currentImageUrl}

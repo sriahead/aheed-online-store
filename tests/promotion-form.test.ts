@@ -103,6 +103,31 @@ describe("parsePromotionForm (R6, R22)", () => {
     expect(result.error.field).toBe("discountCodeId");
   });
 
+  it("requires productId when targetType is PRODUCT", () => {
+    const raw = {
+      headline: "Product Promo",
+      targetType: "PRODUCT",
+    };
+    const result = parsePromotionForm(raw, TIMEZONE);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.field).toBe("productId");
+  });
+
+  it("accepts productId and channel when targetType is PRODUCT", () => {
+    const raw = {
+      headline: "Product Promo",
+      targetType: "PRODUCT",
+      productId: "prod-123",
+      channel: "WHATSAPP",
+    };
+    const result = parsePromotionForm(raw, TIMEZONE);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.productId).toBe("prod-123");
+    expect(result.value.channel).toBe("WHATSAPP");
+  });
+
   it("rejects end date before start date", () => {
     const raw = {
       headline: "Dated Promo",

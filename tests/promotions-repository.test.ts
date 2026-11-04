@@ -5,6 +5,7 @@ import {
   deletePromotion,
   listPromotionsForAdmin,
   listLivePromotions,
+  listEligiblePromotionalProducts,
   type PromotionWriteInput,
 } from "@/lib/repositories/promotions";
 
@@ -19,6 +20,9 @@ function mockPrisma() {
       create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
+    },
+    product: {
+      findMany: vi.fn(),
     },
   };
 }
@@ -139,6 +143,30 @@ describe("promotions repository (R3, R10, R17)", () => {
         }),
         orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
         take: 3,
+      }),
+    );
+  });
+
+  it("queries eligible promotional products with offer filters (R4)", async () => {
+    const prisma = mockPrisma();
+    prisma.product.findMany.mockResolvedValueOnce([
+      { id: "p-1", name: "Lamb Chops", originalPrice: 1200, basePrice: 900 },
+    ]);
+
+    const products = await listEligiblePromotionalProducts(prisma as never, VENDOR_ID);
+    expect(products).toHaveLength(1);
+    expect(products[0].name).toBe("Lamb Chops");
+
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          vendorId: VENDOR_ID,
+          OR: [
+            { originalPrice: { not: null } },
+            { priceTier: { is: { isActive: true } } },
+            { isFeatured: true },
+          ],
+        }),
       }),
     );
   });

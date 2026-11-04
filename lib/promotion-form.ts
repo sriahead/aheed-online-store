@@ -1,12 +1,12 @@
 import type { FieldError, ParseResult, RawForm } from "@/lib/catalogue-form";
 import { parseLocalInput } from "@/lib/local-datetime";
-import type { AudienceSegment } from "@prisma/client";
+import type { AudienceSegment, PromotionChannel } from "@prisma/client";
 
 /**
  * Promotion form parser and validator (R6, R22) — pure, unit-testable.
  */
 
-export type PromotionTargetType = "GENERIC" | "DEPARTMENT" | "BUNDLE" | "DISCOUNT_CODE";
+export type PromotionTargetType = "PRODUCT" | "BUNDLE" | "DISCOUNT_CODE" | "DEPARTMENT" | "GENERIC";
 
 export interface PromotionFormValues {
   headline: string;
@@ -19,10 +19,12 @@ export interface PromotionFormValues {
   startsAt: Date | null;
   endsAt: Date | null;
   audienceSegment: AudienceSegment;
+  channel: PromotionChannel;
   targetType: PromotionTargetType;
   categoryId: string | null;
   bundleId: string | null;
   discountCodeId: string | null;
+  productId: string | null;
   imageKey: string | null;
   altText: string | null;
 }
@@ -53,10 +55,12 @@ export const PROMOTION_FIELDS = [
   "startsAt",
   "endsAt",
   "audienceSegment",
+  "channel",
   "targetType",
   "categoryId",
   "bundleId",
   "discountCodeId",
+  "productId",
   "imageKey",
   "altText",
 ] as const;
@@ -186,20 +190,29 @@ export function parsePromotionForm(
 
   const targetTypeRaw = text(raw, "targetType").toUpperCase() as PromotionTargetType;
   const targetType: PromotionTargetType = [
-    "GENERIC",
-    "DEPARTMENT",
+    "PRODUCT",
     "BUNDLE",
     "DISCOUNT_CODE",
+    "DEPARTMENT",
+    "GENERIC",
   ].includes(targetTypeRaw)
     ? targetTypeRaw
     : "GENERIC";
 
-  let categoryId: string | null = null;
+  const categoryId = optionalText(raw, "categoryId");
+  let productId: string | null = null;
   let bundleId: string | null = null;
   let discountCodeId: string | null = null;
 
-  if (targetType === "DEPARTMENT") {
-    categoryId = optionalText(raw, "categoryId");
+  if (targetType === "PRODUCT") {
+    productId = optionalText(raw, "productId");
+    if (!productId) {
+      return {
+        ok: false,
+        error: { field: "productId", message: "Please select an eligible promotional product." },
+      };
+    }
+  } else if (targetType === "DEPARTMENT") {
     if (!categoryId) {
       return {
         ok: false,
@@ -223,6 +236,13 @@ export function parsePromotionForm(
       };
     }
   }
+
+  const channelRaw = text(raw, "channel").toUpperCase() as PromotionChannel;
+  const channel: PromotionChannel = ["WEBSITE", "WHATSAPP", "FACEBOOK", "INSTAGRAM"].includes(
+    channelRaw,
+  )
+    ? channelRaw
+    : "WEBSITE";
 
   const audienceRaw = text(raw, "audienceSegment") as AudienceSegment;
   const audienceSegment: AudienceSegment = [
@@ -251,10 +271,12 @@ export function parsePromotionForm(
       startsAt: startsResult.value,
       endsAt: endsResult.value,
       audienceSegment,
+      channel,
       targetType,
       categoryId,
       bundleId,
       discountCodeId,
+      productId,
       imageKey,
       altText,
     },

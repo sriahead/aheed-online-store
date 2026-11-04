@@ -30,6 +30,11 @@ import {
 import { STORE_TIMEZONE } from "@/lib/local-datetime";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { IconMedallion } from "@/components/icons/IconMedallion";
+import { Icon } from "@/components/icons/Icon";
+import {
+  getAutoPromotionForCheckout,
+  type AutoAppliedPromotion,
+} from "@/lib/promotions-checkout-service";
 
 export const dynamic = "force-dynamic";
 
@@ -52,11 +57,23 @@ export default async function CheckoutPage() {
   const signedInUserId = (session?.user as { id?: string } | undefined)?.id ?? null;
 
   const initialPostcode = cookieStore.get(DELIVERY_POSTCODE_COOKIE)?.value ?? null;
-  const initialDiscountCode = readCookieWithFallback(
+  const cookieDiscountCode = readCookieWithFallback(
     cookieStore,
     REFERRAL_COOKIE,
     LEGACY_REFERRAL_COOKIE,
   );
+
+  let autoPromotion: AutoAppliedPromotion | null = null;
+  let initialDiscountCode = cookieDiscountCode;
+  if (!initialDiscountCode && vendor) {
+    autoPromotion = await getAutoPromotionForCheckout(
+      vendor.id,
+      summary.lines.map((l) => l.productId),
+    );
+    if (autoPromotion) {
+      initialDiscountCode = autoPromotion.discountCode;
+    }
+  }
 
   // #764 — a returning signed-in shopper is offered the addresses they have already confirmed,
   // rather than being made to retype one we hold. The service returns an empty list for a guest,
@@ -135,6 +152,19 @@ export default async function CheckoutPage() {
         <p className="mb-4 rounded-xl bg-action-tint px-4 py-3 text-sm font-medium text-primary">
           Add {formatPrice(progress.remainingPence)} more for free delivery.
         </p>
+      )}
+
+      {autoPromotion && (
+        <div
+          role="status"
+          className="mb-4 flex items-center gap-2 rounded-xl bg-action-tint px-4 py-3 text-sm font-medium text-primary"
+        >
+          <Icon name="sparkles" className="h-4 w-4 text-action shrink-0" />
+          <span>
+            Promotion applied: <strong>{autoPromotion.headline}</strong> (Discount code{" "}
+            <span className="font-mono">{autoPromotion.discountCode}</span> automatically applied)
+          </span>
+        </div>
       )}
 
       {/*

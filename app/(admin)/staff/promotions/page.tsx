@@ -29,9 +29,10 @@ function statusLabel(promo: PromotionRow, now: Date): { text: string; className:
 }
 
 function targetLabel(promo: PromotionRow): string {
-  if (promo.category) return `Department: ${promo.category.name}`;
+  if (promo.product) return `Product: ${promo.product.name}`;
   if (promo.bundle) return `Bundle: ${promo.bundle.name}`;
   if (promo.discountCode) return `Discount: ${promo.discountCode.code}`;
+  if (promo.category) return `Department: ${promo.category.name}`;
   return "Store-wide";
 }
 
