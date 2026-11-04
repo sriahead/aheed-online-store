@@ -1194,8 +1194,11 @@ checks 1-4 passed (migration applied, health OK, form and honeypot rendered, 0 `
 `merqify.com` host, Contact us before Leave a review). Step 5/7 (owner, 23:17): a signed-in
 Enquiry naming an order logged `email send skipped (recipient is not on EMAIL_ALLOWED_RECIPIENTS …):
 [STAGING] Enquiry · Aheed Food Centre · Order AHE-20261103-ZC7DTP · Test` — the live tag is
-confirmed; Aheed's forward-to is not allowlisted on staging, so nothing was queued. Steps 6, 8 and
-9 not yet run.
+confirmed; Aheed's forward-to is not allowlisted on staging, so nothing was queued. Step 6
+(2026-11-04 05:50, after `EMAIL_ALLOWED_RECIPIENTS` gained the hub): delivered to
+`info-merqifyhub@googlegroups.com` from `no-reply@merqify.com` with that `[STAGING]` subject, and
+Reply addressed the shopper. A reply to a `@merqify.com` demo address loops back into the hub via
+the catch-all, so test replies with a shopper address outside the group. Steps 8 and 9 not yet run.
 
 Quick checks:
 
