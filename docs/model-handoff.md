@@ -63,8 +63,8 @@ reconciliation. If overall project state did not materially change, leave this f
     production); keeps failed sends in `ContactOutbox` for the scheduler to retry; and hides the
     footer email on `*.merqify.com` hosts. Validated in-session, not independently. Migration
     `20261103120000_contact_form` is applied on dev, staging and production. Sanity check:
-    `env-setup.md`, "Sanity check: storefront contact form"; steps 8 (rate limit) and 9 (a
-    production send) are not yet run. Viewing and retrying the outbox is `#1411`.
+    `env-setup.md`, "Sanity check: storefront contact form"; the owner reported the production
+    checks good (2026-11-04); step 8 (rate limit) has no separate live record. Viewing and retrying the outbox is `#1411`.
     - **Outgoing mail works on both hosts** (owner, 2026-11-04): a production Client Setup test
       email and a staging contact Enquiry both arrived from `no-reply@merqify.com`.
     - **Staging only mails `EMAIL_ALLOWED_RECIPIENTS`**, now set to
