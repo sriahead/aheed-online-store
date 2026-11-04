@@ -113,9 +113,12 @@ R7. `lib/order-alert/send.ts` exports
 
 ## Repository
 
-R8. `lib/repositories/order-alert.ts` exports three functions. Each takes the Prisma client and
+R8. `lib/repositories/order-alert.ts` exports four functions. Each takes the Prisma client and
     `vendorId` as explicit parameters:
     - `listOrderAlertRecipients`.
+    - `findOrderAlertRecipient`, a `findFirst` filtered by both `id` and `vendorId`, used by the
+      test alert (R14, R15). *Amended at Build (2026-11-04): the spec first listed three exports and
+      missed the vendor-scoped lookup that the test alert needs.*
     - `createOrderAlertRecipient`, which is a singular `create` with no nested writes. It returns
       `{ ok: true }`, or `{ ok: false; reason: "duplicate" }` when `isUniqueViolation` (from
       `lib/repositories/prisma-errors.ts`) matches.
