@@ -106,7 +106,9 @@ describe("Promotions AI prompt and parser (R14)", () => {
 
     const prompt = buildPromotionPrompt(input);
 
-    expect(prompt).toContain("Multi-buy Offer: 3 for £10.00 (Save £1.97 compared to single unit price)");
+    expect(prompt).toContain(
+      "Multi-buy Offer: 3 for £10.00 (Save £1.97 compared to single unit price)",
+    );
   });
 
   it("parses valid JSON response", () => {

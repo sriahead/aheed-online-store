@@ -110,11 +110,15 @@ export function buildPromotionPrompt(input: PromotionAiInput): string {
     if (d.bundleItems && d.bundleItems.length > 0) {
       lines.push(`- Bundle Contents:`);
       for (const item of d.bundleItems) {
-        lines.push(`    * ${item.quantity}x ${item.name} (£${(item.pricePence / 100).toFixed(2)} each)`);
+        lines.push(
+          `    * ${item.quantity}x ${item.name} (£${(item.pricePence / 100).toFixed(2)} each)`,
+        );
       }
     }
   } else {
-    lines.push("Verified Item Details: No specific item or discount code selected. Promotion applies store-wide.");
+    lines.push(
+      "Verified Item Details: No specific item or discount code selected. Promotion applies store-wide.",
+    );
   }
 
   lines.push(
