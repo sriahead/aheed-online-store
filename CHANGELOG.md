@@ -6,6 +6,13 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Promotions AI Basis Points Percentage Formatting** (issue `#1415`).
+  - **Basis Points to Percentage Normalisation (`lib/promotions-ai.ts`):** Fixed AI prompt builder interpolating raw discount value as percentage directly (`500% OFF` instead of `5% OFF`). Basis points are now correctly divided by 100 (`d.discountValue / 100`), ensuring 500 bps is framed truthfully as 5% and 1000 bps as 10%.
+  - **Staff Form Dropdown Clarification (`components/staff/PromotionForm.tsx`):** Added discount kind and value to the promotion authoring code picker, displaying human-readable discount indicators (e.g. `WEEKENDMEAT5 — 5% off`) directly in the select list.
+  - **Unit Tests (`tests/promotions-ai.test.ts`):** Added tests pinning basis points to percentage conversion in prompt generation.
+
 ### Added
 
 - **Department-Scoped Promotional Discounts at Checkout** (issue `#1415`).

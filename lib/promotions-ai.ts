@@ -102,9 +102,9 @@ export function buildPromotionPrompt(input: PromotionAiInput): string {
       }
       lines.push(multiBuyLine);
     }
-    if (d.discountKind && d.discountValue) {
+    if (d.discountKind && typeof d.discountValue === "number" && d.discountValue > 0) {
       lines.push(
-        `- Discount Offer: ${d.discountKind === "PERCENTAGE" ? `${d.discountValue}% OFF` : `£${(d.discountValue / 100).toFixed(2)} OFF`}`,
+        `- Discount Offer: ${d.discountKind === "PERCENTAGE" ? `${d.discountValue / 100}% OFF` : `£${(d.discountValue / 100).toFixed(2)} OFF`}`,
       );
     }
     if (d.bundleItems && d.bundleItems.length > 0) {

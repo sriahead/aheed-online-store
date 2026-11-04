@@ -62,7 +62,13 @@ export function PromotionForm({
   categories: { id: string; name: string; parentId: string | null; isActive?: boolean }[];
   products: EligiblePromotionalProduct[];
   bundles: { id: string; name: string }[];
-  discountCodes: { id: string; code: string; description: string | null }[];
+  discountCodes: {
+    id: string;
+    code: string;
+    description: string | null;
+    kind?: "PERCENTAGE" | "FIXED_AMOUNT";
+    value?: number;
+  }[];
   currentImageUrl?: string | null;
   timezone: string;
 }) {
@@ -478,7 +484,11 @@ export function PromotionForm({
                     <option value="">-- Choose an active discount code --</option>
                     {discountCodes.map((d) => (
                       <option key={d.id} value={d.id}>
-                        {d.code} {d.description ? `(${d.description})` : ""}
+                        {d.code}
+                        {d.kind && typeof d.value === "number"
+                          ? ` — ${d.kind === "PERCENTAGE" ? `${d.value / 100}% off` : `£${(d.value / 100).toFixed(2)} off`}`
+                          : ""}
+                        {d.description ? ` (${d.description})` : ""}
                       </option>
                     ))}
                   </select>

@@ -111,6 +111,43 @@ describe("Promotions AI prompt and parser (R14)", () => {
     );
   });
 
+  it("converts basis points to percentage correctly in discount offer prompt (500 bps = 5%)", () => {
+    const input: PromotionAiInput = {
+      vendorId: "v-123",
+      targetType: "DISCOUNT_CODE",
+      itemDetails: {
+        name: "Discount Code WEEKENDMEAT5",
+        discountKind: "PERCENTAGE",
+        discountValue: 500, // 500 basis points = 5%
+      },
+      audienceSegment: "ALL",
+      channel: "WEBSITE",
+    };
+
+    const prompt = buildPromotionPrompt(input);
+
+    expect(prompt).toContain("Discount Offer: 5% OFF");
+    expect(prompt).not.toContain("500% OFF");
+  });
+
+  it("formats fixed amount discount offer correctly (500 pence = £5.00)", () => {
+    const input: PromotionAiInput = {
+      vendorId: "v-123",
+      targetType: "DISCOUNT_CODE",
+      itemDetails: {
+        name: "Discount Code SAVE5",
+        discountKind: "FIXED_AMOUNT",
+        discountValue: 500, // 500 pence = £5.00
+      },
+      audienceSegment: "ALL",
+      channel: "WEBSITE",
+    };
+
+    const prompt = buildPromotionPrompt(input);
+
+    expect(prompt).toContain("Discount Offer: £5.00 OFF");
+  });
+
   it("parses valid JSON response", () => {
     const raw = JSON.stringify({
       headline: "Weekend Butchery Feast",
