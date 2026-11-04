@@ -215,6 +215,55 @@ describe("evaluateCode clamping (R11, R12)", () => {
     );
     expect(result).toEqual({ ok: true, discountPence: 1000 - MIN_PAYABLE_PENCE });
   });
+  it("restricts percentage discount to eligible department spend only", () => {
+    // £30.00 total cart, but only £20.00 is in the promoted department
+    const result = evaluateCode(
+      code({
+        kind: "PERCENTAGE",
+        value: 1000, // 10%
+        subtotalPence: 3000,
+        eligibleSubtotalPence: 2000,
+      }),
+    );
+    // 10% of £20.00 = £2.00 (200p), not 10% of £30.00 (300p)
+    expect(result).toEqual({ ok: true, discountPence: 200 });
+  });
+
+  it("caps fixed amount discount to eligible department spend only", () => {
+    // £25.00 total cart, but only £4.00 is in the promoted department
+    const result = evaluateCode(
+      code({
+        kind: "FIXED_AMOUNT",
+        value: 1000, // £10.00 off
+        subtotalPence: 2500,
+        eligibleSubtotalPence: 400, // £4.00
+      }),
+    );
+    // Capped at £4.00 so non-department items are never discounted
+    expect(result).toEqual({ ok: true, discountPence: 400 });
+  });
+
+  it("refuses with NO_ELIGIBLE_ITEMS when cart has 0 eligible department spend", () => {
+    const result = evaluateCode(
+      code({
+        subtotalPence: 2500,
+        eligibleSubtotalPence: 0,
+      }),
+    );
+    expect(result).toEqual({ ok: false, reason: "NO_ELIGIBLE_ITEMS" });
+  });
+
+  it("enforces minSubtotalPence against eligible department spend", () => {
+    // Cart is £50.00, but eligible department spend is only £10.00 and minSubtotal is £15.00
+    const result = evaluateCode(
+      code({
+        minSubtotalPence: 1500,
+        subtotalPence: 5000,
+        eligibleSubtotalPence: 1000,
+      }),
+    );
+    expect(result).toEqual({ ok: false, reason: "BELOW_MINIMUM" });
+  });
 });
 
 describe("refusalMessage (R2)", () => {
@@ -230,6 +279,7 @@ describe("refusalMessage (R2)", () => {
       "SIGN_IN_REQUIRED",
       "NO_HEADROOM",
       "OWN_REFERRAL_CODE",
+      "NO_ELIGIBLE_ITEMS",
     ];
     const messages = reasons.map(refusalMessage);
     expect(new Set(messages).size).toBe(reasons.length);
@@ -238,5 +288,11 @@ describe("refusalMessage (R2)", () => {
 
   it("#972 — names an own referral code exactly", () => {
     expect(refusalMessage("OWN_REFERRAL_CODE")).toBe("You can't use your own referral code.");
+  });
+
+  it("names department-scoped eligible items refusal", () => {
+    expect(refusalMessage("NO_ELIGIBLE_ITEMS")).toBe(
+      "This discount code only applies to selected department products.",
+    );
   });
 });

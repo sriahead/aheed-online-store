@@ -367,6 +367,10 @@ export async function placeOrder(
               userId: input.userId,
               subtotalPence: preDiscount.subtotalPence,
               deliveryFeePence: preDiscount.deliveryFeePence,
+              cartItems: lines.map((l) => ({
+                productId: l.productId,
+                lineTotalPence: l.lineTotalPence ?? l.unitPricePence * l.quantity,
+              })),
             });
       if (claimed && !claimed.ok) {
         throw new CheckoutError("DISCOUNT_CODE", refusalMessage(claimed.reason), claimed.reason);

@@ -30,6 +30,14 @@ type CodeRow = {
   isActive: boolean;
   description?: string | null;
   referrerUserId?: string | null;
+  promotions?: Array<{
+    id: string;
+    categoryId: string | null;
+    productId: string | null;
+    bundleId: string | null;
+    startsAt: Date | null;
+    endsAt: Date | null;
+  }>;
 };
 
 const aCode = (overrides: Partial<CodeRow> = {}): CodeRow => ({
@@ -83,6 +91,9 @@ function readOnlyDb(code: CodeRow | null, priorUses = 0, loyaltyEnabled = true) 
       upsert: refuse,
       delete: refuse,
       deleteMany: refuse,
+    },
+    product: {
+      findMany: vi.fn(async () => [] as Array<{ id: string }>),
     },
   };
 }
@@ -290,4 +301,117 @@ describe("referral codes on a loyalty-off vendor (#1101)", () => {
       expect(db.vendorConfig.findUnique).not.toHaveBeenCalled();
     },
   );
+});
+
+describe("department-scoped promotional discounts", () => {
+  const BUTCHERY_CAT = "cat-butchery";
+  const BUTCHERY_ITEM = "prod-meat";
+  const BAKERY_ITEM = "prod-bread";
+
+  it("calculates percentage discount strictly against eligible department products in cart", async () => {
+    // 10% code linked to a promotion scoped to Butchery department
+    const codeRow = aCode({
+      kind: "PERCENTAGE",
+      value: 1000, // 10%
+      promotions: [
+        {
+          id: "promo-1",
+          categoryId: BUTCHERY_CAT,
+          productId: null,
+          bundleId: null,
+          startsAt: null,
+          endsAt: null,
+        },
+      ],
+    });
+
+    const db = readOnlyDb(codeRow);
+    // Mock product lookup: only BUTCHERY_ITEM belongs to BUTCHERY_CAT
+    db.product.findMany = vi.fn(async () => [{ id: BUTCHERY_ITEM }]);
+
+    const result = await previewCode(db as never, VENDOR, {
+      code: "MEAT10",
+      userId: "u-1",
+      subtotalPence: 3000, // £30.00 total cart
+      deliveryFeePence: 300,
+      cartItems: [
+        { productId: BUTCHERY_ITEM, lineTotalPence: 2000 }, // £20.00 Butchery
+        { productId: BAKERY_ITEM, lineTotalPence: 1000 }, // £10.00 Bakery
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      // 10% of £20.00 = £2.00 (200p), NOT 10% of £30.00 (£3.00)
+      expect(result.discountPence).toBe(200);
+    }
+  });
+
+  it("refuses department code when cart contains no items from that department", async () => {
+    const codeRow = aCode({
+      kind: "PERCENTAGE",
+      value: 1000,
+      promotions: [
+        {
+          id: "promo-1",
+          categoryId: BUTCHERY_CAT,
+          productId: null,
+          bundleId: null,
+          startsAt: null,
+          endsAt: null,
+        },
+      ],
+    });
+
+    const db = readOnlyDb(codeRow);
+    // No matching products in the department
+    db.product.findMany = vi.fn(async () => []);
+
+    const result = await previewCode(db as never, VENDOR, {
+      code: "MEAT10",
+      userId: "u-1",
+      subtotalPence: 1000,
+      deliveryFeePence: 300,
+      cartItems: [{ productId: BAKERY_ITEM, lineTotalPence: 1000 }],
+    });
+
+    expect(result).toEqual({ ok: false, reason: "NO_ELIGIBLE_ITEMS" });
+  });
+
+  it("applies discount store-wide when promotion has no department selected", async () => {
+    // Promotion with categoryId: null (store-wide)
+    const codeRow = aCode({
+      kind: "PERCENTAGE",
+      value: 1000,
+      promotions: [
+        {
+          id: "promo-storewide",
+          categoryId: null,
+          productId: null,
+          bundleId: null,
+          startsAt: null,
+          endsAt: null,
+        },
+      ],
+    });
+
+    const db = readOnlyDb(codeRow);
+
+    const result = await previewCode(db as never, VENDOR, {
+      code: "ALL10",
+      userId: "u-1",
+      subtotalPence: 3000,
+      deliveryFeePence: 300,
+      cartItems: [
+        { productId: BUTCHERY_ITEM, lineTotalPence: 2000 },
+        { productId: BAKERY_ITEM, lineTotalPence: 1000 },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      // Full cart is discounted: 10% of £30.00 = £3.00 (300p)
+      expect(result.discountPence).toBe(300);
+    }
+  });
 });

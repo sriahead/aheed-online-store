@@ -57,6 +57,11 @@ export type ClaimResult =
  */
 export type PreviewResult = ({ ok: true } & ClaimedCode) | { ok: false; reason: CodeRefusalReason };
 
+export interface CartItemForDiscount {
+  productId: string;
+  lineTotalPence: number;
+}
+
 export interface ClaimCodeInput {
   code: string;
   userId: string | null;
@@ -64,6 +69,7 @@ export interface ClaimCodeInput {
   subtotalPence: number;
   deliveryFeePence: number;
   now?: Date;
+  cartItems?: CartItemForDiscount[];
 }
 
 /**
@@ -98,6 +104,17 @@ export async function previewCode(
       maxPerCustomer: true,
       isActive: true,
       referrerUserId: true,
+      promotions: {
+        where: { isActive: true },
+        select: {
+          id: true,
+          categoryId: true,
+          productId: true,
+          bundleId: true,
+          startsAt: true,
+          endsAt: true,
+        },
+      },
     },
   });
   // A code belonging to another vendor is indistinguishable from one that does
@@ -155,6 +172,54 @@ export async function previewCode(
           return { seq: (highest?.seq ?? -1) + 1, uses: used };
         })();
 
+  const now = input.now ?? new Date();
+  const activePromos = (row.promotions ?? []).filter(
+    (p) => (!p.startsAt || p.startsAt <= now) && (!p.endsAt || p.endsAt >= now),
+  );
+
+  const hasStorewidePromo = activePromos.some((p) => !p.categoryId && !p.productId && !p.bundleId);
+
+  let eligibleSubtotalPence: number | undefined;
+
+  // When a promotion scopes to a department or product (and no store-wide promo overrides it),
+  // discount arithmetic applies strictly to eligible items in that department/product.
+  if (activePromos.length > 0 && !hasStorewidePromo && input.cartItems) {
+    const scopedCategoryIds = activePromos
+      .map((p) => p.categoryId)
+      .filter((id): id is string => typeof id === "string" && id !== "");
+    const scopedProductIds = activePromos
+      .map((p) => p.productId)
+      .filter((id): id is string => typeof id === "string" && id !== "");
+
+    if (scopedCategoryIds.length > 0 || scopedProductIds.length > 0) {
+      if (input.cartItems.length === 0) {
+        eligibleSubtotalPence = 0;
+      } else {
+        const matchingProducts = await db.product.findMany({
+          where: {
+            vendorId,
+            id: { in: input.cartItems.map((c) => c.productId) },
+            OR: [
+              ...(scopedProductIds.length > 0 ? [{ id: { in: scopedProductIds } }] : []),
+              ...(scopedCategoryIds.length > 0
+                ? [
+                    { categoryId: { in: scopedCategoryIds } },
+                    { category: { parentId: { in: scopedCategoryIds } } },
+                  ]
+                : []),
+            ],
+          },
+          select: { id: true },
+        });
+
+        const matchingIdSet = new Set(matchingProducts.map((p) => p.id));
+        eligibleSubtotalPence = input.cartItems
+          .filter((c) => matchingIdSet.has(c.productId))
+          .reduce((sum, c) => sum + c.lineTotalPence, 0);
+      }
+    }
+  }
+
   const evaluation = evaluateCode({
     kind: row.kind as DiscountKind,
     value: row.value,
@@ -168,7 +233,8 @@ export async function previewCode(
     deliveryFeePence: input.deliveryFeePence,
     userId: input.userId,
     customerUseCount: uses,
-    now: input.now ?? new Date(),
+    now,
+    eligibleSubtotalPence,
   });
   if (!evaluation.ok) return { ok: false, reason: evaluation.reason };
 
