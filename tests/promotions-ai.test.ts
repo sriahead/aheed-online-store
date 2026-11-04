@@ -148,6 +148,28 @@ describe("Promotions AI prompt and parser (R14)", () => {
     expect(prompt).toContain("Discount Offer: £5.00 OFF");
   });
 
+  it("instructs AI to make altText promotional rather than physical image description", () => {
+    const input: PromotionAiInput = {
+      vendorId: "v-123",
+      targetType: "DISCOUNT_CODE",
+      itemDetails: {
+        name: "Discount Code WEEKENDMEAT5",
+        discountKind: "PERCENTAGE",
+        discountValue: 500,
+      },
+      categoryName: "Halal Meat",
+      audienceSegment: "ALL",
+      channel: "WEBSITE",
+    };
+
+    const prompt = buildPromotionPrompt(input);
+
+    expect(prompt).toContain(
+      "The image description must describe the promotion itself (e.g. 'Promotional banner: Save 5% on Halal Meat with code WEEKENDMEAT5')",
+    );
+    expect(prompt).toContain("Promotion-focused accessibility text conveying the specific offer");
+  });
+
   it("parses valid JSON response", () => {
     const raw = JSON.stringify({
       headline: "Weekend Butchery Feast",
