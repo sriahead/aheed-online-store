@@ -39,7 +39,13 @@ export default async function NewPromotionPage() {
 
   const discountOptions = discountCodes
     .filter((d) => d.isActive)
-    .map((d) => ({ id: d.id, code: d.code, description: d.description }));
+    .map((d) => ({
+      id: d.id,
+      code: d.code,
+      description: d.description,
+      kind: d.kind,
+      value: d.value,
+    }));
 
   const timezone = profile?.timezone ?? STORE_TIMEZONE;
 

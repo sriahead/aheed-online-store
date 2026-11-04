@@ -6,6 +6,14 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Promotions AI Basis Points Percentage Formatting & Promotion-Focused Image Descriptions** (issue `#1415`).
+  - **Basis Points to Percentage Normalisation (`lib/promotions-ai.ts`):** Fixed AI prompt builder interpolating raw discount value as percentage directly (`500% OFF` instead of `5% OFF`). Basis points are now correctly divided by 100 (`d.discountValue / 100`), ensuring 500 bps is framed truthfully as 5% and 1000 bps as 10%.
+  - **Promotion-Focused Alt Text (`lib/promotions-ai.ts`, `components/staff/PromotionForm.tsx`):** Instructed AI to generate image descriptions (`altText`) focused strictly on the promotion, offer, and department context (e.g. `Promotional banner: Save 5% on Halal Meat with code WEEKENDMEAT5`) rather than generic visual photography elements. Updated staff form label and hint text accordingly.
+  - **Staff Form Dropdown Clarification (`components/staff/PromotionForm.tsx`):** Added discount kind and value to the promotion authoring code picker, displaying human-readable discount indicators (e.g. `WEEKENDMEAT5 — 5% off`) directly in the select list.
+  - **Unit Tests (`tests/promotions-ai.test.ts`):** Added tests pinning basis points to percentage conversion in prompt generation and verifying promotion-focused altText generation.
+
 ### Added
 
 - **Department-Scoped Promotional Discounts at Checkout** (issue `#1415`).

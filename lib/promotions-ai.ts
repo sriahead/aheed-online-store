@@ -67,6 +67,7 @@ export function buildPromotionPrompt(input: PromotionAiInput): string {
     "- If NO discount, savings, or multi-buy offer is explicitly listed in the Verified Item Details, you MUST NOT claim any price cut, discount percentage, or savings in the headline, subtitle, or badge. Instead, frame the value around premium quality, authentic freshness, everyday value, curated convenience, or customer popularity.",
     "- Only reference the EXACT savings, prices, and multi-buy figures provided in the Verified Item Details.",
     "- For 'badgeText': Only use a savings or discount badge (e.g. 'Save £1.97', '3 for £10', '10% OFF') if that EXACT offer exists in the details below. If no discount exists, use non-price badges like 'Store Favourite', 'Fresh Daily', 'Curated Pack', 'Top Seller', or 'Chef's Choice'.",
+    "- For 'altText': The image description must describe the promotion itself (e.g. 'Promotional banner: Save 5% on Halal Meat with code WEEKENDMEAT5'), stating the offer and applicable items/department, rather than describing physical photography elements or the visual scene.",
     "",
     `Target Marketing Channel: ${input.channel}`,
     `Target Audience: ${input.audienceSegment}`,
@@ -102,9 +103,9 @@ export function buildPromotionPrompt(input: PromotionAiInput): string {
       }
       lines.push(multiBuyLine);
     }
-    if (d.discountKind && d.discountValue) {
+    if (d.discountKind && typeof d.discountValue === "number" && d.discountValue > 0) {
       lines.push(
-        `- Discount Offer: ${d.discountKind === "PERCENTAGE" ? `${d.discountValue}% OFF` : `£${(d.discountValue / 100).toFixed(2)} OFF`}`,
+        `- Discount Offer: ${d.discountKind === "PERCENTAGE" ? `${d.discountValue / 100}% OFF` : `£${(d.discountValue / 100).toFixed(2)} OFF`}`,
       );
     }
     if (d.bundleItems && d.bundleItems.length > 0) {
@@ -129,7 +130,7 @@ export function buildPromotionPrompt(input: PromotionAiInput): string {
     '  "subtitle": "Compelling value proposition under 120 characters",',
     '  "badgeText": "Short urgency, social proof, or truthful discount tag under 20 characters (must match verified discount if one exists, otherwise quality/social proof)",',
     '  "callToActionText": "Direct action button label under 20 characters (e.g. Shop Deal, Claim Offer, Order Now)",',
-    '  "altText": "Descriptive accessibility text for the banner photograph under 100 characters",',
+    '  "altText": "Promotion-focused accessibility text conveying the specific offer and product/department (under 100 characters), not a physical visual photo description",',
     '  "imagePrompt": "Detailed commercial photography visual prompt for Flux text-to-image. Appetizing, vibrant, clean studio lighting, shallow depth of field, high contrast, professional e-commerce hero banner."',
     "}",
   );

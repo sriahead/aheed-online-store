@@ -49,7 +49,13 @@ export default async function EditPromotionPage({ params }: { params: Promise<{ 
 
   const discountOptions = discountCodes
     .filter((d) => d.isActive)
-    .map((d) => ({ id: d.id, code: d.code, description: d.description }));
+    .map((d) => ({
+      id: d.id,
+      code: d.code,
+      description: d.description,
+      kind: d.kind,
+      value: d.value,
+    }));
 
   const timezone = profile?.timezone ?? STORE_TIMEZONE;
   const { CDN_BASE_URL } = getEnv();

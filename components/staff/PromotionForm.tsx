@@ -62,7 +62,13 @@ export function PromotionForm({
   categories: { id: string; name: string; parentId: string | null; isActive?: boolean }[];
   products: EligiblePromotionalProduct[];
   bundles: { id: string; name: string }[];
-  discountCodes: { id: string; code: string; description: string | null }[];
+  discountCodes: {
+    id: string;
+    code: string;
+    description: string | null;
+    kind?: "PERCENTAGE" | "FIXED_AMOUNT";
+    value?: number;
+  }[];
   currentImageUrl?: string | null;
   timezone: string;
 }) {
@@ -478,7 +484,11 @@ export function PromotionForm({
                     <option value="">-- Choose an active discount code --</option>
                     {discountCodes.map((d) => (
                       <option key={d.id} value={d.id}>
-                        {d.code} {d.description ? `(${d.description})` : ""}
+                        {d.code}
+                        {d.kind && typeof d.value === "number"
+                          ? ` — ${d.kind === "PERCENTAGE" ? `${d.value / 100}% off` : `£${(d.value / 100).toFixed(2)} off`}`
+                          : ""}
+                        {d.description ? ` (${d.description})` : ""}
                       </option>
                     ))}
                   </select>
@@ -756,16 +766,20 @@ export function PromotionForm({
 
               <div>
                 <label htmlFor="altText" className="mb-1 block text-sm font-semibold text-primary">
-                  Image Description (alt text for accessibility)
+                  Promotion Image Description (alt text for accessibility)
                 </label>
                 <input
                   id="altText"
                   name="altText"
-                  placeholder="e.g. Assorted fresh halal barbecue cuts arranged on slate"
+                  placeholder="e.g. Special promotion: 5% off weekend Halal Meat with code WEEKENDMEAT5"
                   value={altText}
                   onChange={(e) => setAltText(e.target.value)}
                   className="w-full rounded-xl border border-black/20 p-2.5 text-sm"
                 />
+                <p className="mt-1 text-xs text-primary-muted">
+                  Describes the promotion and offer for screen readers and SEO, rather than visual
+                  photography details.
+                </p>
               </div>
             </section>
           </div>
