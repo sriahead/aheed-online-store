@@ -1198,7 +1198,9 @@ confirmed; Aheed's forward-to is not allowlisted on staging, so nothing was queu
 (2026-11-04 05:50, after `EMAIL_ALLOWED_RECIPIENTS` gained the hub): delivered to
 `info-merqifyhub@googlegroups.com` from `no-reply@merqify.com` with that `[STAGING]` subject, and
 Reply addressed the shopper. A reply to a `@merqify.com` demo address loops back into the hub via
-the catch-all, so test replies with a shopper address outside the group. Steps 8 and 9 not yet run.
+the catch-all, so test replies with a shopper address outside the group. Production
+(2026-11-04, PR #1413 `cac3fb9`, deploy run `41785879012`): checks 1-4 passed, and the owner reported the
+live production checks good (2026-11-04). Step 8 (rate limit) has no separate live record.
 
 Quick checks:
 
