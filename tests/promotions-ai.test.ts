@@ -32,11 +32,81 @@ describe("Promotions AI prompt and parser (R14)", () => {
     expect(prompt).toContain("COGNITIVE BIASES");
     expect(prompt).toContain("PRICING PSYCHOLOGY");
     expect(prompt).toContain("NEUROMARKETING");
+    expect(prompt).toContain("CRITICAL TRUTHFULNESS & ANTI-HALLUCINATION RULES");
+    expect(prompt).toContain("NEVER fabricate, invent, or assume any discount percentage");
     expect(prompt).toContain("Premium Halal Lamb Chops");
     expect(prompt).toContain("£8.99");
     expect(prompt).toContain("£11.99");
     expect(prompt).toContain("£3.00");
     expect(prompt).toContain("Butchery");
+  });
+
+  it("instructs model not to claim discounts when no savings exist", () => {
+    const input: PromotionAiInput = {
+      vendorId: "v-123",
+      targetType: "PRODUCT",
+      itemDetails: {
+        name: "Whole Cardamom Pods 100g",
+        basePricePence: 399,
+        originalPricePence: null,
+        savingsPence: null,
+      },
+      audienceSegment: "ALL",
+      channel: "WEBSITE",
+    };
+
+    const prompt = buildPromotionPrompt(input);
+
+    expect(prompt).toContain("CRITICAL TRUTHFULNESS & ANTI-HALLUCINATION RULES");
+    expect(prompt).toContain("If NO discount, savings, or multi-buy offer is explicitly listed");
+    expect(prompt).not.toContain("Regular/Was Price");
+    expect(prompt).not.toContain("Markdown Savings");
+    expect(prompt).not.toContain("Multi-buy Offer");
+  });
+
+  it("formats bundle contents and total price for truthful AI promotion", () => {
+    const input: PromotionAiInput = {
+      vendorId: "v-123",
+      targetType: "BUNDLE",
+      itemDetails: {
+        name: "Weekly Curry Spice Kit",
+        description: "Everything you need for authentic curries",
+        basePricePence: 1250,
+        bundleItems: [
+          { name: "Coriander Seeds 100g", quantity: 2, pricePence: 250 },
+          { name: "Cumin Seeds 100g", quantity: 3, pricePence: 250 },
+        ],
+      },
+      audienceSegment: "ALL",
+      channel: "WEBSITE",
+    };
+
+    const prompt = buildPromotionPrompt(input);
+
+    expect(prompt).toContain("Bundle Contents:");
+    expect(prompt).toContain("2x Coriander Seeds 100g (£2.50 each)");
+    expect(prompt).toContain("3x Cumin Seeds 100g (£2.50 each)");
+    expect(prompt).toContain("Current Selling Price: £12.50");
+  });
+
+  it("includes multi-buy savings when multi-buy is active", () => {
+    const input: PromotionAiInput = {
+      vendorId: "v-123",
+      targetType: "PRODUCT",
+      itemDetails: {
+        name: "Fresh Coconut",
+        basePricePence: 399,
+        multiBuyQuantity: 3,
+        multiBuyPricePence: 1000,
+        multiBuySavingsPence: 197,
+      },
+      audienceSegment: "ALL",
+      channel: "WEBSITE",
+    };
+
+    const prompt = buildPromotionPrompt(input);
+
+    expect(prompt).toContain("Multi-buy Offer: 3 for £10.00 (Save £1.97 compared to single unit price)");
   });
 
   it("parses valid JSON response", () => {
