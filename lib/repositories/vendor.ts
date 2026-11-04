@@ -884,6 +884,18 @@ export async function applyThemeToVendor(
  * orders — or confirming them and sending confirmation emails on its behalf —
  * is a worse default than leaving them for whoever resolves the suspension.
  */
+/**
+ * #1409 — every vendor, whatever its status: the contact outbox retry walks them all so a queued
+ * email for a store that has since been suspended is still sent or expired, never stranded.
+ */
+export async function listAllVendorIds(prisma: ReturnType<typeof getPrisma>): Promise<string[]> {
+  const rows = await prisma.vendor.findMany({
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  return rows.map((row) => row.id);
+}
+
 export async function listActiveVendorIds(prisma: ReturnType<typeof getPrisma>): Promise<string[]> {
   const rows = await prisma.vendor.findMany({
     where: { status: "ACTIVE" },

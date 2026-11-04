@@ -96,6 +96,8 @@ EMAIL_FROM = "no-reply@merqify.com"
 # inbox, not a personal address, so committed config. The inbound Worker's INBOUND_FALLBACK_FORWARD
 # secret names the same inbox by convention; it must be a verified Email Routing destination.
 INBOUND_DEFAULT_FORWARD = "info-merqifyhub@googlegroups.com"
+# #1409 — names this deployment, so outgoing subjects are tagged [STAGING]. Unset means [DEV].
+APP_ENV = "staging"
 
 # #1217 — Cloudflare Email Service. The binding is the credential: no API key secret.
 [[env.staging.send_email]]
@@ -143,6 +145,8 @@ EMAIL_FROM = "no-reply@merqify.com"
 EMAIL_RECIPIENT_MODE = "open"
 # #1399 — see the staging block.
 INBOUND_DEFAULT_FORWARD = "info-merqifyhub@googlegroups.com"
+# #1409 — production subjects are never tagged.
+APP_ENV = "production"
 
 [[env.production.send_email]]
 name = "EMAIL"

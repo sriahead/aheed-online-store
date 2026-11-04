@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import scheduler from "../workers/scheduler/src/index";
 import {
+  ALL_JOB_PATHS,
+  CONTACT_OUTBOX_PATH,
   DAILY_CRON,
   ERROR_RATE_PATH,
   REAPER_PATH,
@@ -88,6 +90,7 @@ describe("job scheduler", () => {
       "/api/jobs/reconcile-payments",
       "/api/jobs/reap-guest-carts",
       "/api/jobs/check-error-rate",
+      "/api/jobs/retry-contact-outbox",
     ]);
   });
 
@@ -142,15 +145,40 @@ const FAILED: SignalRead = { ok: false };
 const at = (value: string): SignalRead => ({ ok: true, value });
 
 describe("selectJobs (#1324)", () => {
-  const tick = (paymentDueAt: SignalRead, errorLastAt: SignalRead) =>
-    selectJobs({ cron: "*/15 * * * *", now: NOW, paymentDueAt, errorLastAt });
+  const tick = (
+    paymentDueAt: SignalRead,
+    errorLastAt: SignalRead,
+    contactOutboxPending: SignalRead = NONE,
+  ) =>
+    selectJobs({ cron: "*/15 * * * *", now: NOW, paymentDueAt, errorLastAt, contactOutboxPending });
 
-  it("R3: the daily cron calls all three jobs in order, whatever the signals say", () => {
+  it("R3: the daily cron calls every job in order, whatever the signals say", () => {
     for (const signal of [NONE, FAILED, at(minutesFromNow(60)), at("garbage")]) {
       expect(
-        selectJobs({ cron: DAILY_CRON, now: NOW, paymentDueAt: signal, errorLastAt: signal }),
-      ).toEqual([SWEEP_PATH, REAPER_PATH, ERROR_RATE_PATH]);
+        selectJobs({
+          cron: DAILY_CRON,
+          now: NOW,
+          paymentDueAt: signal,
+          errorLastAt: signal,
+          contactOutboxPending: signal,
+        }),
+      ).toEqual([SWEEP_PATH, REAPER_PATH, ERROR_RATE_PATH, CONTACT_OUTBOX_PATH]);
     }
+  });
+
+  describe("#1409 R22: the contact outbox retry on a tick", () => {
+    it.each([
+      ["a failed read", FAILED, true],
+      ["nothing stored", NONE, false],
+      ["a stored instant", at(minutesFromNow(-5)), true],
+      ["an unparseable value", at("garbage"), true],
+    ])("%s → included: %s", (_label, read, included) => {
+      expect(tick(NONE, NONE, read as SignalRead).includes(CONTACT_OUTBOX_PATH)).toBe(included);
+    });
+
+    it("ALL_JOB_PATHS lists it", () => {
+      expect(ALL_JOB_PATHS).toContain(CONTACT_OUTBOX_PATH);
+    });
   });
 
   describe("R4: the sweep on a tick", () => {
@@ -186,6 +214,7 @@ describe("selectJobs (#1324)", () => {
         const jobs = tick(payment, errors);
         expect(jobs).not.toContain(REAPER_PATH);
         if (jobs.length === 2) expect(jobs).toEqual([SWEEP_PATH, ERROR_RATE_PATH]);
+        expect(jobs).not.toContain(CONTACT_OUTBOX_PATH);
       }
     }
   });
@@ -216,23 +245,35 @@ describe("scheduled handler gating (#1324 R7)", () => {
       .map((call: unknown[]) => String(call[0]))
       .filter((l: string) => l.startsWith("scheduler tick"));
 
-  it("fails open with no JOB_SIGNALS binding: the sweep and the error check both run", async () => {
+  it("fails open with no JOB_SIGNALS binding: every gated job runs", async () => {
     await scheduler.scheduled(TICK, ENV, CTX);
-    expect(fetchedPaths()).toEqual([SWEEP_PATH, ERROR_RATE_PATH]);
+    expect(fetchedPaths()).toEqual([SWEEP_PATH, ERROR_RATE_PATH, CONTACT_OUTBOX_PATH]);
+  });
+
+  it("#1409: a stored contact-outbox marker runs only the retry job", async () => {
+    await scheduler.scheduled(
+      TICK,
+      { ...ENV, JOB_SIGNALS: kv({ "contact-outbox:pending": "2026-11-03T10:00:00.000Z" }) },
+      CTX,
+    );
+    expect(fetchedPaths()).toEqual([CONTACT_OUTBOX_PATH]);
   });
 
   it("skips every job on an idle tick, and still logs the tick", async () => {
     await scheduler.scheduled(TICK, { ...ENV, JOB_SIGNALS: kv({}) }, CTX);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(tickLines()).toEqual([
-      `scheduler tick cron=*/15 * * * * ran=none skipped=${SWEEP_PATH},${REAPER_PATH},${ERROR_RATE_PATH}`,
+      `scheduler tick cron=*/15 * * * * ran=none skipped=${SWEEP_PATH},${REAPER_PATH},${ERROR_RATE_PATH},${CONTACT_OUTBOX_PATH}`,
     ]);
   });
 
   it("a throwing first read still reads the second key, and fails open for the first", async () => {
-    const store = kv({ "error-events:last-at": null }, { throwOn: "payment-sweep:due-at" });
+    const store = kv(
+      { "error-events:last-at": null, "contact-outbox:pending": null },
+      { throwOn: "payment-sweep:due-at" },
+    );
     await scheduler.scheduled(TICK, { ...ENV, JOB_SIGNALS: store }, CTX);
-    expect(store.get).toHaveBeenCalledTimes(2);
+    expect(store.get).toHaveBeenCalledTimes(3);
     expect(fetchedPaths()).toEqual([SWEEP_PATH]);
   });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isOwnDomainHost,
   isRoutableSenderDomain,
   suggestSender,
   type StoreHost,
@@ -127,5 +128,28 @@ describe("isRoutableSenderDomain (R13)", () => {
     expect(routable("Orders@CornerShop.Example", [host("cornershop.example")])).toBe(true);
     expect(routable("orders@PLATFORM.TEST")).toBe(true);
     expect(routable("orders@Mail.Example", [], ["MAIL.example"])).toBe(true);
+  });
+});
+
+describe("isOwnDomainHost (#1409 R6)", () => {
+  it("is true for a store domain outside the platform", () => {
+    expect(isOwnDomainHost("srimart.co.uk", "merqify.com")).toBe(true);
+    expect(isOwnDomainHost("Shop.Example.COM", "merqify.com")).toBe(true);
+  });
+
+  it.each([
+    "aheed.merqify.com",
+    "merqify.com",
+    "x.localhost",
+    "localhost:8787",
+    "127.0.0.1",
+    "localhost",
+  ])("is false for %s", (host) => {
+    expect(isOwnDomainHost(host, "merqify.com")).toBe(false);
+  });
+
+  it("with no platform domain, every eligible host counts", () => {
+    expect(isOwnDomainHost("a.com", undefined)).toBe(true);
+    expect(isOwnDomainHost("a.localhost", undefined)).toBe(false);
   });
 });

@@ -37,6 +37,7 @@ const STATIC_PATHS = [
   "/bundles",
   "/whatsapp-offers",
   "/help",
+  "/contact",
   "/privacy",
   "/terms",
 ];
@@ -58,7 +59,7 @@ afterEach(() => {
 });
 
 describe("app/sitemap.ts (#955)", () => {
-  it("lists exactly the six static public paths when the vendor has no catalogue (R10)", async () => {
+  it("lists exactly the static public paths when the vendor has no catalogue (R10)", async () => {
     const urls = (await run()).map((entry) => entry.url);
 
     expect(urls).toEqual(STATIC_PATHS.map((path) => `https://aheed.example${path}`));
@@ -74,9 +75,9 @@ describe("app/sitemap.ts (#955)", () => {
     expect(urls).toContain("https://aheed.example/products/item-b");
     expect(urls).toContain("https://aheed.example/categories/dept-one");
     expect(urls).toContain("https://aheed.example/categories/dept-two");
-    // One entry per record and no duplicates: 7 static + 2 categories + 2 products.
-    expect(urls).toHaveLength(11);
-    expect(new Set(urls).size).toBe(11);
+    // One entry per record and no duplicates: 8 static + 2 categories + 2 products.
+    expect(urls).toHaveLength(12);
+    expect(new Set(urls).size).toBe(12);
   });
 
   it("builds every URL on the host that asked, not a baked-in one (R12)", async () => {

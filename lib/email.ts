@@ -1,12 +1,14 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
   DEFAULT_PLATFORM_NAME,
+  getAppEnvironment,
   getEmailEnv,
   getPlatformBrandingEnv,
   readOptional,
   type EmailEnv,
 } from "./config";
 import { createCloudflareAdapter } from "./email/cloudflare";
+import { withEnvironmentTag } from "./email/environment-tag";
 import { createLogAdapter } from "./email/log";
 import { isRecipientAllowed, resolveSender } from "./email/policy";
 import { createResendAdapter } from "./email/resend";
@@ -72,7 +74,9 @@ export function getPlatformSenderName(): string {
 
 export function getEmailService(): EmailService {
   return {
-    async send({ to, subject, html, sender }) {
+    async send({ to, subject: untagged, html, sender, replyTo: replyToOverride }) {
+      // #1409 — first, so the adapter and every log line below see the tagged subject.
+      const subject = withEnvironmentTag(untagged, getAppEnvironment());
       let env: EmailEnv;
       try {
         env = getEmailEnv();
@@ -107,12 +111,15 @@ export function getEmailService(): EmailService {
         return { status: "failed", reason };
       }
 
-      const { from, replyTo } = resolveSender({
+      const resolved = resolveSender({
         sender,
         verifiedDomains: env.EMAIL_VERIFIED_DOMAINS,
         platformFrom: env.EMAIL_FROM ?? "",
         platformName: getPlatformSenderName(),
       });
+
+      const from = resolved.from;
+      const replyTo = replyToOverride?.trim() ? replyToOverride.trim() : resolved.replyTo;
 
       const result = await adapter.deliver({ from, replyTo, to, subject, html });
       if (result.status === "failed") {

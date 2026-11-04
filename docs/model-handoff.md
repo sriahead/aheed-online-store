@@ -40,23 +40,38 @@ reconciliation. If overall project state did not materially change, leave this f
 ## Last Verified
 
 - **2026-11-03 (`#1399`, `#1392` + `#1403`): incoming email is live on `merqify.com`; outgoing still is not.**
-  - **`#1399` (default forward-to inbox) is MERGED TO STAGING** (PR #1402, `924a6ec`), board
-    `In Review`, NOT promoted. It was validated in-session, not independently. The owner confirmed
+  - **`#1399` (default forward-to inbox) is IN PRODUCTION** (PR #1402, promoted in PR #1406,
+    `deb6347`), closed and `Done`. It was validated in-session, not independently. The owner confirmed
     it on staging. Spec `specs/2026-11-02-default-forward-inbox/`. Sanity check: `env-setup.md`,
     "Sanity check: default forward-to inbox".
-  - **`#1392` + `#1403` are MERGED TO STAGING** (PR #1405, `6b169cd`), board `In Review`, NOT
-    promoted. Spec `specs/2026-11-02-forward-dropdown-default-sender/`. They add a Forward to
+  - **`#1392` + `#1403` are IN PRODUCTION** (PR #1405, promoted in PR #1406, `deb6347`). `#1403`
+    is closed and `Done`; `#1392` stays open (`In Review`). Spec `specs/2026-11-02-forward-dropdown-default-sender/`. They add a Forward to
     dropdown of Cloudflare-verified destinations (text fallback) and a suggested sender per store.
     Validated in-session, not independently. The staging rows R5, R6, R10 `ok` and R11 `true` are
     unverified. Sanity check: `env-setup.md`, "Sanity check: verified mailboxes and suggested
     sender".
     - **Owner prerequisite for the live dropdown:** add **Email Routing Addresses: Read** to the
       staging and production Merqify tokens (same token values, no redeploy). On 2026-11-03 the
-      staging token still answered **403** (error 10000), so staging shows the text-field fallback,
-      as designed. Re-run sanity steps 3-6 once it is added.
-    - The promotion PR must close `#1403` only. `#1392` stays open for routing-rule and
-      sending-domain state.
+      staging and production tokens both answered **403** (error 10000), so staging and production show the text-field
+      fallback, as designed. Re-run sanity steps 3-8 once it is added.
+    - `#1392` stays open for routing-rule and sending-domain state.
       "New stores start with the suggested sender" is `#1404` (P12).
+  - **`#1409` (storefront Contact us form) is BUILT, NOT VALIDATED** on
+    `feature/1409-storefront-contact-form` (spec `specs/2026-11-03-storefront-contact-form/`, build
+    `a2724a30`; read its `build-notes.md`). It adds `/contact` routed to the Client Setup ORDERS/SUPPORT
+    forward-to, `APP_ENV` tagging of every outgoing subject (`[STAGING]`/`[DEV]`), a `ContactOutbox`
+    retried by the scheduler, and it hides the footer email on platform hosts. Its migration
+    `20261103120000_contact_form` is applied on dev (owner, 2026-11-03); staging and production get
+    it from the deploy workflows. The branch also carries the `#1406` promotion
+    docs commit.
+  - **Email Routing on `merqify.com`, as the owner's dashboard showed it on 2026-11-03:** a
+    **catch-all** to `info-merqifyhub@googlegroups.com` and one rule, `info@merqify.com` to
+    `info-merqify@googlegroups.com`. There are **no Worker rules**, so the inbound Worker and every
+    Client Setup forward-to are unused, and all store mail lands in the hub. Neither Merqify token
+    can read routing rules (error 10000), so this is visible only in the dashboard.
+  - **`#1408`:** CI `docs-gates` does not compile the docs site as MDX, so a bare `<tag>` in
+    `docs/` or `specs/` passes CI and then fails `deploy-docs-internal` after the merge. It happened
+    twice; run the real `kms/site-internal` build until it is fixed.
   - **On staging, both Aheed receiving addresses** (`info-aheed@`, `orders-aheed@merqify.com`)
     forward to the hub group, not `info-afc@`. The owner may re-add them.
   - **Email Routing is ENABLED on `merqify.com`** (MX `route1/2/3.mx.cloudflare.net`, SPF,

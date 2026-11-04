@@ -16,6 +16,11 @@ export interface OutgoingEmail {
   html: string;
   /** The vendor the mail is sent on behalf of. Omitted means the platform itself. */
   sender?: EmailSender;
+  /**
+   * #1409 — overrides the policy's Reply-To when set and non-blank. The contact form uses it so a
+   * store's staff reply straight to the shopper.
+   */
+  replyTo?: string;
 }
 
 /** What an adapter delivers: the From is final, and `replyTo` is set only when R5 says so. */

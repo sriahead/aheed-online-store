@@ -122,3 +122,28 @@ describe("R13 — markErrorEvent is throttled to one write per 5 minutes", () =>
     if (writes) expect(store.data.get(ERR)).toBe(NOW.toISOString());
   });
 });
+
+describe("#1409 R19 — the contact outbox marker", () => {
+  it("mark puts an ISO instant and clear deletes the key", async () => {
+    const kv = memoryKv();
+    ctx.env = { JOB_SIGNALS: kv };
+    const { markContactOutboxPending, clearContactOutboxPending } =
+      await import("@/lib/job-signals");
+    await markContactOutboxPending();
+    expect(Number.isNaN(Date.parse(kv.data.get("contact-outbox:pending") ?? ""))).toBe(false);
+    await clearContactOutboxPending();
+    expect(kv.data.has("contact-outbox:pending")).toBe(false);
+  });
+
+  it("both resolve when the binding is absent or throwing", async () => {
+    const { markContactOutboxPending, clearContactOutboxPending } =
+      await import("@/lib/job-signals");
+    for (const env of [{}, { JOB_SIGNALS: throwingKv() }]) {
+      ctx.env = env;
+      await expect(markContactOutboxPending()).resolves.toBeUndefined();
+      await expect(clearContactOutboxPending()).resolves.toBeUndefined();
+    }
+    ctx.throws = true;
+    await expect(markContactOutboxPending()).resolves.toBeUndefined();
+  });
+});

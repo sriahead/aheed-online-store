@@ -59,12 +59,18 @@ const SEEDED = {
   loyaltyEnabled: true,
 };
 
-function renderFooter(profile: object, platformName?: string, assistantAvailable = false) {
+function renderFooter(
+  profile: object,
+  platformName?: string,
+  assistantAvailable = false,
+  ownDomain = true,
+) {
   render(
     <StorefrontFooter
       profile={profile as VendorProfile}
       platformName={platformName}
       assistantAvailable={assistantAvailable}
+      ownDomain={ownDomain}
     />,
   );
   return screen.getByRole("contentinfo");
@@ -95,6 +101,7 @@ describe("StorefrontFooter (#1055)", () => {
         platformName="Merqify"
         platformTagline="Your Merchandise, Digitised Quickly"
         assistantAvailable={false}
+        ownDomain={false}
       />,
     );
     expect(screen.getByRole("contentinfo").textContent).toContain(
@@ -119,10 +126,43 @@ describe("StorefrontFooter (#1055)", () => {
     expect(footer.querySelector('a[href^="mailto:"]')).toBeNull();
   });
 
-  it("links a real email address", () => {
+  it("links a real email address on the store's own domain, with a tagged subject (#1409 R9)", () => {
     const footer = renderFooter({ ...SEEDED, contactEmail: "shop@example.com" });
-    expect(footer.querySelector('a[href="mailto:shop@example.com"]')).not.toBeNull();
+    const expected = `mailto:shop@example.com?subject=${encodeURIComponent("[DEV] Enquiry: First Shop")}`;
+    expect(footer.querySelector(`a[href="${expected}"]`)).not.toBeNull();
   });
+
+  it("never prints the email on the shared platform (#1409 R8)", () => {
+    const footer = renderFooter(
+      { ...SEEDED, contactEmail: "shop@example.com" },
+      undefined,
+      false,
+      false,
+    );
+    expect(footer.querySelector('a[href^="mailto:"]')).toBeNull();
+    expect(footer.textContent).not.toContain("shop@example.com");
+  });
+
+  it("does not show the contact column for an email alone on the shared platform (#1409 R8)", () => {
+    const footer = renderFooter(
+      { ...BARE, contactEmail: "shop@example.com" },
+      undefined,
+      false,
+      false,
+    );
+    expect(within(footer).queryByRole("heading", { name: "Visit & contact us" })).toBeNull();
+  });
+
+  it.each([true, false])(
+    "links Contact us right before Leave a review (ownDomain=%s, #1409 R10)",
+    (own) => {
+      const footer = renderFooter(BARE, undefined, false, own);
+      const contact = within(footer).getByRole("link", { name: "Contact us" });
+      expect(contact.getAttribute("href")).toBe("/contact");
+      const nextItem = contact.closest("li")?.nextElementSibling;
+      expect(nextItem?.textContent).toBe("Leave a review");
+    },
+  );
 
   it("shows the weekly hours Monday → Sunday and highlights today (#1060)", () => {
     // Wednesday 2026-10-14, midday in London.

@@ -6,7 +6,9 @@ import { Header } from "@/components/layout/Header";
 import { FloatingContact } from "@/components/layout/FloatingContact";
 import { AssistantLauncherProvider } from "@/components/assistant/AssistantLauncher";
 import { StorefrontFooter } from "@/components/layout/StorefrontFooter";
-import { getPlatformBrandingEnv } from "@/lib/config";
+import { getEmailEnv, getPlatformBrandingEnv, readOptional } from "@/lib/config";
+import { emailDomain } from "@/lib/email/policy";
+import { isOwnDomainHost } from "@/lib/client-setup/sender-suggestion";
 import { CookieBanner } from "@/components/consent/CookieBanner";
 import { QuickViewProvider } from "@/components/product/quick-view-context";
 import { QuickViewDrawer } from "@/components/product/QuickViewDrawer";
@@ -46,6 +48,10 @@ export async function StorefrontChrome({
   const assistantAvailable = profile.assistantEnabled && profile.whatsappNumber !== null;
   const activeSlotIcons = await getActiveSlotAssetsForVendor(profile.id).catch(() => ({}));
   const platformBranding = getPlatformBrandingEnv();
+  // #1409 — judged from the host the shopper is on, so it costs no query. The platform domain is
+  // EMAIL_FROM's, the same source the Client Setup sender suggestion uses.
+  const platformDomain = emailDomain(readOptional(getEmailEnv)?.EMAIL_FROM ?? "") || undefined;
+  const ownDomain = isOwnDomainHost(host.toLowerCase(), platformDomain);
 
   return (
     <ActiveSlotIconsProvider initialIcons={activeSlotIcons}>
@@ -67,6 +73,7 @@ export async function StorefrontChrome({
                 platformName={platformBranding.PLATFORM_NAME}
                 platformTagline={platformBranding.PLATFORM_TAGLINE}
                 assistantAvailable={assistantAvailable}
+                ownDomain={ownDomain}
               />
               <FloatingContact
                 vendorName={profile.name}
