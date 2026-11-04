@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **Promotions AI Anti-Hallucination Guardrails & Truth Verification** (issue `#1415`).
+  - **Anti-Hallucination Prompt Constraints (`lib/promotions-ai.ts`):** Enforced mandatory truthfulness rules in `buildPromotionPrompt`. Forbids hallucinated discount percentages, fabricated was-prices, or artificial savings when none exist on the selected item. Stripped misleading prompt examples (`Save 20%`) and enforced context-appropriate social proof/quality badges (`Customer Favourite`, `Store Pick`) when items lack explicit discounts.
+  - **Truthful Item & Bundle Details Provider (`lib/promotions-ai-service.ts`):** Bundles now supply itemized constituents with individual unit prices and derived total bundle pricing. Product queries accurately compute real multi-buy savings (e.g. 3 for £10 vs £3.99 each saves £1.97) and suppress invalid was-price entries (`originalPrice <= basePrice`).
+  - **Unit Tests (`tests/promotions-ai.test.ts`):** Added tests pinning anti-hallucination guardrails, multi-buy savings calculation, bundle constituent formatting, and non-discount prompt outputs.
+
 - **Promotions campaign management, eligible items, checkout auto-apply & AI generation** (issue `#1415`, spec `specs/2026-11-04-p1415-promotions-campaign-marketing/`).
   - **Two-Column Form & AI Generator Placement:** Reorganised the staff promotion authoring and editing form into a balanced two-column desktop grid with `PageContainer width="wide"`. Strategic targeting (offer type, eligible item, department scope, channel) and scheduling (dates, priority, audience) sit on the left; the psychology-led AI content generator is positioned prominently above promotional messaging and banner creative on the right.
   - **Schema & Migration:** Extended `Promotion` with `productId String?` (FK to `Product`), `channel PromotionChannel @default(WEBSITE)` enum supporting `WEBSITE`, `WHATSAPP`, `FACEBOOK`, and `INSTAGRAM`, and composite index `@@index([vendorId, productId])` via hand-authored migration `20261104140000_promotions_campaign_marketing`.
