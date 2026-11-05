@@ -1257,7 +1257,16 @@ Live checks (staging):
 **Last run:** 2026-11-05 on staging after PR #1431 (`4fa69aa`, deploy run `42020496874`). Quick
 checks 1-3 passed: the deploy applied `20261104160000_order_alert_recipient` and redeployed
 `aheed-inbound-email-staging`; health was OK; the alert route answered 405 and 401. Live checks 4-8
-have not run, because `TELEGRAM_BOT_TOKEN` is not yet set on staging.
+then waited on the bot token. Later that day the owner set `TELEGRAM_BOT_TOKEN` on staging, and
+checks 1-3 passed again. Steps 4-5 passed: the group received
+`[STAGING] Test alert from Client Setup: Aheed Food Centre`. Steps 6-8 have not run yet.
+
+Two gotchas came up at step 4:
+
+- `getUpdates` returns `{"ok":true,"result":[]}` until a message the bot can see arrives after the
+  bot joins. With privacy mode on (the default), that means a command addressed to it, such as
+  `/start@<bot_username>`.
+- Use the `id` inside `"chat"`, never the one inside `"from"`, which is the sender's own user ID.
 
 Quick checks:
 
