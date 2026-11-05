@@ -4,8 +4,8 @@ title: System Architecture — Merqify Platform
 audience: [dev]
 type: doc
 status: approved
-version: "1.47.0"
-updated: 2026-11-04
+version: "1.48.0"
+updated: 2026-11-05
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -39,7 +39,8 @@ environment-configured seam so the platform can move clouds without a rewrite.
 | Image delivery | CDN in front of the bucket | DB stores **relative keys**; `CDN_BASE_URL` resolved at runtime. |
 | Payments | **Stripe** (Elements/Checkout + webhooks) | `PaymentService` port; card data never touches our servers. |
 | Transactional email | **Cloudflare Email Service** (Email Sending + Email Routing), since `#1217` | Provider-agnostic `EmailService` port (`lib/email.ts`), one adapter per provider under `lib/email/`, chosen by `EMAIL_PROVIDER`. Resend stays a selectable fallback. Each store sends from its own address once its domain is verified; incoming mail reaches `workers/inbound-email`, which forwards it to the store's mailbox. |
-| Staff alerts | **Telegram Bot API**, since `#1390` | `OrderAlertChannelAdapter` port (`lib/order-alert/`), one adapter per `OrderAlertChannel`; recipients per vendor in `VendorOrderAlertRecipient`. Plain text only: store, order number, sender name, subject, route. WhatsApp is a second adapter (`#1424`), not a replacement. |
+| Staff alerts | **Telegram Bot API**, since `#1390` | `OrderAlertChannelAdapter` port (`lib/order-alert/`), one adapter per `OrderAlertChannel`; recipients per vendor in `VendorOrderAlertRecipient`. Plain text only: store, order number, sender name, subject, route. WhatsApp is a second adapter (`#1424`), not a replacement. Since `#1435`, the store owner also gets every order event (new paid order, each status change, cancellation) through the same adapter, plus by email; that Telegram text carries no customer name, address or product names. |
+| Outbound notification queue | **`NotificationOutbox`** (Postgres), since `#1435` | Channel-neutral (`EMAIL` / `TELEGRAM`). Send first, queue only on failure; `workers/scheduler` retries via `/api/jobs/retry-notification-outbox` while the `notification-outbox:pending` KV marker is set, plus daily; rows expire unsent after 24 h. Every order-event message (customer and owner) goes through it. `ContactOutbox` (`#1409`) stays contact-form-only, with its 7-day retention. A `JobQueue` port (Cloudflare Queues) remains the growth-stage option below. |
 | Auth | **Better Auth** (self-hosted, bearer tokens, RBAC) | Unchanged from ADR-002. |
 | Validation | **zod** (shared client/server, plus env parsing) | — |
 | Caching | Next.js Data/Route cache (portable) + optional edge KV behind a `CacheService` port | Degrades to DB-only; KV ↔ Redis swap. |
