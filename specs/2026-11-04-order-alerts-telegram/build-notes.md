@@ -136,3 +136,30 @@ format:check were green.
   - `#1426`: per-vendor alert throttle.
   - `#1427`: self-service Telegram linking and store-admin access.
   - `#1428`: order numbers from the email body.
+
+## Validation pass 1 — not independent (same session, owner's choice), 2026-11-05
+
+Run in the session that built the slice, on Opus, from the worktree at `ed32014a`. **Result: FAIL.**
+One finding needs `/fix`, and the live rows wait on the dev migration.
+
+- **Pre-flight, all exit 0:** lint, typecheck, format:check, `vitest --maxWorkers=4` (392 files,
+  5796 tests), kms:validate, kms:check-generated, `npm run build`, and the KMS internal site build.
+  The worktree needed `npm ci` in `kms/site-internal` first.
+- **PASS:** R1, R2 (`diff` empty; no destructive statements; `#895` header), R3–R7, R8 (static and
+  the repository tests), R9 (as tested), R10, R11, R12, R14 (static and schema tests), R16–R18
+  (static), R20, R21.
+- **FAIL, F1 (R9/R16/R18 privacy):** `parseFromDisplayName('"jane@customer.test" <jane@customer.test>')`
+  returns `jane@customer.test`. Some mail clients send exactly this header when no name is set, so
+  the customer's address reaches Telegram as `From: …`. That breaks R9 ("No sender address is in the
+  body"), R16's "the customer's email address [is] never sent", and the privacy sentence. Fix
+  direction: treat a display name containing `@` as no name (`null`) in the Worker, and make
+  `formatOrderAlert` print `unknown` for an `@` name too, so the contact form's free-text name is
+  covered as well. Add tests for both.
+- **UNVERIFIED, needs the dev migration:** R8 live duplicate, R13, R14 preview, R15, R18 preview.
+  Dev (`ep-dry-morning`) has three migrations unapplied: `20261104120000_promotions_overhaul` and
+  `20261104140000_promotions_campaign_marketing` (both already on staging) and this slice's
+  `20261104160000_order_alert_recipient`.
+- **BLOCKED (owner resource missing):** R19. There is no `TELEGRAM_BOT_TOKEN` in `.dev.vars` or
+  `.env`.
+- **Ship note:** `origin/staging` moved to `869cec05`. A merge conflicts only in the generated
+  `ARTIFACT_INDEX.md`. Regenerate it with `kms:build-index` when merging.
