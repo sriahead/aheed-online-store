@@ -1,6 +1,7 @@
 import type { InboundDefaultForward } from "@/lib/config";
 import type { EmailSendResult, OutgoingEmail } from "@/lib/email";
 import type { ContactOutboxInput } from "@/lib/repositories/contact";
+import type { OrderAlertBrief } from "@/lib/order-alert/brief";
 import {
   initialContactState,
   parseContactFields,
@@ -16,6 +17,10 @@ import { resolveContactRecipient, type RecipientAddress } from "./recipient";
  *
  * The order is fixed (R14): honeypot, validation, rate limit, order ownership, recipient, send.
  * Only a submission that passes validation counts against the rate limit.
+ *
+ * #1390 R12 — after the send (or the outbox enqueue), a complaint or a message about the shopper's
+ * own order alerts the store's staff. Awaited, because a Worker may cancel an unawaited promise once
+ * the response is sent; a failed alert is logged and never changes what the shopper sees.
  */
 
 export interface ContactDeps {
@@ -31,6 +36,8 @@ export interface ContactDeps {
   enqueue(row: ContactOutboxInput): Promise<void>;
   markPending(): Promise<void>;
   logError(message: string): void;
+  /** #1390 — alert the store's staff. Expected never to reject, but guarded anyway. */
+  alert(brief: OrderAlertBrief): Promise<void>;
   vendorId: string;
   now(): Date;
 }
@@ -105,6 +112,20 @@ export async function processContactSubmission(
       lastError: result.reason,
     });
     await deps.markPending();
+  }
+
+  if (input.type === "COMPLAINT" || orderNumber !== null) {
+    try {
+      await deps.alert({
+        source: "contact-form",
+        storeName: deps.storeName,
+        orderNumber,
+        senderName: input.name,
+        subject: input.subject,
+      });
+    } catch {
+      deps.logError(`contact form: order alert failed for vendor ${deps.vendorId}`);
+    }
   }
   return succeeded(input.email);
 }

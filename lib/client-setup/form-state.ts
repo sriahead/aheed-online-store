@@ -35,6 +35,23 @@ export const removeInboundAddressSchema = z.object({
 
 export const testEmailSchema = z.object({ vendorId: z.string().min(1) });
 
+// #1390 — order-alert recipients. A Telegram chat id is numeric; a group's starts with "-".
+export const CHAT_ID_MESSAGE = "Enter the numeric Telegram chat ID (group IDs start with -).";
+
+export const orderAlertRecipientSchema = z.object({
+  vendorId: z.string().min(1),
+  channel: z.enum(["TELEGRAM"]),
+  destination: z
+    .string()
+    .trim()
+    .regex(/^-?\d{1,20}$/, CHAT_ID_MESSAGE),
+});
+
+export const orderAlertRecipientIdSchema = z.object({
+  vendorId: z.string().min(1),
+  id: z.string().min(1),
+});
+
 export function firstIssue(error: z.ZodError): string {
   return error.issues[0]?.message ?? "Check the form and try again.";
 }

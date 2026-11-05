@@ -15,8 +15,8 @@
  * application outage never drops a customer's email.
  *
  * NOTHING PERSONAL IS LOGGED. The one log line carries the vendor id, purpose, order flag and order
- * number — never the sender, the subject or the body (R22). `#1390` attaches the WhatsApp alert at
- * that point.
+ * number — never the sender, the subject or the body (R22). After it, an order-related message asks
+ * `/api/inbound-email/alert` to alert the store's staff (`#1390`).
  */
 
 export interface Env {
@@ -45,6 +45,7 @@ interface Resolution {
 }
 
 export const RESOLVE_PATH = "/api/inbound-email/resolve";
+export const ALERT_PATH = "/api/inbound-email/alert";
 
 async function forwardToFallback(message: InboundMessage, env: Env, why: string): Promise<void> {
   console.error(`inbound-email resolve failed (${why}); forwarding to the fallback mailbox`);
@@ -88,6 +89,73 @@ export async function handleInboundEmail(message: InboundMessage, env: Env): Pro
     `inbound-email vendorId=${resolution.vendorId} purpose=${resolution.purpose} ` +
       `orderRelated=${resolution.orderRelated} orderNumber=${resolution.orderNumber ?? "none"}`,
   );
+
+  if (resolution.orderRelated) await requestOrderAlert(message, env);
+}
+
+/**
+ * #1390 R9 — ask the application to alert the store's staff. Only AFTER `forward()` has resolved,
+ * so an alert can never delay or break delivery; a failure here is logged and swallowed. The body
+ * carries the sender's display name only, never their address. The application re-resolves the
+ * address itself rather than trusting a vendor id from this side.
+ */
+async function requestOrderAlert(message: InboundMessage, env: Env): Promise<void> {
+  try {
+    const response = await fetch(new URL(ALERT_PATH, env.APP_BASE_URL), {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-inbound-token": env.INBOUND_EMAIL_TOKEN },
+      body: JSON.stringify({
+        to: message.to,
+        subject: message.headers.get("subject") ?? "",
+        fromName: parseFromDisplayName(message.headers.get("from")),
+      }),
+    });
+    if (!response.ok) console.error(`inbound-email alert call failed (${response.status})`);
+  } catch {
+    console.error("inbound-email alert call failed (network error)");
+  }
+}
+
+/** A UTF-8 RFC 2047 encoded word (`=?UTF-8?B?…?=` or `?Q?`), decoded; anything else unchanged. */
+function decodeEncodedWords(value: string): string {
+  return value.replace(
+    /=\?([^?]+)\?([bBqQ])\?([^?]*)\?=/g,
+    (whole, charset: string, encoding: string, text: string) => {
+      if (charset.toLowerCase() !== "utf-8") return whole;
+      try {
+        let bytes: Uint8Array;
+        if (encoding.toLowerCase() === "b") {
+          bytes = Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
+        } else {
+          const ascii = text
+            .replace(/_/g, " ")
+            .replace(/=([0-9A-Fa-f]{2})/g, (_m, hex: string) =>
+              String.fromCharCode(parseInt(hex, 16)),
+            );
+          bytes = Uint8Array.from(ascii, (c) => c.charCodeAt(0));
+        }
+        return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      } catch {
+        return whole;
+      }
+    },
+  );
+}
+
+/**
+ * #1390 R10 — the display name from a `From` header (`"Jane Doe" <j@x.com>` gives `Jane Doe`), or
+ * null when there is none. The address part is never returned.
+ */
+export function parseFromDisplayName(header: string | null): string | null {
+  if (!header) return null;
+  const angle = header.lastIndexOf("<");
+  if (angle <= 0) return null;
+  let name = header.slice(0, angle).trim();
+  if (name.startsWith('"') && name.endsWith('"') && name.length >= 2) {
+    name = name.slice(1, -1).replace(/\\(.)/g, "$1").trim();
+  }
+  if (name === "") return null;
+  return decodeEncodedWords(name);
 }
 
 const inboundEmailWorker = {

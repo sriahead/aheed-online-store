@@ -16,6 +16,7 @@ import { listAllVendorIds } from "@/lib/repositories/vendor";
 import { findOrderForUser, listOrdersForUser } from "@/lib/repositories/orders";
 import { fetchVendorProfile } from "@/lib/vendor-service";
 import { processContactSubmission } from "@/lib/contact/submit";
+import { sendOrderAlertForVendor } from "@/lib/order-alert-service";
 import type { ContactFormState } from "@/features/contact/validate-contact";
 
 /**
@@ -55,6 +56,9 @@ export async function submitContactForVendor(input: {
     enqueue: (row) => insertContactOutbox(prisma, vendorId, row),
     markPending: () => markContactOutboxPending(),
     logError: (message) => console.error(message),
+    alert: async (brief) => {
+      await sendOrderAlertForVendor(vendorId, brief);
+    },
     now: () => new Date(),
   });
 }

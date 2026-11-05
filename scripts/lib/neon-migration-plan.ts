@@ -34,6 +34,7 @@ export const MODEL_PLAN: Record<string, { class: Classification; reason: string 
   Vendor: { class: "copy-filtered", reason: "only aheed-food-centre and srimart" },
   VendorDomain: { class: "skip", reason: "regenerated for the new merqify.com hosts (R15)" },
   VendorInboundAddress: { class: "skip", reason: "per-environment addresses (#1217)" },
+  VendorOrderAlertRecipient: { class: "skip", reason: "per-environment alert chats (#1390)" },
   VendorBranding: { class: "copy", reason: "store settings" },
   VendorConfig: { class: "copy", reason: "store settings" },
   VendorLocation: { class: "copy", reason: "store settings" },

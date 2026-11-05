@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import worker, {
+  ALERT_PATH,
   RESOLVE_PATH,
   handleInboundEmail,
+  parseFromDisplayName,
   type Env,
   type InboundMessage,
 } from "../workers/inbound-email/src/index";
@@ -130,5 +132,97 @@ describe("no personal data in logs (R22)", () => {
       expect(line).not.toContain(SECRET_SUBJECT);
       expect(line).not.toContain("QX7");
     }
+  });
+});
+
+describe("order alert call (#1390 R9)", () => {
+  /** A fetch that answers the resolve call with `resolution` and the alert call with `alertStatus`. */
+  function sequence(resolution: unknown, alert: number | "reject", order: string[]) {
+    const fetchSpy = vi.fn(async (url: URL | string) => {
+      if (String(url).endsWith(RESOLVE_PATH)) {
+        order.push("resolve");
+        return new Response(JSON.stringify(resolution), { status: 200 });
+      }
+      order.push("alert");
+      if (alert === "reject") throw new Error("down");
+      return new Response("{}", { status: alert });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+    return fetchSpy;
+  }
+
+  function namedMessage(order: string[]) {
+    const m = message();
+    m.headers.set("from", `"Jane Doe" <${SECRET_FROM}>`);
+    m.forward.mockImplementation(async () => void order.push("forward"));
+    return m;
+  }
+
+  it("order-related: forwards first, then posts to/subject/fromName with the token", async () => {
+    const order: string[] = [];
+    const fetchSpy = sequence(RESOLUTION, 200, order);
+    await handleInboundEmail(namedMessage(order), env);
+
+    expect(order).toEqual(["resolve", "forward", "alert"]);
+    const [url, init] = fetchSpy.mock.calls[1] as unknown as [URL, RequestInit];
+    expect(String(url)).toBe(`https://app.test${ALERT_PATH}`);
+    expect((init.headers as Record<string, string>)["x-inbound-token"]).toBe("tok");
+    const body = JSON.parse(String(init.body));
+    expect(Object.keys(body).sort()).toEqual(["fromName", "subject", "to"]);
+    expect(body).toEqual({ to: "orders@shop.test", subject: SECRET_SUBJECT, fromName: "Jane Doe" });
+    expect(String(init.body)).not.toContain("@customer.test");
+  });
+
+  it("not order-related: no alert call", async () => {
+    const order: string[] = [];
+    sequence({ ...RESOLUTION, purpose: "SUPPORT", orderRelated: false }, 200, order);
+    await handleInboundEmail(namedMessage(order), env);
+    expect(order).toEqual(["resolve", "forward"]);
+  });
+
+  it("404 and fallback paths: no alert call", async () => {
+    const f404 = respond(404, { error: "Unknown recipient" });
+    await handleInboundEmail(message(), env);
+    expect(f404).toHaveBeenCalledTimes(1);
+
+    const fDown = vi.fn().mockRejectedValue(new Error("down"));
+    vi.stubGlobal("fetch", fDown);
+    await handleInboundEmail(message(), env);
+    expect(fDown).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([500, "reject"] as const)(
+    "a failed alert call (%s) is logged and swallowed",
+    async (a) => {
+      const order: string[] = [];
+      sequence(RESOLUTION, a, order);
+      const m = namedMessage(order);
+      await expect(handleInboundEmail(m, env)).resolves.toBeUndefined();
+      expect(m.forward).toHaveBeenCalledWith("owner@shop.test");
+      expect(logs.some((l) => l.startsWith("inbound-email alert call failed"))).toBe(true);
+      for (const line of logs) {
+        expect(line).not.toContain(SECRET_SUBJECT);
+        expect(line).not.toContain("Jane Doe");
+      }
+    },
+  );
+});
+
+describe("parseFromDisplayName (#1390 R10)", () => {
+  it.each([
+    ['"Jane Doe" <j@x.com>', "Jane Doe"],
+    ["Jane Doe <j@x.com>", "Jane Doe"],
+    ["j@x.com", null],
+    ["<j@x.com>", null],
+    ["", null],
+    ["=?UTF-8?B?Sm9zw6k=?= <j@x.com>", "José"],
+    ["=?utf-8?q?Jos=C3=A9?= <j@x.com>", "José"],
+    ["=?ISO-8859-1?Q?Jos=E9?= <j@x.com>", "=?ISO-8859-1?Q?Jos=E9?="],
+  ])("%s gives %s", (header, expected) => {
+    expect(parseFromDisplayName(header)).toBe(expected);
+  });
+
+  it("null gives null", () => {
+    expect(parseFromDisplayName(null)).toBeNull();
   });
 });
