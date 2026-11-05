@@ -1306,6 +1306,53 @@ it:
 9. After promotion, set the production token, then repeat 1-7 on `aheed.merqify.com` with
    `aheed-store-production` and `aheed-inbound-email`. A production alert has no tag.
 
+### Sanity check: order updates and notification queue (`#1435`)
+
+**Last run:** 2026-11-05 on staging after PR #1440 (`373f83f`, deploy run `42106863189`). Quick
+checks 1-4 passed: the deploy applied `20261105120000_notification_outbox` and redeployed
+`aheed-scheduler-staging`; health reported `373f83f` with the database and reference data reachable;
+the retry route answered 405 and 401; `/privacy` showed the new paragraph and `24 hours`. Live
+checks 5-10 have not run yet.
+
+Quick checks:
+
+1. `gh run list --branch staging --limit 4`. Expected: `deploy-staging` **success** on the merge
+   commit. Its log shows `Applying migration 20261105120000_notification_outbox` (first deploy only)
+   and `Deployed aheed-scheduler-staging`.
+2. `curl -s --compressed https://aheed-staging.merqify.com/api/health`. Expected: `db.ok` true,
+   `reference.reachable` true, a non-empty `reference.sources`.
+3. `curl -si https://aheed-staging.merqify.com/api/jobs/retry-notification-outbox | head -1` gives
+   **405**, and the same with `-X POST` gives **401**. A **503** means `JOB_INVOCATION_TOKEN` is
+   missing on the app Worker. Don't use `-o /dev/null` in Git Bash: it reports `000`.
+4. `curl -s --compressed https://aheed-staging.merqify.com/privacy | grep -c '24 hours'`. Expected:
+   at least `1`, and the page contains "Order updates waiting to be sent."
+
+Live checks (staging). Use an Aheed staging order that is `CONFIRMED`, with Telegram set up as in
+the `#1390` guide above:
+
+5. Run `npx wrangler tail aheed-store-staging --format pretty`. As store staff, advance a delivery
+   order to **Out for delivery** from `/staff/orders`. Expected: one
+   `notification vendorId=<id> channel=TELEGRAM audience=OWNER event=OUT_FOR_DELIVERY status=sent`
+   line for each Telegram recipient. There is also one `channel=EMAIL audience=CUSTOMER` line:
+   `status=sent` if the buyer is on `EMAIL_ALLOWED_RECIPIENTS`, otherwise `status=skipped`. If the
+   store has an **Orders** or **Support** receiving address, there is also an
+   `audience=OWNER channel=EMAIL` line. No line contains an `@`, a name or a product.
+6. The Telegram group receives `[STAGING] Out for delivery: Aheed Food Centre`, then the order
+   number, total, slot and staff-panel link lines. It contains no customer name, address or product
+   names.
+7. If the buyer is allowlisted, they receive `[STAGING] Order <number> is on its way — Aheed Food Centre`.
+   It says what happens next and gives the slot, and it has one **View your order** button.
+8. Open that order's account page in one tab, and advance it to **Delivered** from the staff panel
+   in another. Expected: within about 45 s, without a reload, the tracker moves to **Delivered** and
+   the page stops refreshing.
+9. Open `/staff/orders`, then place and pay an order in another browser session (Stripe test card).
+   Expected: within about 30 s, `1 new order since you opened this page` appears. The sound box is
+   unchecked on first visit, and **Dismiss** clears the notice.
+10. Tick two orders and bulk-advance them. Expected: two customer lines, but only one owner Telegram
+    message per recipient, listing both order numbers.
+11. After promotion, set `TELEGRAM_BOT_TOKEN` on production, then repeat 1-6 on
+    `aheed.merqify.com` with `aheed-store-production`. A production message has no tag.
+
 ## Prerequisites (one-time)
 
 1. **Authenticate the GitHub CLI** — this is where GitHub issues the **one-time device code**:
