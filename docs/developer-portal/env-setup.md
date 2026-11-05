@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.35.0"
-updated: 2026-11-04
+version: "1.36.0"
+updated: 2026-11-05
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -1251,6 +1251,51 @@ Live checks (staging):
 8. Send six valid messages within an hour from one connection. Expected: the sixth says "Too many
    messages. Please try again later."
 9. After promotion, repeat 2-5 on `aheed.merqify.com`. A production subject has no tag.
+
+### Sanity check: order alerts on Telegram (`#1390`)
+
+**Last run:** 2026-11-05 on staging after PR #1431 (`4fa69aa`, deploy run `42020496874`). Quick
+checks 1-3 passed: the deploy applied `20261104160000_order_alert_recipient` and redeployed
+`aheed-inbound-email-staging`; health was OK; the alert route answered 405 and 401. Live checks 4-8
+have not run, because `TELEGRAM_BOT_TOKEN` is not yet set on staging.
+
+Quick checks:
+
+1. `gh run list --branch staging --limit 4`. Expected: `deploy-staging` **success** on the merge
+   commit. Its log shows `Applying migration 20261104160000_order_alert_recipient` (first deploy
+   only) and `Deployed aheed-inbound-email-staging`.
+2. `curl -s --compressed https://aheed-staging.merqify.com/api/health`. Expected: `db.ok` true,
+   `reference.reachable` true, a non-empty `reference.sources`.
+3. `curl -s https://aheed-staging.merqify.com/api/inbound-email/alert` gives **405**, and
+   `curl -s -X POST -H 'content-type: application/json' -d '{}' https://aheed-staging.merqify.com/api/inbound-email/alert`
+   gives **401** `Unauthorized`. A **503** means `INBOUND_EMAIL_TOKEN` is missing on the app
+   Worker.
+
+Live checks (staging). These need a bot from BotFather, its token set with
+`npx wrangler secret put TELEGRAM_BOT_TOKEN --env staging`, and a Telegram group with the bot in
+it:
+
+4. Platform admin, `/staff/platform/client-setup` on `aheed-staging.merqify.com`, Aheed Food Centre:
+   the **Order alerts** card reads `Telegram bot token: Set`. Find the group's chat ID: send a
+   message in the group, then open `https://api.telegram.org/bot<token>/getUpdates` and read
+   `chat.id` (it starts with `-`). Add it as a recipient. Expected: it is listed as `Telegram` plus
+   the ID.
+5. Press **Send test alert**. Expected: "Test alert sent. Check the Telegram chat.", and the group
+   receives `[STAGING] Test alert from Client Setup: Aheed Food Centre` within a minute. "Failed:
+   telegram 400: Bad Request: chat not found" means the bot is not in the group or the ID is wrong.
+6. Run `npx wrangler tail aheed-store-staging --format pretty`. As a guest, send a **Complaint**
+   from `/contact`. Expected: the group receives five lines starting
+   `[STAGING] Order inquiry: Aheed Food Centre` and ending `Via: contact form`. The tail prints
+   `order alert vendorId=<id> channel=TELEGRAM status=sent`, with no subject or name.
+7. Send an email to the store's **Orders** receiving address. Run
+   `npx wrangler tail aheed-inbound-email-staging --format pretty` alongside step 6's tail.
+   Expected: the email is forwarded as before, and the group receives an alert ending `Via: email`.
+   Its `From:` line shows your display name, or `unknown` if your client sends only the address.
+   The inbound tail shows no `inbound-email alert call failed`.
+8. An **Enquiry** with no order number sends no alert, and nor does an email to a Support address
+   whose subject names no order.
+9. After promotion, set the production token, then repeat 1-7 on `aheed.merqify.com` with
+   `aheed-store-production` and `aheed-inbound-email`. A production alert has no tag.
 
 ## Prerequisites (one-time)
 
