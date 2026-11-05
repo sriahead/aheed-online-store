@@ -235,6 +235,7 @@ export default async function SearchPage({
           selectedCategory ? (selectedCategory.parent?.slug ?? selectedCategory.slug) : null
         }
         use3D
+        hrefFor={(catSlug) => categoryFilterHref(params, catSlug)}
       />
 
       {/* #1173 — applies a collapse chosen earlier in this tab before the sidebar paints. */}
@@ -261,13 +262,7 @@ export default async function SearchPage({
             }
           />
           {/* #568 — sidebar at md+, a`details` disclosure below it. Both render the same form. */}
-          <FilterPanel
-            heading="Search & filters"
-            basePath="/search"
-            showQuery
-            searchParams={params}
-            facets={facets}
-          />
+          <FilterPanel heading="Filters" basePath="/search" searchParams={params} facets={facets} />
         </CollapsibleSidebar>
 
         <div className="flex-1">
