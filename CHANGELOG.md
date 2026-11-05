@@ -8,6 +8,30 @@ every branch merges.
 
 ### Added
 
+- **Order updates: notification queue, owner email and Telegram, live order tracker** (issue `#1435`, spec `specs/2026-11-05-order-updates-notifications/`).
+  - **Notification queue.** A new `NotificationOutbox` table (hand-authored migration `20261105120000_notification_outbox`, `#895`) holds email and Telegram messages.
+    - A message is sent straight away and saved only if the send fails.
+    - `workers/scheduler` retries saved messages through `POST /api/jobs/retry-notification-outbox` while `notification-outbox:pending` is set, plus in its daily run.
+    - A message still unsent after 24 hours is deleted.
+    - `ContactOutbox` is unchanged.
+  - **One entry point.** `notifyOrderEvent` replaces `sendOrderConfirmationEmail` and `sendOrderStatusEmail` at all seven call sites.
+    - Customer order emails are now retried rather than lost.
+    - Staff "Resend confirmation email" still reaches only the customer.
+  - **Customer emails.** Each one leads with "what happens next" and the real slot, and has one "View your order" button.
+    - The confirmation says "You saved £X" only when a discount was actually recorded, and the confirmation and final emails show the points earned.
+    - A test blocks marketing and urgency wording.
+    - Every shopper-supplied string is escaped. Product names in status emails were not escaped before.
+  - **Owner notifications.** The store owner gets every paid-order event by email (the store's Orders mailbox, else its Support one) and on Telegram (the `#1390` recipients).
+    - The Telegram text carries no customer name, address, email or product names.
+    - A bulk status change sends one summary per status.
+  - **Website.** `OrderProgressTracker` shows every step of a delivery or collection order, including the steps to come, and what happens next.
+    - It replaces `OrderTimeline` on the account page.
+    - It replaces the lookup page's delivery-only stepper, which also printed the raw status code.
+    - It is added to the checkout confirmation page.
+    - `LiveRefresh` refreshes the account and checkout pages every 45 s while the tab is visible.
+    - `/staff/orders` refreshes every 30 s and shows "N new orders since you opened this page", with a sound that is off by default.
+  - **Privacy and docs.** The privacy page states what staff are told about an order and the 24-hour retry window. `architecture.md` v1.48.0, the platform admin guide, the staff playbook and the shopping guide are updated.
+
 - **Studio Product Photography for "All" Category & Storefront Surface Mapping in Visual Asset Gallery** (`components/product/SubcategoryLinks.tsx`, `components/icons/IconMedallion.tsx`, `lib/icon-slots.ts`, `lib/category-image.ts`, `components/staff/IconGalleryClient.tsx`, `docs/client-help-centre/icon-and-visual-asset-standards.md`, `tests/icon-slots.test.ts`, `tests/icon-medallion.test.tsx`, `tests/subcategory-links.test.tsx`):
   - **Studio Product Photography for "All" Subcategory (`SubcategoryLinks.tsx`, `IconMedallion.tsx`):**
     - Replaced the vector "All" icon (flat book emoji) with high-definition Studio Product Photography of an assorted supermarket grocery harvest (`/images/categories/all.jpg`), creating visual harmony across the category medallion strip.

@@ -41,11 +41,14 @@ async function loadStore(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
 ): Promise<StoreContext> {
+  // The profile (the sender) is required, as it always was for the customer email. The other three
+  // only add a link or owner recipients, so a failed read degrades to "none" rather than costing
+  // the customer their email.
   const [profile, hosts, addresses, recipients] = await Promise.all([
     fetchVendorProfile(prisma, vendorId),
-    listVendorHosts(prisma, vendorId),
-    listInboundAddresses(prisma, vendorId),
-    listOrderAlertRecipients(prisma, vendorId),
+    listVendorHosts(prisma, vendorId).catch(() => []),
+    listInboundAddresses(prisma, vendorId).catch(() => []),
+    listOrderAlertRecipients(prisma, vendorId).catch(() => []),
   ]);
   return {
     vendorId,
