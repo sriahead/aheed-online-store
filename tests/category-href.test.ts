@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoryNavHref } from "@/components/product/category-href";
+import { categoryNavHref, categoryNavQuery } from "@/components/product/category-href";
 
 describe("categoryNavHref", () => {
   it("builds a clean URL when no filters or sort are set", () => {
@@ -56,5 +56,18 @@ describe("categoryNavHref", () => {
     expect(href).toContain("attr_colour=black");
     expect(href).toContain("attr_length_min=1");
     expect(href).toContain("attr_length_max=5");
+  });
+
+  it("categoryNavQuery returns serialized query string omitting pagination", () => {
+    const qs = categoryNavQuery({
+      cursor: "abc",
+      back: "xyz",
+      isHalal: "1",
+      sort: "price_desc",
+    });
+    expect(qs).toContain("isHalal=1");
+    expect(qs).toContain("sort=price_desc");
+    expect(qs).not.toContain("cursor=");
+    expect(qs).not.toContain("back=");
   });
 });

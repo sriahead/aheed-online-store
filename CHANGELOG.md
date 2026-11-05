@@ -47,6 +47,9 @@ every branch merges.
 
 ### Fixed
 
+- **Server-to-Client Component Boundary Invariant on DepartmentScroller** (`components/layout/DepartmentScroller.tsx`, `app/(storefront)/categories/[slug]/page.tsx`, `app/(storefront)/search/page.tsx`):
+  - Fixed HTTP 500 runtime crash on `/categories/[slug]` caused by passing a function prop (`hrefFor`) from Server Components across the RSC boundary to Client Component `<DepartmentScroller />`.
+  - Replaced `hrefFor` with serializable string props `carriedQuery` and `searchMode`, generating safe category and search URLs while preserving active filter and sort queries.
 - **Promotions AI Basis Points Percentage Formatting & Promotion-Focused Image Descriptions** (issue `#1415`).
   - **Basis Points to Percentage Normalisation (`lib/promotions-ai.ts`):** Fixed AI prompt builder interpolating raw discount value as percentage directly (`500% OFF` instead of `5% OFF`). Basis points are now correctly divided by 100 (`d.discountValue / 100`), ensuring 500 bps is framed truthfully as 5% and 1000 bps as 10%.
   - **Promotion-Focused Alt Text (`lib/promotions-ai.ts`, `components/staff/PromotionForm.tsx`):** Instructed AI to generate image descriptions (`altText`) focused strictly on the promotion, offer, and department context (e.g. `Promotional banner: Save 5% on Halal Meat with code WEEKENDMEAT5`) rather than generic visual photography elements. Updated staff form label and hint text accordingly.
