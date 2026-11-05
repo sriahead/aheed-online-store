@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.162.0"
+version: "1.163.0"
 updated: 2026-11-05
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -133,8 +133,8 @@ reconciliation. If overall project state did not materially change, leave this f
       `aheed-inbound-email[-staging]`, a third Worker.
   - **Open decision:** R12 (`configure-env` does not require `EMAIL_FROM`; it is committed in
     `wrangler.toml`, `no-reply@merqify.com`, not yet owner-confirmed).
-  - **Client Setup** (`/staff/platform/client-setup`): more sections are `#1391`, WhatsApp alerts
-    `#1390`, a cosmetic test-email message `#1395`.
+  - **Client Setup** (`/staff/platform/client-setup`): more sections are `#1391`, Telegram order alerts
+    `#1390` (on staging; WhatsApp is `#1424`), a cosmetic test-email message `#1395`.
   - **This machine's TLS fails on any POST to Cloudflare hosts**, so POST checks against staging must
     run from elsewhere.
 
@@ -1510,20 +1510,23 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **P12 `#1390` — Telegram alerts for order-related inquiries — BUILT, NOT VALIDATED, NOT PUSHED
-  (2026-11-05).**
-  - **Where it is:** branch `feature/order-alerts-telegram`, built in a **separate git worktree**,
-    `E:\GitRepositories\aheed-online-store-alerts`. A concurrent session was using the main checkout,
-    and switched it to another branch mid-slice. Spec `specs/2026-11-04-order-alerts-telegram/`; read
-    its `build-notes.md` first.
-  - **Owner decisions:** Telegram now, WhatsApp later as a second adapter (`#1424`); alerts on both
-    order-related email and contact-form complaints or messages about an order; one platform bot.
-  - **Blocked on the owner:** a BotFather bot token (`TELEGRAM_BOT_TOKEN`, optional Worker secret,
-    added to `secrets/<env>.vars` then `configure-env`) and a staff group containing the bot. The
-    migration `20261104160000_order_alert_recipient` must also be applied to dev, which is an owner
-    command, before the preview rows can run.
+- **P12 `#1390` — Telegram alerts for order-related inquiries — MERGED TO STAGING, NOT PROMOTED,
+  NO LIVE TELEGRAM YET (2026-11-05).**
+  - **Where it is:** PR **#1431** (squash `4fa69aa`, `staging`). `deploy-staging` run `42020496874`
+    applied `20261104160000_order_alert_recipient` and redeployed `aheed-inbound-email-staging`.
+    Spec `specs/2026-11-04-order-alerts-telegram/`; its `build-notes.md` records two validation
+    passes (not independent). The board shows **In Review**; `#1390` stays open until promotion.
+  - **Not yet proven:** real Telegram delivery (R19). It needs the owner's BotFather token
+    (`npx wrangler secret put TELEGRAM_BOT_TOKEN --env staging`, and in `secrets/<env>.vars`) and a
+    group containing the bot. Until then every alert logs `status=skipped`. The post-ship check is
+    in `docs/developer-portal/env-setup.md`, "Sanity check: order alerts on Telegram", and on the
+    issue.
+  - **Owner decisions:** Telegram now, WhatsApp later as a second adapter (`#1424`). Alerts fire on
+    order-related email and on contact-form complaints or messages about an order. One platform bot.
   - **Deferred, tracked:** `#1426` throttle, `#1427` self-service linking and store-admin access,
     `#1428` order numbers from the email body.
+  - **Carry-forward:** the post-ship docs commits are on branch `docs/1390-post-ship` (pushed). The
+    next slice merges that branch into its own branch rather than opening a doc-only PR.
 
 - **P11 `#1216` — placeholder manifests, catalogue importer, onboarding runbook — MERGED TO STAGING, NOT
   PROMOTED, DATABASE ROWS UNVERIFIED (2026-10-22).**
