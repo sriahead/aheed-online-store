@@ -124,21 +124,6 @@ const SLOT_SUBJECTS: Record<string, string> = {
     "an open gift box tied with a satin ribbon, a small golden trophy rising out of it",
   "icon:layers":
     "an assorted supermarket grocery basket with fresh produce, crisp apples, bananas, artisan bread, fresh milk, and pantry staples, representing all products",
-  "icon:apple": "a vibrant assortment of crisp fresh apples, fresh fruit and orchard produce",
-  "icon:croissant":
-    "freshly baked artisan golden croissants, loaves of crusty bread and bakery pastries",
-  "icon:milk": "bottles of fresh milk, farmhouse butter, artisan cheese and dairy eggs",
-  "icon:beef":
-    "prime cuts of fresh halal beef, lamb chops and poultry presented on clean retail butcher display",
-  "icon:coffee": "steaming roasted coffee, aromatic tea leaves and refreshing beverages",
-  "icon:cookie": "crisp savory namkeen, crunchy biscuits and sweet snacks",
-  "icon:house": "eco-friendly household cleaning essentials and kitchen pantry supplies",
-  "icon:globe":
-    "world culinary specialties, international spices and traditional heritage groceries",
-  "icon:package": "premium fresh fish fillets, ocean seafood and grocery parcels",
-  "icon:tag": "premium pet care supplies, pantry essentials and promotional offers",
-  "icon:gift": "baby care essentials, gentle kids products and milestone gift packs",
-  "icon:sparkles": "health, beauty, wellness and personal care essentials",
 };
 
 function slotSubject(slot: string): string {
