@@ -8,6 +8,19 @@ every branch merges.
 
 ### Added
 
+- **Studio Product Photography for "All" Category & Storefront Surface Mapping in Visual Asset Gallery** (`components/product/SubcategoryLinks.tsx`, `components/icons/IconMedallion.tsx`, `lib/icon-slots.ts`, `lib/category-image.ts`, `components/staff/IconGalleryClient.tsx`, `docs/client-help-centre/icon-and-visual-asset-standards.md`, `tests/icon-slots.test.ts`, `tests/icon-medallion.test.tsx`, `tests/subcategory-links.test.tsx`):
+  - **Studio Product Photography for "All" Subcategory (`SubcategoryLinks.tsx`, `IconMedallion.tsx`):**
+    - Replaced the vector "All" icon (flat book emoji) with high-definition Studio Product Photography of an assorted supermarket grocery harvest (`/images/categories/all.jpg`), creating visual harmony across the category medallion strip.
+    - Added `fallbackImageUrl` prop to `IconMedallion` allowing icon slots to render authentic studio photography while preserving full override capability when an AI asset is active in `CategoryAsset`.
+    - Keyed "All" to slot `icon:layers` so admins can generate, preview, and activate custom brand imagery directly from `/staff/icons`.
+  - **Surface Mapping in Visual Asset Gallery (`lib/icon-slots.ts`, `IconGalleryClient.tsx`):**
+    - Added `surfaces: readonly string[]` to all flat icon slots in `lib/icon-slots.ts`, clearly documenting where every icon renders across storefront and admin interfaces.
+    - Updated `IconGalleryClient` with interactive surface badges on every asset card, in the generator dropdown, and inside the high-resolution inspection modal.
+    - Enhanced asset search to match surface names (e.g. searching "Subcategory", "Header", or "Checkout" displays all relevant assets).
+    - Defaulted generator visual preset to "Studio Product Photography" for all category and system icons to maintain consistent photorealistic styling.
+  - **Quality Gates & Tests (`tests/icon-slots.test.ts`, `tests/icon-medallion.test.tsx`, `tests/subcategory-links.test.tsx`):**
+    - Added unit tests for `fallbackImageUrl` resolution, active AI asset precedence, flat slot surface metadata, and "All" subcategory medallion rendering. All 38 tests pass.
+
 - **Quick View Cross-Product State Isolation & Storefront Layout Parity for Help Centre** (`components/product/QuickViewDrawer.tsx`, `app/(storefront)/help/page.tsx`, `tests/quick-view.test.tsx`, `tests/page-container.test.ts`, `tests/help-vendor-facts.test.tsx`):
   - **Quick View Stale Image & Description Isolation (`components/product/QuickViewDrawer.tsx`):**
     - Fixed a bug where opening Quick View for a product would retain images, description, or certifications from a previously viewed or prefetched product.

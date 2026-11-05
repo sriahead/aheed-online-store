@@ -61,6 +61,8 @@ export type IconMedallionProps = MedallionContent & {
   loading?: "eager" | "lazy";
   /** For `imageUrl`: the glyph shown if the photo fails to load. */
   fallbackIcon?: IconName;
+  /** For `icon`: optional photo to show when no AI asset is active, before falling back to vector. */
+  fallbackImageUrl?: string;
   /**
    * For `imageUrl`: `cover` (default) fills the circle, for photos on a white background;
    * `inset` sits at 80 % like a static 3D cut-out, for transparent artwork such as the department
@@ -95,9 +97,18 @@ export function IconMedallion(props: IconMedallionProps) {
           : slotIdForIconName(props.icon)));
   const aiUrl = props.imageUrl === undefined && slotId ? activeIcons[slotId] : undefined;
   const staticAsset = props.icon3d !== undefined ? ICON_3D_IMAGE_ASSETS[props.icon3d] : undefined;
+  const photoUrl = props.imageUrl ?? (aiUrl ? undefined : props.fallbackImageUrl);
 
   const source: "photo" | "ai" | "static" | "vector" =
-    props.imageUrl !== undefined ? "photo" : aiUrl ? "ai" : staticAsset ? "static" : "vector";
+    props.imageUrl !== undefined
+      ? "photo"
+      : aiUrl
+        ? "ai"
+        : photoUrl !== undefined
+          ? "photo"
+          : staticAsset
+            ? "static"
+            : "vector";
 
   const isDecorative = decorative ?? label === undefined;
   // The medallion itself carries the accessible name; the image inside is presentational.
@@ -123,7 +134,7 @@ export function IconMedallion(props: IconMedallionProps) {
   if (source === "photo" && imageFit === "inset") {
     content = (
       <ImageWithFallback
-        src={props.imageUrl as string}
+        src={photoUrl as string}
         alt={alt}
         width={staticPx}
         height={staticPx}
@@ -134,7 +145,7 @@ export function IconMedallion(props: IconMedallionProps) {
       />
     );
   } else if (source === "photo" || source === "ai") {
-    const src = (props.imageUrl ?? aiUrl) as string;
+    const src = (photoUrl ?? aiUrl) as string;
     content = (
       <ImageWithFallback
         src={src}

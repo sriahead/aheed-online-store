@@ -210,7 +210,7 @@ The table lists every slot (the source of truth is `lib/icon-slots.ts`; a test k
 | `icon:heart-outline` | Flat icon | Inline only (below 32 px) today, so an override is stored but not shown until the icon is used at 32 px or more |
 | `icon:house` | Flat icon | Inline only (below 32 px) today, so an override is stored but not shown until the icon is used at 32 px or more |
 | `icon:image-up` | Flat icon | Inline only (below 32 px) today, so an override is stored but not shown until the icon is used at 32 px or more |
-| `icon:layers` | Flat icon | Inline only (below 32 px) today, so an override is stored but not shown until the icon is used at 32 px or more |
+| `icon:layers` | Flat icon | Subcategories navigation: 'All' filter tile |
 | `icon:layout-dashboard` | Flat icon | Inline only (below 32 px) today, so an override is stored but not shown until the icon is used at 32 px or more |
 | `icon:list-checks` | Flat icon | Inline only (below 32 px) today, so an override is stored but not shown until the icon is used at 32 px or more |
 | `icon:lock` | Flat icon | Inline only (below 32 px) today, so an override is stored but not shown until the icon is used at 32 px or more |

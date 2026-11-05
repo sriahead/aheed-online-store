@@ -126,4 +126,15 @@ describe("SubcategoryLinks", () => {
       "/search?category=rice-grains&q=rice&sort=price_asc",
     );
   });
+
+  it("renders the 'All' tile with studio product photography and icon:layers slot", () => {
+    render(<SubcategoryLinks tabs={TABS} parentSlug="groceries" activeSlug="groceries" />);
+    const allLink = screen.getByRole("link", { name: "All" });
+    const medallion = allLink.querySelector("[data-medallion]");
+    expect(medallion).not.toBeNull();
+    expect(medallion?.getAttribute("data-medallion-slot")).toBe("icon:layers");
+    expect(medallion?.getAttribute("data-medallion-source")).toBe("photo");
+    const img = medallion?.querySelector("img");
+    expect(img?.getAttribute("src")).toBe("/images/categories/all.jpg");
+  });
 });

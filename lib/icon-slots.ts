@@ -39,6 +39,8 @@ export interface FlatIconSlot {
   iconName: IconName;
   /** The icon's Noto Emoji id, used as the prompt's subject. */
   notoId: string;
+  /** Where shoppers or staff see it, in words an operator recognises. */
+  surfaces: readonly string[];
 }
 
 export type IconSlot = Icon3DSlot | FlatIconSlot;
@@ -171,6 +173,67 @@ function humanise(id: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+const FLAT_ICON_SURFACES: Partial<Record<IconName, readonly string[]>> = {
+  layers: ["Subcategories navigation: 'All' filter tile"],
+  apple: ["Subcategories navigation: Fresh Fruit, Fresh Vegetables, Herbs & Salads"],
+  croissant: ["Subcategories navigation: Bread & Loaves, Pastries"],
+  milk: ["Subcategories navigation: Milk & Cream, Cheese & Paneer, Eggs & Butter"],
+  beef: ["Subcategories navigation: Lamb & Mutton, Chicken & Poultry, Beef & Mince"],
+  coffee: ["Subcategories navigation: Tea & Coffee, Juices & Soft Drinks, Water & Mixers"],
+  cookie: ["Subcategories navigation: Crisps & Namkeen, Biscuits & Sweets, Nuts & Dried Fruit"],
+  house: ["Subcategories navigation: Cleaning, Kitchen & Foil, Paper & Toiletries"],
+  globe: ["Subcategories navigation: South Asian, Middle Eastern, African & Caribbean"],
+  package: [
+    "Subcategories navigation: Fresh Fish, Frozen Fish",
+    "Customer Account: Orders",
+    "Staff: Products & Bundles",
+  ],
+  tag: ["Category: Pet Supplies", "Checkout: Discount codes", "WhatsApp offers"],
+  gift: ["Category: Baby & Kids", "Rewards: Gift perks"],
+  sparkles: ["Category: Health & Beauty", "Staff: Visual Asset Generator"],
+  "featured-star": ["Storefront: Featured products badge"],
+  heart: ["Customer Account: Favourites"],
+  "heart-outline": ["Product Cards: Favourite button"],
+  "list-checks": ["Shop Your List", "Customer Account: Lists"],
+  "clipboard-list": ["Customer Account: Order overview", "Staff: Orders desk"],
+  ruler: ["Staff: Net content & measurements"],
+  megaphone: ["Staff: Promotions & Announcements"],
+  "badge-check": ["Customer Reviews: Verified badge", "Help Centre: Role journeys"],
+  "calendar-clock": ["Checkout: Delivery slot picker", "Product: Restock notice"],
+  boxes: ["Help Centre: User journeys"],
+  "message-square-quote": ["Customer Account: Feedback & reviews"],
+  truck: ["Storefront: Delivery trust badges", "Location control"],
+  phone: ["Header & Footer: Helpline"],
+  mail: ["Storefront Footer: Contact email"],
+  "map-pin": ["Storefront Footer: Store address", "Location selector"],
+  lock: ["Storefront Footer: Secure 256-bit SSL", "Rewards: Locked perks"],
+  "circle-question-mark": ["Header: Help guide", "Help Centre FAQs"],
+  "credit-card": ["Payment options badge"],
+  banknote: ["Cash on delivery / payment options"],
+  coins: ["Loyalty points & cash balance"],
+  bookmark: ["Customer Account: Saved items"],
+  "bell-ring": ["Staff: Real-time order alerts"],
+  "folder-tree": ["Staff: Category catalogue", "Asset Gallery empty states"],
+  "image-up": ["Staff: Asset uploaders"],
+  "layout-dashboard": ["Staff: Portal navigation"],
+  "triangle-alert": ["Storefront: Error alerts", "Quick View: Error dialog"],
+  upload: ["Staff: Stock file importer"],
+  users: ["Staff: Customer roster", "Rewards: Referral programme"],
+  "user-x": ["Staff: Customer redaction"],
+};
+
+const FLAT_ICON_LABELS: Partial<Record<IconName, string>> = {
+  layers: "All Products / Assortment (Subcategories 'All' tile)",
+  apple: "Fresh Fruit & Vegetables (Subcategories)",
+  croissant: "Bakery & Breads (Subcategories)",
+  milk: "Dairy & Milk (Subcategories)",
+  beef: "Fresh Meat & Cuts (Subcategories)",
+  coffee: "Beverages & Coffee (Subcategories)",
+  cookie: "Snacks & Biscuits (Subcategories)",
+  house: "Household & Cleaning (Subcategories)",
+  globe: "International & World Foods (Subcategories)",
+};
+
 export const FLAT_ICON_SLOTS: readonly FlatIconSlot[] = (
   Object.entries(ICON_REGISTRY) as [IconName, (typeof ICON_REGISTRY)[IconName]][]
 )
@@ -178,9 +241,10 @@ export const FLAT_ICON_SLOTS: readonly FlatIconSlot[] = (
   .map(([name, entry]) => ({
     id: `icon:${name}` as const,
     kind: "flat" as const,
-    label: humanise(name),
+    label: FLAT_ICON_LABELS[name] ?? humanise(name),
     iconName: name,
     notoId: entry.id,
+    surfaces: FLAT_ICON_SURFACES[name] ?? ["Storefront & Staff interface"],
   }));
 
 export const ICON_SLOTS: readonly IconSlot[] = [...ICON_3D_SLOTS, ...FLAT_ICON_SLOTS];
