@@ -21,9 +21,20 @@ import { ICON_REGISTRY, type IconName } from "@/components/icons/registry";
 
 export type IconSlotKind = "3d" | "flat";
 
+export type IconSlotGroup =
+  | "Fulfilment & Delivery"
+  | "Trust & Security"
+  | "Storefront & Navigation"
+  | "Subcategories & Produce"
+  | "Account & Orders"
+  | "Rewards & Loyalty"
+  | "Staff & Operations"
+  | "General UI";
+
 export interface Icon3DSlot {
   id: string;
   kind: "3d";
+  group: IconSlotGroup;
   label: string;
   /** The `Icon3D` name this slot overrides. */
   icon3d: string;
@@ -34,6 +45,7 @@ export interface Icon3DSlot {
 export interface FlatIconSlot {
   id: `icon:${string}`;
   kind: "flat";
+  group: IconSlotGroup;
   label: string;
   /** The `<Icon>` registry name this slot overrides. */
   iconName: IconName;
@@ -60,20 +72,31 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
   {
     id: "delivery-van",
     kind: "3d",
+    group: "Fulfilment & Delivery",
     label: "Delivery van",
     icon3d: "delivery-van",
-    surfaces: ["Landing trust strip", "Landing feature card: local delivery"],
+    surfaces: [
+      "Header: Delivery method selector",
+      "Landing hero trust badges: Local Delivery",
+      "Landing feature card: local delivery",
+    ],
   },
   {
     id: "storefront",
     kind: "3d",
-    label: "Shop / storefront",
+    group: "Fulfilment & Delivery",
+    label: "Shop / Click & Collect storefront",
     icon3d: "storefront",
-    surfaces: ["Header: Shop link", "Help Centre: Click & Collect"],
+    surfaces: [
+      "Header: Click & Collect selector",
+      "Header: Shop navigation link",
+      "Help Centre: Click & Collect guide",
+    ],
   },
   {
     id: "quick-shop",
     kind: "3d",
+    group: "Storefront & Navigation",
     label: "Quick Shop basket",
     icon3d: "quick-shop",
     surfaces: ["Header: Quick Shop link"],
@@ -81,6 +104,7 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
   {
     id: "user-profile",
     kind: "3d",
+    group: "Account & Orders",
     label: "User profile avatar",
     icon3d: "user-profile",
     surfaces: ["Header: Sign in / Account"],
@@ -88,6 +112,7 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
   {
     id: "cart-floating",
     kind: "3d",
+    group: "Storefront & Navigation",
     label: "Cart trolley",
     icon3d: "cart-add",
     surfaces: ["Header cart button", "Cart drawer heading", "Empty cart"],
@@ -95,9 +120,11 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
   {
     id: "secure-checkout",
     kind: "3d",
+    group: "Trust & Security",
     label: "Secure checkout shield",
     icon3d: "secure-checkout",
     surfaces: [
+      "Landing hero trust badges: Minimum delivery order",
       "Checkout page heading",
       "Landing feature card: secure checkout",
       "Help Centre: Platform Admin journey",
@@ -106,6 +133,7 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
   {
     id: "order-updates",
     kind: "3d",
+    group: "Account & Orders",
     label: "Order updates bell",
     icon3d: "order-updates",
     surfaces: ["Landing feature card: order updates"],
@@ -113,6 +141,7 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
   {
     id: "view-shopper",
     kind: "3d",
+    group: "Staff & Operations",
     label: "Role switcher: shopper view",
     icon3d: "view-shopper",
     surfaces: ["Header role switcher", "Help Centre: Shopper journey"],
@@ -120,6 +149,7 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
   {
     id: "view-staff",
     kind: "3d",
+    group: "Staff & Operations",
     label: "Role switcher: staff view",
     icon3d: "view-staff",
     surfaces: ["Header role switcher", "Help Centre: Staff journey"],
@@ -127,6 +157,7 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
   {
     id: "view-admin",
     kind: "3d",
+    group: "Staff & Operations",
     label: "Role switcher: admin view",
     icon3d: "view-admin",
     surfaces: ["Header role switcher", "Help Centre: Store Admin journey"],
@@ -134,6 +165,7 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
   {
     id: "rewards-coin",
     kind: "3d",
+    group: "Rewards & Loyalty",
     label: "Rewards launcher coin",
     icon3d: "rewards-coin",
     surfaces: ["Floating rewards launcher", "Help Centre: Loyalty Points"],
@@ -141,13 +173,15 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
   {
     id: "halal-certified",
     kind: "3d",
-    label: "Halal certified badge",
+    group: "Trust & Security",
+    label: "100% Halal certified badge",
     icon3d: "halal-certified",
-    surfaces: ["Landing trust strip"],
+    surfaces: ["Landing hero trust badges: 100% Certified HMC Halal", "Landing trust strip"],
   },
   {
     id: "postcode-search",
     kind: "3d",
+    group: "Fulfilment & Delivery",
     label: "Postcode / location pin",
     icon3d: "postcode-search",
     surfaces: ["Delivery location dialog", "Help Centre: Delivery & Minimums"],
@@ -155,6 +189,7 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
   {
     id: "contact-follow",
     kind: "3d",
+    group: "Fulfilment & Delivery",
     label: "Contact & follow",
     icon3d: "contact-follow",
     surfaces: ["Floating contact button"],
@@ -162,6 +197,7 @@ export const ICON_3D_SLOTS: readonly Icon3DSlot[] = [
   {
     id: "rewards-gift",
     kind: "3d",
+    group: "Rewards & Loyalty",
     label: "Rewards gift",
     icon3d: "rewards-gift",
     surfaces: ["Third-party credits page"],
@@ -222,6 +258,51 @@ const FLAT_ICON_SURFACES: Partial<Record<IconName, readonly string[]>> = {
   "user-x": ["Staff: Customer redaction"],
 };
 
+const FLAT_ICON_GROUPS: Partial<Record<IconName, IconSlotGroup>> = {
+  layers: "Storefront & Navigation",
+  apple: "Subcategories & Produce",
+  croissant: "Subcategories & Produce",
+  milk: "Subcategories & Produce",
+  beef: "Subcategories & Produce",
+  coffee: "Subcategories & Produce",
+  cookie: "Subcategories & Produce",
+  house: "Subcategories & Produce",
+  globe: "Subcategories & Produce",
+  package: "Subcategories & Produce",
+  tag: "Storefront & Navigation",
+  gift: "Rewards & Loyalty",
+  sparkles: "Storefront & Navigation",
+  "featured-star": "Storefront & Navigation",
+  heart: "Account & Orders",
+  "heart-outline": "Account & Orders",
+  "list-checks": "Account & Orders",
+  "clipboard-list": "Account & Orders",
+  ruler: "Staff & Operations",
+  megaphone: "Staff & Operations",
+  "badge-check": "Trust & Security",
+  "calendar-clock": "Fulfilment & Delivery",
+  boxes: "Staff & Operations",
+  "message-square-quote": "Account & Orders",
+  truck: "Fulfilment & Delivery",
+  phone: "Fulfilment & Delivery",
+  mail: "Fulfilment & Delivery",
+  "map-pin": "Fulfilment & Delivery",
+  lock: "Trust & Security",
+  "circle-question-mark": "Storefront & Navigation",
+  "credit-card": "Account & Orders",
+  banknote: "Account & Orders",
+  coins: "Rewards & Loyalty",
+  bookmark: "Account & Orders",
+  "bell-ring": "Staff & Operations",
+  "folder-tree": "Staff & Operations",
+  "image-up": "Staff & Operations",
+  "layout-dashboard": "Staff & Operations",
+  "triangle-alert": "Staff & Operations",
+  upload: "Staff & Operations",
+  users: "Staff & Operations",
+  "user-x": "Staff & Operations",
+};
+
 const FLAT_ICON_LABELS: Partial<Record<IconName, string>> = {
   layers: "All Products / Assortment (Subcategories 'All' tile)",
   apple: "Fresh Fruit & Vegetables (Subcategories)",
@@ -241,6 +322,7 @@ export const FLAT_ICON_SLOTS: readonly FlatIconSlot[] = (
   .map(([name, entry]) => ({
     id: `icon:${name}` as const,
     kind: "flat" as const,
+    group: FLAT_ICON_GROUPS[name] ?? "General UI",
     label: FLAT_ICON_LABELS[name] ?? humanise(name),
     iconName: name,
     notoId: entry.id,

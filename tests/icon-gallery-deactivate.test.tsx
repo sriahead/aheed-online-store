@@ -130,6 +130,35 @@ describe("IconGalleryClient (#1288 R4, R7, R9)", () => {
     expect(screen.getByText("icon-package-1.png")).not.toBeNull();
     expect(screen.queryByText("storefront-1.png")).toBeNull();
   });
+
+  it("filters system icon slots by group pill and search query", () => {
+    render(<IconGalleryClient initialAssets={[]} categories={CATEGORIES} canManage />);
+    fireEvent.click(screen.getByRole("button", { name: "System Icon" }));
+
+    // Click "Fulfilment & Delivery" category group pill in the generator
+    const fulfilmentPill = screen.getByRole("button", { name: /^Fulfilment & Delivery \(\d+\)$/ });
+    fireEvent.click(fulfilmentPill);
+
+    expect(screen.getByText("Shop / Click & Collect storefront")).not.toBeNull();
+    expect(screen.getAllByText("Delivery van").length).toBeGreaterThanOrEqual(1);
+    // Non-fulfilment should not appear in the quick select list
+    expect(screen.queryByText("Quick Shop basket")).toBeNull();
+
+    // Type in search query "van"
+    const searchInput = screen.getByLabelText("Quick Search Target:");
+    fireEvent.change(searchInput, { target: { value: "van" } });
+
+    expect(screen.getAllByText("Delivery van").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("Shop / Click & Collect storefront")).toBeNull();
+
+    // Selecting matching item
+    const vanButtons = screen.getAllByRole("button", { name: /Delivery van/ });
+    fireEvent.click(vanButtons[0]);
+    const select = document.getElementById(
+      "quick-gen-target-select",
+    ) as unknown as HTMLSelectElement;
+    expect(select.value).toBe("delivery-van");
+  });
 });
 
 describe("CategoryImageManager (#1288 R5)", () => {
