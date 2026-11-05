@@ -8,6 +8,21 @@ every branch merges.
 
 ### Added
 
+- **Categorized Target Search in Visual Asset Gallery & Fulfilment/Trust Medallion Upgrades** (`components/staff/IconGalleryClient.tsx`, `lib/icon-slots.ts`, `components/layout/LocationControl.tsx`, `app/(landing)/page.tsx`, `tests/icon-slots.test.ts`, `tests/icon-gallery-deactivate.test.tsx`):
+  - **Categorized Search & Functional Grouping in Visual Asset Generator (`IconGalleryClient.tsx`, `lib/icon-slots.ts`):**
+    - Added `group: IconSlotGroup` to all 3D and flat slots in `lib/icon-slots.ts` categorizing every slot into semantic functional groups: *Fulfilment & Delivery*, *Trust & Security*, *Storefront & Navigation*, *Subcategories & Produce*, *Account & Orders*, *Rewards & Loyalty*, *Staff & Operations*, and *General UI*.
+    - Upgraded the Generator Panel with live interactive search filtering (`quick-gen-target-search`) that filters targets in real time by label, ID, group, and storefront surface names.
+    - Added functional category group pills (`All Slots`, `Fulfilment & Delivery`, `Trust & Security`, `Storefront & Navigation`, `Subcategories & Produce`, `Account & Orders`, `Rewards & Loyalty`, `Staff & Operations`) with live item counts for instant scoping.
+    - Added a live Selected Target Details card displaying an `IconMedallion` visual preview, target title, ID, group badge, and exact storefront surfaces where the icon appears.
+    - Added category group filter pills to the Asset Library controls (`All Groups`, `Departments`, `Fulfilment & Delivery`, etc.) and enhanced library search to match group names and labels.
+  - **Header Fulfilment & Landing Hero Badges Upgraded to `IconMedallion` (`LocationControl.tsx`, `app/(landing)/page.tsx`):**
+    - Upgraded the header fulfilment selector (`components/layout/LocationControl.tsx`) from raw Lucide SVGs to `<IconMedallion icon3d="storefront" />` for Click & Collect and `<IconMedallion icon3d="delivery-van" />` for Delivery. Any studio photo or 3D asset generated in `/staff/icons` now instantly reflects in the header location selector.
+    - Upgraded landing page hero badges (`app/(landing)/page.tsx`) to `<IconMedallion icon3d="delivery-van" size={16} />` for free delivery and `<IconMedallion icon3d="secure-checkout" size={16} />` for minimum order.
+    - Updated surfaces documentation in `lib/icon-slots.ts` for `storefront`, `delivery-van`, `secure-checkout`, and `halal-certified` to explicitly document their presence in the header selector and landing hero.
+  - **Tests (`tests/icon-slots.test.ts`, `tests/icon-gallery-deactivate.test.tsx`):**
+    - Added tests asserting all 3D and flat slots carry valid non-empty groups and surfaces.
+    - Added integration test proving the generator's category filter pills and quick search filter slots accurately and update the target selector. All 54 icon tests pass.
+
 - **Studio Product Photography for "All" Category & Storefront Surface Mapping in Visual Asset Gallery** (`components/product/SubcategoryLinks.tsx`, `components/icons/IconMedallion.tsx`, `lib/icon-slots.ts`, `lib/category-image.ts`, `components/staff/IconGalleryClient.tsx`, `docs/client-help-centre/icon-and-visual-asset-standards.md`, `tests/icon-slots.test.ts`, `tests/icon-medallion.test.tsx`, `tests/subcategory-links.test.tsx`):
   - **Studio Product Photography for "All" Subcategory (`SubcategoryLinks.tsx`, `IconMedallion.tsx`):**
     - Replaced the vector "All" icon (flat book emoji) with high-definition Studio Product Photography of an assorted supermarket grocery harvest (`/images/categories/all.jpg`), creating visual harmony across the category medallion strip.
