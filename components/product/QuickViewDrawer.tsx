@@ -161,9 +161,12 @@ export function QuickViewDrawer() {
   // Derived loading: product details are loading if current data is not yet for the activeSlug
   const loading = Boolean(activeSlug) && !currentData;
 
-  // Use full product data if loaded, otherwise fall back to initialProduct summary for instant UI
-  const displayProduct = currentData?.product ?? initialProduct;
-  const cdnBaseUrl = currentData?.cdnBaseUrl ?? initialCdnBaseUrl ?? "";
+  // Use full product data if loaded, otherwise fall back to initialProduct summary for instant UI.
+  // Validate that initialProduct actually matches the currently active slug before using it.
+  const isInitialForActive = initialProduct?.slug === activeSlug;
+  const validInitialProduct = isInitialForActive ? initialProduct : null;
+  const displayProduct = currentData?.product ?? validInitialProduct;
+  const cdnBaseUrl = currentData?.cdnBaseUrl ?? (isInitialForActive ? initialCdnBaseUrl : "");
   const reviews = currentData?.reviews ?? [];
   const existingReview = currentData?.existingReview ?? null;
   const currentUser = currentData?.currentUser ?? null;
@@ -199,14 +202,14 @@ export function QuickViewDrawer() {
   const hasTier = tierQuantity !== null && displayProduct?.tier != null;
 
   const description =
-    data?.product?.description ??
+    currentData?.product?.description ??
     (displayProduct &&
     "description" in displayProduct &&
     typeof displayProduct.description === "string"
       ? displayProduct.description
       : undefined);
   const hmcReference =
-    data?.product?.hmcReference ??
+    currentData?.product?.hmcReference ??
     (displayProduct &&
     "hmcReference" in displayProduct &&
     typeof displayProduct.hmcReference === "string"
@@ -217,7 +220,8 @@ export function QuickViewDrawer() {
   const isLowStock = displayProduct ? showsLowStock(displayProduct) : false;
 
   const displayImages =
-    data?.product?.images ?? (initialProduct?.primaryImage ? [initialProduct.primaryImage] : []);
+    currentData?.product?.images ??
+    (validInitialProduct?.primaryImage ? [validInitialProduct.primaryImage] : []);
 
   const handleReviewSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -329,6 +333,7 @@ export function QuickViewDrawer() {
                 {/* Images */}
                 <div className="overflow-hidden rounded-2xl bg-surface-muted">
                   <ProductImageGallery
+                    key={displayProduct.slug}
                     images={displayImages}
                     cdnBaseUrl={cdnBaseUrl}
                     variant="carousel"

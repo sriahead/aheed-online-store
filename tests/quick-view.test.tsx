@@ -318,4 +318,105 @@ describe("QuickViewDrawer", () => {
 
     expect(screen.queryByRole("dialog")).toBeNull();
   });
+
+  it("never leaks images or descriptions across different products when switching Quick View", async () => {
+    const mockNuggetsSummary: ProductSummary = {
+      ...mockProductSummary,
+      id: "prod-2",
+      slug: "frozen-chicken-nuggets",
+      name: "Chicken Nuggets 500g",
+      basePrice: 349,
+      unitLabel: "500g",
+      primaryImage: {
+        storageKey: "products/nuggets.webp",
+        alt: "Chicken Nuggets 500g",
+        isPrimary: true,
+      },
+    };
+
+    const mockNuggetsDetail: ProductDetail = {
+      ...mockNuggetsSummary,
+      description: "Halal-certified breaded chicken nuggets.",
+      acceptsNote: false,
+      images: [
+        { storageKey: "products/nuggets-1.webp", alt: "Chicken Nuggets Pack", isPrimary: true },
+      ],
+      hmcReference: null,
+      specifications: [],
+    };
+
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("frozen-chicken-nuggets")) {
+        return {
+          ok: true,
+          json: async () => ({
+            ...mockApiResponse,
+            product: mockNuggetsDetail,
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => mockApiResponse,
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    function MultiProductTest() {
+      const { openQuickView } = useQuickView();
+      return (
+        <div>
+          <button
+            type="button"
+            onClick={() =>
+              openQuickView("golden-paneer-500g", mockProductSummary, "https://cdn.example.com")
+            }
+          >
+            Open Paneer
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              openQuickView("frozen-chicken-nuggets", mockNuggetsSummary, "https://cdn.example.com")
+            }
+          >
+            Open Nuggets
+          </button>
+          <QuickViewDrawer />
+        </div>
+      );
+    }
+
+    render(
+      <QuickViewProvider>
+        <MultiProductTest />
+      </QuickViewProvider>,
+    );
+
+    // Open first product: Paneer
+    fireEvent.click(screen.getByText("Open Paneer"));
+    await waitFor(() => {
+      expect(screen.getByText("Golden Paneer 500g")).toBeTruthy();
+      expect(screen.getByText("Fresh and delicious paneer cheese block.")).toBeTruthy();
+    });
+
+    // Switch to second product: Nuggets
+    fireEvent.click(screen.getByText("Open Nuggets"));
+    await waitFor(() => {
+      expect(screen.getByText("Chicken Nuggets 500g")).toBeTruthy();
+      expect(screen.getByText("Halal-certified breaded chicken nuggets.")).toBeTruthy();
+    });
+
+    // Ensure paneer description and images are NOT present
+    expect(screen.queryByText("Fresh and delicious paneer cheese block.")).toBeNull();
+    const imgs = screen.getAllByRole("img");
+    const nuggetImg = imgs.find(
+      (img) =>
+        img.getAttribute("alt") === "Chicken Nuggets Pack" ||
+        img.getAttribute("alt") === "Chicken Nuggets 500g",
+    );
+    expect(nuggetImg).toBeTruthy();
+    const paneerImg = imgs.find((img) => img.getAttribute("alt") === "Paneer Front");
+    expect(paneerImg).toBeFalsy();
+  });
 });

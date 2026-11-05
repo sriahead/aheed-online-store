@@ -89,6 +89,7 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(storefront)/search/page.tsx": { width: "wide", padY: "tight" },
   "app/(storefront)/bundles/page.tsx": { width: "wide", padY: "tight" },
   "app/(storefront)/whatsapp-offers/page.tsx": { width: "wide", padY: "tight" },
+  "app/(storefront)/help/page.tsx": { width: "wide", padY: "tight" },
   // --- storefront: standard
   "app/(storefront)/account/page.tsx": { width: "standard", padY: "default" },
   "app/(storefront)/account/data/page.tsx": { width: "standard", padY: "default" },
@@ -131,7 +132,6 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(storefront)/orders/lookup/page.tsx": { width: "narrow", padY: "default" },
   "app/(storefront)/contact/page.tsx": { width: "narrow", padY: "default" },
   "app/(storefront)/feedback/page.tsx": { width: "narrow", padY: "default" },
-  "app/(storefront)/help/page.tsx": { width: "narrow", padY: "default" },
   "app/(storefront)/privacy/page.tsx": { width: "narrow", padY: "default" },
   "app/(storefront)/terms/page.tsx": { width: "narrow", padY: "default" },
   "app/(storefront)/login/page.tsx": { width: "narrow", padY: "default" },
