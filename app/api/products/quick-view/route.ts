@@ -20,14 +20,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
   }
 
-  const product = await getProductRepository().getBySlug(slug);
+  const [product, session] = await Promise.all([
+    getProductRepository().getBySlug(slug),
+    headers().then(async (reqHeaders) => {
+      const auth = await getAuth();
+      return auth.api.getSession({ headers: reqHeaders });
+    }),
+  ]);
+
   if (!product) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
 
   const { CDN_BASE_URL } = getEnv();
-  const requestHeaders = await headers();
-  const session = await (await getAuth()).api.getSession({ headers: requestHeaders });
   const reviewRepo = getReviewRepository();
 
   const [reviews, existingReview] = await Promise.all([
@@ -37,11 +42,18 @@ export async function GET(request: Request) {
       : Promise.resolve(null),
   ]);
 
-  return NextResponse.json({
-    product,
-    reviews,
-    existingReview,
-    currentUser: session?.user ? { id: session.user.id, name: session.user.name } : null,
-    cdnBaseUrl: CDN_BASE_URL ?? "",
-  });
+  return NextResponse.json(
+    {
+      product,
+      reviews,
+      existingReview,
+      currentUser: session?.user ? { id: session.user.id, name: session.user.name } : null,
+      cdnBaseUrl: CDN_BASE_URL ?? "",
+    },
+    {
+      headers: {
+        "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
+      },
+    },
+  );
 }

@@ -9,6 +9,7 @@ import {
   type NetContent,
   type NetContentUnit,
 } from "@/components/product/unit-price";
+import type { ProductSortOption } from "@/components/product/sort-params";
 import {
   ELIGIBILITY_SELECT,
   PURCHASABILITY_SELECT,
@@ -325,6 +326,8 @@ export interface ProductFilters {
    * string passing lib/attribute-number.ts's rule. A product must carry a number within every range.
    */
   attributeRanges?: readonly { attributeId: string; min?: string; max?: string }[];
+  /** #1424 — storefront sort ordering. */
+  sort?: ProductSortOption;
 }
 
 /**
@@ -370,11 +373,20 @@ export interface AvailableFacets {
    * `1kg`. Empty when no product in context carries net content, which hides the control entirely.
    */
   packSizes: NetContent[];
-  /**
-   * #912 — the vendor's own filters that at least one product in this context carries a value for,
+  /** #912 — the vendor's own filters that at least one product in this context carries a value for,
    * each listing only the values actually carried, in the vendor's order. Empty hides them all.
    */
   attributes: FacetAttribute[];
+  /** #1424 — genuine product counts for active boolean facets in this result context. */
+  halalCount?: number;
+  freshCount?: number;
+  organicCount?: number;
+  vegetarianCount?: number;
+  glutenFreeCount?: number;
+  hmcCertifiedCount?: number;
+  onOfferCount?: number;
+  inStockCount?: number;
+  totalCount?: number;
 }
 
 export interface FacetAttribute {
@@ -707,6 +719,26 @@ function toProductSummary(row: ProductSummaryRow, tier: ProductTier | null): Pro
   };
 }
 
+function getProductOrderBy(sort?: ProductSortOption): Prisma.ProductOrderByWithRelationInput[] {
+  switch (sort) {
+    case "price_asc":
+      return [{ basePrice: "asc" }, { id: "asc" }];
+    case "price_desc":
+      return [{ basePrice: "desc" }, { id: "desc" }];
+    case "unit_price_asc":
+      return [
+        { unitPricePencePerBaseUnit: { sort: "asc", nulls: "last" } },
+        { basePrice: "asc" },
+        { id: "asc" },
+      ];
+    case "rating_desc":
+      return [{ averageRating: "desc" }, { reviewCount: "desc" }, { id: "desc" }];
+    case "newest":
+    default:
+      return [{ createdAt: "desc" }, { id: "desc" }];
+  }
+}
+
 /**
  * Storefront product reads (#252). Every one takes `prisma` and `vendorId` as
  * explicit arguments and reads no request context — the request-scoped facade
@@ -716,7 +748,7 @@ async function findPage(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
   where: Prisma.ProductWhereInput,
-  { take, cursor }: { take: number; cursor?: string },
+  { take, cursor, sort }: { take: number; cursor?: string; sort?: ProductSortOption },
 ): Promise<ProductPage> {
   // Keyset (cursor) pagination on (createdAt, id) — never OFFSET, per
   // specs/architecture.md's pagination strategy. Over-fetch by one to
@@ -729,7 +761,7 @@ async function findPage(
   const rows = await runKeysetPage(keysetCursorArgs(cursor), (pageArgs) =>
     prisma.product.findMany({
       where,
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      orderBy: getProductOrderBy(sort),
       take: take + 1,
       ...pageArgs,
       select: productSummarySelect,
@@ -939,7 +971,7 @@ export async function listProductsByCategory(
       ...buildFilterWhere(filters),
       categoryId: { in: categoryIds },
     },
-    { take, cursor },
+    { take, cursor, sort: filters.sort },
   );
 }
 
@@ -1082,7 +1114,7 @@ export async function listProducts(
     prisma,
     vendorId,
     { vendorId, isActive: true, category: visibleCategoryWhere, ...buildFilterWhere(filters) },
-    { take, cursor },
+    { take, cursor, sort: filters.sort },
   );
 }
 
@@ -1341,6 +1373,48 @@ export async function listProductNameTokens(
  * `specs/2026-09-03-search-zero-result-recovery/` for the full rationale — in particular why a
  * term already in the vendor's vocabulary is never "corrected" into something else.
  */
+function sortSearchCandidates(
+  candidates: ProductSummary[],
+  sort: ProductSortOption,
+): ProductSummary[] {
+  const sorted = [...candidates];
+  switch (sort) {
+    case "price_asc":
+      return sorted.sort((a, b) => a.basePrice - b.basePrice || a.id.localeCompare(b.id));
+    case "price_desc":
+      return sorted.sort((a, b) => b.basePrice - a.basePrice || b.id.localeCompare(a.id));
+    case "unit_price_asc":
+      return sorted.sort((a, b) => {
+        const netContentA =
+          a.netContentAmount !== null && a.netContentUnit !== null
+            ? { amount: a.netContentAmount, unit: a.netContentUnit }
+            : null;
+        const netContentB =
+          b.netContentAmount !== null && b.netContentUnit !== null
+            ? { amount: b.netContentAmount, unit: b.netContentUnit }
+            : null;
+        const uA = deriveUnitPricePenceForSort(a.basePrice, netContentA);
+        const uB = deriveUnitPricePenceForSort(b.basePrice, netContentB);
+        if (uA !== null && uB !== null) {
+          return uA - uB || a.basePrice - b.basePrice || a.id.localeCompare(b.id);
+        }
+        if (uA !== null) return -1;
+        if (uB !== null) return 1;
+        return a.basePrice - b.basePrice || a.id.localeCompare(b.id);
+      });
+    case "rating_desc":
+      return sorted.sort(
+        (a, b) =>
+          (b.averageRating ?? 0) - (a.averageRating ?? 0) ||
+          (b.reviewCount ?? 0) - (a.reviewCount ?? 0) ||
+          a.id.localeCompare(b.id),
+      );
+    case "newest":
+    default:
+      return sorted;
+  }
+}
+
 export async function searchProducts(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
@@ -1449,7 +1523,10 @@ export async function searchProducts(
     suggestions = await buildThinResultSuggestions(prisma, vendorId, terms, groups);
   }
 
-  const ranked = rankSearchCandidates(candidates, rankingGroups);
+  const ranked =
+    filters.sort && filters.sort !== "relevance"
+      ? sortSearchCandidates(candidates, filters.sort)
+      : rankSearchCandidates(candidates, rankingGroups);
   const offset = parseSearchOffset(cursor);
   // An offset at or beyond the ranked count yields an honest empty page rather
   // than bouncing back to page one, which would loop a shopper who followed a
@@ -1637,17 +1714,32 @@ export async function getAvailableFacets(
     buildFilterWhere(filters),
     groups && groups.length > 0 ? buildDirectSearchWhere(groups) : undefined,
   );
-  const flagProbe = (flag: Prisma.ProductWhereInput) =>
-    prisma.product.findFirst({ where: combineWhere(base, flag), select: { id: true } });
+  const flagProbe = async (
+    flag: Prisma.ProductWhereInput,
+  ): Promise<{ available: boolean; count?: number }> => {
+    if (typeof (prisma.product as { count?: unknown }).count === "function") {
+      const count = await prisma.product.count({ where: combineWhere(base, flag) });
+      return { available: count > 0, count };
+    }
+    const row = await prisma.product.findFirst({
+      where: combineWhere(base, flag),
+      select: { id: true },
+    });
+    return { available: row !== null };
+  };
+
+  const hasCount = typeof (prisma.product as { count?: unknown }).count === "function";
 
   const [
-    halal,
-    fresh,
-    organic,
-    vegetarian,
-    glutenFree,
-    hmcCertified,
-    onOffer,
+    halalRes,
+    freshRes,
+    organicRes,
+    vegetarianRes,
+    glutenFreeRes,
+    hmcCertifiedRes,
+    onOfferRes,
+    inStockRes,
+    totalCount,
     originRows,
     brandRows,
     packSizeRows,
@@ -1661,6 +1753,10 @@ export async function getAvailableFacets(
     flagProbe({ isGlutenFree: true }),
     flagProbe({ isHmcCertified: true }),
     flagProbe({ OR: [{ originalPrice: { not: null } }, { priceTier: { isNot: null } }] }),
+    hasCount
+      ? flagProbe(buildFilterWhere({ inStockOnly: true }))
+      : Promise.resolve<{ available: boolean; count?: number }>({ available: true }),
+    hasCount ? prisma.product.count({ where: base }) : Promise.resolve(undefined),
     // `distinct` rather than a groupBy: the facet needs the VALUES, not counts, and a count
     // would be a second promise nobody renders.
     prisma.product.findMany({
@@ -1713,13 +1809,13 @@ export async function getAvailableFacets(
   ]);
 
   return {
-    halal: halal !== null,
-    fresh: fresh !== null,
-    organic: organic !== null,
-    vegetarian: vegetarian !== null,
-    glutenFree: glutenFree !== null,
-    hmcCertified: hmcCertified !== null,
-    onOffer: onOffer !== null,
+    halal: halalRes.available,
+    fresh: freshRes.available,
+    organic: organicRes.available,
+    vegetarian: vegetarianRes.available,
+    glutenFree: glutenFreeRes.available,
+    hmcCertified: hmcCertifiedRes.available,
+    onOffer: onOfferRes.available,
     origins: originRows
       .map((row) => row.origin)
       .filter((origin): origin is string => origin !== null),
@@ -1734,6 +1830,15 @@ export async function getAvailableFacets(
       )
       .sort(comparePackSizes),
     attributes: groupFacetAttributes(attributeRows, numberAttributeRows),
+    ...(halalRes.count !== undefined ? { halalCount: halalRes.count } : {}),
+    ...(freshRes.count !== undefined ? { freshCount: freshRes.count } : {}),
+    ...(organicRes.count !== undefined ? { organicCount: organicRes.count } : {}),
+    ...(vegetarianRes.count !== undefined ? { vegetarianCount: vegetarianRes.count } : {}),
+    ...(glutenFreeRes.count !== undefined ? { glutenFreeCount: glutenFreeRes.count } : {}),
+    ...(hmcCertifiedRes.count !== undefined ? { hmcCertifiedCount: hmcCertifiedRes.count } : {}),
+    ...(onOfferRes.count !== undefined ? { onOfferCount: onOfferRes.count } : {}),
+    ...(inStockRes.count !== undefined ? { inStockCount: inStockRes.count } : {}),
+    ...(totalCount !== undefined ? { totalCount } : {}),
   };
 }
 

@@ -32,7 +32,16 @@ interface QuickViewApiResponse {
 }
 
 export function QuickViewDrawer() {
-  const { isOpen, activeSlug, initialProduct, closeQuickView } = useQuickView();
+  const {
+    isOpen,
+    activeSlug,
+    initialProduct,
+    initialCdnBaseUrl,
+    closeQuickView,
+    getCached,
+    setCached,
+    getInFlight,
+  } = useQuickView();
   const [data, setData] = useState<QuickViewApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshIndex, setRefreshIndex] = useState(0);
@@ -107,17 +116,27 @@ export function QuickViewDrawer() {
       return;
     }
 
+    const cached = getCached(activeSlug);
+    if (cached && refreshIndex === 0) {
+      return;
+    }
+
     let cancelled = false;
-    fetch(`/api/products/quick-view?slug=${encodeURIComponent(activeSlug)}`)
-      .then(async (res) => {
+    const inFlight = refreshIndex === 0 ? getInFlight(activeSlug) : null;
+    const requestPromise =
+      inFlight ??
+      fetch(`/api/products/quick-view?slug=${encodeURIComponent(activeSlug)}`).then(async (res) => {
         if (!res.ok) {
           throw new Error(`Failed to load product (${res.status})`);
         }
         return (await res.json()) as QuickViewApiResponse;
-      })
+      });
+
+    requestPromise
       .then((json) => {
-        if (!cancelled) {
+        if (!cancelled && json) {
           setData(json);
+          setCached(activeSlug, json);
           setError(null);
         }
       })
@@ -130,21 +149,24 @@ export function QuickViewDrawer() {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, activeSlug, refreshIndex]);
+  }, [isOpen, activeSlug, refreshIndex, getCached, setCached, getInFlight]);
 
   if (!isOpen) {
     return null;
   }
 
+  const cached = activeSlug ? getCached(activeSlug) : null;
+  const currentData = (data?.product.slug === activeSlug ? data : null) ?? cached;
+
   // Derived loading: product details are loading if current data is not yet for the activeSlug
-  const loading = Boolean(activeSlug) && (!data || data.product.slug !== activeSlug);
+  const loading = Boolean(activeSlug) && !currentData;
 
   // Use full product data if loaded, otherwise fall back to initialProduct summary for instant UI
-  const displayProduct = data?.product ?? initialProduct;
-  const cdnBaseUrl = data?.cdnBaseUrl ?? "";
-  const reviews = data?.reviews ?? [];
-  const existingReview = data?.existingReview ?? null;
-  const currentUser = data?.currentUser ?? null;
+  const displayProduct = currentData?.product ?? initialProduct;
+  const cdnBaseUrl = currentData?.cdnBaseUrl ?? initialCdnBaseUrl ?? "";
+  const reviews = currentData?.reviews ?? [];
+  const existingReview = currentData?.existingReview ?? null;
+  const currentUser = currentData?.currentUser ?? null;
 
   const hasDiscount =
     displayProduct?.originalPrice != null &&

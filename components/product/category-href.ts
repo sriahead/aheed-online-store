@@ -35,6 +35,9 @@ function categoryPageHref(
   overrides: { cursor?: string; back: string[] },
 ): string {
   const qs = new URLSearchParams();
+  if (typeof params.sort === "string" && params.sort !== "") {
+    qs.set("sort", params.sort);
+  }
   // `append`, never `set` (#918): a list filter may carry several values under one key.
   for (const [key, value] of filterEntries(params)) qs.append(key, value);
   if (overrides.cursor) qs.set("cursor", overrides.cursor);
@@ -62,4 +65,29 @@ export function prevCategoryPageHref(slug: string, params: CategoryPageParams): 
     cursor: prevCursor || undefined,
     back: back.slice(0, -1),
   });
+}
+
+/**
+ * Returns the query string of active filters and sort orders to preserve when switching categories.
+ */
+export function categoryNavQuery(params: CategoryPageParams): string {
+  const qs = new URLSearchParams();
+  if (typeof params.sort === "string" && params.sort !== "") {
+    qs.set("sort", params.sort);
+  }
+  // Carry all active filters, omitting pagination keys:
+  for (const [key, value] of filterEntries(params, ["cursor", "back"])) {
+    qs.append(key, value);
+  }
+  return qs.toString();
+}
+
+/**
+ * Builds the URL when navigating to a new category or subcategory from within a category view.
+ * Carries all active filters (dietary, price, stock, brand, vendor attributes) and sort order
+ * across the category switch, while dropping cursor and back so the new category starts at page 1.
+ */
+export function categoryNavHref(newSlug: string, params: CategoryPageParams): string {
+  const query = categoryNavQuery(params);
+  return query ? `/categories/${newSlug}?${query}` : `/categories/${newSlug}`;
 }

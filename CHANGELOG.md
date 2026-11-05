@@ -6,8 +6,50 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Filter Polish, Subcategory Icons, Quick View Performance & Filter Persistence** (spec `specs/2026-11-05-filter-polish-quickview-perf/`).
+  - **Filter Decluttering & Semantic Grouping (`components/product/ProductFilterForm.tsx`, `app/(storefront)/search/page.tsx`):**
+    - Removed redundant visible search input inside the sidebar on `/search`, preserving the active search query via a hidden passthrough field to keep the filter panel clean while preventing filter submits from losing search terms.
+    - Removed duplicate price preset pills from inside `ProductFilterForm`, leaving clean, accessible `Min` – `Max` numeric inputs (presets remain available above products via `<QuickFiltersRail />`).
+    - Structured filters into clean semantic fieldsets (*Price*, *Availability*, *Dietary & Lifestyle*, and *Attributes*) with clear legends and visual hierarchy to eliminate decision fatigue (Hick's Law).
+  - **Subcategory Visual Icons (`components/product/category-icon.ts`, `components/product/SubcategoryLinks.tsx`):**
+    - Extended `categoryIconName` with semantic icon mappings for all 31 catalogue subcategories across both grocery and non-grocery departments.
+    - Updated `<SubcategoryLinks />` to render an `<Icon />` with `aria-hidden="true"` inside each subcategory pill and the leading "All" pill (`layers`), creating visual consistency with the main department tiles and improving scannability.
+  - **Quick View Instant Hydration & Caching (`components/product/quick-view-context.tsx`, `components/product/QuickViewDrawer.tsx`, `components/product/ProductCard.tsx`, `app/api/products/quick-view/route.ts`):**
+    - Accelerated Quick View to near-instant perceived latency: passes `cdnBaseUrl` with initial product data so full packshot photographs, pricing, and add-to-cart controls hydrate immediately without waiting for network responses.
+    - Added in-memory client-side caching in `QuickViewProvider` to eliminate repeated network fetches for previously opened products.
+    - Added hover and focus prefetching (`prefetchQuickView`) on `ProductCard` desktop and mobile triggers so product details are already cached in memory before click.
+    - Parallelized product detail and Better Auth session queries in `/api/products/quick-view/route.ts` via `Promise.all()`, and added `Cache-Control` response headers.
+  - **Category Filter & Sort Persistence (`components/product/category-href.ts`, `app/(storefront)/categories/[slug]/page.tsx`, `app/(storefront)/search/page.tsx`, `components/layout/DepartmentScroller.tsx`):**
+    - Added `categoryNavHref(newSlug, currentParams)` to preserve all active filter parameters (`minPrice`, `maxPrice`, `inStock`, `isHalal`, `isFresh`, `isOrganic`, `isVegetarian`, `isGlutenFree`, `isHmcCertified`, `onOffer`, `origin`, `brand`, `packSize`, `attr_*`, and `sort`) across department and subcategory switches, while resetting pagination offsets.
+    - Wired `hrefFor` into `<SubcategoryLinks />` and `<DepartmentScroller />` on `/categories/[slug]`, and into `<DepartmentScroller />` on `/search`.
+  - **Unit Tests (`tests/category-href.test.ts`, `tests/quick-view.test.tsx`, `tests/category-icon.test.ts`):** Added tests verifying filter preservation across category navigation, instant image hydration with `cdnBaseUrl`, client cache hits on drawer reopen, and subcategory icon mappings.
+  - **Storefront Product Sorting (`lib/repositories/products.ts`, `components/product/sort-params.ts`, `components/product/ProductSortSelect.tsx`):**
+    - Extended `ProductFilters` with `sort?: ProductSortOption` supporting `newest` (default browse), `relevance` (default search), `price_asc` (Price: Low to High), `price_desc` (Price: High to Low), `unit_price_asc` (Best Value per reference unit: kg/L), and `rating_desc` (Customer Rating).
+    - In `findPage()` (browse & category navigation), dynamic keyset ordering leverages existing database indexes (`basePrice`, `unitPricePencePerBaseUnit`, `averageRating`, `createdAt`).
+    - In `searchProducts()`, search candidates sort in memory deterministically when an explicit sort option is requested, while preserving ranked score ordering for `relevance`.
+    - Added `<ProductSortSelect />` component positioned above product grids on both `/categories/[slug]` and `/search`, implemented as an accessible `<form method="GET">` with `<noscript>` fallback for 100% no-JavaScript functionality.
+  - **Quick Filters Bar (`components/product/QuickFiltersRail.tsx`):**
+    - Responsive, horizontal scrollable rail of 1-tap quick filter toggle pills directly above product listings for high-intent grocery attributes (*On Offer*, *In Stock*, *Halal*, *Fresh*, *Organic*, *Vegetarian*, *Gluten Free*).
+    - Each pill shows active/inactive states with clear visual feedback, live result counts, and single-click toggling without expanding mobile drawers or accordions.
+  - **Quick Price Presets (`components/product/ProductFilterForm.tsx`):**
+    - Added 1-click price preset buttons (*Under £2*, *£2 – £5*, *£5 – £10*, *£10+*) in the filter panel to relieve decision fatigue, while preserving custom numeric min/max price inputs.
+  - **Live Product Counts in Filter Options (`lib/repositories/products.ts`, `components/product/ProductFilterForm.tsx`):**
+    - Enhanced `getAvailableFacets()` to compute genuine product counts for boolean facets in the current result context.
+    - Updated `ProductFilterForm` labels to display live item counts (e.g. `Halal (14)`, `On offer (6)`), providing shoppers with result density foresight before applying filters.
+  - **Zero-Result Smart Relaxation (`components/product/FilterZeroRecovery.tsx`):**
+    - When an over-constrained filter combination returns 0 products, an intelligent recovery component replaces dead-end blank states with 1-click links to relax the limiting filter (e.g. `Remove price filter`, `Remove brand filter`) or `Clear all filters`.
+  - **Navigation & Chip Preservation (`components/product/filter-chips.ts`, `category-href.ts`, `search-href.ts`):**
+    - `sort` parameter is preserved across pagination (`nextCategoryPageHref`, `prevCategoryPageHref`, `searchPageHref`, `categoryFilterHref`), when removing individual filter chips, and when clearing all filters.
+    - `sort` is excluded from filter chips so sort order never renders as a removable facet.
+  - **Unit & Integration Tests (`tests/product-sort-and-discovery.test.ts`):** Added comprehensive test coverage asserting sort parsing, URL preservation, chip isolation, Prisma `orderBy` generation, in-memory candidate sorting, and empty state relaxation.
+
 ### Fixed
 
+- **Server-to-Client Component Boundary Invariant on DepartmentScroller** (`components/layout/DepartmentScroller.tsx`, `app/(storefront)/categories/[slug]/page.tsx`, `app/(storefront)/search/page.tsx`):
+  - Fixed HTTP 500 runtime crash on `/categories/[slug]` caused by passing a function prop (`hrefFor`) from Server Components across the RSC boundary to Client Component `<DepartmentScroller />`.
+  - Replaced `hrefFor` with serializable string props `carriedQuery` and `searchMode`, generating safe category and search URLs while preserving active filter and sort queries.
 - **Promotions AI Basis Points Percentage Formatting & Promotion-Focused Image Descriptions** (issue `#1415`).
   - **Basis Points to Percentage Normalisation (`lib/promotions-ai.ts`):** Fixed AI prompt builder interpolating raw discount value as percentage directly (`500% OFF` instead of `5% OFF`). Basis points are now correctly divided by 100 (`d.discountValue / 100`), ensuring 500 bps is framed truthfully as 5% and 1000 bps as 10%.
   - **Promotion-Focused Alt Text (`lib/promotions-ai.ts`, `components/staff/PromotionForm.tsx`):** Instructed AI to generate image descriptions (`altText`) focused strictly on the promotion, offer, and department context (e.g. `Promotional banner: Save 5% on Halal Meat with code WEEKENDMEAT5`) rather than generic visual photography elements. Updated staff form label and hint text accordingly.
