@@ -298,7 +298,8 @@ export default async function SearchPage({
               tabs={selectedCategory.parent?.children ?? selectedCategory.children}
               parentSlug={selectedCategory.parent?.slug ?? selectedCategory.slug}
               activeSlug={selectedCategory.slug}
-              hrefFor={(slug) => categoryFilterHref(params, slug)}
+              searchMode
+              carriedQuery={searchCategoryFilterQuery(params)}
             />
           )}
 

@@ -91,6 +91,22 @@ export function ProductFilterForm({
       )}
       {searchParams.q && <input type="hidden" name="q" value={searchParams.q} />}
 
+      {/*
+        Quick filters passthrough: Availability and Dietary & Lifestyle toggles live on the
+        quick filters rail above results. Carrying active selections via hidden inputs ensures
+        submitting sidebar filters (price, origin, brand, attributes) never clears quick filters.
+      */}
+      {searchParams.inStock === "1" && <input type="hidden" name="inStock" value="1" />}
+      {searchParams.onOffer === "1" && <input type="hidden" name="onOffer" value="1" />}
+      {searchParams.isHalal === "1" && <input type="hidden" name="isHalal" value="1" />}
+      {searchParams.isFresh === "1" && <input type="hidden" name="isFresh" value="1" />}
+      {searchParams.isOrganic === "1" && <input type="hidden" name="isOrganic" value="1" />}
+      {searchParams.isVegetarian === "1" && <input type="hidden" name="isVegetarian" value="1" />}
+      {searchParams.isGlutenFree === "1" && <input type="hidden" name="isGlutenFree" value="1" />}
+      {searchParams.isHmcCertified === "1" && (
+        <input type="hidden" name="isHmcCertified" value="1" />
+      )}
+
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-semibold text-primary">Price (£)</legend>
         <div className="flex items-center gap-2">
@@ -117,155 +133,6 @@ export function ProductFilterForm({
           />
         </div>
       </fieldset>
-
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-sm font-semibold text-primary">Availability</legend>
-        <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="inStock"
-              value="1"
-              defaultChecked={searchParams.inStock === "1"}
-            />
-            <span className="text-sm text-primary">In stock only</span>
-          </div>
-          {spec.inStockCount !== undefined && (
-            <span className="text-xs text-primary-muted font-normal">({spec.inStockCount})</span>
-          )}
-        </label>
-        {spec.onOffer && (
-          <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                name="onOffer"
-                value="1"
-                defaultChecked={searchParams.onOffer === "1"}
-              />
-              <span className="text-sm text-primary">On offer</span>
-            </div>
-            {spec.onOfferCount !== undefined && (
-              <span className="text-xs text-primary-muted font-normal">({spec.onOfferCount})</span>
-            )}
-          </label>
-        )}
-      </fieldset>
-
-      {(spec.halal ||
-        spec.fresh ||
-        spec.organic ||
-        spec.vegetarian ||
-        spec.glutenFree ||
-        spec.hmcCertified) && (
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 text-sm font-semibold text-primary">Dietary & Lifestyle</legend>
-          {spec.halal && (
-            <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="isHalal"
-                  value="1"
-                  defaultChecked={searchParams.isHalal === "1"}
-                />
-                <span className="text-sm text-primary">Halal</span>
-              </div>
-              {spec.halalCount !== undefined && (
-                <span className="text-xs text-primary-muted font-normal">({spec.halalCount})</span>
-              )}
-            </label>
-          )}
-          {spec.fresh && (
-            <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="isFresh"
-                  value="1"
-                  defaultChecked={searchParams.isFresh === "1"}
-                />
-                <span className="text-sm text-primary">Fresh</span>
-              </div>
-              {spec.freshCount !== undefined && (
-                <span className="text-xs text-primary-muted font-normal">({spec.freshCount})</span>
-              )}
-            </label>
-          )}
-          {spec.organic && (
-            <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="isOrganic"
-                  value="1"
-                  defaultChecked={searchParams.isOrganic === "1"}
-                />
-                <span className="text-sm text-primary">Organic</span>
-              </div>
-              {spec.organicCount !== undefined && (
-                <span className="text-xs text-primary-muted font-normal">
-                  ({spec.organicCount})
-                </span>
-              )}
-            </label>
-          )}
-          {spec.vegetarian && (
-            <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="isVegetarian"
-                  value="1"
-                  defaultChecked={searchParams.isVegetarian === "1"}
-                />
-                <span className="text-sm text-primary">Vegetarian</span>
-              </div>
-              {spec.vegetarianCount !== undefined && (
-                <span className="text-xs text-primary-muted font-normal">
-                  ({spec.vegetarianCount})
-                </span>
-              )}
-            </label>
-          )}
-          {spec.glutenFree && (
-            <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="isGlutenFree"
-                  value="1"
-                  defaultChecked={searchParams.isGlutenFree === "1"}
-                />
-                <span className="text-sm text-primary">Gluten free</span>
-              </div>
-              {spec.glutenFreeCount !== undefined && (
-                <span className="text-xs text-primary-muted font-normal">
-                  ({spec.glutenFreeCount})
-                </span>
-              )}
-            </label>
-          )}
-          {spec.hmcCertified && (
-            <label className="flex min-h-tap lg:min-h-0 items-center justify-between gap-2 cursor-pointer">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="isHmcCertified"
-                  value="1"
-                  defaultChecked={searchParams.isHmcCertified === "1"}
-                />
-                <span className="text-sm text-primary">HMC certified</span>
-              </div>
-              {spec.hmcCertifiedCount !== undefined && (
-                <span className="text-xs text-primary-muted font-normal">
-                  ({spec.hmcCertifiedCount})
-                </span>
-              )}
-            </label>
-          )}
-        </fieldset>
-      )}
 
       {/*
         #569 — origin and brand are DISTINCT-VALUE facets, not booleans, so they are selects rather

@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **Filter Deduplication & Subcategory Medallion Tiles** (`components/product/ProductFilterForm.tsx`, `components/product/SubcategoryLinks.tsx`, `app/(storefront)/categories/[slug]/page.tsx`, `app/(storefront)/search/page.tsx`):
+  - **Sidebar Filter Deduplication (`ProductFilterForm.tsx`):** Removed duplicate Availability and Dietary & Lifestyle checkboxes from the left sidebar filter panel to eliminate visual clutter and redundant controls. All quick filters remain accessible via `<QuickFiltersRail />` directly above results, and active quick filters are preserved as hidden passthrough inputs when applying sidebar filters (Price, Origin, Brand, Attributes).
+  - **Consistent Subcategory Medallion Layout (`SubcategoryLinks.tsx`):** Transformed subcategories from pill buttons into circular medallion tiles with icons/illustrations on top and titles underneath, matching the visual design, 64px diameter, hover animations, and layout of the main category scroller.
+  - **Unit Tests (`tests/product-filter-form.test.tsx`, `tests/subcategory-links.test.tsx`):** Added tests verifying that no duplicate checkboxes render in the sidebar, active quick filters are preserved on form submit, subcategories render circular medallions with active ring states, and subcategory links support serializable `carriedQuery` and `searchMode` props.
+
 - **Filter Polish, Subcategory Icons, Quick View Performance & Filter Persistence** (spec `specs/2026-11-05-filter-polish-quickview-perf/`).
   - **Filter Decluttering & Semantic Grouping (`components/product/ProductFilterForm.tsx`, `app/(storefront)/search/page.tsx`):**
     - Removed redundant visible search input inside the sidebar on `/search`, preserving the active search query via a hidden passthrough field to keep the filter panel clean while preventing filter submits from losing search terms.
