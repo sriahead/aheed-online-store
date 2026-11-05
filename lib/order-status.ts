@@ -106,6 +106,15 @@ export const ORDER_STATUSES = [
 
 export type OrderStatusValue = (typeof ORDER_STATUSES)[number];
 
+/**
+ * #1435 — a status after which nothing more happens to the order, so a live page stops refreshing.
+ */
+export const FINAL_STATUSES: readonly OrderStatusValue[] = ["DELIVERED", "COLLECTED", "CANCELLED"];
+
+export function isFinalStatus(status: string): boolean {
+  return (FINAL_STATUSES as readonly string[]).includes(status);
+}
+
 /** Narrows untrusted input (a form field, a URL) to a real status. */
 export function isOrderStatus(value: string): value is OrderStatusValue {
   return (ORDER_STATUSES as readonly string[]).includes(value);

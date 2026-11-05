@@ -4,8 +4,8 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.10.0"
-updated: 2026-11-04
+version: "1.11.0"
+updated: 2026-11-05
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
 tags: ["admin", "platform", "technical", "multi-tenancy"]
@@ -155,7 +155,14 @@ reload to see them.
 - **Set up order alerts.** The **Order alerts** card sends the store's staff a short Telegram message whenever a customer gets in touch about an order. To add a recipient, leave **Channel** on Telegram, type the chat's numeric **Chat ID**, and press **Add recipient**. A store can have several recipients, for example a staff group and the owner's own chat. Press **Send test alert** next to a recipient to check that the bot can reach that chat; the card says whether the test was sent, skipped or failed, with the reason. Press **Remove** to stop alerts to that chat. The card also shows **Telegram bot token: Set** or **Not set**.
 - **Know what triggers an alert.** An email to one of the store's receiving addresses alerts when it is order-related: it was sent to an **Orders** address, or its subject names one of the store's order numbers. A **Contact us** message alerts when it is a complaint, or when the shopper picked one of their own orders. An enquiry with no order does not alert.
 - **Know what an alert says.** Five lines: the store name, the order number (or "not given"), the sender's name, the subject, and whether it came by email or the contact form. Alerts from staging start with `[STAGING]`. The message itself, the customer's email address and their phone number are never sent.
-- **Find a group's chat ID.** Add the platform bot to the staff's Telegram group and send any message in the group. Then open `https://api.telegram.org/bot<token>/getUpdates` in a browser, with the bot's token in place of `<token>`, and read `chat.id` from the newest message. A group's ID starts with `-`. A chat with one person works too: that person sends the bot any message first.
+- **Order notifications to the owner (`#1435`).** The same Telegram recipients, plus the store's mailbox, also hear about every paid-order event.
+  - **The events:** a new paid order, *Out for delivery*, *Ready for collection*, *Delivered*, *Collected* and *Cancelled*.
+  - **Email** goes to the forward-to mailbox of the store's **Orders** receiving address, or, if it has none, its **Support** one. It never goes to the platform's default inbox. Its Reply-To is the customer, so replying reaches them.
+  - **Telegram** messages give the event, the order number, the total and item count, the slot and a link to the order in the staff panel. They never include the customer's name, address, email or the products.
+  - **A bulk status change** sends one summary per status ("Out for delivery: 12 orders") instead of a message per order.
+  - **A store with no receiving address and no Telegram recipient** gets no owner notifications. Customers still get their emails.
+  - **A message that fails to send** is retried by the scheduler every 15 minutes for up to 24 hours. **Send test alert** checks the Telegram side.
+- **Find a group's chat ID.** Add the platform bot to the staff's Telegram group. In the group, send `/start@<bot username>`: by default a bot only sees commands addressed to it, so a plain message leaves `getUpdates` empty (`{"ok":true,"result":[]}`). Then open `https://api.telegram.org/bot<token>/getUpdates` in a browser, with the bot's token in place of `<token>`, and read `chat.id` from the newest message. A group's ID starts with `-`. A chat with one person works too: that person sends the bot any message first.
 
 **Important fields and filters:** The store picker (one button per store); the guide's step status (Done, Not done, Check in Cloudflare, Action on this page); Sender name and Sender email; each receiving address with its purpose (Orders or Support), grouped by its forward-to mailbox; the sending status (Provider, Platform sender, Recipients, Store domain, Mail goes out as, Default forward-to, Verified mailboxes); each order-alert recipient (channel and chat ID) and the Telegram bot token line.
 

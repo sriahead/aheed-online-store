@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-05T15:36:09.761Z` · commit `40efa98c` · `316` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-05T16:18:41.148Z` · commit `fcca5578` · `316` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -338,8 +338,8 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Client & Role User Journey Maps](docs/client-help-centre/user-journeys.md) | guide | 1.1.0 | 2026-11-01 | approved | internal | Comprehensive end-to-end user journey maps with Mermaid flowcharts, step-by-step guides, permissions, and checklists for Platform Admin, Store Admin, Staff, and Customer. |
 | [Operations & Fulfillment Procedures](docs/operations-research/operations-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for operations teams detailing the fulfillment lifecycle, stock management, and exception handling. |
 | [Order & Fulfilment Operations](docs/operations-research/order-fulfilment-core.md) | runbook | 1.0.0 | 2026-09-22 | approved | internal | Canonical rules for order status transitions, fulfilment slots, cancellations, and payment exceptions. |
-| [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.10.0 | 2026-11-04 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
-| [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.15.0 | 2026-10-27 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item. |
+| [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.11.0 | 2026-11-05 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
+| [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.16.0 | 2026-11-05 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item. |
 | [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.20.0 | 2026-10-31 | approved | internal | How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access. |
 | [Merqify KMS — Knowledge Architecture, Governance and Validation (plan)](specs/2026-11-02-merqify-kms-architecture-governance/plan.md) | spec | 1.0.0 | 2026-11-02 | draft | internal | Review, redesign, and reorganise Merqify KMS into an authoritative single source of truth across 13 canonical domains, with C4 alignment, automated link integrity testing, and Nextra portal restructuring. |
 
@@ -347,4 +347,4 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 
 | Artifact | Type | Ver | Updated | Status | Vis | Summary |
 |---|---|---|---|---|---|---|
-| [Shopping Guide & Help Center](docs/shopper-help/shopping-guide.md) | guide | 1.6.0 | 2026-10-10 | approved | public | A complete guide for customers on how to browse, place orders, and manage their account. |
+| [Shopping Guide & Help Center](docs/shopper-help/shopping-guide.md) | guide | 1.7.0 | 2026-11-05 | approved | public | A complete guide for customers on how to browse, place orders, and manage their account. |

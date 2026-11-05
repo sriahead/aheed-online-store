@@ -86,6 +86,7 @@ describe("privacy page section 5 — figures come from lib/data-retention.ts (R2
       SEARCH_QUERY_LOG_RETENTION_DAYS: 30,
       ASSISTANT_CONVERSATION_RETENTION_DAYS: 45,
       ATTEMPT_RECORD_RETENTION_HOURS: 2,
+      NOTIFICATION_OUTBOX_RETENTION_HOURS: 36,
     }));
     const section = await sectionFive();
     expect(paragraphLedBy(section, "Searches.")).toContain("due for deletion after 30 days");
@@ -94,6 +95,10 @@ describe("privacy page section 5 — figures come from lib/data-retention.ts (R2
     );
     expect(paragraphLedBy(section, "Records that protect the shop from abuse.")).toContain(
       "due for deletion after 2 hours",
+    );
+    // #1435 R26 — the order-update retry window is read from the same module.
+    expect(paragraphLedBy(section, "Order updates waiting to be sent.")).toContain(
+      "for at most 36 hours",
     );
   });
 });

@@ -1039,6 +1039,10 @@ describe("findOrderForViewer — guest capability token (#427)", () => {
       },
       discountUse: null,
       loyaltyEntries: [] as { points: number }[],
+      // #1435 — the tracker fields findOrderForViewer now selects.
+      fulfilmentDate: null as Date | null,
+      fulfilmentSlot: null as { startTime: string; endTime: string } | null,
+      statusEvents: [{ status: "CONFIRMED", createdAt: new Date("2026-08-29T10:05:00Z") }],
       ...over,
     };
   }

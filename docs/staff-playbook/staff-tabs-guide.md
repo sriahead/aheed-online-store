@@ -4,8 +4,8 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.15.0"
-updated: "2026-10-27"
+version: "2.16.0"
+updated: "2026-11-05"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
 tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback"]
@@ -97,6 +97,12 @@ awaiting action** — delivered and cancelled orders are hidden so the queue sta
 anything else you must choose a status explicitly, including "All statuses". The search box matches
 an order number or a customer email. Results are paged 20 at a time, and the page link carries your
 current filter with it.
+
+**New orders appear by themselves (`#1435`):**
+- **Refreshing:** while the page is open and on screen, it refreshes every 30 seconds, so you do not need to reload it.
+- **The notice:** when a paid order arrives after you opened the page, a notice says **"1 new order since you opened this page"** (or "N new orders"). It counts every new *Confirmed* order, whatever filter you are looking at. Press **Dismiss** to clear the count.
+- **Sound:** tick **Sound for new orders** to hear a short tone when the count goes up. It is off until you turn it on, and the setting is remembered in this browser only.
+- **Customer emails:** each status you set still emails the customer, and the store owner is told too. Bulk changes send the owner one summary, not a message per order.
 
 **Common mistakes and limitations:** An order sitting in *Pending payment* is not yours to advance —
 the customer's payment never completed, and there is no control to push it forward. Those are

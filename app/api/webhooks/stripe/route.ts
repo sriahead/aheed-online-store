@@ -6,7 +6,7 @@ import {
 } from "@/lib/stripe-webhook";
 import { getWebhookOrderService } from "@/lib/orders-service";
 import { STRIPE_PAYMENT_PROVIDER } from "@/lib/payments";
-import { sendOrderConfirmationEmail } from "@/features/checkout/send-confirmation";
+import { notifyOrderEvent } from "@/lib/order-notifications-service";
 import type { PaymentBinding, PaymentTransitionRefusal } from "@/lib/repositories/orders";
 
 export const dynamic = "force-dynamic";
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
         const order = await orders.findOrder(event.orderNumber);
         // Email only when THIS delivery performed the transition, so Stripe's
         // retries can't email the shopper twice.
-        if (order) await sendOrderConfirmationEmail(order);
+        if (order) await notifyOrderEvent(order, "CONFIRMED");
       } else {
         reportRefusal(confirmed.reason, event, event.orderNumber);
       }

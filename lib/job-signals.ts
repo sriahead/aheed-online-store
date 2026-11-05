@@ -4,6 +4,7 @@ import {
   ERROR_EVENTS_LAST_AT_KEY,
   ERROR_SIGNAL_THROTTLE_MS,
   JOB_SIGNALS_BINDING,
+  NOTIFICATION_OUTBOX_PENDING_KEY,
   PAYMENT_SWEEP_DUE_AT_KEY,
 } from "@/lib/job-signal-keys";
 
@@ -140,5 +141,30 @@ export async function clearContactOutboxPending(): Promise<void> {
     await store.delete(CONTACT_OUTBOX_PENDING_KEY);
   } catch (error) {
     logFailure("clear", CONTACT_OUTBOX_PENDING_KEY, error);
+  }
+}
+
+/**
+ * #1435 — an order-notification message failed and was queued, or the retry job left rows behind.
+ * One write per dispatch that queued anything, never per message.
+ */
+export async function markNotificationOutboxPending(): Promise<void> {
+  const store = resolveStore();
+  if (!store) return;
+  try {
+    await store.put(NOTIFICATION_OUTBOX_PENDING_KEY, new Date().toISOString());
+  } catch (error) {
+    logFailure("mark", NOTIFICATION_OUTBOX_PENDING_KEY, error);
+  }
+}
+
+/** #1435 — the retry job emptied the outbox. */
+export async function clearNotificationOutboxPending(): Promise<void> {
+  const store = resolveStore();
+  if (!store) return;
+  try {
+    await store.delete(NOTIFICATION_OUTBOX_PENDING_KEY);
+  } catch (error) {
+    logFailure("clear", NOTIFICATION_OUTBOX_PENDING_KEY, error);
   }
 }

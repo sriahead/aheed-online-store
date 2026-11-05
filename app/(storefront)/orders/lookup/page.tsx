@@ -11,6 +11,8 @@ import { formatPrice } from "@/components/product/format-price";
 import { GuestEraseForm } from "@/components/orders/GuestEraseForm";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Icon } from "@/components/icons/Icon";
+import { OrderProgressTracker } from "@/components/orders/OrderProgressTracker";
+import { orderStatusLabel } from "@/lib/order-status";
 
 export const dynamic = "force-dynamic";
 
@@ -79,25 +81,6 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
   const profile = await getCurrentVendorProfile();
   const examplePrefix = vendorOrderPrefix(profile?.slug ?? "");
 
-  const steps = [
-    { status: "CONFIRMED", label: "Order Confirmed", desc: "Store staff preparing items" },
-    {
-      status: "OUT_FOR_DELIVERY",
-      label: "Out for Delivery",
-      desc: "En route with local delivery team",
-    },
-    { status: "DELIVERED", label: "Delivered", desc: "Handed safely to customer" },
-  ];
-
-  const getStepIndex = (status: string) => {
-    if (status === "CONFIRMED" || status === "PENDING_PAYMENT") return 0;
-    if (status === "OUT_FOR_DELIVERY") return 1;
-    if (status === "DELIVERED") return 2;
-    return 0;
-  };
-
-  const currentIndex = orderResult ? getStepIndex(orderResult.status) : 0;
-
   return (
     <PageContainer width="narrow" className="text-primary">
       <nav className="mb-6 text-xs text-primary-muted">
@@ -111,7 +94,7 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
         {/* Header */}
         <div className="p-6 bg-primary text-white">
           <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-200">
-            Delivery progress
+            Order progress
           </span>
           <h1 className="text-xl font-extrabold mt-0.5">Track Your Order</h1>
         </div>
@@ -192,48 +175,21 @@ export default async function OrderLookupPage({ searchParams }: LookupPageProps)
               <div className="text-right">
                 <p className="text-xs text-slate-500 font-medium">Status</p>
                 <span className="inline-block rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-primary mt-0.5">
-                  {orderResult.status}
+                  {orderStatusLabel(orderResult.status)}
                 </span>
               </div>
             </div>
 
-            {/* 3-Step Pipeline Visualizer */}
-            <h2 className="sr-only">Delivery Status</h2>
-            <div className="relative space-y-6 pl-4 border-l-2 border-slate-200 my-4">
-              {steps.map((step, idx) => {
-                const isCompleted = idx <= currentIndex;
-                const isCurrent = idx === currentIndex;
-
-                return (
-                  <div key={step.status} className="relative flex items-start gap-4">
-                    <div
-                      className={`absolute -left-[25px] top-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition ${
-                        isCompleted
-                          ? "bg-primary text-white ring-4 ring-emerald-100 shadow-sm"
-                          : "bg-slate-200 text-slate-500"
-                      }`}
-                    >
-                      {isCompleted ? <Icon name="circle-check" className="w-3.5 h-3.5" /> : idx + 1}
-                    </div>
-
-                    <div className="pl-2">
-                      <h3
-                        className={`font-bold text-sm leading-tight ${
-                          isCurrent
-                            ? "text-primary"
-                            : isCompleted
-                              ? "text-slate-800"
-                              : "text-slate-400"
-                        }`}
-                      >
-                        {step.label}
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">{step.desc}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            {/* #1435 R21 — the shared tracker: the order's own path (delivery or collection),
+                never the raw status. No LiveRefresh here: each lookup spends the rate-limit
+                budget, so this page refreshes only when the shopper asks. */}
+            <OrderProgressTracker
+              orderNumber={orderResult.orderNumber}
+              status={orderResult.status}
+              fulfilmentMethod={orderResult.fulfilmentMethod}
+              timeline={orderResult.timeline}
+              slotLabel={orderResult.slotLabel}
+            />
 
             {/* Items Summary */}
             <h2 className="sr-only">Order Items</h2>

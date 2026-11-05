@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
-import { sendOrderStatusEmail } from "./send-status-email";
+import { notifyOrderEvent } from "@/lib/order-notifications-service";
 
 /**
  * Advance one order along the staff ladder (P4b, #125).
@@ -37,6 +37,6 @@ export async function advanceStatus(formData: FormData) {
 
   if (!result.ok) return;
 
-  await sendOrderStatusEmail(result.order, toStatus);
+  await notifyOrderEvent(result.order, toStatus);
   revalidatePath("/staff/orders");
 }

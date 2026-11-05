@@ -10,6 +10,9 @@ import { OrderPointsNote } from "@/components/orders/OrderPointsNote";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { IconMedallion } from "@/components/icons/IconMedallion";
 import { PaymentStatusCheck } from "@/components/checkout/PaymentStatusCheck";
+import { OrderProgressTracker } from "@/components/orders/OrderProgressTracker";
+import { LiveRefresh } from "@/components/orders/LiveRefresh";
+import { isFinalStatus } from "@/lib/order-status";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +95,19 @@ export default async function OrderConfirmationPage({
           stock. Nothing has been charged.
         </p>
       )}
+
+      {/* #1435 R21/R22 — the order's progress, kept current while the tab is open: an unpaid order
+          moves to confirmed here without a reload once the payment clears. */}
+      {order.status !== "CANCELLED" && (
+        <OrderProgressTracker
+          orderNumber={order.orderNumber}
+          status={order.status}
+          fulfilmentMethod={order.fulfilmentMethod}
+          timeline={order.timeline}
+          slotLabel={order.slotLabel}
+        />
+      )}
+      <LiveRefresh active={!isFinalStatus(order.status)} />
 
       <OrderPointsNote
         status={order.status}

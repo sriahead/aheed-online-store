@@ -11,7 +11,7 @@ import {
   recordPaymentReconciliationOutcome,
 } from "@/lib/repositories/payment-reconciliations";
 import { listActiveVendorIds } from "@/lib/repositories/vendor";
-import { sendOrderConfirmationEmail } from "@/features/checkout/send-confirmation";
+import { notifyOrderEvent } from "@/lib/order-notifications-service";
 import {
   DEFAULT_CANDIDATE_CUTOFF_MS,
   runPaymentSweep,
@@ -73,7 +73,7 @@ export function getPaymentSweepService() {
             listStalePendingOrders(prisma, vendorId, olderThan, now, limit),
           sendConfirmation: async (orderNumber) => {
             const order = await orders.findOrder(orderNumber);
-            if (order) await sendOrderConfirmationEmail(order);
+            if (order) await notifyOrderEvent(order, "CONFIRMED");
           },
           provider: STRIPE_PAYMENT_PROVIDER,
           now: () => new Date(),

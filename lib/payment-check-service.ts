@@ -3,7 +3,7 @@ import { getCurrentVendorId } from "@/lib/tenant";
 import { getPaymentService, STRIPE_PAYMENT_PROVIDER } from "@/lib/payments";
 import { getWebhookOrderService } from "@/lib/orders-service";
 import { findOrderPaymentState } from "@/lib/repositories/orders";
-import { sendOrderConfirmationEmail } from "@/features/checkout/send-confirmation";
+import { notifyCustomerConfirmation, notifyOrderEvent } from "@/lib/order-notifications-service";
 import { checkOrderPayment, type PaymentCheckOutcome } from "@/lib/payment-check";
 import { isPaidStatus } from "@/lib/order-status";
 
@@ -44,7 +44,7 @@ export function getPaymentCheckService() {
           confirm: (number, binding) => orders.confirm(number, binding),
           sendConfirmation: async (number) => {
             const confirmed = await orders.findOrder(number);
-            if (confirmed) await sendOrderConfirmationEmail(confirmed);
+            if (confirmed) await notifyOrderEvent(confirmed, "CONFIRMED");
           },
           provider: STRIPE_PAYMENT_PROVIDER,
         },
@@ -56,8 +56,9 @@ export function getPaymentCheckService() {
      * Staff "Resend confirmation email". Only for a paid order: an "order
      * confirmed" email for an unpaid or cancelled one would be a false statement
      * to the customer. `sent` means handed to the email service —
-     * `sendOrderConfirmationEmail` never throws and swallows provider failures,
-     * so nothing here can know it was delivered (#946 is that problem).
+     * `notifyCustomerConfirmation` never throws; a failed send is queued and
+     * retried (#1435), so nothing here can know it was delivered (#946). It
+     * reaches the customer only — never the owner (#1435 R10).
      */
     resendConfirmation: async (
       orderNumber: string,
@@ -74,7 +75,7 @@ export function getPaymentCheckService() {
       // for the email's content.
       const order = await getWebhookOrderService().findOrder(orderNumber);
       if (!order) return { kind: "not-found" };
-      await sendOrderConfirmationEmail(order);
+      await notifyCustomerConfirmation(order);
       console.log(`confirmation email resent by staff order=${orderNumber}`);
       return { kind: "sent" };
     },

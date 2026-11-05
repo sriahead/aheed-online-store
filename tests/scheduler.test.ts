@@ -3,6 +3,7 @@ import scheduler from "../workers/scheduler/src/index";
 import {
   ALL_JOB_PATHS,
   CONTACT_OUTBOX_PATH,
+  NOTIFICATION_OUTBOX_PATH,
   DAILY_CRON,
   ERROR_RATE_PATH,
   REAPER_PATH,
@@ -91,6 +92,7 @@ describe("job scheduler", () => {
       "/api/jobs/reap-guest-carts",
       "/api/jobs/check-error-rate",
       "/api/jobs/retry-contact-outbox",
+      "/api/jobs/retry-notification-outbox",
     ]);
   });
 
@@ -149,8 +151,16 @@ describe("selectJobs (#1324)", () => {
     paymentDueAt: SignalRead,
     errorLastAt: SignalRead,
     contactOutboxPending: SignalRead = NONE,
+    notificationOutboxPending: SignalRead = NONE,
   ) =>
-    selectJobs({ cron: "*/15 * * * *", now: NOW, paymentDueAt, errorLastAt, contactOutboxPending });
+    selectJobs({
+      cron: "*/15 * * * *",
+      now: NOW,
+      paymentDueAt,
+      errorLastAt,
+      contactOutboxPending,
+      notificationOutboxPending,
+    });
 
   it("R3: the daily cron calls every job in order, whatever the signals say", () => {
     for (const signal of [NONE, FAILED, at(minutesFromNow(60)), at("garbage")]) {
@@ -161,8 +171,15 @@ describe("selectJobs (#1324)", () => {
           paymentDueAt: signal,
           errorLastAt: signal,
           contactOutboxPending: signal,
+          notificationOutboxPending: signal,
         }),
-      ).toEqual([SWEEP_PATH, REAPER_PATH, ERROR_RATE_PATH, CONTACT_OUTBOX_PATH]);
+      ).toEqual([
+        SWEEP_PATH,
+        REAPER_PATH,
+        ERROR_RATE_PATH,
+        CONTACT_OUTBOX_PATH,
+        NOTIFICATION_OUTBOX_PATH,
+      ]);
     }
   });
 
@@ -178,6 +195,24 @@ describe("selectJobs (#1324)", () => {
 
     it("ALL_JOB_PATHS lists it", () => {
       expect(ALL_JOB_PATHS).toContain(CONTACT_OUTBOX_PATH);
+    });
+  });
+
+  describe("#1435 R6: the notification outbox retry on a tick", () => {
+    it.each([
+      ["a failed read", FAILED, true],
+      ["nothing stored", NONE, false],
+      ["a stored instant", at(minutesFromNow(-5)), true],
+      ["an unparseable value", at("garbage"), true],
+    ])("%s → included: %s", (_label, read, included) => {
+      expect(tick(NONE, NONE, NONE, read as SignalRead).includes(NOTIFICATION_OUTBOX_PATH)).toBe(
+        included,
+      );
+    });
+
+    it("ALL_JOB_PATHS lists it, and the contact marker alone does not call it", () => {
+      expect(ALL_JOB_PATHS).toContain(NOTIFICATION_OUTBOX_PATH);
+      expect(tick(NONE, NONE, at(minutesFromNow(-5)), NONE)).toEqual([CONTACT_OUTBOX_PATH]);
     });
   });
 
@@ -215,6 +250,7 @@ describe("selectJobs (#1324)", () => {
         expect(jobs).not.toContain(REAPER_PATH);
         if (jobs.length === 2) expect(jobs).toEqual([SWEEP_PATH, ERROR_RATE_PATH]);
         expect(jobs).not.toContain(CONTACT_OUTBOX_PATH);
+        expect(jobs).not.toContain(NOTIFICATION_OUTBOX_PATH);
       }
     }
   });
@@ -247,7 +283,21 @@ describe("scheduled handler gating (#1324 R7)", () => {
 
   it("fails open with no JOB_SIGNALS binding: every gated job runs", async () => {
     await scheduler.scheduled(TICK, ENV, CTX);
-    expect(fetchedPaths()).toEqual([SWEEP_PATH, ERROR_RATE_PATH, CONTACT_OUTBOX_PATH]);
+    expect(fetchedPaths()).toEqual([
+      SWEEP_PATH,
+      ERROR_RATE_PATH,
+      CONTACT_OUTBOX_PATH,
+      NOTIFICATION_OUTBOX_PATH,
+    ]);
+  });
+
+  it("#1435: a stored notification-outbox marker runs only its retry job", async () => {
+    await scheduler.scheduled(
+      TICK,
+      { ...ENV, JOB_SIGNALS: kv({ "notification-outbox:pending": "2026-11-05T10:00:00.000Z" }) },
+      CTX,
+    );
+    expect(fetchedPaths()).toEqual([NOTIFICATION_OUTBOX_PATH]);
   });
 
   it("#1409: a stored contact-outbox marker runs only the retry job", async () => {
@@ -263,17 +313,21 @@ describe("scheduled handler gating (#1324 R7)", () => {
     await scheduler.scheduled(TICK, { ...ENV, JOB_SIGNALS: kv({}) }, CTX);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(tickLines()).toEqual([
-      `scheduler tick cron=*/15 * * * * ran=none skipped=${SWEEP_PATH},${REAPER_PATH},${ERROR_RATE_PATH},${CONTACT_OUTBOX_PATH}`,
+      `scheduler tick cron=*/15 * * * * ran=none skipped=${SWEEP_PATH},${REAPER_PATH},${ERROR_RATE_PATH},${CONTACT_OUTBOX_PATH},${NOTIFICATION_OUTBOX_PATH}`,
     ]);
   });
 
   it("a throwing first read still reads the second key, and fails open for the first", async () => {
     const store = kv(
-      { "error-events:last-at": null, "contact-outbox:pending": null },
+      {
+        "error-events:last-at": null,
+        "contact-outbox:pending": null,
+        "notification-outbox:pending": null,
+      },
       { throwOn: "payment-sweep:due-at" },
     );
     await scheduler.scheduled(TICK, { ...ENV, JOB_SIGNALS: store }, CTX);
-    expect(store.get).toHaveBeenCalledTimes(3);
+    expect(store.get).toHaveBeenCalledTimes(4);
     expect(fetchedPaths()).toEqual([SWEEP_PATH]);
   });
 

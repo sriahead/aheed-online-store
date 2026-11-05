@@ -5,7 +5,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { getBindingRefusalService } from "@/lib/payment-binding-refusals-service";
 import { getOrderRecoveryService } from "@/lib/orders-service";
 import { getPaymentService, STRIPE_PAYMENT_PROVIDER, type RetrievedSession } from "@/lib/payments";
-import { sendOrderConfirmationEmail } from "@/features/checkout/send-confirmation";
+import { notifyOrderEvent } from "@/lib/order-notifications-service";
 
 /**
  * The two staff actions behind `/staff/payments` (#454).
@@ -144,7 +144,7 @@ export async function recoverRefusedOrder(formData: FormData) {
   // committed, so a second click cannot email the shopper twice — the second
   // call refuses with `already-processed` and never reaches here.
   const order = await orders.findOrder(target.orderNumber);
-  if (order) await sendOrderConfirmationEmail(order);
+  if (order) await notifyOrderEvent(order, "CONFIRMED");
 
   await service.recordResolution(
     target.id,

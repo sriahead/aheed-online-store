@@ -34,6 +34,7 @@
 import {
   CONTACT_OUTBOX_PENDING_KEY,
   ERROR_EVENTS_LAST_AT_KEY,
+  NOTIFICATION_OUTBOX_PENDING_KEY,
   PAYMENT_SWEEP_DUE_AT_KEY,
 } from "../../../lib/job-signal-keys";
 import { ALL_JOB_PATHS, selectJobs, type SignalRead } from "./select-jobs";
@@ -103,6 +104,7 @@ const scheduler = {
     const paymentDueAt = await readSignal(env, PAYMENT_SWEEP_DUE_AT_KEY);
     const errorLastAt = await readSignal(env, ERROR_EVENTS_LAST_AT_KEY);
     const contactOutboxPending = await readSignal(env, CONTACT_OUTBOX_PENDING_KEY);
+    const notificationOutboxPending = await readSignal(env, NOTIFICATION_OUTBOX_PENDING_KEY);
 
     const jobs = selectJobs({
       cron: controller.cron,
@@ -110,6 +112,7 @@ const scheduler = {
       paymentDueAt,
       errorLastAt,
       contactOutboxPending,
+      notificationOutboxPending,
     });
     const skipped = ALL_JOB_PATHS.filter((path) => !jobs.includes(path));
 
