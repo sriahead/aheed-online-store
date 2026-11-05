@@ -72,7 +72,7 @@ export function ProductCard({
    */
   favouriteState: FavouriteState;
 }) {
-  const { openQuickView } = useQuickView();
+  const { openQuickView, prefetchQuickView } = useQuickView();
   const hasDiscount = product.originalPrice != null && product.originalPrice > product.basePrice;
   const saving = hasDiscount ? product.originalPrice! - product.basePrice : 0;
   /**
@@ -182,8 +182,10 @@ export function ProductCard({
               type="button"
               onClick={(e) => {
                 e.preventDefault();
-                openQuickView(product.slug, product);
+                openQuickView(product.slug, product, cdnBaseUrl);
               }}
+              onPointerEnter={() => prefetchQuickView(product.slug)}
+              onFocus={() => prefetchQuickView(product.slug)}
               className="flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-xs font-bold text-primary shadow-md backdrop-blur-xs transition-transform duration-200 hover:scale-105 motion-reduce:hover:scale-100 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
             >
               <Icon name="eye" className="h-3.5 w-3.5" />
@@ -199,8 +201,9 @@ export function ProductCard({
             type="button"
             onClick={(e) => {
               e.preventDefault();
-              openQuickView(product.slug, product);
+              openQuickView(product.slug, product, cdnBaseUrl);
             }}
+            onTouchStart={() => prefetchQuickView(product.slug)}
             aria-label={`Quick view ${product.name}`}
             className="group/qv sm:hidden absolute top-0 right-0 z-20 flex size-tap items-center justify-center rounded-full"
           >

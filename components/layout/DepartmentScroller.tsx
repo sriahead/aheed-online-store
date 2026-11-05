@@ -25,10 +25,12 @@ export function DepartmentScroller({
   categories,
   activeSlug = null,
   use3D = false,
+  hrefFor = (slug) => `/categories/${slug}`,
 }: {
   categories: CategorySummary[];
   activeSlug?: string | null;
   use3D?: boolean;
+  hrefFor?: (slug: string) => string;
 }) {
   return (
     <HorizontalScroller
@@ -54,7 +56,7 @@ export function DepartmentScroller({
         return (
           <Link
             key={category.id}
-            href={`/categories/${category.slug}`}
+            href={hrefFor(category.slug)}
             aria-current={isActive ? "page" : undefined}
             className="group flex w-20 shrink-0 flex-col items-center gap-2 text-center"
           >
