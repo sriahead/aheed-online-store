@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons/Icon";
 import { IconMedallion } from "@/components/icons/IconMedallion";
-import { FLAT_ICON_SLOTS, ICON_3D_SLOTS } from "@/lib/icon-slots";
+import { FLAT_ICON_SLOTS, ICON_3D_SLOTS, getIconSlot } from "@/lib/icon-slots";
 import type { CategoryAssetItem } from "@/components/staff/CategoryImageManager";
 import type { CategoryImageStyle } from "@/lib/category-image";
 
@@ -27,6 +27,18 @@ export interface IconGalleryClientProps {
 /** Flat (Noto) icon slots are stored as `icon:<name>`; 3D system slots are bare names. */
 function isFlatSlot(slot: string | null | undefined): boolean {
   return Boolean(slot?.startsWith("icon:"));
+}
+
+/** Resolves human-readable surfaces where this asset renders in the storefront or admin. */
+function getSurfacesForAsset(asset: CategoryAssetItem): readonly string[] {
+  if (asset.slot) {
+    const slot = getIconSlot(asset.slot);
+    return slot?.surfaces ?? ["Storefront & Staff interface"];
+  }
+  if (asset.categoryId) {
+    return ["Storefront Category Navigation", "Department scroller & browse page headers"];
+  }
+  return [];
 }
 
 /** Card and modal previews show the asset in the same circle shoppers see (#1288 R17). */
@@ -79,10 +91,28 @@ export function IconGalleryClient({
       const catName = asset.category?.name?.toLowerCase() || "";
       const slotName = asset.slot?.toLowerCase() || "";
       const keyName = asset.storageKey.toLowerCase();
+      const surfacesText = getSurfacesForAsset(asset).join(" ").toLowerCase();
 
-      return catName.includes(q) || slotName.includes(q) || keyName.includes(q);
+      return (
+        catName.includes(q) ||
+        slotName.includes(q) ||
+        keyName.includes(q) ||
+        surfacesText.includes(q)
+      );
     });
   }, [assets, filterTab, searchQuery]);
+
+  const currentTargetSurfaces = useMemo(() => {
+    if (targetType === "category") {
+      const cat = categories.find((c) => c.id === selectedCategoryId);
+      return [
+        `Storefront Category Navigation: ${cat ? cat.name : "Selected department"}`,
+        "Department scroller & browse page headers",
+      ];
+    }
+    const slot = getIconSlot(selectedSlotId);
+    return slot?.surfaces ?? ["Storefront & Staff interface"];
+  }, [targetType, selectedCategoryId, selectedSlotId, categories]);
 
   async function handleGenerate() {
     setStatusMessage(null);
@@ -323,7 +353,6 @@ export function IconGalleryClient({
                   type="button"
                   onClick={() => {
                     setTargetType("slot");
-                    setGenStyle("3d-icon");
                   }}
                   className={`flex-1 rounded-md py-1 text-xs font-semibold transition ${
                     targetType === "slot" ? "bg-white text-primary shadow-sm" : "text-black/60"
@@ -342,42 +371,60 @@ export function IconGalleryClient({
                 {targetType === "category" ? "Department:" : "Icon Slot:"}
               </label>
               {targetType === "category" ? (
-                <select
-                  id="quick-gen-target-select"
-                  value={selectedCategoryId}
-                  onChange={(e) => setSelectedCategoryId(e.target.value)}
-                  disabled={generating}
-                  className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.slug})
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <select
+                    id="quick-gen-target-select"
+                    value={selectedCategoryId}
+                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                    disabled={generating}
+                    className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.slug}) — Storefront Category Navigation
+                      </option>
+                    ))}
+                  </select>
+                  <p
+                    className="mt-1 text-[10px] text-primary-muted truncate"
+                    title={currentTargetSurfaces.join("; ")}
+                  >
+                    <span className="font-semibold text-primary">Surface: </span>
+                    {currentTargetSurfaces.join("; ")}
+                  </p>
+                </div>
               ) : (
-                <select
-                  id="quick-gen-target-select"
-                  value={selectedSlotId}
-                  onChange={(e) => setSelectedSlotId(e.target.value)}
-                  disabled={generating}
-                  className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
-                >
-                  <optgroup label="3D icons">
-                    {ICON_3D_SLOTS.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Flat icons">
-                    {FLAT_ICON_SLOTS.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
+                <div>
+                  <select
+                    id="quick-gen-target-select"
+                    value={selectedSlotId}
+                    onChange={(e) => setSelectedSlotId(e.target.value)}
+                    disabled={generating}
+                    className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
+                  >
+                    <optgroup label="3D icons">
+                      {ICON_3D_SLOTS.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.label} ({s.surfaces.join(", ")})
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Flat icons">
+                      {FLAT_ICON_SLOTS.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.label} ({s.surfaces.join(", ")})
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                  <p
+                    className="mt-1 text-[10px] text-primary-muted truncate"
+                    title={currentTargetSurfaces.join("; ")}
+                  >
+                    <span className="font-semibold text-primary">Surface: </span>
+                    {currentTargetSurfaces.join("; ")}
+                  </p>
+                </div>
               )}
             </div>
 
@@ -395,7 +442,7 @@ export function IconGalleryClient({
                 disabled={generating}
                 className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
               >
-                <option value="photo">Studio Product Photography</option>
+                <option value="photo">Studio Product Photography (Recommended)</option>
                 <option value="3d-icon">Commercial 3D Rendered Icon</option>
               </select>
             </div>
@@ -554,6 +601,31 @@ export function IconGalleryClient({
                     <p className="text-[10px] text-primary-muted truncate font-mono">
                       {asset.storageKey.split("/").pop()}
                     </p>
+                    {(() => {
+                      const surfaces = getSurfacesForAsset(asset);
+                      if (surfaces.length === 0) return null;
+                      return (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {surfaces.slice(0, 2).map((surface, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-block rounded bg-primary/5 px-1.5 py-0.5 text-[9px] font-medium text-primary-muted truncate max-w-full"
+                              title={surface}
+                            >
+                              📍 {surface}
+                            </span>
+                          ))}
+                          {surfaces.length > 2 && (
+                            <span
+                              className="inline-block rounded bg-primary/5 px-1 py-0.5 text-[9px] font-medium text-primary-muted"
+                              title={surfaces.slice(2).join("; ")}
+                            >
+                              +{surfaces.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="mt-3 flex items-center gap-1 pt-2 border-t border-black/5">
@@ -671,6 +743,19 @@ export function IconGalleryClient({
               <div>
                 <strong className="text-primary font-sans">Status:</strong>{" "}
                 {selectedAssetForPreview.isSelected ? "Active Primary" : "Candidate"}
+              </div>
+              <div className="pt-2 border-t border-black/10">
+                <strong className="text-primary font-sans">Storefront Surface Mapping:</strong>
+                <div className="mt-1 flex flex-wrap gap-1 font-sans">
+                  {getSurfacesForAsset(selectedAssetForPreview).map((surface, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-block rounded-md bg-white border border-black/15 px-2 py-0.5 text-[11px] font-medium text-primary"
+                    >
+                      📍 {surface}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
 

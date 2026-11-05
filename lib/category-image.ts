@@ -122,6 +122,8 @@ const SLOT_SUBJECTS: Record<string, string> = {
   "contact-follow": "a speech bubble beside a smartphone, suggesting contact and social follow",
   "rewards-gift":
     "an open gift box tied with a satin ribbon, a small golden trophy rising out of it",
+  "icon:layers":
+    "an assorted supermarket grocery basket with fresh produce, crisp apples, bananas, artisan bread, fresh milk, and pantry staples, representing all products",
 };
 
 function slotSubject(slot: string): string {
