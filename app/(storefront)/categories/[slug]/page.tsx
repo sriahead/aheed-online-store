@@ -21,7 +21,11 @@ import { FilterChips } from "@/components/product/FilterChips";
 import { SubcategoryLinks } from "@/components/product/SubcategoryLinks";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
-import { nextCategoryPageHref, prevCategoryPageHref } from "@/components/product/category-href";
+import {
+  categoryNavHref,
+  nextCategoryPageHref,
+  prevCategoryPageHref,
+} from "@/components/product/category-href";
 import type { FilterParamValue } from "@/components/product/filter-params";
 import { ProductSortSelect } from "@/components/product/ProductSortSelect";
 import { QuickFiltersRail } from "@/components/product/QuickFiltersRail";
@@ -181,7 +185,12 @@ export default async function CategoryPage({
     <PageContainer width="wide" padY="tight">
       {/* Departments: horizontal strip on top (arrow-scrolled). Highlights
           the DEPARTMENT even when viewing one of its subcategories. */}
-      <DepartmentScroller categories={allCategories} activeSlug={scrollerActiveSlug} use3D />
+      <DepartmentScroller
+        categories={allCategories}
+        activeSlug={scrollerActiveSlug}
+        use3D
+        hrefFor={(catSlug) => categoryNavHref(catSlug, query)}
+      />
 
       {/* #1173 — applies a collapse chosen earlier in this tab before the sidebar paints. */}
       <script dangerouslySetInnerHTML={{ __html: FILTERS_COLLAPSED_SCRIPT }} />
@@ -210,7 +219,12 @@ export default async function CategoryPage({
 
         <section className="flex-1">
           <h1 className="mb-6 text-2xl font-semibold text-primary">{category.name}</h1>
-          <SubcategoryLinks tabs={tabs} parentSlug={tabParentSlug} activeSlug={slug} />
+          <SubcategoryLinks
+            tabs={tabs}
+            parentSlug={tabParentSlug}
+            activeSlug={slug}
+            hrefFor={(subSlug) => categoryNavHref(subSlug, query)}
+          />
 
           {/* #1424 — Quick Filters and Sort Control */}
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

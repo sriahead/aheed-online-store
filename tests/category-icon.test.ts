@@ -32,8 +32,29 @@ describe("categoryIconName", () => {
       "beverages",
       "snacks",
       "household",
+      "fresh-fruit",
+      "fresh-vegetables",
+      "bread-loaves",
+      "pastries",
+      "milk-cream",
+      "lamb-mutton",
+      "chicken-poultry",
+      "rice-grains",
+      "tea-coffee",
+      "crisps-namkeen",
+      "cleaning",
     ]) {
       expect(ICON_REGISTRY).toHaveProperty([categoryIconName(slug)]);
     }
+  });
+
+  it("maps subcategories to appropriate semantic icons", () => {
+    expect(categoryIconName("fresh-fruit")).toBe("apple");
+    expect(categoryIconName("lamb-mutton")).toBe("beef");
+    expect(categoryIconName("chicken-poultry")).toBe("beef");
+    expect(categoryIconName("milk-cream")).toBe("milk");
+    expect(categoryIconName("tea-coffee")).toBe("coffee");
+    expect(categoryIconName("bread-loaves")).toBe("croissant");
+    expect(categoryIconName("cleaning")).toBe("house");
   });
 });

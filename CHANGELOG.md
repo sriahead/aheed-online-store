@@ -8,7 +8,23 @@ every branch merges.
 
 ### Added
 
-- **Product Filtering & Discovery CRO Overhaul** (issue `#1424`, spec `specs/2026-11-04-product-filtering-cro/`).
+- **Filter Polish, Subcategory Icons, Quick View Performance & Filter Persistence** (spec `specs/2026-11-05-filter-polish-quickview-perf/`).
+  - **Filter Decluttering & Semantic Grouping (`components/product/ProductFilterForm.tsx`, `app/(storefront)/search/page.tsx`):**
+    - Removed redundant visible search input inside the sidebar on `/search`, preserving the active search query via a hidden passthrough field to keep the filter panel clean while preventing filter submits from losing search terms.
+    - Removed duplicate price preset pills from inside `ProductFilterForm`, leaving clean, accessible `Min` – `Max` numeric inputs (presets remain available above products via `<QuickFiltersRail />`).
+    - Structured filters into clean semantic fieldsets (*Price*, *Availability*, *Dietary & Lifestyle*, and *Attributes*) with clear legends and visual hierarchy to eliminate decision fatigue (Hick's Law).
+  - **Subcategory Visual Icons (`components/product/category-icon.ts`, `components/product/SubcategoryLinks.tsx`):**
+    - Extended `categoryIconName` with semantic icon mappings for all 31 catalogue subcategories across both grocery and non-grocery departments.
+    - Updated `<SubcategoryLinks />` to render an `<Icon />` with `aria-hidden="true"` inside each subcategory pill and the leading "All" pill (`layers`), creating visual consistency with the main department tiles and improving scannability.
+  - **Quick View Instant Hydration & Caching (`components/product/quick-view-context.tsx`, `components/product/QuickViewDrawer.tsx`, `components/product/ProductCard.tsx`, `app/api/products/quick-view/route.ts`):**
+    - Accelerated Quick View to near-instant perceived latency: passes `cdnBaseUrl` with initial product data so full packshot photographs, pricing, and add-to-cart controls hydrate immediately without waiting for network responses.
+    - Added in-memory client-side caching in `QuickViewProvider` to eliminate repeated network fetches for previously opened products.
+    - Added hover and focus prefetching (`prefetchQuickView`) on `ProductCard` desktop and mobile triggers so product details are already cached in memory before click.
+    - Parallelized product detail and Better Auth session queries in `/api/products/quick-view/route.ts` via `Promise.all()`, and added `Cache-Control` response headers.
+  - **Category Filter & Sort Persistence (`components/product/category-href.ts`, `app/(storefront)/categories/[slug]/page.tsx`, `app/(storefront)/search/page.tsx`, `components/layout/DepartmentScroller.tsx`):**
+    - Added `categoryNavHref(newSlug, currentParams)` to preserve all active filter parameters (`minPrice`, `maxPrice`, `inStock`, `isHalal`, `isFresh`, `isOrganic`, `isVegetarian`, `isGlutenFree`, `isHmcCertified`, `onOffer`, `origin`, `brand`, `packSize`, `attr_*`, and `sort`) across department and subcategory switches, while resetting pagination offsets.
+    - Wired `hrefFor` into `<SubcategoryLinks />` and `<DepartmentScroller />` on `/categories/[slug]`, and into `<DepartmentScroller />` on `/search`.
+  - **Unit Tests (`tests/category-href.test.ts`, `tests/quick-view.test.tsx`, `tests/category-icon.test.ts`):** Added tests verifying filter preservation across category navigation, instant image hydration with `cdnBaseUrl`, client cache hits on drawer reopen, and subcategory icon mappings.
   - **Storefront Product Sorting (`lib/repositories/products.ts`, `components/product/sort-params.ts`, `components/product/ProductSortSelect.tsx`):**
     - Extended `ProductFilters` with `sort?: ProductSortOption` supporting `newest` (default browse), `relevance` (default search), `price_asc` (Price: Low to High), `price_desc` (Price: High to Low), `unit_price_asc` (Best Value per reference unit: kg/L), and `rating_desc` (Customer Rating).
     - In `findPage()` (browse & category navigation), dynamic keyset ordering leverages existing database indexes (`basePrice`, `unitPricePencePerBaseUnit`, `averageRating`, `createdAt`).

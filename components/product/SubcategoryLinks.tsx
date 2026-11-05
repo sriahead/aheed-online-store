@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Icon } from "@/components/icons/Icon";
+import { categoryIconName } from "@/components/product/category-icon";
 import type { CategorySummary } from "@/lib/repositories/categories";
 
 /**
@@ -55,6 +57,7 @@ export function SubcategoryLinks({
         aria-current={activeSlug === parentSlug ? "page" : undefined}
         className={pill(activeSlug === parentSlug)}
       >
+        <Icon name="layers" aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
         All
       </Link>
       {tabs.map((tab) => (
@@ -64,6 +67,11 @@ export function SubcategoryLinks({
           aria-current={activeSlug === tab.slug ? "page" : undefined}
           className={pill(activeSlug === tab.slug)}
         >
+          <Icon
+            name={categoryIconName(tab.slug)}
+            aria-hidden="true"
+            className="mr-1.5 size-4 shrink-0"
+          />
           {tab.name}
         </Link>
       ))}

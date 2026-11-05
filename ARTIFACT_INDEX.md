@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-04T23:39:33.132Z` · commit `60efef62` · `313` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-05T09:48:14.950Z` · commit `869cec05` · `314` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -302,6 +302,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Promotions: Marketing Campaign Management, Eligible Offer Items & AI Generation (plan)](specs/2026-11-04-p1415-promotions-campaign-marketing/plan.md) | spec | 1.0.0 | 2026-11-04 | approved | internal | Separation of offer configuration from marketing campaign management, eligible promotional product selection, department scoping, checkout auto-application, psychology-led AI generation, and multi-channel publishing architecture. |
 | [Product Filtering Component CRO & UX Improvements (Plan)](specs/2026-11-04-product-filtering-cro/plan.md) | spec | 1.0.0 | 2026-11-04 | draft | internal | Overhaul storefront product filtering and discovery using ethical consumer psychology and CRO. Adds storefront sorting, quick filter pills, price ranges, live counts, and zero-result relaxation with no-JS fallback. |
 | [Promotion Intelligence Platform & Storefront Experience (plan)](specs/2026-11-04-promotions-landing-overhaul/plan.md) | spec | 2.0.0 | 2026-11-04 | draft | internal | Psychology-led promotion platform upgrading staff campaign management and landing hero display with behavioural economics, audience targeting, prioritisation, and phased analytics/experimentation. |
+| [Product Filter Polish, Subcategory Icons, Quick View Performance & Filter Persistence (plan)](specs/2026-11-05-filter-polish-quickview-perf/plan.md) | spec | 1.0.0 | 2026-11-05 | approved | internal | Implements four user-requested improvements to storefront product discovery — decluttering redundant filter inputs, adding visual icons to subcategories, accelerating Quick View to near-instant perceived latency, and persisting active filters and sorting across category and subcategory navigation. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.46.0 | 2026-11-02 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

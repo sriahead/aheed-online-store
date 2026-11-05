@@ -15,6 +15,7 @@ import type { IconName } from "@/components/icons/registry";
  * library draws it. Callers render `<Icon name={categoryIconName(slug)} />`.
  */
 const ICONS_BY_SLUG: Record<string, IconName> = {
+  // Top-level departments
   "fruit-veg": "apple",
   bakery: "croissant",
   "dairy-eggs": "milk",
@@ -24,6 +25,60 @@ const ICONS_BY_SLUG: Record<string, IconName> = {
   beverages: "coffee",
   snacks: "cookie",
   household: "house",
+  "frozen-foods": "package",
+  "health-beauty": "sparkles",
+  "baby-kids": "gift",
+  "pet-supplies": "tag",
+
+  // Fruit & Veg subcategories
+  "fresh-fruit": "apple",
+  "fresh-vegetables": "apple",
+  "herbs-salads": "apple",
+
+  // Bakery subcategories
+  "bread-loaves": "croissant",
+  pastries: "croissant",
+  "cakes-desserts": "cookie",
+
+  // Dairy & Eggs subcategories
+  "milk-cream": "milk",
+  "cheese-paneer": "milk",
+  "eggs-butter": "milk",
+
+  // Halal Meat subcategories
+  "lamb-mutton": "beef",
+  "chicken-poultry": "beef",
+  "beef-mince": "beef",
+
+  // Fish subcategories
+  fish: "package",
+  "fresh-fish": "package",
+  "frozen-fish": "package",
+
+  // Groceries subcategories
+  "rice-grains": "shopping-bag",
+  "lentils-pulses": "shopping-bag",
+  "cooking-oils": "shopping-bag",
+
+  // International subcategories
+  "south-asian": "globe",
+  "middle-eastern": "globe",
+  "african-caribbean": "globe",
+
+  // Beverages subcategories
+  "tea-coffee": "coffee",
+  "juices-soft-drinks": "coffee",
+  "water-mixers": "coffee",
+
+  // Snacks subcategories
+  "crisps-namkeen": "cookie",
+  "biscuits-sweets": "cookie",
+  "nuts-dried-fruit": "cookie",
+
+  // Household subcategories
+  cleaning: "house",
+  "kitchen-foil": "house",
+  "paper-toiletries": "house",
 };
 
 export function categoryIconName(slug: string): IconName {
