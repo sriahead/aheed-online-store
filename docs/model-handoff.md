@@ -1516,8 +1516,9 @@ All facts in this section require live verification:
     `feature/order-updates-notifications` (spec `fcca5578`, implementation `0354f7c0`). Spec
     `specs/2026-11-05-order-updates-notifications/`. Read its `build-notes.md` first: it lists four
     small deviations and the shaky areas.
-  - **Blocking validation:** migration `20261105120000_notification_outbox` is NOT applied to dev.
-    The owner runs `env -u DIRECT_URL -u DATABASE_URL npx prisma migrate deploy` from the worktree.
+  - **Dev database:** migration `20261105120000_notification_outbox` was applied to dev
+    (`ep-dry-morning`) by the owner on 2026-11-05. Staging and production get it through the
+    deploy workflows.
   - **What it changes for every later slice:**
     - Every paid-order event now goes through `notifyOrderEvent` (`lib/order-notifications-service.ts`).
       `sendOrderConfirmationEmail` and `sendOrderStatusEmail` no longer exist.

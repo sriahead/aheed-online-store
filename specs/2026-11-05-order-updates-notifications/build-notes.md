@@ -7,10 +7,7 @@
   - Its `.env` and `.dev.vars` are copies of the main checkout's. Both name the **dev** database (`ep-dry-morning`), checked by host against `secrets/staging.vars` and `secrets/production.vars`.
 - **Commits:** spec `fcca5578`, implementation `0354f7c0`, build notes and CHANGELOG in the commit that adds this file.
 - **Carried-forward docs.** The branch also carries the unpushed `#1390` post-ship docs branch (`docs/1390-post-ship`, merged at `40efa98c`), per the carry-forward rule. Those files (`docs/model-handoff.md`, `specs/roadmap.md`, `local-dev-playbook.md`, `env-setup.md`) are `#1390`'s, not this slice's.
-- **The migration is NOT applied to dev yet.** The owner must run it before any preview check (R1 step 3, R3 integration, R5, R9-E2E, R18-E2E, R21-R23 E2E):
-  ```
-  ! cd /e/GitRepositories/aheed-online-store-orders && env -u DIRECT_URL -u DATABASE_URL npx prisma migrate deploy
-  ```
+- **The migration is applied to dev.** The owner ran `env -u DIRECT_URL -u DATABASE_URL npx prisma migrate deploy` from the worktree on 2026-11-05, after the build. Prisma reported the datasource as `ep-dry-morning-zab7dx08` (dev) and applied only `20261105120000_notification_outbox`. Preview checks can run.
 
 ## What changed and why
 
@@ -100,7 +97,7 @@
 
 ## Known-shaky areas
 
-- **Nothing has run against a real database or in `npm run preview`.** The migration is unapplied, so the repository functions, the `ORDER_TRACKER_SELECT` additions and the staff page's extra query are proven only by types and fakes. The R3 integration row and R9-E2E are the first real exercise.
+- **Nothing has run against a real database or in `npm run preview`.** The migration is now on dev, but nothing has run against it: the repository functions, the `ORDER_TRACKER_SELECT` additions and the staff page's extra query are proven only by types and fakes. The R3 integration row and R9-E2E are the first real exercise.
   - Check `create` on `NotificationOutbox` through `getPrisma()` (HTTP). It has no nested writes, so it should be fine under `#382`.
 - **The checkout page with a `PENDING_PAYMENT` order** now has both `PaymentStatusCheck` (a client POST) and `LiveRefresh`. `router.refresh()` should not remount `PaymentStatusCheck`, so it should not re-POST. Watch the preview logs for repeated payment checks.
 - **Cost of the staff page.** It now re-renders every 30 s while a staff tab is visible: two order queries per refresh. That keeps Neon awake while a tab is open, a deliberate trade for R23 that the owner has not been told about explicitly.
