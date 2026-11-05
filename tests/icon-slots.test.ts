@@ -56,22 +56,25 @@ describe("ICON_SLOTS (#1288 R8)", () => {
     expect(ids.length).toBe(ICON_3D_SLOTS.length + FLAT_ICON_SLOTS.length);
   });
 
-  it("gives every 3D slot a label, surfaces and a real Icon3D name", () => {
+  it("gives every 3D slot a label, surfaces, valid group and a real Icon3D name", () => {
     for (const slot of ICON_3D_SLOTS) {
       expect(slot.label.length, slot.id).toBeGreaterThan(0);
       expect(slot.surfaces.length, slot.id).toBeGreaterThan(0);
+      expect(slot.group.length, slot.id).toBeGreaterThan(0);
       expect(Object.keys(ICON_3D_DEFINITIONS), slot.id).toContain(slot.icon3d);
     }
   });
 
-  it("gives every flat slot a label and non-empty surfaces array", () => {
+  it("gives every flat slot a label, valid group and non-empty surfaces array", () => {
     for (const slot of FLAT_ICON_SLOTS) {
       expect(slot.label.length, slot.id).toBeGreaterThan(0);
       expect(slot.surfaces.length, slot.id).toBeGreaterThan(0);
+      expect(slot.group.length, slot.id).toBeGreaterThan(0);
     }
     const layersSlot = FLAT_ICON_SLOTS.find((s) => s.id === "icon:layers");
     expect(layersSlot).toBeDefined();
     expect(layersSlot?.surfaces).toContain("Subcategories navigation: 'All' filter tile");
+    expect(layersSlot?.group).toBe("Storefront & Navigation");
   });
 
   it("maps cart-floating to the cart-add 3D icon", () => {

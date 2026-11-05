@@ -122,16 +122,26 @@ export default async function HomePage() {
               data in this system backs, for any vendor. */}
             <div className="pt-2 flex flex-wrap gap-3 text-xs font-medium text-white/90">
               {freeDeliveryThresholdPence !== null && (
-                <span className="flex items-center gap-1 bg-black/20 px-2.5 py-1 rounded-lg">
-                  <Icon name="truck" className="w-3.5 h-3.5 text-amber-300" /> Free delivery over{" "}
-                  {formatPrice(freeDeliveryThresholdPence)}
+                <span className="flex items-center gap-1.5 bg-black/20 px-2.5 py-1 rounded-lg">
+                  <IconMedallion
+                    icon3d="delivery-van"
+                    size={16}
+                    decorative
+                    className="-my-0.5 shrink-0"
+                  />
+                  <span>Free delivery over {formatPrice(freeDeliveryThresholdPence)}</span>
                 </span>
               )}
               {minimumOrderPence > 0 && (
-                <span className="flex items-center gap-1 bg-black/20 px-2.5 py-1 rounded-lg">
-                  <Icon name="shield-check" className="w-3.5 h-3.5 text-action-tint" />{" "}
+                <span className="flex items-center gap-1.5 bg-black/20 px-2.5 py-1 rounded-lg">
+                  <IconMedallion
+                    icon3d="secure-checkout"
+                    size={16}
+                    decorative
+                    className="-my-0.5 shrink-0"
+                  />
                   {/* #1083 — "delivery": collection has its own minimum, often none. */}
-                  {formatPrice(minimumOrderPence)} minimum delivery order
+                  <span>{formatPrice(minimumOrderPence)} minimum delivery order</span>
                 </span>
               )}
             </div>
