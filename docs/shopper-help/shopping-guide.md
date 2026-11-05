@@ -4,8 +4,8 @@ title: "Shopping Guide & Help Center"
 audience: [shopper]
 type: guide
 status: approved
-version: "1.6.0"
-updated: 2026-10-10
+version: "1.7.0"
+updated: 2026-11-05
 visibility: public
 summary: "A complete guide for customers on how to browse, place orders, and manage their account."
 tags: ["shopper", "help", "orders"]
@@ -33,7 +33,9 @@ Welcome! This guide explains how to find what you need, place orders, and make t
 - **Paying:** Your browser can fill in the name, phone, email and address you have saved on your device. On a phone, the order total shows just above **Continue to payment**. You then pay on a secure payment page, which shows the exact amount you will be charged, after every discount that applied to your order.
 
 ## Managing Your Orders
-- **Order Status:** After placing an order, its status will update from *Pending Payment* to *Confirmed*. When the store prepares it, it will change to *Out for Delivery*, and finally *Delivered*.
+- **Order Status:** After placing an order, its status will update from *Pending Payment* to *Confirmed*. A delivery order then moves to *Out for Delivery*, and finally *Delivered*. A collection order moves to *Ready for Collection*, then *Collected*.
+- **Live progress:** Your order page shows every step of your order's journey, the one it is on now, and what happens next, including your delivery or collection slot. Leave the page open and it updates by itself. *Track Your Order* (the guest lookup) shows the same steps; search again to refresh it.
+- **Order emails:** We email you when your order is confirmed, when it is out for delivery or ready to collect, when it has been delivered or collected, and if it is cancelled. Each email has one **View your order** button. If an email cannot be delivered straight away, we keep trying for up to 24 hours. Order emails never contain offers or adverts.
 - **Order History:** If you create an account, you can view your full past order history and track active orders.
 - **Cancellations:** If you need to cancel an order, please contact the store directly.
 

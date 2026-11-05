@@ -5,6 +5,7 @@ import { CookieSettingsButton } from "@/components/consent/CookieSettingsButton"
 import {
   ASSISTANT_CONVERSATION_RETENTION_DAYS,
   ATTEMPT_RECORD_RETENTION_HOURS,
+  NOTIFICATION_OUTBOX_RETENTION_HOURS,
   SEARCH_QUERY_LOG_RETENTION_DAYS,
 } from "@/lib/data-retention";
 import {
@@ -19,6 +20,10 @@ import { PageContainer } from "@/components/layout/PageContainer";
 export const dynamic = "force-dynamic";
 
 /** #1041 — "one hour" reads better than "1 hours" in a policy; any other count is numeric. */
+/** #1435 — what reaches the store's staff about an order, and what never does. */
+const ORDER_UPDATES_TO_STAFF =
+  "When your order is placed or its status changes, the store's staff are told by email and through a messaging service. The messaging service is given only the order number, status, total, number of items and delivery or collection slot, never your name, address or contact details.";
+
 function hoursPhrase(hours: number): string {
   return hours === 1 ? "one hour" : `${hours} hours`;
 }
@@ -82,7 +87,9 @@ export default async function PrivacyPage() {
                 parties. {/* #1390 — order alerts to the store's staff (lib/order-alert/). */}
                 {
                   "If you contact a store about an order, your name and the subject of your message may be passed to the store's staff through a messaging service so they can respond quickly; the message itself is not."
-                }
+                }{" "}
+                {/* #1435 — order updates to the store's staff (lib/order-notifications/). */}
+                {ORDER_UPDATES_TO_STAFF}
               </p>
               <p className="text-sm text-primary-muted leading-relaxed">
                 If you opt in, we may use your details for marketing and promotional purposes.
@@ -101,7 +108,9 @@ export default async function PrivacyPage() {
               third parties.{" "}
               {
                 "If you contact a store about an order, your name and the subject of your message may be passed to the store's staff through a messaging service so they can respond quickly; the message itself is not."
-              }
+              }{" "}
+              {/* #1435 — order updates to the store's staff (lib/order-notifications/). */}
+              {ORDER_UPDATES_TO_STAFF}
             </p>
           )}
         </section>
@@ -260,6 +269,12 @@ export default async function PrivacyPage() {
             your name or your account. Each becomes due for deletion after{" "}
             {hoursPhrase(ATTEMPT_RECORD_RETENTION_HOURS)} and is removed by routine clean-up after
             that.
+          </p>
+          <p className="text-sm text-primary-muted leading-relaxed">
+            <strong>Order updates waiting to be sent.</strong> If an email or message about your
+            order cannot be delivered straight away, it is held so it can be tried again, for at
+            most {hoursPhrase(NOTIFICATION_OUTBOX_RETENTION_HOURS)}, and then deleted whether or not
+            it was sent. {/* #1435 — NotificationOutbox, expired by the retry job. */}
           </p>
         </section>
 

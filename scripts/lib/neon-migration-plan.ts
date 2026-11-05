@@ -101,6 +101,7 @@ export const MODEL_PLAN: Record<string, { class: Classification; reason: string 
   OrderLookupAttempt: { class: "skip", reason: "rate-limit attempts" },
   ContactAttempt: { class: "skip", reason: "rate-limit attempts (#1409)" },
   ContactOutbox: { class: "skip", reason: "failed-send queue, deleted once sent (#1409)" },
+  NotificationOutbox: { class: "skip", reason: "failed-send queue, deleted once sent (#1435)" },
   DiscountCodeAttempt: { class: "skip", reason: "rate-limit attempts" },
   AuthenticationAttempt: { class: "skip", reason: "rate-limit attempts" },
   CustomerFeedbackAttempt: { class: "skip", reason: "rate-limit attempts" },

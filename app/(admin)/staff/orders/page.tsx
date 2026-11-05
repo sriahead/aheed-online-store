@@ -19,6 +19,8 @@ import { advanceStatusBulk } from "@/features/orders/advance-status-bulk";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Icon } from "@/components/icons/Icon";
 import { IconMedallion } from "@/components/icons/IconMedallion";
+import { LiveRefresh } from "@/components/orders/LiveRefresh";
+import { NewOrdersNotice } from "@/components/staff/NewOrdersNotice";
 
 // Reads the session and this vendor's live orders — must render per-request.
 export const dynamic = "force-dynamic";
@@ -61,11 +63,14 @@ export default async function StaffOrdersPage({
   }
 
   const query = parseStaffOrdersQuery({ status, q });
-  const { items, nextCursor } = await getOrderRepository().listForStaff({
-    take: PAGE_SIZE,
-    cursor,
-    filter: query,
-  });
+  const [{ items, nextCursor }, confirmedOrderNumbers] = await Promise.all([
+    getOrderRepository().listForStaff({
+      take: PAGE_SIZE,
+      cursor,
+      filter: query,
+    }),
+    getOrderRepository().listConfirmedNumbersForStaff(),
+  ]);
   // Deliberately impure: this page renders per request (see the queue above,
   // already re-fetched live) and an Express order's breach state is a fact
   // about the current instant, not a value that should stay stable across
@@ -81,6 +86,11 @@ export default async function StaffOrdersPage({
           ? "Orders awaiting action. Delivered and cancelled orders aren't shown — filter to see them."
           : "Filtered view. Clear the filters to return to the action queue."}
       </p>
+
+      {/* #1435 R23 — new orders appear without a reload: the page re-renders every 30 s while the
+          tab is visible, and the notice counts CONFIRMED orders that were not here at first load. */}
+      <LiveRefresh active intervalMs={30_000} />
+      <NewOrdersNotice confirmedOrderNumbers={confirmedOrderNumbers} />
 
       {/* A plain GET form: no client component, no JS, and the resulting URL is
           shareable — which is what a staff member phoning about an order wants. */}

@@ -27,6 +27,12 @@ export const PAYMENT_SWEEP_DUE_AT_KEY = "payment-sweep:due-at";
  */
 export const CONTACT_OUTBOX_PENDING_KEY = "contact-outbox:pending";
 
+/**
+ * #1435 — present (an ISO instant) while a failed order-notification message waits in
+ * `NotificationOutbox`. Absent means the outbox is empty, and the tick skips the retry job.
+ */
+export const NOTIFICATION_OUTBOX_PENDING_KEY = "notification-outbox:pending";
+
 /** When an `ErrorEvent` was last written, as an ISO instant. */
 export const ERROR_EVENTS_LAST_AT_KEY = "error-events:last-at";
 

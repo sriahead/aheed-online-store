@@ -4,12 +4,13 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { getOrderRepository } from "@/lib/orders-service";
-import { formatOrderDate } from "@/lib/order-status";
+import { formatOrderDate, isFinalStatus } from "@/lib/order-status";
 import { OrderItemsCard } from "@/components/orders/OrderItemsCard";
 import { OrderPointsNote } from "@/components/orders/OrderPointsNote";
 import { OrderAddressCard } from "@/components/orders/OrderAddressCard";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
-import { OrderTimeline } from "@/components/orders/OrderTimeline";
+import { OrderProgressTracker } from "@/components/orders/OrderProgressTracker";
+import { LiveRefresh } from "@/components/orders/LiveRefresh";
 import { reorderItems } from "@/features/orders/reorder-items";
 import { saveOrderAsList } from "@/features/lists/save-order-as-list";
 import { MAX_SAVED_LISTS } from "@/lib/saved-list";
@@ -103,7 +104,15 @@ export default async function AccountOrderPage({
         <OrderStatusBadge status={order.status} />
       </div>
 
-      <OrderTimeline timeline={order.timeline} />
+      {/* #1435 R21/R22 — every step of the order's path, kept current while the tab is open. */}
+      <OrderProgressTracker
+        orderNumber={order.orderNumber}
+        status={order.status}
+        fulfilmentMethod={order.fulfilmentMethod}
+        timeline={order.timeline}
+        slotLabel={order.slotLabel}
+      />
+      <LiveRefresh active={!isFinalStatus(order.status)} />
 
       <OrderPointsNote
         status={order.status}

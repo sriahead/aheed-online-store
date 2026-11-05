@@ -25,3 +25,10 @@ export const ASSISTANT_CONVERSATION_RETENTION_DAYS = 90;
  * `tests/data-retention.test.ts` holds that invariant.
  */
 export const ATTEMPT_RECORD_RETENTION_HOURS = 1;
+
+/**
+ * `NotificationOutbox` — an order update (customer or owner, email or Telegram) whose send failed
+ * (#1435). Deleted once it sends, or unsent after this many hours by the retry job: a stale "out
+ * for delivery" is worse than none, and the order page stays the truth. `/privacy` renders it.
+ */
+export const NOTIFICATION_OUTBOX_RETENTION_HOURS = 24;

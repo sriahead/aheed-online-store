@@ -7,6 +7,7 @@ import {
   cancelUnpaidOrder,
   confirmPayment,
   countOrdersForStaff,
+  listConfirmedOrderNumbers,
   failPayment,
   findOrderForGuestLookup,
   findOrderForStaff,
@@ -80,6 +81,10 @@ export function getOrderRepository(): OrderRepository {
 
     async countForStaff() {
       return countOrdersForStaff(prisma, await vendorId());
+    },
+
+    async listConfirmedNumbersForStaff() {
+      return listConfirmedOrderNumbers(prisma, await vendorId());
     },
 
     async getForStaff(orderNumber) {

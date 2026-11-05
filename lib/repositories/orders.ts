@@ -45,6 +45,7 @@ import { refusalMessage, type CodeRefusalReason } from "@/lib/discounts";
 import { tieredLineTotalPence } from "@/lib/tier-pricing";
 import { listActiveTiersForProducts } from "@/lib/repositories/product-tiers";
 import { NOTE_ACCEPTANCE_SELECT, productAcceptsNote } from "@/lib/custom-note";
+import { slotLabel } from "@/lib/order-notifications/slot";
 
 /**
  * Order read/write path (P3b, #96) — the ONLY DB access for orders. Pages,
@@ -731,6 +732,16 @@ async function restoreCartFromOrder(
  * `discountUse` is `@@unique([orderId])` and `loyaltyEntries` is
  * `@@unique([orderId, kind])`, so both yield at most one row per order.
  */
+/**
+ * #1435 R19 — what the order progress tracker needs beyond an `OrderSummary`: the slot, and the
+ * status events (`note` deliberately NOT selected — see buildTimeline's contract).
+ */
+const ORDER_TRACKER_SELECT = {
+  fulfilmentDate: true,
+  fulfilmentSlot: { select: { startTime: true, endTime: true } },
+  statusEvents: { select: { status: true, createdAt: true } },
+} as const;
+
 const ORDER_PROVENANCE_SELECT = {
   discountUse: { select: { amountPence: true, code: { select: { code: true } } } },
   loyaltyEntries: { where: { kind: "EARN" as const }, select: { points: true } },
@@ -848,6 +859,8 @@ export interface OrderListPage {
 /** An owned order plus its customer-facing timeline (P4a, #122). */
 export interface OrderDetail extends OrderSummary {
   timeline: TimelineEntry[];
+  /** #1435 — `Friday 6 November, 10:00–12:00`, or null without a slot. */
+  slotLabel: string | null;
 }
 
 /**
@@ -973,7 +986,8 @@ export interface OrderRepository {
     orderNumber: string,
     viewerUserId: string | null,
     confirmationToken: string | null,
-  ): Promise<OrderSummary | null>;
+    // #1435 — `OrderDetail`: the confirmation page now renders the progress tracker too.
+  ): Promise<OrderDetail | null>;
   /** The signed-in shopper's own orders for this vendor, newest first (P4a). */
   listForUser(userId: string, opts: { take: number; cursor?: string }): Promise<OrderListPage>;
   /**
@@ -997,6 +1011,8 @@ export interface OrderRepository {
   }): Promise<OrderListPage>;
   /** How many orders are awaiting staff action — the /staff landing figure (P6a). */
   countForStaff(): Promise<number>;
+  /** #1435 R23 — the newest CONFIRMED order numbers, for the new-orders notice. */
+  listConfirmedNumbersForStaff(): Promise<string[]>;
   /**
    * One order for this vendor's staff (P6a, #158). A THIRD read beside
    * getByOrderNumber and getForUser, and deliberately neither of their rules:
@@ -1082,6 +1098,7 @@ export async function findOrderForViewer(
         },
       },
       ...ORDER_PROVENANCE_SELECT,
+      ...ORDER_TRACKER_SELECT,
     },
   });
   if (!order) return null;
@@ -1119,6 +1136,9 @@ export async function findOrderForViewer(
     loyaltyEntries,
     guestEmail,
     user,
+    fulfilmentDate,
+    fulfilmentSlot,
+    statusEvents,
     ...summary
   } = order;
   return {
@@ -1126,6 +1146,8 @@ export async function findOrderForViewer(
     ...toProvenance({ discountUse, loyaltyEntries }),
     hasAccount: ownerId !== null,
     customerEmail: guestEmail ?? user?.email ?? null,
+    timeline: buildTimeline(statusEvents),
+    slotLabel: slotLabel(fulfilmentDate, fulfilmentSlot),
   };
 }
 
@@ -1201,14 +1223,21 @@ export async function findOrderForUser(
           notes: true,
         },
       },
-      // `note` is deliberately NOT selected — see buildTimeline's contract.
-      statusEvents: { select: { status: true, createdAt: true } },
       ...ORDER_PROVENANCE_SELECT,
+      ...ORDER_TRACKER_SELECT,
     },
   });
   if (!order) return null;
 
-  const { statusEvents, discountUse, loyaltyEntries, user, ...summary } = order;
+  const {
+    statusEvents,
+    discountUse,
+    loyaltyEntries,
+    user,
+    fulfilmentDate,
+    fulfilmentSlot,
+    ...summary
+  } = order;
   return {
     ...summary,
     ...toProvenance({ discountUse, loyaltyEntries }),
@@ -1216,6 +1245,7 @@ export async function findOrderForUser(
     hasAccount: true,
     customerEmail: user?.email ?? null,
     timeline: buildTimeline(statusEvents),
+    slotLabel: slotLabel(fulfilmentDate, fulfilmentSlot),
   };
 }
 
@@ -1244,6 +1274,26 @@ export async function countOrdersForStaff(prisma: ReturnType<typeof getPrisma>, 
   return prisma.order.count({
     where: { vendorId, status: { in: [...STAFF_QUEUE_STATUSES] } },
   });
+}
+
+/**
+ * #1435 R23 — the order numbers of this vendor's newest `CONFIRMED` orders (paid, awaiting
+ * dispatch), for the staff Orders page's "new orders since you opened this page" notice. Read on its
+ * own, independent of the page's status filter and pagination, so a filtered view still counts new
+ * orders.
+ */
+export async function listConfirmedOrderNumbers(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  take = 100,
+): Promise<string[]> {
+  const rows = await prisma.order.findMany({
+    where: { vendorId, status: "CONFIRMED" },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take,
+    select: { orderNumber: true },
+  });
+  return rows.map((row) => row.orderNumber);
 }
 
 export async function findOrderForStaff(
@@ -1618,6 +1668,16 @@ export interface WebhookOrder {
     /** #1135 — the shopper's note on this line, or null. */
     customNote: string | null;
   }[];
+  /** #1435 — for the order-event messages' "what happens next" and slot lines. */
+  fulfilmentMethod: "DELIVERY" | "COLLECTION";
+  fulfilmentDate: Date | null;
+  fulfilmentSlot: { startTime: string; endTime: string } | null;
+  /**
+   * #1435 — used ONLY to build a guest's "View your order" link in their own email (the same
+   * capability checkout already puts on Stripe's return URLs, P9.1 #427). Never logged, never shown
+   * to staff, never put in an owner message.
+   */
+  confirmationToken: string | null;
 }
 
 /**
@@ -1646,6 +1706,10 @@ export async function findOrderForWebhook(
       guestEmail: true,
       userId: true,
       isExpress: true,
+      fulfilmentMethod: true,
+      fulfilmentDate: true,
+      fulfilmentSlot: { select: { startTime: true, endTime: true } },
+      confirmationToken: true,
       user: { select: { email: true } },
       items: {
         select: {
@@ -1662,9 +1726,10 @@ export async function findOrderForWebhook(
 
   if (!order) return null;
 
-  const { guestEmail, user, discountUse, loyaltyEntries, ...rest } = order;
+  const { guestEmail, user, discountUse, loyaltyEntries, fulfilmentMethod, ...rest } = order;
   return {
     ...rest,
+    fulfilmentMethod: fulfilmentMethod as "DELIVERY" | "COLLECTION",
     ...toProvenance({ discountUse, loyaltyEntries }),
     buyerEmail: guestEmail ?? user?.email ?? null,
   };
@@ -2059,6 +2124,10 @@ export interface GuestLookupOrder {
   status: string;
   totalPence: number;
   items: { productName: string; quantity: number; lineTotalPence: number }[];
+  /** #1435 R19 — for the order progress tracker. */
+  fulfilmentMethod: "DELIVERY" | "COLLECTION";
+  slotLabel: string | null;
+  timeline: TimelineEntry[];
 }
 
 /**
@@ -2073,7 +2142,7 @@ export async function findOrderForGuestLookup(
   orderNumber: string,
   email: string,
 ): Promise<GuestLookupOrder | null> {
-  return prisma.order.findFirst({
+  const order = await prisma.order.findFirst({
     where: {
       orderNumber,
       vendorId,
@@ -2087,8 +2156,18 @@ export async function findOrderForGuestLookup(
       status: true,
       totalPence: true,
       items: { select: { productName: true, quantity: true, lineTotalPence: true } },
+      fulfilmentMethod: true,
+      ...ORDER_TRACKER_SELECT,
     },
   });
+  if (!order) return null;
+  const { fulfilmentMethod, fulfilmentDate, fulfilmentSlot, statusEvents, ...rest } = order;
+  return {
+    ...rest,
+    fulfilmentMethod: fulfilmentMethod as "DELIVERY" | "COLLECTION",
+    slotLabel: slotLabel(fulfilmentDate, fulfilmentSlot),
+    timeline: buildTimeline(statusEvents),
+  };
 }
 
 /* `getGuestOrderLookupService()` moved to `lib/orders-service.ts` (#252) — it
