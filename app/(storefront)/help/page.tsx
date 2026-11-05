@@ -9,6 +9,18 @@ import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { HelpContactCard } from "@/components/assistant/HelpContactCard";
 import { Icon } from "@/components/icons/Icon";
 import { RoleJourneyMaps, type UserJourneyRole } from "@/components/help/RoleJourneyMaps";
+import type { VendorProfile } from "@/lib/repositories/vendor";
+
+function directionsHref(name: string, location: NonNullable<VendorProfile["location"]>): string {
+  const parts = [
+    name,
+    location.addressLine1,
+    location.addressLine2,
+    location.city,
+    location.postcode,
+  ].filter((p): p is string => Boolean(p && p.trim()));
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(", "))}`;
+}
 
 export const metadata: Metadata = {
   title: "Help Centre",
@@ -50,6 +62,8 @@ export default async function HelpPage() {
   const vendorName = profile?.name ?? "Store";
   const locality = profile?.localityName ?? null;
   const phone = profile?.contactPhone ?? null;
+  const directions =
+    profile?.location && profile.name ? directionsHref(profile.name, profile.location) : null;
   const storeLocation = profile?.location
     ? [
         profile.location.addressLine1,
@@ -161,9 +175,9 @@ export default async function HelpPage() {
                   <div>
                     <span className="font-semibold text-primary block">Store Location</span>
                     <p className="mt-0.5 leading-relaxed">{storeLocation}</p>
-                    {profile?.footerDirectionsUrl && (
+                    {directions && (
                       <a
-                        href={profile.footerDirectionsUrl}
+                        href={directions}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-action font-semibold mt-1 hover:underline"
