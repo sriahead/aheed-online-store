@@ -124,9 +124,21 @@ export function LocationControl({
             className="flex h-full min-h-tap w-full cursor-pointer list-none items-center gap-1.5 whitespace-nowrap rounded-xl border border-black/10 bg-surface-muted px-3 py-2 text-xs font-bold text-black/80 transition hover:bg-black/5 sm:w-auto lg:min-h-0 [&::-webkit-details-marker]:hidden"
           >
             {method === "COLLECTION" ? (
-              <IconMedallion icon3d="storefront" size={18} decorative className="shrink-0" />
+              <IconMedallion
+                icon="store"
+                slot="storefront"
+                size={18}
+                decorative
+                className="shrink-0"
+              />
             ) : (
-              <IconMedallion icon3d="delivery-van" size={18} decorative className="shrink-0" />
+              <IconMedallion
+                icon="truck"
+                slot="delivery-van"
+                size={18}
+                decorative
+                className="shrink-0"
+              />
             )}
             <span className="min-w-0 truncate">{summaryLabel}</span>
             <Icon
@@ -154,7 +166,13 @@ export function LocationControl({
                 aria-current={method === "COLLECTION" ? "true" : undefined}
                 className={itemClass}
               >
-                <IconMedallion icon3d="storefront" size={20} decorative className="shrink-0" />
+                <IconMedallion
+                  icon="store"
+                  slot="storefront"
+                  size={20}
+                  decorative
+                  className="shrink-0"
+                />
                 <span className="flex-1">Click &amp; Collect</span>
                 {method === "COLLECTION" && (
                   <Icon name="check" className="h-4 w-4 shrink-0 text-action" />
@@ -172,7 +190,13 @@ export function LocationControl({
                   aria-current={method === "DELIVERY" ? "true" : undefined}
                   className={itemClass}
                 >
-                  <IconMedallion icon3d="delivery-van" size={20} decorative className="shrink-0" />
+                  <IconMedallion
+                    icon="truck"
+                    slot="delivery-van"
+                    size={20}
+                    decorative
+                    className="shrink-0"
+                  />
                   <span className="flex-1">{deliveryLabel}</span>
                   {method === "DELIVERY" && (
                     <Icon name="check" className="h-4 w-4 shrink-0 text-action" />
@@ -191,7 +215,13 @@ export function LocationControl({
                 aria-current={method === "DELIVERY" ? "true" : undefined}
                 className={itemClass}
               >
-                <IconMedallion icon3d="delivery-van" size={20} decorative className="shrink-0" />
+                <IconMedallion
+                  icon="truck"
+                  slot="delivery-van"
+                  size={20}
+                  decorative
+                  className="shrink-0"
+                />
                 <span className="flex-1">Delivery</span>
                 {method === "DELIVERY" && (
                   <Icon name="check" className="h-4 w-4 shrink-0 text-action" />
@@ -236,7 +266,13 @@ export function LocationControl({
           {hasDeliverablePostcode ? (
             <Icon name="check" className="w-4 h-4 text-action" />
           ) : (
-            <IconMedallion icon3d="delivery-van" size={18} decorative className="shrink-0" />
+            <IconMedallion
+              icon="truck"
+              slot="delivery-van"
+              size={18}
+              decorative
+              className="shrink-0"
+            />
           )}
           <span aria-hidden className="hidden sm:inline">
             {hasDeliverablePostcode ? `Delivery · ${postcode}` : "Check delivery availability"}
