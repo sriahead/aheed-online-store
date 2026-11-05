@@ -177,3 +177,36 @@ One finding needs `/fix`, and the live rows wait on the dev migration.
   one `formatOrderAlert` case. Before the fix, the parser returned the address (probe at pass 1).
 - **CHANGELOG unchanged:** its "email address … never sent" claim is now true.
 - **Next:** validation pass 2 from the top.
+
+## Validation pass 2 — not independent (same session, owner's choice), 2026-11-05
+
+Run from the top at `63bb9b5f`, after the owner applied the three pending migrations to dev
+(`ep-dry-morning`). **Result: PASS, except R19, which is BLOCKED.**
+
+- **Pre-flight, all exit 0:** lint, typecheck, format:check, `vitest --maxWorkers=4` (392 files,
+  5800 tests), kms:validate, kms:check-generated, the preview build, and the KMS internal site
+  build.
+- **Live rows, driven with `curl` against `npm run preview`.** Server actions were posted with the
+  `useActionState` form fields read from the rendered page. Signed in as
+  `demo-platform-admin@example.com` and `demo-store-admin@example.com`; **dev's demo accounts are
+  `@example.com`, not `@merqify.com`.**
+  - **R13:** with no recipients, the card shows the empty line, a Telegram-only Channel select, the
+    Chat ID input, Add recipient, and `Telegram bot token: Not set` with `role="alert"`. The token
+    was absent from both `.env` and `.dev.vars`. After adding `-100123`, the list shows `Telegram`,
+    `-100123`, Remove and Send test alert. After Remove, the empty state comes back.
+  - **R8 live:** adding ` -100123 ` (with spaces) a second time returned "That chat is already an
+    alert recipient for this store." So `isUniqueViolation` holds on the real `getPrisma()` HTTP
+    adapter.
+  - **R14:** `@group` returned the chat ID message. A test alert with no token returned
+    `Skipped: TELEGRAM_BOT_TOKEN unset.`. The store admin got `Platform admin only.` from all three
+    actions. An unknown vendor id got `That store no longer exists.` from all three.
+  - **R15:** with SriMart's vendor id and Aheed's recipient id, Remove returned
+    `That recipient was already removed.` and the test alert returned
+    `That recipient no longer exists.`. Aheed's card still listed the recipient.
+  - **R18:** `/privacy` contains the sentence twice.
+- **Environment noise, not the slice:** some page loads returned 500 and two adds hit the action's
+  catch branch. The preview's logs show `NeonDbError: … Network connection lost`, with Neon fetches
+  taking 5–40 s from local workerd. Those cases were retried and passed.
+- **BLOCKED (owner resource missing):** R19. There is no `TELEGRAM_BOT_TOKEN`, and R19(c) also needs
+  `INBOUND_EMAIL_TOKEN`, which is absent from the worktree's `.dev.vars`.
+- Dev was left with no alert recipients.
