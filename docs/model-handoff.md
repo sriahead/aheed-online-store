@@ -1525,8 +1525,10 @@ All facts in this section require live verification:
     order-related email and on contact-form complaints or messages about an order. One platform bot.
   - **Deferred, tracked:** `#1426` throttle, `#1427` self-service linking and store-admin access,
     `#1428` order numbers from the email body.
-  - **Carry-forward:** the post-ship docs commits are on branch `docs/1390-post-ship` (pushed). The
-    next slice merges that branch into its own branch rather than opening a doc-only PR.
+  - **Carry-forward:** the post-ship docs commits are on LOCAL branch `docs/1390-post-ship` in the
+    worktree `E:\GitRepositories\aheed-online-store-alerts`. It is not pushed, because the pre-push hook
+    rejects a branch with no CHANGELOG diff. The next slice merges that branch into its own branch
+    rather than opening a doc-only PR.
 
 - **P11 `#1216` — placeholder manifests, catalogue importer, onboarding runbook — MERGED TO STAGING, NOT
   PROMOTED, DATABASE ROWS UNVERIFIED (2026-10-22).**
