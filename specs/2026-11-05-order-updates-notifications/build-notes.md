@@ -192,3 +192,10 @@ No `CHANGELOG.md` change: F1 alters a log line only, nothing a customer or staff
 **Unverified until after Ship:** R16 staging E2E (a real Telegram owner message on staging). That row is defined as post-ship.
 
 **Result:** all rows pass, apart from that post-ship staging row.
+
+## Ship (2026-11-05)
+
+- **Merge:** PR #1440, squash `373f83f`, into `staging`. Before pushing, the branch merged the latest `staging` (`8bf4059`, #1437); the only conflict was `CHANGELOG.md`, where both entries were kept. On the merged tree typecheck passed, all 5936 tests passed, and CI passed (`quality`, `kms`, `docs-gates`).
+- **Deploy:** `deploy-staging` run `42106863189` applied `20261105120000_notification_outbox` and redeployed the store, scheduler and inbound-email Workers. `/api/health` reported `373f83f`, `db.ok` true, and the reference data reachable with two sources.
+- **Quick checks:** sanity-check steps 1-4 passed. The guide is in `docs/developer-portal/env-setup.md`, "Sanity check: order updates and notification queue". The retry route answered 405 and 401, and `/privacy` showed the new paragraph.
+- **Still unverified:** R16 staging E2E (sanity-check steps 5-6) waits for the owner to advance a staging order with the Telegram group set up.

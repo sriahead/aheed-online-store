@@ -4,7 +4,7 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.39.0"
+version: "1.40.0"
 updated: 2026-11-05
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, KMS coverage vs gitignore, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, vendor hosts, and what a session can and cannot drive when proving a payment path.
@@ -1020,3 +1020,10 @@ switch there is global to that folder. `#1390` was built and shipped from a sepa
 - **Build a sign-in body containing a secret with Node, not shell interpolation.** A
   `DEMO_ACCOUNT_PASSWORD` with JSON-significant characters gave `400`. Piping
   `node -e '…JSON.stringify({email, password})…' | curl --data-binary @- …` worked.
+- **Under `npm run preview`, every email send fails unless `.dev.vars` sets `EMAIL_FROM`** (`#1435`).
+  Preview runs with `NODE_ENV=production`, so the email config rejects a missing sender with
+  `EMAIL_FROM is required in production`. It does so even with `EMAIL_PROVIDER="log"`. The send
+  returns `failed`, so an order-notification path queues a `NotificationOutbox` row instead of
+  logging `status=sent`. That looks like a provider outage, but it is local config. Set any
+  `EMAIL_FROM` in `.dev.vars` before testing a send. To test the queue, make the failure deliberate
+  instead, for example with an invalid `RESEND_API_KEY`.

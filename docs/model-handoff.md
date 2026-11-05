@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.164.0"
+version: "1.165.0"
 updated: 2026-11-05
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -1511,14 +1511,15 @@ mistake them for backlog.
 All facts in this section require live verification:
 
 - **P10 `#1435` — order updates: notification queue, owner email + Telegram, live order tracker —
-  BUILT, NOT VALIDATED, NOT PUSHED (2026-11-05).**
-  - **Where it is:** worktree `E:\GitRepositories\aheed-online-store-orders`, branch
-    `feature/order-updates-notifications` (spec `fcca5578`, implementation `0354f7c0`). Spec
-    `specs/2026-11-05-order-updates-notifications/`. Read its `build-notes.md` first: it lists four
-    small deviations and the shaky areas.
-  - **Dev database:** migration `20261105120000_notification_outbox` was applied to dev
-    (`ep-dry-morning`) by the owner on 2026-11-05. Staging and production get it through the
-    deploy workflows.
+  MERGED TO STAGING, NOT PROMOTED (2026-11-05).**
+  - **Where it is:** PR **#1440** (squash `373f83f`, `staging`). `deploy-staging` run
+    `42106863189` applied `20261105120000_notification_outbox` (dev got it from the owner earlier
+    the same day). Spec `specs/2026-11-05-order-updates-notifications/`. Its `build-notes.md`
+    records two validation passes (not independent) and the ship. The board shows **In Review**,
+    and `#1435` stays open until promotion. Production gets the migration from `deploy-production`.
+  - **Not yet run:** a real owner Telegram message on staging (R16, sanity-check steps 5-6). Steps
+    7-10 are optional. The guide is in `docs/developer-portal/env-setup.md`, "Sanity check: order
+    updates and notification queue".
   - **What it changes for every later slice:**
     - Every paid-order event now goes through `notifyOrderEvent` (`lib/order-notifications-service.ts`).
       `sendOrderConfirmationEmail` and `sendOrderStatusEmail` no longer exist.
@@ -1528,8 +1529,11 @@ All facts in this section require live verification:
     - The owner hears about every event, not a subset.
     - Customer updates come by email plus a live tracker on the website.
     - Copy follows consumer psychology within PECR and the DMCC Act: no urgency, no cross-sell.
-  - **Carry-forward:** this branch already contains `docs/1390-post-ship`, merged at `40efa98c`. That
-    local branch and the `aheed-online-store-alerts` worktree can be removed once this branch is pushed.
+  - **Carry-forward:** the local branch `docs/1435-post-ship`, in the `aheed-online-store-orders`
+    worktree, holds the sanity-check guide and this reconciliation. Merge it into the next slice's
+    branch. `#1390`'s carry-forward reached `staging` inside PR #1440's squash. Because of the
+    squash, git does not show `docs/1390-post-ship` as merged. Its content is on `staging`, so the
+    owner can decide whether to delete that branch and the `aheed-online-store-alerts` worktree.
 
 - **P12 `#1390` — Telegram alerts for order-related inquiries — MERGED TO STAGING, NOT PROMOTED,
   TOKEN SET AND TEST ALERT RECEIVED ON STAGING (2026-11-05).**
@@ -1547,8 +1551,7 @@ All facts in this section require live verification:
     order-related email and on contact-form complaints or messages about an order. One platform bot.
   - **Deferred, tracked:** `#1426` throttle, `#1427` self-service linking and store-admin access,
     `#1428` order numbers from the email body.
-  - **Carry-forward:** the post-ship docs commits (local branch `docs/1390-post-ship`) are merged
-    into `#1435`'s branch and ship with it.
+  - **Carry-forward:** the post-ship docs reached `staging` in PR #1440 (`373f83f`).
 
 - **P11 `#1216` — placeholder manifests, catalogue importer, onboarding runbook — MERGED TO STAGING, NOT
   PROMOTED, DATABASE ROWS UNVERIFIED (2026-10-22).**
