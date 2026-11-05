@@ -189,6 +189,17 @@ describe("dispatchNotifications (R3)", () => {
 });
 
 describe("log lines (R7)", () => {
+  it("stay on one line when a provider returns a multi-line reason (validation pass 1, F1)", () => {
+    // The shape preview produced: the email config's pretty-printed zod error.
+    const reason =
+      'email configuration is invalid: [\n  {\n    "code": "custom",\n    "message": "EMAIL_FROM is required"\n  }\n]';
+    const line = notificationLogLine("v-1", email(), "queued", reason);
+    expect(line).not.toMatch(/[\r\n]/);
+    expect(line).toBe(
+      'notification vendorId=v-1 channel=EMAIL audience=CUSTOMER event=CONFIRMED status=queued reason=email configuration is invalid: [ { "code": "custom", "message": "EMAIL_FROM is required" } ]',
+    );
+  });
+
   it("have the required shape", () => {
     expect(notificationLogLine("v-1", email(), "sent")).toBe(
       "notification vendorId=v-1 channel=EMAIL audience=CUSTOMER event=CONFIRMED status=sent",

@@ -45,10 +45,16 @@ const REASON_MAX = 200;
 
 /**
  * A provider's error text can echo the recipient ("address not verified: jo@…"), so anything shaped
- * like an address is masked before a reason reaches a log line, and the reason is capped.
+ * like an address is masked before a reason reaches a log line, and the reason is capped. Whitespace
+ * runs collapse to one space: a provider can return a multi-line error (the email config's zod
+ * error is pretty-printed JSON), and R7's per-message line must stay one line (#1435 validation
+ * pass 1, F1).
  */
 export function safeReason(reason: string): string {
-  const masked = reason.replace(/[^\s@<>"'(),;:]+@[^\s@<>"'(),;:]+/g, "<address>");
+  const masked = reason
+    .replace(/[^\s@<>"'(),;:]+@[^\s@<>"'(),;:]+/g, "<address>")
+    .replace(/\s+/g, " ")
+    .trim();
   return masked.length > REASON_MAX ? `${masked.slice(0, REASON_MAX)}…` : masked;
 }
 

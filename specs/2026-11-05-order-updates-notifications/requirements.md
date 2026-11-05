@@ -119,7 +119,9 @@ The per-message line has the form `notification vendorId=<id> channel=<EMAIL|TEL
 - For any other status, it builds nothing.
 - It never rejects.
 
-**R9. The call sites.** These seven call sites call `notifyOrderEvent`, and no longer call `sendOrderConfirmationEmail` or `sendOrderStatusEmail`:
+**R9. The call sites.** These seven call sites no longer call `sendOrderConfirmationEmail` or `sendOrderStatusEmail`. The first six call `notifyOrderEvent`; the bulk action calls `notifyBulkStatusChange`, which R18 requires:
+
+*Amended at Fix (2026-11-05, validation pass 1, F2):* this said all seven call `notifyOrderEvent`, which contradicted R18. A bulk change must send one owner digest rather than one owner message per order, so it cannot go through the single-order entry point. The artifact follows R18, and the wording was wrong.
 
 | Call site | Event |
 |---|---|

@@ -106,3 +106,55 @@
 - **Staging allowlist.** Staging's `EMAIL_RECIPIENT_MODE` allowlist means both customer and owner emails are `skipped` for addresses not on `EMAIL_ALLOWED_RECIPIENTS`. That is expected, not a defect.
 - **Telegram 429 and other failures** are proven by unit tests only. The live Telegram path was last exercised by `#1390`'s test alert on 2026-11-05.
 - **The KMS internal site build** (`kms:assemble:internal` plus a Next build in `kms/site-internal`, R25) was not run at Build. The worktree's `kms/site-internal` has no `node_modules`, so run `npm ci` there first (see `local-dev-playbook.md`, the worktree section).
+
+## Validation pass 1 (2026-11-05)
+
+**This pass was NOT independent.** It ran in the context that built the slice, on Opus, without the `/clear` and model switch: the owner chose to validate in place. Every row was run as written, including preview and browser checks against the dev database.
+
+**Pre-flight passed:** lint, typecheck, format, `npx vitest run --maxWorkers=4` (397 files, 5934 tests), the production build, `kms:assemble:internal` and the `kms/site-internal` Next build.
+
+**Preview checks, against the dev database with the HTTP adapter:**
+
+- **R3.** With email forced to fail, advancing `AHE-20260915-TCUKGL` queued two EMAIL rows (customer and owner), each with `attempts = 1` and a reason.
+- **R5, both branches on real rows:**
+  - with email still failing, the job returned `failed: 2` and `attempts` became 2;
+  - with `EMAIL_PROVIDER="log"` and a placeholder `EMAIL_FROM`, it returned `sent: 2, remaining: 0`, and the rows were gone.
+- **R4:** 405, 401, 401 and 200 with the four keys. With the token removed from both env files, the route gave 503.
+- **R9-E2E and R18-E2E:**
+  - one customer line, one owner EMAIL line, and TELEGRAM `skipped reason=TELEGRAM_BOT_TOKEN unset`;
+  - a two-order bulk advance gave two customer lines and one owner EMAIL digest.
+  - The real subjects matched R11 and R17.
+- **R21:**
+  - the account page (member, collection with slot) and `/checkout/<n>?t=` (guest, collection, no slot) rendered the tracker with the right states and copy;
+  - the guest lookup showed the collection path and "Order progress";
+  - no raw status codes appeared.
+- **R22 (browser):** the account page moved to "Out for delivery" 28 s after a staff advance, in the same document.
+- **R23 (browser):**
+  - "1 new order since you opened this page" appeared 15 s after a dev order became `CONFIRMED`, and Dismiss cleared it;
+  - the sound box was unchecked;
+  - a ticked bulk checkbox and text in the search box survived the refresh.
+- **R26:** `/privacy` showed both sentences and "24 hours".
+
+**Dev fixtures, all removed afterwards:**
+
+- one ORDERS receiving address and one Telegram recipient for Aheed;
+- temporary `.dev.vars` keys (restored byte for byte from a backup).
+
+Four orders advanced during the checks were set back to `CONFIRMED`. Their extra `OrderStatusEvent` rows remain in the dev database: `TCUKGL`, `EMBFFH`, `MTYDX2` and `GH8WS2`.
+
+**Findings:**
+
+- **F1 (R7, a code defect).** A multi-line provider reason (the email config's pretty-printed zod error) put newlines into the per-message log line.
+- **F2 (R9, a spec defect).** R9 said all seven call sites call `notifyOrderEvent`, contradicting R18's bulk digest.
+- **F3 (R12, a check defect).** The check's grep missed the email's sibling `./next-step` import.
+- **F4 (R22, a check defect).** "Source contains no `LiveRefresh`" matched the lookup page's explanatory comment.
+
+**Noted, not a slice defect:** under `npm run preview`, every email fails with "EMAIL_FROM is required in production" unless `.dev.vars` sets `EMAIL_FROM`, even with `EMAIL_PROVIDER="log"`.
+
+## Fix after validation pass 1
+
+- **F1:** `safeReason` collapses whitespace runs to one space and trims. A new test asserts the line has no newline, using the zod-shaped reason that preview produced.
+- **F2:** R9's wording is amended in `requirements.md`, and its row in `validation.md`. The code was right.
+- **F3 and F4:** the two `validation.md` commands are amended. The code was right.
+
+No `CHANGELOG.md` change: F1 alters a log line only, nothing a customer or staff member sees.
