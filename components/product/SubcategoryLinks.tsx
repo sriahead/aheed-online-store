@@ -76,6 +76,7 @@ export function SubcategoryLinks({
       >
         <IconMedallion
           icon="layers"
+          fallbackImageUrl="/images/categories/all.jpg"
           size={TILE_SIZE}
           tint="action"
           active={isAllActive}

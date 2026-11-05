@@ -64,6 +64,16 @@ describe("ICON_SLOTS (#1288 R8)", () => {
     }
   });
 
+  it("gives every flat slot a label and non-empty surfaces array", () => {
+    for (const slot of FLAT_ICON_SLOTS) {
+      expect(slot.label.length, slot.id).toBeGreaterThan(0);
+      expect(slot.surfaces.length, slot.id).toBeGreaterThan(0);
+    }
+    const layersSlot = FLAT_ICON_SLOTS.find((s) => s.id === "icon:layers");
+    expect(layersSlot).toBeDefined();
+    expect(layersSlot?.surfaces).toContain("Subcategories navigation: 'All' filter tile");
+  });
+
   it("maps cart-floating to the cart-add 3D icon", () => {
     expect(ICON_3D_SLOTS.find((slot) => slot.id === "cart-floating")?.icon3d).toBe("cart-add");
     expect(slotIdForIcon3D("cart-add")).toBe("cart-floating");
