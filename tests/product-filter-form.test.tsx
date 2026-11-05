@@ -94,3 +94,65 @@ describe("ProductFilterForm — category passthrough", () => {
     expect(container.querySelector('select[name="category"]')).toBeNull();
   });
 });
+
+describe("ProductFilterForm — quick filters deduplication & passthrough", () => {
+  const ALL_FACETS = {
+    halal: true,
+    fresh: true,
+    organic: true,
+    vegetarian: true,
+    glutenFree: true,
+    hmcCertified: true,
+    onOffer: true,
+    origins: [],
+    brands: [],
+    packSizes: [],
+    attributes: [],
+  };
+
+  it("renders no visible checkboxes for availability or dietary filters (deduplicated to QuickFiltersRail)", () => {
+    const { container } = render(<ProductFilterForm searchParams={{}} facets={ALL_FACETS} />);
+
+    expect(container.querySelector('input[type="checkbox"][name="inStock"]')).toBeNull();
+    expect(container.querySelector('input[type="checkbox"][name="onOffer"]')).toBeNull();
+    expect(container.querySelector('input[type="checkbox"][name="isHalal"]')).toBeNull();
+    expect(container.querySelector('input[type="checkbox"][name="isFresh"]')).toBeNull();
+    expect(container.querySelector('input[type="checkbox"][name="isOrganic"]')).toBeNull();
+    expect(container.querySelector('input[type="checkbox"][name="isVegetarian"]')).toBeNull();
+    expect(container.querySelector('input[type="checkbox"][name="isGlutenFree"]')).toBeNull();
+    expect(container.querySelector('input[type="checkbox"][name="isHmcCertified"]')).toBeNull();
+  });
+
+  it("carries active quick filters as hidden inputs so form submit preserves them", () => {
+    const { container } = render(
+      <ProductFilterForm
+        searchParams={{
+          inStock: "1",
+          onOffer: "1",
+          isHalal: "1",
+          isFresh: "1",
+          isOrganic: "1",
+          isVegetarian: "1",
+          isGlutenFree: "1",
+          isHmcCertified: "1",
+        }}
+        facets={ALL_FACETS}
+      />,
+    );
+
+    for (const key of [
+      "inStock",
+      "onOffer",
+      "isHalal",
+      "isFresh",
+      "isOrganic",
+      "isVegetarian",
+      "isGlutenFree",
+      "isHmcCertified",
+    ]) {
+      const hidden = container.querySelector(`input[type="hidden"][name="${key}"]`);
+      expect(hidden).not.toBeNull();
+      expect(hidden?.getAttribute("value")).toBe("1");
+    }
+  });
+});

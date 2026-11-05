@@ -224,7 +224,7 @@ export default async function CategoryPage({
             tabs={tabs}
             parentSlug={tabParentSlug}
             activeSlug={slug}
-            hrefFor={(subSlug) => categoryNavHref(subSlug, query)}
+            carriedQuery={categoryNavQuery(query)}
           />
 
           {/* #1424 — Quick Filters and Sort Control */}
