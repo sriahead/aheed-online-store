@@ -4,7 +4,13 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons/Icon";
 import { IconMedallion } from "@/components/icons/IconMedallion";
-import { FLAT_ICON_SLOTS, ICON_3D_SLOTS } from "@/lib/icon-slots";
+import {
+  FLAT_ICON_SLOTS,
+  ICON_3D_SLOTS,
+  ICON_SLOTS,
+  getIconSlot,
+  type IconSlotGroup,
+} from "@/lib/icon-slots";
 import type { CategoryAssetItem } from "@/components/staff/CategoryImageManager";
 import type { CategoryImageStyle } from "@/lib/category-image";
 
@@ -29,9 +35,45 @@ function isFlatSlot(slot: string | null | undefined): boolean {
   return Boolean(slot?.startsWith("icon:"));
 }
 
+/** Resolves human-readable surfaces where this asset renders in the storefront or admin. */
+function getSurfacesForAsset(asset: CategoryAssetItem): readonly string[] {
+  if (asset.slot) {
+    const slot = getIconSlot(asset.slot);
+    return slot?.surfaces ?? ["Storefront & Staff interface"];
+  }
+  if (asset.categoryId) {
+    return ["Storefront Category Navigation", "Department scroller & browse page headers"];
+  }
+  return [];
+}
+
 /** Card and modal previews show the asset in the same circle shoppers see (#1288 R17). */
 const CARD_MEDALLION_SIZE = 120;
 const PREVIEW_MEDALLION_SIZE = 320;
+
+const SLOT_GROUP_FILTERS: { id: "all" | IconSlotGroup; label: string }[] = [
+  { id: "all", label: "All Slots" },
+  { id: "Fulfilment & Delivery", label: "Fulfilment & Delivery" },
+  { id: "Trust & Security", label: "Trust & Security" },
+  { id: "Storefront & Navigation", label: "Navigation & Storefront" },
+  { id: "Subcategories & Produce", label: "Subcategories & Produce" },
+  { id: "Account & Orders", label: "Account & Orders" },
+  { id: "Rewards & Loyalty", label: "Rewards & Loyalty" },
+  { id: "Staff & Operations", label: "Staff & Operations" },
+  { id: "General UI", label: "General UI" },
+];
+
+const LIBRARY_GROUP_FILTERS: { id: "all" | IconSlotGroup | "departments"; label: string }[] = [
+  { id: "all", label: "All Groups" },
+  { id: "departments", label: "Departments" },
+  { id: "Fulfilment & Delivery", label: "Fulfilment & Delivery" },
+  { id: "Trust & Security", label: "Trust & Security" },
+  { id: "Storefront & Navigation", label: "Navigation & Storefront" },
+  { id: "Subcategories & Produce", label: "Subcategories & Produce" },
+  { id: "Account & Orders", label: "Account & Orders" },
+  { id: "Rewards & Loyalty", label: "Rewards & Loyalty" },
+  { id: "Staff & Operations", label: "Staff & Operations" },
+];
 
 function useOptionalRouter() {
   try {
@@ -48,6 +90,9 @@ export function IconGalleryClient({
 }: IconGalleryClientProps) {
   const [assets, setAssets] = useState<CategoryAssetItem[]>(initialAssets);
   const [filterTab, setFilterTab] = useState<"all" | "categories" | "slots" | "flat">("all");
+  const [libraryGroupFilter, setLibraryGroupFilter] = useState<
+    "all" | IconSlotGroup | "departments"
+  >("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssetForPreview, setSelectedAssetForPreview] = useState<CategoryAssetItem | null>(
     null,
@@ -57,6 +102,8 @@ export function IconGalleryClient({
   const [targetType, setTargetType] = useState<"category" | "slot">("category");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(categories[0]?.id || "");
   const [selectedSlotId, setSelectedSlotId] = useState<string>(ICON_3D_SLOTS[0].id);
+  const [slotCategoryFilter, setSlotCategoryFilter] = useState<"all" | IconSlotGroup>("all");
+  const [targetSearchQuery, setTargetSearchQuery] = useState("");
   const [genStyle, setGenStyle] = useState<CategoryImageStyle>("photo");
   const [generating, setGenerating] = useState(false);
   const [actionPendingId, setActionPendingId] = useState<string | null>(null);
@@ -73,16 +120,76 @@ export function IconGalleryClient({
       if (filterTab === "slots" && (!asset.slot || isFlatSlot(asset.slot))) return false;
       if (filterTab === "flat" && !isFlatSlot(asset.slot)) return false;
 
+      if (libraryGroupFilter !== "all") {
+        if (libraryGroupFilter === "departments") {
+          if (!asset.categoryId) return false;
+        } else {
+          if (!asset.slot) return false;
+          const slot = getIconSlot(asset.slot);
+          if (slot?.group !== libraryGroupFilter) return false;
+        }
+      }
+
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
 
       const catName = asset.category?.name?.toLowerCase() || "";
       const slotName = asset.slot?.toLowerCase() || "";
+      const slot = asset.slot ? getIconSlot(asset.slot) : undefined;
+      const slotLabel = slot?.label.toLowerCase() || "";
+      const slotGroup = slot?.group.toLowerCase() || "";
       const keyName = asset.storageKey.toLowerCase();
+      const surfacesText = getSurfacesForAsset(asset).join(" ").toLowerCase();
 
-      return catName.includes(q) || slotName.includes(q) || keyName.includes(q);
+      return (
+        catName.includes(q) ||
+        slotName.includes(q) ||
+        slotLabel.includes(q) ||
+        slotGroup.includes(q) ||
+        keyName.includes(q) ||
+        surfacesText.includes(q)
+      );
     });
-  }, [assets, filterTab, searchQuery]);
+  }, [assets, filterTab, libraryGroupFilter, searchQuery]);
+
+  const filteredSlots = useMemo(() => {
+    return ICON_SLOTS.filter((slot) => {
+      if (slotCategoryFilter !== "all" && slot.group !== slotCategoryFilter) {
+        return false;
+      }
+      if (!targetSearchQuery.trim()) return true;
+      const q = targetSearchQuery.toLowerCase().trim();
+      const matchLabel = slot.label.toLowerCase().includes(q);
+      const matchId = slot.id.toLowerCase().includes(q);
+      const matchGroup = slot.group.toLowerCase().includes(q);
+      const matchSurfaces = slot.surfaces.some((s) => s.toLowerCase().includes(q));
+      return matchLabel || matchId || matchGroup || matchSurfaces;
+    });
+  }, [slotCategoryFilter, targetSearchQuery]);
+
+  const filteredCategories = useMemo(() => {
+    if (!targetSearchQuery.trim()) return categories;
+    const q = targetSearchQuery.toLowerCase().trim();
+    return categories.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q),
+    );
+  }, [categories, targetSearchQuery]);
+
+  const selectedSlot = useMemo(() => {
+    return getIconSlot(selectedSlotId);
+  }, [selectedSlotId]);
+
+  const currentTargetSurfaces = useMemo(() => {
+    if (targetType === "category") {
+      const cat = categories.find((c) => c.id === selectedCategoryId);
+      return [
+        `Storefront Category Navigation: ${cat ? cat.name : "Selected department"}`,
+        "Department scroller & browse page headers",
+      ];
+    }
+    const slot = getIconSlot(selectedSlotId);
+    return slot?.surfaces ?? ["Storefront & Staff interface"];
+  }, [targetType, selectedCategoryId, selectedSlotId, categories]);
 
   async function handleGenerate() {
     setStatusMessage(null);
@@ -302,117 +409,305 @@ export function IconGalleryClient({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-            <div>
-              <span className="block text-xs font-semibold text-primary-muted mb-1">
-                Asset Target:
-              </span>
-              <div className="flex rounded-lg border border-black/15 p-0.5 bg-surface-muted">
+          {/* Generator Controls */}
+          <div className="space-y-3">
+            {/* Target Type & Search Header */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div>
+                <span className="block text-xs font-semibold text-primary-muted mb-1">
+                  Asset Target:
+                </span>
+                <div className="flex rounded-lg border border-black/15 p-0.5 bg-surface-muted">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTargetType("category");
+                      setTargetSearchQuery("");
+                    }}
+                    className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+                      targetType === "category"
+                        ? "bg-white text-primary shadow-sm"
+                        : "text-black/60"
+                    }`}
+                  >
+                    Category
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTargetType("slot");
+                      setTargetSearchQuery("");
+                    }}
+                    className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+                      targetType === "slot" ? "bg-white text-primary shadow-sm" : "text-black/60"
+                    }`}
+                  >
+                    System Icon
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1">
+                <label
+                  htmlFor="quick-gen-target-search"
+                  className="block text-xs font-semibold text-primary-muted mb-1"
+                >
+                  Quick Search Target:
+                </label>
+                <div className="relative">
+                  <Icon
+                    name="search"
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary-subtle"
+                  />
+                  <input
+                    id="quick-gen-target-search"
+                    type="text"
+                    value={targetSearchQuery}
+                    onChange={(e) => setTargetSearchQuery(e.target.value)}
+                    placeholder={
+                      targetType === "category"
+                        ? "Search department (e.g. bakery, halal, fruit)..."
+                        : "Search icon or surface (e.g. delivery, collect, all, halal, meat, shield)..."
+                    }
+                    className="w-full rounded-lg border border-black/15 bg-surface-muted py-1.5 pl-8 pr-7 text-xs text-primary placeholder:text-primary-subtle focus:border-action focus:bg-white focus:outline-none"
+                  />
+                  {targetSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setTargetSearchQuery("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-black/60 hover:text-black"
+                      aria-label="Clear target search"
+                    >
+                      <Icon name="x" className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Target Category Pills (for slots) */}
+            {targetType === "slot" && (
+              <div>
+                <span className="block text-[11px] font-semibold text-primary-muted mb-1">
+                  Categorise by Function:
+                </span>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                  {SLOT_GROUP_FILTERS.map((gf) => {
+                    const isSelected = slotCategoryFilter === gf.id;
+                    const count =
+                      gf.id === "all"
+                        ? ICON_SLOTS.length
+                        : ICON_SLOTS.filter((s) => s.group === gf.id).length;
+                    return (
+                      <button
+                        key={gf.id}
+                        type="button"
+                        onClick={() => setSlotCategoryFilter(gf.id)}
+                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition ${
+                          isSelected
+                            ? "bg-primary text-white shadow-xs"
+                            : "bg-surface-muted border border-black/10 text-black/70 hover:bg-black/5"
+                        }`}
+                      >
+                        {gf.label} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Filtered Quick-Select Strip (when search or group filter is active) */}
+            {(targetSearchQuery.trim() ||
+              (targetType === "slot" && slotCategoryFilter !== "all")) && (
+              <div className="rounded-xl border border-action/20 bg-action-tint/10 p-2.5">
+                <div className="mb-1.5 flex items-center justify-between text-[11px]">
+                  <span className="font-bold text-action">
+                    Matching Targets (
+                    {targetType === "category" ? filteredCategories.length : filteredSlots.length}):
+                  </span>
+                  <span className="text-primary-muted">Click an icon below to select it</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                  {targetType === "category" ? (
+                    filteredCategories.length === 0 ? (
+                      <span className="text-xs text-primary-muted py-1">
+                        No matching departments found
+                      </span>
+                    ) : (
+                      filteredCategories.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setSelectedCategoryId(c.id)}
+                          className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold transition ${
+                            selectedCategoryId === c.id
+                              ? "border-action bg-white text-action ring-2 ring-action/20 shadow-xs"
+                              : "border-black/10 bg-white text-primary hover:border-black/30"
+                          }`}
+                        >
+                          <span className="truncate max-w-[150px]">{c.name}</span>
+                        </button>
+                      ))
+                    )
+                  ) : filteredSlots.length === 0 ? (
+                    <span className="text-xs text-primary-muted py-1">No matching icons found</span>
+                  ) : (
+                    filteredSlots.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setSelectedSlotId(s.id)}
+                        className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold transition ${
+                          selectedSlotId === s.id
+                            ? "border-action bg-white text-action ring-2 ring-action/20 shadow-xs"
+                            : "border-black/10 bg-white text-primary hover:border-black/30"
+                        }`}
+                        title={`${s.label} (${s.surfaces.join(", ")})`}
+                      >
+                        {s.kind === "3d" ? (
+                          <IconMedallion icon3d={s.icon3d as any} size={18} decorative />
+                        ) : (
+                          <IconMedallion icon={s.iconName} size={18} decorative />
+                        )}
+                        <span className="truncate max-w-[140px]">{s.label}</span>
+                        <span className="rounded bg-black/5 px-1 py-0.2 text-[9px] font-normal text-black/60">
+                          {s.group.split(" ")[0]}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Target Selector Dropdown, Style Preset & Generate Button */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+              <div className="sm:col-span-2">
+                <label
+                  htmlFor="quick-gen-target-select"
+                  className="block text-xs font-semibold text-primary-muted mb-1"
+                >
+                  {targetType === "category" ? "Target Department:" : "Target System Icon Slot:"}
+                </label>
+                {targetType === "category" ? (
+                  <select
+                    id="quick-gen-target-select"
+                    value={selectedCategoryId}
+                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                    disabled={generating}
+                    className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.slug}) — Storefront Category Navigation
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <select
+                    id="quick-gen-target-select"
+                    value={selectedSlotId}
+                    onChange={(e) => setSelectedSlotId(e.target.value)}
+                    disabled={generating}
+                    className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
+                  >
+                    <optgroup label="3D icons">
+                      {ICON_3D_SLOTS.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.label} [{s.group}] ({s.surfaces.join(", ")})
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Flat icons">
+                      {FLAT_ICON_SLOTS.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.label} [{s.group}] ({s.surfaces.join(", ")})
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="quick-gen-style-select"
+                  className="block text-xs font-semibold text-primary-muted mb-1"
+                >
+                  Visual Preset:
+                </label>
+                <select
+                  id="quick-gen-style-select"
+                  value={genStyle}
+                  onChange={(e) => setGenStyle(e.target.value as CategoryImageStyle)}
+                  disabled={generating}
+                  className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
+                >
+                  <option value="photo">Studio Product Photography (Recommended)</option>
+                  <option value="3d-icon">Commercial 3D Rendered Icon</option>
+                </select>
+              </div>
+
+              <div className="flex items-end">
                 <button
                   type="button"
-                  onClick={() => {
-                    setTargetType("category");
-                  }}
-                  className={`flex-1 rounded-md py-1 text-xs font-semibold transition ${
-                    targetType === "category" ? "bg-white text-primary shadow-sm" : "text-black/60"
-                  }`}
+                  onClick={handleGenerate}
+                  disabled={generating}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-action px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-action-hover disabled:opacity-50"
                 >
-                  Category
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTargetType("slot");
-                    setGenStyle("3d-icon");
-                  }}
-                  className={`flex-1 rounded-md py-1 text-xs font-semibold transition ${
-                    targetType === "slot" ? "bg-white text-primary shadow-sm" : "text-black/60"
-                  }`}
-                >
-                  System Icon
+                  <Icon
+                    name="sparkles"
+                    className={`h-4 w-4 ${generating ? "animate-spin" : "text-amber-300"}`}
+                  />
+                  {generating ? "Generating…" : "Generate & Add to Library"}
                 </button>
               </div>
             </div>
 
-            <div>
-              <label
-                htmlFor="quick-gen-target-select"
-                className="block text-xs font-semibold text-primary-muted mb-1"
-              >
-                {targetType === "category" ? "Department:" : "Icon Slot:"}
-              </label>
-              {targetType === "category" ? (
-                <select
-                  id="quick-gen-target-select"
-                  value={selectedCategoryId}
-                  onChange={(e) => setSelectedCategoryId(e.target.value)}
-                  disabled={generating}
-                  className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.slug})
-                    </option>
+            {/* Live Selected Target Details Card */}
+            <div className="flex items-start gap-3 rounded-xl border border-black/10 bg-surface-muted p-3">
+              <div className="shrink-0 pt-0.5">
+                {targetType === "category" ? (
+                  <IconMedallion icon="folder-tree" size={36} decorative />
+                ) : selectedSlot?.kind === "3d" ? (
+                  <IconMedallion icon3d={selectedSlot.icon3d as any} size={36} decorative />
+                ) : (
+                  <IconMedallion
+                    icon={selectedSlot?.iconName ?? "folder-tree"}
+                    size={36}
+                    decorative
+                  />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-primary">
+                    {targetType === "category"
+                      ? categories.find((c) => c.id === selectedCategoryId)?.name
+                      : selectedSlot?.label}
+                  </span>
+                  <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                    {targetType === "category" ? "Departments & Navigation" : selectedSlot?.group}
+                  </span>
+                  <span className="text-[10px] text-primary-muted font-mono">
+                    ID: {targetType === "category" ? selectedCategoryId : selectedSlotId}
+                  </span>
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-semibold text-primary">
+                    Storefront surfaces:
+                  </span>
+                  {currentTargetSurfaces.map((surface, idx) => (
+                    <span
+                      key={idx}
+                      className="rounded bg-white border border-black/10 px-1.5 py-0.5 text-[9px] font-medium text-black/70"
+                    >
+                      📍 {surface}
+                    </span>
                   ))}
-                </select>
-              ) : (
-                <select
-                  id="quick-gen-target-select"
-                  value={selectedSlotId}
-                  onChange={(e) => setSelectedSlotId(e.target.value)}
-                  disabled={generating}
-                  className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
-                >
-                  <optgroup label="3D icons">
-                    {ICON_3D_SLOTS.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Flat icons">
-                    {FLAT_ICON_SLOTS.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="quick-gen-style-select"
-                className="block text-xs font-semibold text-primary-muted mb-1"
-              >
-                Visual Preset:
-              </label>
-              <select
-                id="quick-gen-style-select"
-                value={genStyle}
-                onChange={(e) => setGenStyle(e.target.value as CategoryImageStyle)}
-                disabled={generating}
-                className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
-              >
-                <option value="photo">Studio Product Photography</option>
-                <option value="3d-icon">Commercial 3D Rendered Icon</option>
-              </select>
-            </div>
-
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={generating}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-action px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-action-hover disabled:opacity-50"
-              >
-                <Icon
-                  name="sparkles"
-                  className={`h-4 w-4 ${generating ? "animate-spin" : "text-amber-300"}`}
-                />
-                {generating ? "Generating…" : "Generate & Add to Library"}
-              </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -431,61 +726,84 @@ export function IconGalleryClient({
         </div>
       )}
 
-      {/* Library Controls: Tabs & Search */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex rounded-xl border border-black/10 bg-white p-1">
-          <button
-            type="button"
-            onClick={() => setFilterTab("all")}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-              filterTab === "all" ? "bg-primary text-white" : "text-black/70 hover:bg-black/5"
-            }`}
-          >
-            All Assets ({assets.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab("categories")}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-              filterTab === "categories"
-                ? "bg-primary text-white"
-                : "text-black/70 hover:bg-black/5"
-            }`}
-          >
-            Category Imagery ({assets.filter((a) => a.categoryId).length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab("slots")}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-              filterTab === "slots" ? "bg-primary text-white" : "text-black/70 hover:bg-black/5"
-            }`}
-          >
-            System Icons ({assets.filter((a) => a.slot && !isFlatSlot(a.slot)).length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab("flat")}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-              filterTab === "flat" ? "bg-primary text-white" : "text-black/70 hover:bg-black/5"
-            }`}
-          >
-            Flat icons ({assets.filter((a) => isFlatSlot(a.slot)).length})
-          </button>
+      {/* Library Controls: Tabs, Category Filters & Search */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex rounded-xl border border-black/10 bg-white p-1">
+            <button
+              type="button"
+              onClick={() => setFilterTab("all")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                filterTab === "all" ? "bg-primary text-white" : "text-black/70 hover:bg-black/5"
+              }`}
+            >
+              All Assets ({assets.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab("categories")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                filterTab === "categories"
+                  ? "bg-primary text-white"
+                  : "text-black/70 hover:bg-black/5"
+              }`}
+            >
+              Category Imagery ({assets.filter((a) => a.categoryId).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab("slots")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                filterTab === "slots" ? "bg-primary text-white" : "text-black/70 hover:bg-black/5"
+              }`}
+            >
+              System Icons ({assets.filter((a) => a.slot && !isFlatSlot(a.slot)).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab("flat")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                filterTab === "flat" ? "bg-primary text-white" : "text-black/70 hover:bg-black/5"
+              }`}
+            >
+              Flat icons ({assets.filter((a) => isFlatSlot(a.slot)).length})
+            </button>
+          </div>
+
+          <div className="relative sm:w-64">
+            <Icon
+              name="search"
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary-subtle"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search library assets…"
+              className="w-full rounded-xl border border-black/15 bg-white py-1.5 pl-8 pr-3 text-xs text-primary placeholder:text-primary-subtle focus:border-action focus:outline-none"
+            />
+          </div>
         </div>
 
-        <div className="relative sm:w-64">
-          <Icon
-            name="search"
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary-subtle"
-          />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search assets…"
-            className="w-full rounded-xl border border-black/15 bg-white py-1.5 pl-8 pr-3 text-xs text-primary placeholder:text-primary-subtle focus:border-action focus:outline-none"
-          />
+        {/* Group Filter Pills for Library */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+          {LIBRARY_GROUP_FILTERS.map((f) => {
+            const isSelected = libraryGroupFilter === f.id;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setLibraryGroupFilter(f.id)}
+                className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                  isSelected
+                    ? "bg-primary text-white shadow-xs"
+                    : "bg-white border border-black/10 text-black/70 hover:bg-black/5"
+                }`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -554,6 +872,31 @@ export function IconGalleryClient({
                     <p className="text-[10px] text-primary-muted truncate font-mono">
                       {asset.storageKey.split("/").pop()}
                     </p>
+                    {(() => {
+                      const surfaces = getSurfacesForAsset(asset);
+                      if (surfaces.length === 0) return null;
+                      return (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {surfaces.slice(0, 2).map((surface, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-block rounded bg-primary/5 px-1.5 py-0.5 text-[9px] font-medium text-primary-muted truncate max-w-full"
+                              title={surface}
+                            >
+                              📍 {surface}
+                            </span>
+                          ))}
+                          {surfaces.length > 2 && (
+                            <span
+                              className="inline-block rounded bg-primary/5 px-1 py-0.5 text-[9px] font-medium text-primary-muted"
+                              title={surfaces.slice(2).join("; ")}
+                            >
+                              +{surfaces.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="mt-3 flex items-center gap-1 pt-2 border-t border-black/5">
@@ -671,6 +1014,19 @@ export function IconGalleryClient({
               <div>
                 <strong className="text-primary font-sans">Status:</strong>{" "}
                 {selectedAssetForPreview.isSelected ? "Active Primary" : "Candidate"}
+              </div>
+              <div className="pt-2 border-t border-black/10">
+                <strong className="text-primary font-sans">Storefront Surface Mapping:</strong>
+                <div className="mt-1 flex flex-wrap gap-1 font-sans">
+                  {getSurfacesForAsset(selectedAssetForPreview).map((surface, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-block rounded-md bg-white border border-black/15 px-2 py-0.5 text-[11px] font-medium text-primary"
+                    >
+                      📍 {surface}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
 

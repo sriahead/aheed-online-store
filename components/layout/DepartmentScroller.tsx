@@ -25,10 +25,16 @@ export function DepartmentScroller({
   categories,
   activeSlug = null,
   use3D = false,
+  carriedQuery = "",
+  searchMode = false,
 }: {
   categories: CategorySummary[];
   activeSlug?: string | null;
   use3D?: boolean;
+  /** Serialized query string of active filters to preserve (RSC-safe string, not a function). */
+  carriedQuery?: string;
+  /** When true, links target `/search?category=<slug>&...` rather than `/categories/<slug>?...`. */
+  searchMode?: boolean;
 }) {
   return (
     <HorizontalScroller
@@ -51,10 +57,14 @@ export function DepartmentScroller({
         const medallionClass =
           "transition duration-300 group-hover:scale-105 motion-reduce:group-hover:scale-100 group-hover:-translate-y-1 group-hover:ring-2 group-hover:ring-action/30 group-hover:shadow-md";
 
+        const href = searchMode
+          ? `/search?category=${category.slug}${carriedQuery ? `&${carriedQuery}` : ""}`
+          : `/categories/${category.slug}${carriedQuery ? `?${carriedQuery}` : ""}`;
+
         return (
           <Link
             key={category.id}
-            href={`/categories/${category.slug}`}
+            href={href}
             aria-current={isActive ? "page" : undefined}
             className="group flex w-20 shrink-0 flex-col items-center gap-2 text-center"
           >

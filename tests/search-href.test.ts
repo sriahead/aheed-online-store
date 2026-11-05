@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   categoryFilterHref,
+  searchCategoryFilterQuery,
   searchPageHref,
   type SearchHrefParams,
 } from "@/components/product/search-href";
@@ -80,6 +81,26 @@ describe("categoryFilterHref for the /search subcategory pills (#1169 R8)", () =
     expect(qs.get("q")).toBe("juice");
     expect(qs.get("inStock")).toBe("1");
     expect(qs.getAll("category")).toEqual(["juices"]);
+    expect(qs.has("cursor")).toBe(false);
+  });
+});
+
+describe("searchCategoryFilterQuery for DepartmentScroller", () => {
+  it("omits category and cursor, keeps query, sort, and other filters", () => {
+    const params: SearchHrefParams = {
+      q: "apples",
+      category: "fresh-produce",
+      sort: "price-asc",
+      inStock: "1",
+      isOrganic: "1",
+    };
+    const query = searchCategoryFilterQuery(params);
+    const qs = new URLSearchParams(query);
+    expect(qs.get("q")).toBe("apples");
+    expect(qs.get("sort")).toBe("price-asc");
+    expect(qs.get("inStock")).toBe("1");
+    expect(qs.get("isOrganic")).toBe("1");
+    expect(qs.has("category")).toBe(false);
     expect(qs.has("cursor")).toBe(false);
   });
 });

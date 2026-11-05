@@ -88,4 +88,53 @@ describe("SubcategoryLinks", () => {
       ...TABS.map((tab) => `/search?q=rice&category=${tab.slug}`),
     ]);
   });
+
+  it("renders circular medallion tiles with title underneath matching main categories layout", () => {
+    const { container } = render(
+      <SubcategoryLinks tabs={TABS} parentSlug="groceries" activeSlug="rice-grains" />,
+    );
+
+    const medallions = container.querySelectorAll("[data-medallion]");
+    expect(medallions).toHaveLength(TABS.length + 1);
+
+    // Active subcategory tile has active ring
+    const activeTile = screen.getByRole("link", { name: "Rice & Grains" });
+    const activeMedallion = activeTile.querySelector("[data-medallion]");
+    expect(activeMedallion?.getAttribute("class")).toContain("ring-2 ring-action");
+
+    // Non-active subcategory tile has subtle ring
+    const inactiveTile = screen.getByRole("link", { name: "Lentils & Pulses" });
+    const inactiveMedallion = inactiveTile.querySelector("[data-medallion]");
+    expect(inactiveMedallion?.getAttribute("class")).toContain("ring-1 ring-black/5");
+  });
+
+  it("supports carriedQuery and searchMode without function props (RSC boundary safe)", () => {
+    render(
+      <SubcategoryLinks
+        tabs={TABS}
+        parentSlug="groceries"
+        activeSlug="groceries"
+        searchMode
+        carriedQuery="q=rice&sort=price_asc"
+      />,
+    );
+    const allLink = screen.getByRole("link", { name: "All" });
+    expect(allLink.getAttribute("href")).toBe("/search?category=groceries&q=rice&sort=price_asc");
+
+    const riceLink = screen.getByRole("link", { name: "Rice & Grains" });
+    expect(riceLink.getAttribute("href")).toBe(
+      "/search?category=rice-grains&q=rice&sort=price_asc",
+    );
+  });
+
+  it("renders the 'All' tile with studio product photography and icon:layers slot", () => {
+    render(<SubcategoryLinks tabs={TABS} parentSlug="groceries" activeSlug="groceries" />);
+    const allLink = screen.getByRole("link", { name: "All" });
+    const medallion = allLink.querySelector("[data-medallion]");
+    expect(medallion).not.toBeNull();
+    expect(medallion?.getAttribute("data-medallion-slot")).toBe("icon:layers");
+    expect(medallion?.getAttribute("data-medallion-source")).toBe("photo");
+    const img = medallion?.querySelector("img");
+    expect(img?.getAttribute("src")).toBe("/images/categories/all.jpg");
+  });
 });

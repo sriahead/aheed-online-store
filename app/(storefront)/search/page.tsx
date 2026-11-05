@@ -17,12 +17,20 @@ import { CollectionNav } from "@/components/product/CollectionNav";
 import { parsePackSizeParam } from "@/components/product/unit-price";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
-import { categoryFilterHref, searchPageHref } from "@/components/product/search-href";
+import {
+  categoryFilterHref,
+  searchCategoryFilterQuery,
+  searchPageHref,
+} from "@/components/product/search-href";
 import { searchHeading } from "@/components/product/search-heading";
 import { SubcategoryLinks } from "@/components/product/SubcategoryLinks";
 import { SearchTruncationNotice } from "@/components/product/SearchTruncationNotice";
 import { SearchRecoveryNotice } from "@/components/product/SearchRecoveryNotice";
 import { SearchSuggestionsNotice } from "@/components/product/SearchSuggestionsNotice";
+import { ProductSortSelect } from "@/components/product/ProductSortSelect";
+import { QuickFiltersRail } from "@/components/product/QuickFiltersRail";
+import { FilterZeroRecovery } from "@/components/product/FilterZeroRecovery";
+import { parseSortOption } from "@/components/product/sort-params";
 import { parseSearchQuery } from "@/lib/search-query";
 import { expandSearchTerms } from "@/lib/search-expansion";
 import { listCurrentVendorAttributeDefinitions } from "@/lib/attributes-service";
@@ -49,6 +57,7 @@ export async function generateMetadata() {
 const PAGE_SIZE = 12;
 
 type SearchParams = {
+  sort?: string;
   q?: string;
   minPrice?: string;
   maxPrice?: string;
@@ -165,6 +174,7 @@ export default async function SearchPage({
     // #918 — ticked values of one list filter are one group (any of them); number filters are ranges.
     attributeOptionGroups: attributeFilters.optionGroups,
     attributeRanges: attributeFilters.ranges,
+    sort: parseSortOption(params.sort, query ? "relevance" : "newest"),
   };
 
   const result = query ? await products.search(query, options) : await products.list(options);
@@ -229,6 +239,8 @@ export default async function SearchPage({
           selectedCategory ? (selectedCategory.parent?.slug ?? selectedCategory.slug) : null
         }
         use3D
+        searchMode
+        carriedQuery={searchCategoryFilterQuery(params)}
       />
 
       {/* #1173 — applies a collapse chosen earlier in this tab before the sidebar paints. */}
@@ -254,20 +266,24 @@ export default async function SearchPage({
                   : "/search"
             }
           />
-          {/* #568 — sidebar at md+, a `details` disclosure below it. Both render the same form. */}
-          <FilterPanel heading="Search & filters" showQuery searchParams={params} facets={facets} />
+          {/* #568 — sidebar at md+, a`details` disclosure below it. Both render the same form. */}
+          <FilterPanel heading="Filters" basePath="/search" searchParams={params} facets={facets} />
         </CollapsibleSidebar>
 
         <div className="flex-1">
           <h1 className="mb-1 text-2xl font-semibold text-primary">{heading}</h1>
-          {/*
-            #681 — browse mode is ordered `createdAt desc, id desc` by `findPage`, so this listing
-            genuinely IS newest-first. Saying so is what let the New Arrivals entry point exist
-            without inventing a `collection=new` parameter that would change no predicate while
-            rendering a chip claiming a filter that is not running.
-          */}
-          {!query && <p className="mb-6 text-sm text-primary-muted">Newest first</p>}
-          {query && <div className="mb-6" />}
+          <div className="mb-4" />
+
+          {/* #1424 — Quick Filters and Sort Control */}
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <QuickFiltersRail basePath="/search" params={params} facets={facets} />
+            <ProductSortSelect
+              basePath="/search"
+              currentSort={params.sort}
+              params={params}
+              defaultSort={query ? "relevance" : "newest"}
+            />
+          </div>
 
           {/*
             #1169 — the category page's subcategory pills, for a resolved `category` (none for an
@@ -282,7 +298,8 @@ export default async function SearchPage({
               tabs={selectedCategory.parent?.children ?? selectedCategory.children}
               parentSlug={selectedCategory.parent?.slug ?? selectedCategory.slug}
               activeSlug={selectedCategory.slug}
-              hrefFor={(slug) => categoryFilterHref(params, slug)}
+              searchMode
+              carriedQuery={searchCategoryFilterQuery(params)}
             />
           )}
 
@@ -324,13 +341,17 @@ export default async function SearchPage({
               />
             ) : (
               /*
-               * #501 — without this, a search with no matches (or an over-narrow
-               * price filter) still renders the same blank content column this
-               * slice exists to remove, just reached by a different route.
+               * #501/#1424 — intelligent recovery offering 1-click filter relaxation.
                */
-              <p className="text-primary-muted">
-                No products match. Try a different search or clear your filters.
-              </p>
+              <FilterZeroRecovery
+                basePath="/search"
+                params={{
+                  ...params,
+                  category: selectedCategory ? params.category : undefined,
+                  brand: selectedBrand ? params.brand : undefined,
+                }}
+                brandLabel={selectedBrand?.name}
+              />
             )
           ) : (
             <>

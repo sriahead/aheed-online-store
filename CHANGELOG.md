@@ -6,8 +6,96 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Categorized Target Search in Visual Asset Gallery & Fulfilment/Trust Medallion Upgrades** (`components/staff/IconGalleryClient.tsx`, `lib/icon-slots.ts`, `components/layout/LocationControl.tsx`, `app/(landing)/page.tsx`, `tests/icon-slots.test.ts`, `tests/icon-gallery-deactivate.test.tsx`):
+  - **Categorized Search & Functional Grouping in Visual Asset Generator (`IconGalleryClient.tsx`, `lib/icon-slots.ts`):**
+    - Added `group: IconSlotGroup` to all 3D and flat slots in `lib/icon-slots.ts` categorizing every slot into semantic functional groups: *Fulfilment & Delivery*, *Trust & Security*, *Storefront & Navigation*, *Subcategories & Produce*, *Account & Orders*, *Rewards & Loyalty*, *Staff & Operations*, and *General UI*.
+    - Upgraded the Generator Panel with live interactive search filtering (`quick-gen-target-search`) that filters targets in real time by label, ID, group, and storefront surface names.
+    - Added functional category group pills (`All Slots`, `Fulfilment & Delivery`, `Trust & Security`, `Storefront & Navigation`, `Subcategories & Produce`, `Account & Orders`, `Rewards & Loyalty`, `Staff & Operations`) with live item counts for instant scoping.
+    - Added a live Selected Target Details card displaying an `IconMedallion` visual preview, target title, ID, group badge, and exact storefront surfaces where the icon appears.
+    - Added category group filter pills to the Asset Library controls (`All Groups`, `Departments`, `Fulfilment & Delivery`, etc.) and enhanced library search to match group names and labels.
+  - **Header Fulfilment & Landing Hero Badges Upgraded to `IconMedallion` (`LocationControl.tsx`, `app/(landing)/page.tsx`):**
+    - Upgraded the header fulfilment selector (`components/layout/LocationControl.tsx`) from raw Lucide SVGs to `<IconMedallion icon3d="storefront" />` for Click & Collect and `<IconMedallion icon3d="delivery-van" />` for Delivery. Any studio photo or 3D asset generated in `/staff/icons` now instantly reflects in the header location selector.
+    - Upgraded landing page hero badges (`app/(landing)/page.tsx`) to `<IconMedallion icon3d="delivery-van" size={16} />` for free delivery and `<IconMedallion icon3d="secure-checkout" size={16} />` for minimum order.
+    - Updated surfaces documentation in `lib/icon-slots.ts` for `storefront`, `delivery-van`, `secure-checkout`, and `halal-certified` to explicitly document their presence in the header selector and landing hero.
+  - **Tests (`tests/icon-slots.test.ts`, `tests/icon-gallery-deactivate.test.tsx`):**
+    - Added tests asserting all 3D and flat slots carry valid non-empty groups and surfaces.
+    - Added integration test proving the generator's category filter pills and quick search filter slots accurately and update the target selector. All 54 icon tests pass.
+
+- **Studio Product Photography for "All" Category & Storefront Surface Mapping in Visual Asset Gallery** (`components/product/SubcategoryLinks.tsx`, `components/icons/IconMedallion.tsx`, `lib/icon-slots.ts`, `lib/category-image.ts`, `components/staff/IconGalleryClient.tsx`, `docs/client-help-centre/icon-and-visual-asset-standards.md`, `tests/icon-slots.test.ts`, `tests/icon-medallion.test.tsx`, `tests/subcategory-links.test.tsx`):
+  - **Studio Product Photography for "All" Subcategory (`SubcategoryLinks.tsx`, `IconMedallion.tsx`):**
+    - Replaced the vector "All" icon (flat book emoji) with high-definition Studio Product Photography of an assorted supermarket grocery harvest (`/images/categories/all.jpg`), creating visual harmony across the category medallion strip.
+    - Added `fallbackImageUrl` prop to `IconMedallion` allowing icon slots to render authentic studio photography while preserving full override capability when an AI asset is active in `CategoryAsset`.
+    - Keyed "All" to slot `icon:layers` so admins can generate, preview, and activate custom brand imagery directly from `/staff/icons`.
+  - **Surface Mapping in Visual Asset Gallery (`lib/icon-slots.ts`, `IconGalleryClient.tsx`):**
+    - Added `surfaces: readonly string[]` to all flat icon slots in `lib/icon-slots.ts`, clearly documenting where every icon renders across storefront and admin interfaces.
+    - Updated `IconGalleryClient` with interactive surface badges on every asset card, in the generator dropdown, and inside the high-resolution inspection modal.
+    - Enhanced asset search to match surface names (e.g. searching "Subcategory", "Header", or "Checkout" displays all relevant assets).
+    - Defaulted generator visual preset to "Studio Product Photography" for all category and system icons to maintain consistent photorealistic styling.
+  - **Quality Gates & Tests (`tests/icon-slots.test.ts`, `tests/icon-medallion.test.tsx`, `tests/subcategory-links.test.tsx`):**
+    - Added unit tests for `fallbackImageUrl` resolution, active AI asset precedence, flat slot surface metadata, and "All" subcategory medallion rendering. All 38 tests pass.
+
+- **Quick View Cross-Product State Isolation & Storefront Layout Parity for Help Centre** (`components/product/QuickViewDrawer.tsx`, `app/(storefront)/help/page.tsx`, `tests/quick-view.test.tsx`, `tests/page-container.test.ts`, `tests/help-vendor-facts.test.tsx`):
+  - **Quick View Stale Image & Description Isolation (`components/product/QuickViewDrawer.tsx`):**
+    - Fixed a bug where opening Quick View for a product would retain images, description, or certifications from a previously viewed or prefetched product.
+    - Updated `displayImages`, `description`, and `hmcReference` derivations to strictly source from `currentData?.product` (verified matching `activeSlug`), falling back to `initialProduct` summary only when its slug matches `activeSlug`.
+    - Added `key={displayProduct.slug}` to `ProductImageGallery` in the drawer so image carousel indices reset to 0 upon switching products.
+    - Added unit test in `tests/quick-view.test.tsx` asserting complete isolation between consecutively opened products in Quick View.
+  - **Storefront Help Centre Layout Parity (`app/(storefront)/help/page.tsx`, `tests/page-container.test.ts`):**
+    - Updated Help Centre from `width="narrow"` (672px) to `<PageContainer width="wide" padY="tight">` (1280px), bringing it into visual alignment with the header, footer, and other primary storefront pages (`/categories`, `/categories/[slug]`, `/search`, `/bundles`).
+    - Added top `<DepartmentScroller />` with 3D category medallions to maintain consistent brand navigation across all store surfaces.
+    - Added breadcrumb navigation (`Home / Help Centre`) and an inviting Hero banner with quick jump anchor chips (`#delivery`, `#faqs`, `#journeys`, `#contact`).
+    - Introduced a responsive two-column layout: left sidebar with verified store address, Google Maps directions, customer service phone, opening hours, Halal quality guarantees, and quick navigation shortcuts; right area with FAQ answers, interactive role journey maps, staff runbook notice, and direct contact options.
+    - Updated `tests/page-container.test.ts` to track `/help` under wide pages, and verified all 28 related tests pass.
+
+- **Filter Deduplication & Subcategory Medallion Tiles** (`components/product/ProductFilterForm.tsx`, `components/product/SubcategoryLinks.tsx`, `app/(storefront)/categories/[slug]/page.tsx`, `app/(storefront)/search/page.tsx`):
+  - **Sidebar Filter Deduplication (`ProductFilterForm.tsx`):** Removed duplicate Availability and Dietary & Lifestyle checkboxes from the left sidebar filter panel to eliminate visual clutter and redundant controls. All quick filters remain accessible via `<QuickFiltersRail />` directly above results, and active quick filters are preserved as hidden passthrough inputs when applying sidebar filters (Price, Origin, Brand, Attributes).
+  - **Consistent Subcategory Medallion Layout (`SubcategoryLinks.tsx`):** Transformed subcategories from pill buttons into circular medallion tiles with icons/illustrations on top and titles underneath, matching the visual design, 64px diameter, hover animations, and layout of the main category scroller.
+  - **Unit Tests (`tests/product-filter-form.test.tsx`, `tests/subcategory-links.test.tsx`):** Added tests verifying that no duplicate checkboxes render in the sidebar, active quick filters are preserved on form submit, subcategories render circular medallions with active ring states, and subcategory links support serializable `carriedQuery` and `searchMode` props.
+
+- **Filter Polish, Subcategory Icons, Quick View Performance & Filter Persistence** (spec `specs/2026-11-05-filter-polish-quickview-perf/`).
+  - **Filter Decluttering & Semantic Grouping (`components/product/ProductFilterForm.tsx`, `app/(storefront)/search/page.tsx`):**
+    - Removed redundant visible search input inside the sidebar on `/search`, preserving the active search query via a hidden passthrough field to keep the filter panel clean while preventing filter submits from losing search terms.
+    - Removed duplicate price preset pills from inside `ProductFilterForm`, leaving clean, accessible `Min` – `Max` numeric inputs (presets remain available above products via `<QuickFiltersRail />`).
+    - Structured filters into clean semantic fieldsets (*Price*, *Availability*, *Dietary & Lifestyle*, and *Attributes*) with clear legends and visual hierarchy to eliminate decision fatigue (Hick's Law).
+  - **Subcategory Visual Icons (`components/product/category-icon.ts`, `components/product/SubcategoryLinks.tsx`):**
+    - Extended `categoryIconName` with semantic icon mappings for all 31 catalogue subcategories across both grocery and non-grocery departments.
+    - Updated `<SubcategoryLinks />` to render an `<Icon />` with `aria-hidden="true"` inside each subcategory pill and the leading "All" pill (`layers`), creating visual consistency with the main department tiles and improving scannability.
+  - **Quick View Instant Hydration & Caching (`components/product/quick-view-context.tsx`, `components/product/QuickViewDrawer.tsx`, `components/product/ProductCard.tsx`, `app/api/products/quick-view/route.ts`):**
+    - Accelerated Quick View to near-instant perceived latency: passes `cdnBaseUrl` with initial product data so full packshot photographs, pricing, and add-to-cart controls hydrate immediately without waiting for network responses.
+    - Added in-memory client-side caching in `QuickViewProvider` to eliminate repeated network fetches for previously opened products.
+    - Added hover and focus prefetching (`prefetchQuickView`) on `ProductCard` desktop and mobile triggers so product details are already cached in memory before click.
+    - Parallelized product detail and Better Auth session queries in `/api/products/quick-view/route.ts` via `Promise.all()`, and added `Cache-Control` response headers.
+  - **Category Filter & Sort Persistence (`components/product/category-href.ts`, `app/(storefront)/categories/[slug]/page.tsx`, `app/(storefront)/search/page.tsx`, `components/layout/DepartmentScroller.tsx`):**
+    - Added `categoryNavHref(newSlug, currentParams)` to preserve all active filter parameters (`minPrice`, `maxPrice`, `inStock`, `isHalal`, `isFresh`, `isOrganic`, `isVegetarian`, `isGlutenFree`, `isHmcCertified`, `onOffer`, `origin`, `brand`, `packSize`, `attr_*`, and `sort`) across department and subcategory switches, while resetting pagination offsets.
+    - Wired `hrefFor` into `<SubcategoryLinks />` and `<DepartmentScroller />` on `/categories/[slug]`, and into `<DepartmentScroller />` on `/search`.
+  - **Unit Tests (`tests/category-href.test.ts`, `tests/quick-view.test.tsx`, `tests/category-icon.test.ts`):** Added tests verifying filter preservation across category navigation, instant image hydration with `cdnBaseUrl`, client cache hits on drawer reopen, and subcategory icon mappings.
+  - **Storefront Product Sorting (`lib/repositories/products.ts`, `components/product/sort-params.ts`, `components/product/ProductSortSelect.tsx`):**
+    - Extended `ProductFilters` with `sort?: ProductSortOption` supporting `newest` (default browse), `relevance` (default search), `price_asc` (Price: Low to High), `price_desc` (Price: High to Low), `unit_price_asc` (Best Value per reference unit: kg/L), and `rating_desc` (Customer Rating).
+    - In `findPage()` (browse & category navigation), dynamic keyset ordering leverages existing database indexes (`basePrice`, `unitPricePencePerBaseUnit`, `averageRating`, `createdAt`).
+    - In `searchProducts()`, search candidates sort in memory deterministically when an explicit sort option is requested, while preserving ranked score ordering for `relevance`.
+    - Added `<ProductSortSelect />` component positioned above product grids on both `/categories/[slug]` and `/search`, implemented as an accessible `<form method="GET">` with `<noscript>` fallback for 100% no-JavaScript functionality.
+  - **Quick Filters Bar (`components/product/QuickFiltersRail.tsx`):**
+    - Responsive, horizontal scrollable rail of 1-tap quick filter toggle pills directly above product listings for high-intent grocery attributes (*On Offer*, *In Stock*, *Halal*, *Fresh*, *Organic*, *Vegetarian*, *Gluten Free*).
+    - Each pill shows active/inactive states with clear visual feedback, live result counts, and single-click toggling without expanding mobile drawers or accordions.
+  - **Quick Price Presets (`components/product/ProductFilterForm.tsx`):**
+    - Added 1-click price preset buttons (*Under £2*, *£2 – £5*, *£5 – £10*, *£10+*) in the filter panel to relieve decision fatigue, while preserving custom numeric min/max price inputs.
+  - **Live Product Counts in Filter Options (`lib/repositories/products.ts`, `components/product/ProductFilterForm.tsx`):**
+    - Enhanced `getAvailableFacets()` to compute genuine product counts for boolean facets in the current result context.
+    - Updated `ProductFilterForm` labels to display live item counts (e.g. `Halal (14)`, `On offer (6)`), providing shoppers with result density foresight before applying filters.
+  - **Zero-Result Smart Relaxation (`components/product/FilterZeroRecovery.tsx`):**
+    - When an over-constrained filter combination returns 0 products, an intelligent recovery component replaces dead-end blank states with 1-click links to relax the limiting filter (e.g. `Remove price filter`, `Remove brand filter`) or `Clear all filters`.
+  - **Navigation & Chip Preservation (`components/product/filter-chips.ts`, `category-href.ts`, `search-href.ts`):**
+    - `sort` parameter is preserved across pagination (`nextCategoryPageHref`, `prevCategoryPageHref`, `searchPageHref`, `categoryFilterHref`), when removing individual filter chips, and when clearing all filters.
+    - `sort` is excluded from filter chips so sort order never renders as a removable facet.
+  - **Unit & Integration Tests (`tests/product-sort-and-discovery.test.ts`):** Added comprehensive test coverage asserting sort parsing, URL preservation, chip isolation, Prisma `orderBy` generation, in-memory candidate sorting, and empty state relaxation.
+
 ### Fixed
 
+- **Server-to-Client Component Boundary Invariant on DepartmentScroller** (`components/layout/DepartmentScroller.tsx`, `app/(storefront)/categories/[slug]/page.tsx`, `app/(storefront)/search/page.tsx`):
+  - Fixed HTTP 500 runtime crash on `/categories/[slug]` caused by passing a function prop (`hrefFor`) from Server Components across the RSC boundary to Client Component `<DepartmentScroller />`.
+  - Replaced `hrefFor` with serializable string props `carriedQuery` and `searchMode`, generating safe category and search URLs while preserving active filter and sort queries.
 - **Promotions AI Basis Points Percentage Formatting & Promotion-Focused Image Descriptions** (issue `#1415`).
   - **Basis Points to Percentage Normalisation (`lib/promotions-ai.ts`):** Fixed AI prompt builder interpolating raw discount value as percentage directly (`500% OFF` instead of `5% OFF`). Basis points are now correctly divided by 100 (`d.discountValue / 100`), ensuring 500 bps is framed truthfully as 5% and 1000 bps as 10%.
   - **Promotion-Focused Alt Text (`lib/promotions-ai.ts`, `components/staff/PromotionForm.tsx`):** Instructed AI to generate image descriptions (`altText`) focused strictly on the promotion, offer, and department context (e.g. `Promotional banner: Save 5% on Halal Meat with code WEEKENDMEAT5`) rather than generic visual photography elements. Updated staff form label and hint text accordingly.

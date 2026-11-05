@@ -149,4 +149,32 @@ describe("IconMedallion content resolution (#1288 R14)", () => {
       cleanup();
     }
   });
+
+  it("uses fallbackImageUrl as photo when no AI asset is active for an icon slot", () => {
+    const { container } = render(
+      withMap(
+        {},
+        <IconMedallion icon="layers" fallbackImageUrl="/images/categories/all.jpg" size={64} />,
+      ),
+    );
+    const root = medallionOf(container);
+    expect(root.getAttribute("data-medallion-source")).toBe("photo");
+    expect(root.getAttribute("data-medallion-slot")).toBe("icon:layers");
+    const img = root.querySelector("img")!;
+    expect(img.getAttribute("src")).toBe("/images/categories/all.jpg");
+  });
+
+  it("prefers active AI asset over fallbackImageUrl when present", () => {
+    const { container } = render(
+      withMap(
+        { "icon:layers": AI_URL },
+        <IconMedallion icon="layers" fallbackImageUrl="/images/categories/all.jpg" size={64} />,
+      ),
+    );
+    const root = medallionOf(container);
+    expect(root.getAttribute("data-medallion-source")).toBe("ai");
+    expect(root.getAttribute("data-medallion-slot")).toBe("icon:layers");
+    const img = root.querySelector("img")!;
+    expect(img.getAttribute("src")).toBe(AI_URL);
+  });
 });

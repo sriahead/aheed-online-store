@@ -21,8 +21,17 @@ import { FilterChips } from "@/components/product/FilterChips";
 import { SubcategoryLinks } from "@/components/product/SubcategoryLinks";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
-import { nextCategoryPageHref, prevCategoryPageHref } from "@/components/product/category-href";
+import {
+  categoryNavHref,
+  categoryNavQuery,
+  nextCategoryPageHref,
+  prevCategoryPageHref,
+} from "@/components/product/category-href";
 import type { FilterParamValue } from "@/components/product/filter-params";
+import { ProductSortSelect } from "@/components/product/ProductSortSelect";
+import { QuickFiltersRail } from "@/components/product/QuickFiltersRail";
+import { FilterZeroRecovery } from "@/components/product/FilterZeroRecovery";
+import { parseSortOption } from "@/components/product/sort-params";
 import { listCurrentVendorAttributeDefinitions } from "@/lib/attributes-service";
 import { resolveAttributeFilters } from "@/lib/attribute-filters";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -57,6 +66,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 type SearchParams = {
+  sort?: string;
   minPrice?: string;
   maxPrice?: string;
   inStock?: string;
@@ -137,6 +147,7 @@ export default async function CategoryPage({
     packSize: parsePackSizeParam(query.packSize),
     attributeOptionGroups: attributeFilters.optionGroups,
     attributeRanges: attributeFilters.ranges,
+    sort: parseSortOption(query.sort, "newest"),
   });
   /*
    * #568 — facets narrow to this category's own products (and its subcategories'), so a department
@@ -175,7 +186,12 @@ export default async function CategoryPage({
     <PageContainer width="wide" padY="tight">
       {/* Departments: horizontal strip on top (arrow-scrolled). Highlights
           the DEPARTMENT even when viewing one of its subcategories. */}
-      <DepartmentScroller categories={allCategories} activeSlug={scrollerActiveSlug} use3D />
+      <DepartmentScroller
+        categories={allCategories}
+        activeSlug={scrollerActiveSlug}
+        use3D
+        carriedQuery={categoryNavQuery(query)}
+      />
 
       {/* #1173 — applies a collapse chosen earlier in this tab before the sidebar paints. */}
       <script dangerouslySetInnerHTML={{ __html: FILTERS_COLLAPSED_SCRIPT }} />
@@ -194,12 +210,34 @@ export default async function CategoryPage({
         <CollapsibleSidebar id="browse-sidebar">
           <CollectionNav />
           {/* #568 — sidebar at md+, a `details` disclosure below it. Both render the same form. */}
-          <FilterPanel heading="Filters" searchParams={query} facets={facets} />
+          <FilterPanel
+            heading="Filters"
+            basePath={`/categories/${slug}`}
+            searchParams={query}
+            facets={facets}
+          />
         </CollapsibleSidebar>
 
         <section className="flex-1">
           <h1 className="mb-6 text-2xl font-semibold text-primary">{category.name}</h1>
-          <SubcategoryLinks tabs={tabs} parentSlug={tabParentSlug} activeSlug={slug} />
+          <SubcategoryLinks
+            tabs={tabs}
+            parentSlug={tabParentSlug}
+            activeSlug={slug}
+            carriedQuery={categoryNavQuery(query)}
+          />
+
+          {/* #1424 — Quick Filters and Sort Control */}
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <QuickFiltersRail basePath={`/categories/${slug}`} params={query} facets={facets} />
+            <ProductSortSelect
+              basePath={`/categories/${slug}`}
+              currentSort={query.sort}
+              params={query}
+              defaultSort="newest"
+            />
+          </div>
+
           {/*
             #568 — the category itself is NOT a chip here: it is the route, not a filter, and
             removing it would have to mean navigating somewhere else entirely. `SubcategoryLinks`
@@ -213,17 +251,25 @@ export default async function CategoryPage({
             attributeLabels={attributeFilters.labels}
           />
           <h2 className="sr-only">Products</h2>
-          <ProductGrid density={gridDensity}>
-            {items.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                cdnBaseUrl={CDN_BASE_URL ?? ""}
-                cartQuantity={cartQuantities.get(product.id) ?? 0}
-                favouriteState={favouriteState(product.id)}
-              />
-            ))}
-          </ProductGrid>
+          {items.length === 0 ? (
+            <FilterZeroRecovery
+              basePath={`/categories/${slug}`}
+              params={{ ...query, brand: selectedBrand ? query.brand : undefined }}
+              brandLabel={selectedBrand?.name}
+            />
+          ) : (
+            <ProductGrid density={gridDensity}>
+              {items.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  cdnBaseUrl={CDN_BASE_URL ?? ""}
+                  cartQuantity={cartQuantities.get(product.id) ?? 0}
+                  favouriteState={favouriteState(product.id)}
+                />
+              ))}
+            </ProductGrid>
+          )}
           {(nextCursor || !isFirstPage) && (
             <div data-tap-surface="pagination" className="mt-6 flex gap-3">
               {!isFirstPage && (
