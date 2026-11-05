@@ -23,6 +23,7 @@ import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
 import {
   categoryNavHref,
+  categoryNavQuery,
   nextCategoryPageHref,
   prevCategoryPageHref,
 } from "@/components/product/category-href";
@@ -189,7 +190,7 @@ export default async function CategoryPage({
         categories={allCategories}
         activeSlug={scrollerActiveSlug}
         use3D
-        hrefFor={(catSlug) => categoryNavHref(catSlug, query)}
+        carriedQuery={categoryNavQuery(query)}
       />
 
       {/* #1173 — applies a collapse chosen earlier in this tab before the sidebar paints. */}

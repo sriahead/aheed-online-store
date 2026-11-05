@@ -17,7 +17,11 @@ import { CollectionNav } from "@/components/product/CollectionNav";
 import { parsePackSizeParam } from "@/components/product/unit-price";
 import { DepartmentScroller } from "@/components/layout/DepartmentScroller";
 import { parsePriceInput } from "@/components/product/parse-price-input";
-import { categoryFilterHref, searchPageHref } from "@/components/product/search-href";
+import {
+  categoryFilterHref,
+  searchCategoryFilterQuery,
+  searchPageHref,
+} from "@/components/product/search-href";
 import { searchHeading } from "@/components/product/search-heading";
 import { SubcategoryLinks } from "@/components/product/SubcategoryLinks";
 import { SearchTruncationNotice } from "@/components/product/SearchTruncationNotice";
@@ -235,7 +239,8 @@ export default async function SearchPage({
           selectedCategory ? (selectedCategory.parent?.slug ?? selectedCategory.slug) : null
         }
         use3D
-        hrefFor={(catSlug) => categoryFilterHref(params, catSlug)}
+        searchMode
+        carriedQuery={searchCategoryFilterQuery(params)}
       />
 
       {/* #1173 — applies a collapse chosen earlier in this tab before the sidebar paints. */}

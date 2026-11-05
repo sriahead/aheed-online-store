@@ -38,4 +38,24 @@ describe("DepartmentScroller renders Icon from a client component (R22, R44)", (
     expect(tiles[0].querySelector("img")).not.toBeNull();
     expect(tiles[1].querySelector("svg[data-icon]")).not.toBeNull();
   });
+
+  it("appends carriedQuery in category mode without function props (RSC boundary safe)", () => {
+    const { container } = render(
+      <DepartmentScroller categories={[CATEGORIES[0]]} carriedQuery="sort=price-asc&inStock=1" />,
+    );
+    const link = container.querySelector("a[href^='/categories/fruit-veg']");
+    expect(link?.getAttribute("href")).toBe("/categories/fruit-veg?sort=price-asc&inStock=1");
+  });
+
+  it("renders search href with carriedQuery in searchMode", () => {
+    const { container } = render(
+      <DepartmentScroller
+        categories={[CATEGORIES[0]]}
+        searchMode
+        carriedQuery="q=apples&sort=price-asc"
+      />,
+    );
+    const link = container.querySelector("a[href^='/search']");
+    expect(link?.getAttribute("href")).toBe("/search?category=fruit-veg&q=apples&sort=price-asc");
+  });
 });

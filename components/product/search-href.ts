@@ -63,6 +63,11 @@ export function searchPageHref(params: SearchHrefParams, cursor: string): string
   return `/search?${qs.toString()}`;
 }
 
+export function searchCategoryFilterQuery(params: SearchHrefParams): string {
+  const qs = carriedQuery(params, ["category", "cursor"]);
+  return qs.toString();
+}
+
 /**
  * #568 — the href for selecting a department from within results: every active filter and the
  * shopper's query are preserved, `category` is replaced, and `cursor` is dropped.
