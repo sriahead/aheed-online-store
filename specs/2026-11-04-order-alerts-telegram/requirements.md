@@ -67,8 +67,9 @@ R5. `lib/order-alert/brief.ts` is pure (it imports nothing that touches the netw
     `formatOrderAlert` returns exactly five lines joined by `"\n"`:
     1. `withEnvironmentTag("Order inquiry: " + storeName, environment)`
     2. `"Order: "` + the order number, or `not given` when it is null
-    3. `"From: "` + the sender name trimmed and cut to 100 characters, or `unknown` when it is null
-       or blank
+    3. `"From: "` + the sender name trimmed and cut to 100 characters, or `unknown` when it is null,
+       blank or contains `@` (an address used as a name). *Amended at Fix (2026-11-05, validation
+       pass 1, F1): without it, an address could reach the alert, against R9, R16 and R18.*
     4. `"Subject: "` + the subject trimmed, or `(no subject)` when it is blank; a subject over 200
        characters is cut to its first 200 characters followed by `…`
     5. `"Via: email"` or `"Via: contact form"`
@@ -148,6 +149,9 @@ R10. `parseFromDisplayName(header: string | null): string | null` is exported fr
      - returns the display name, with surrounding quotes removed, for `"Jane Doe" <j@x.com>` and
        for `Jane Doe <j@x.com>`;
      - returns `null` for `j@x.com`, `<j@x.com>`, an empty string and `null`;
+     - returns `null` when the name, after decoding, contains `@`, for example
+       `"j@x.com" <j@x.com>`. Some clients send that header when no name is set. *Amended at Fix
+       (2026-11-05, validation pass 1, F1).*
      - decodes an RFC 2047 encoded word in UTF-8 with `B` or `Q` encoding, for example
        `=?UTF-8?B?Sm9zw6k=?= <j@x.com>` gives `José`;
      - returns any other charset's encoded word unchanged.

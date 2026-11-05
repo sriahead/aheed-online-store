@@ -163,3 +163,17 @@ One finding needs `/fix`, and the live rows wait on the dev migration.
   `.env`.
 - **Ship note:** `origin/staging` moved to `869cec05`. A merge conflicts only in the generated
   `ARTIFACT_INDEX.md`. Regenerate it with `kms:build-index` when merging.
+
+## Fix after validation pass 1, 2026-11-05
+
+- **F1 fixed at both layers.** `parseFromDisplayName` returns `null` when the decoded name contains
+  `@` (`workers/inbound-email/src/index.ts`). `formatOrderAlert` prints `From: unknown` for an
+  `@` name (`lib/order-alert/brief.ts`), which also covers a shopper typing their email into the
+  contact form's name field and anything else that reaches the brief.
+- **Spec amended, not loosened.** R5 line 3 and R10 each gained the `@` case, marked "Amended at
+  Fix". Their validation rows gained matching cases. R9, R16 and R18 already required this; R5 and
+  R10 had not said how.
+- **Tests:** three `parseFromDisplayName` cases (quoted, unquoted, B-encoded address-as-name) and
+  one `formatOrderAlert` case. Before the fix, the parser returned the address (probe at pass 1).
+- **CHANGELOG unchanged:** its "email address … never sent" claim is now true.
+- **Next:** validation pass 2 from the top.

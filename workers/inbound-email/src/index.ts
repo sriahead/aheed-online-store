@@ -144,7 +144,8 @@ function decodeEncodedWords(value: string): string {
 
 /**
  * #1390 R10 — the display name from a `From` header (`"Jane Doe" <j@x.com>` gives `Jane Doe`), or
- * null when there is none. The address part is never returned.
+ * null when there is none. The address part is never returned, and neither is a "name" containing
+ * `@`: some clients send `"j@x.com" <j@x.com>` when no name is set, which would leak the address.
  */
 export function parseFromDisplayName(header: string | null): string | null {
   if (!header) return null;
@@ -155,7 +156,8 @@ export function parseFromDisplayName(header: string | null): string | null {
     name = name.slice(1, -1).replace(/\\(.)/g, "$1").trim();
   }
   if (name === "") return null;
-  return decodeEncodedWords(name);
+  const decoded = decodeEncodedWords(name);
+  return decoded.includes("@") ? null : decoded;
 }
 
 const inboundEmailWorker = {

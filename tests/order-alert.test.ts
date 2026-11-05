@@ -51,6 +51,14 @@ describe("formatOrderAlert (R5)", () => {
     expect(blank[2]).toBe("From: unknown");
   });
 
+  it("never prints a sender name that contains @ (an address used as a name)", () => {
+    for (const senderName of ["jane@customer.test", "  Jane jane@customer.test "]) {
+      const text = formatOrderAlert({ ...BRIEF, senderName }, "production");
+      expect(text.split("\n")[2]).toBe("From: unknown");
+      expect(text).not.toContain("@");
+    }
+  });
+
   it("marks a blank subject", () => {
     expect(formatOrderAlert({ ...BRIEF, subject: "  " }, "production").split("\n")[3]).toBe(
       "Subject: (no subject)",

@@ -218,6 +218,10 @@ describe("parseFromDisplayName (#1390 R10)", () => {
     ["=?UTF-8?B?Sm9zw6k=?= <j@x.com>", "José"],
     ["=?utf-8?q?Jos=C3=A9?= <j@x.com>", "José"],
     ["=?ISO-8859-1?Q?Jos=E9?= <j@x.com>", "=?ISO-8859-1?Q?Jos=E9?="],
+    // An address used as the name (validation pass 1, F1) never comes back, encoded or not.
+    ['"j@x.com" <j@x.com>', null],
+    ["j@x.com <j@x.com>", null],
+    ["=?UTF-8?B?akB4LmNvbQ==?= <j@x.com>", null],
   ])("%s gives %s", (header, expected) => {
     expect(parseFromDisplayName(header)).toBe(expected);
   });

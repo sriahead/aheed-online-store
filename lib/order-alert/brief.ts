@@ -29,9 +29,13 @@ const VIA: Record<OrderAlertBrief["source"], string> = {
   "contact-form": "contact form",
 };
 
+/**
+ * A name containing `@` is treated as no name: it is most likely an email address (a mail client's
+ * address-as-name, or a shopper typing their email into the name field), and none may be sent.
+ */
 function senderLine(senderName: string | null): string {
   const name = (senderName ?? "").trim();
-  return name === "" ? "unknown" : name.slice(0, SENDER_MAX);
+  return name === "" || name.includes("@") ? "unknown" : name.slice(0, SENDER_MAX);
 }
 
 function subjectLine(subject: string): string {
