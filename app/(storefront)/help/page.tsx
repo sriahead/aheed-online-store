@@ -47,9 +47,19 @@ export default async function HelpPage() {
     }
   }
 
-  const vendorName = profile?.name ?? "Aheed Food Centre";
-  const locality = profile?.localityName ?? "Milton Keynes";
-  const phone = profile?.contactPhone ?? "01908 239130";
+  const vendorName = profile?.name ?? "Store";
+  const locality = profile?.localityName ?? null;
+  const phone = profile?.contactPhone ?? null;
+  const storeLocation = profile?.location
+    ? [
+        profile.location.addressLine1,
+        profile.location.addressLine2,
+        profile.location.city,
+        profile.location.postcode,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : null;
 
   return (
     <PageContainer width="wide" padY="tight">
@@ -65,7 +75,7 @@ export default async function HelpPage() {
           <Icon name="house" className="w-3.5 h-3.5" />
           <span>Home</span>
         </Link>
-        <Icon name="chevron-right" className="w-3 h-3 text-black/30" />
+        <Icon name="chevron-right" className="w-3 h-3 text-primary-muted" />
         <span className="font-semibold text-primary" aria-current="page">
           Help Centre
         </span>
@@ -82,9 +92,9 @@ export default async function HelpPage() {
             How can we help you today?
           </h1>
           <p className="mt-2 text-sm sm:text-base text-primary-muted leading-relaxed">
-            Everything you need to know about shopping, local delivery across {locality}, 100%
-            Certified HMC Halal fresh meat, click &amp; collect, order tracking, and platform
-            features.
+            Everything you need to know about shopping, local delivery
+            {locality ? ` across ${locality}` : ""}, click &amp; collect, order tracking, and
+            platform features.
           </p>
         </div>
 
@@ -140,63 +150,76 @@ export default async function HelpPage() {
               </div>
               <div>
                 <h3 className="font-bold text-primary">{vendorName}</h3>
-                <p className="text-xs text-primary-muted">{locality} Storefront</p>
+                {locality && <p className="text-xs text-primary-muted">{locality} Storefront</p>}
               </div>
             </div>
 
             <div className="space-y-3 text-xs text-primary-muted border-t border-black/10 pt-4">
-              <div className="flex items-start gap-2.5">
-                <Icon name="map-pin" className="h-4 w-4 shrink-0 text-action mt-0.5" />
-                <div>
-                  <span className="font-semibold text-primary block">Store Location</span>
-                  <p className="mt-0.5 leading-relaxed">
-                    Unit 23 Lloyds Court, 11North, Tenth Street, Milton Keynes MK9 3EL
-                  </p>
-                  <a
-                    href="https://maps.google.com/?q=Unit+23+Lloyds+Court+11North+Tenth+Street+Milton+Keynes+MK9+3EL"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-action font-semibold mt-1 hover:underline"
-                  >
-                    <span>Get directions</span>
-                    <Icon name="chevron-right" className="w-3 h-3" />
-                  </a>
+              {storeLocation && (
+                <div className="flex items-start gap-2.5">
+                  <Icon name="map-pin" className="h-4 w-4 shrink-0 text-action mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-primary block">Store Location</span>
+                    <p className="mt-0.5 leading-relaxed">{storeLocation}</p>
+                    {profile?.footerDirectionsUrl && (
+                      <a
+                        href={profile.footerDirectionsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-action font-semibold mt-1 hover:underline"
+                      >
+                        <span>Get directions</span>
+                        <Icon name="chevron-right" className="w-3 h-3 text-action" />
+                      </a>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex items-start gap-2.5 pt-2 border-t border-black/5">
-                <Icon name="phone" className="h-4 w-4 shrink-0 text-action mt-0.5" />
-                <div>
-                  <span className="font-semibold text-primary block">Customer Service</span>
-                  <a
-                    href={`tel:${phone.replace(/\s+/g, "")}`}
-                    className="mt-0.5 block font-medium hover:text-primary transition-colors"
-                  >
-                    {phone}
-                  </a>
+              {phone && (
+                <div className="flex items-start gap-2.5 pt-2 border-t border-black/5">
+                  <Icon name="phone" className="h-4 w-4 shrink-0 text-action mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-primary block">Customer Service</span>
+                    <a
+                      href={`tel:${phone.replace(/\s+/g, "")}`}
+                      className="mt-0.5 block font-medium hover:text-primary transition-colors"
+                    >
+                      {phone}
+                    </a>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex items-start gap-2.5 pt-2 border-t border-black/5">
-                <Icon name="clock" className="h-4 w-4 shrink-0 text-action mt-0.5" />
-                <div>
-                  <span className="font-semibold text-primary block">Opening Hours</span>
-                  <p className="mt-0.5">Mon – Sat: 9am – 8pm</p>
-                  <p>Sunday: 10am – 4pm</p>
+              {profile?.openingHoursNote ? (
+                <div className="flex items-start gap-2.5 pt-2 border-t border-black/5">
+                  <Icon name="clock" className="h-4 w-4 shrink-0 text-action mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-primary block">Opening Hours</span>
+                    <p className="mt-0.5">{profile.openingHoursNote}</p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-start gap-2.5 pt-2 border-t border-black/5">
+                  <Icon name="clock" className="h-4 w-4 shrink-0 text-action mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-primary block">Store Support</span>
+                    <p className="mt-0.5">Customer service available during business hours</p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Quality & Halal Trust Pillars */}
+            {/* Quality & Service Trust Pillars */}
             <div className="rounded-xl bg-surface-muted p-4 space-y-2.5 border border-black/5 text-xs">
               <div className="flex items-center gap-2 font-semibold text-primary">
                 <Icon name="shield-check" className="w-4 h-4 text-action" />
-                <span>Quality &amp; Halal Guarantee</span>
+                <span>Quality &amp; Service Guarantee</span>
               </div>
               <ul className="space-y-1.5 text-primary-muted text-[11px] list-disc list-inside">
-                <li>100% Certified HMC Halal Fresh Meat Cut Daily</li>
-                <li>Refrigerated local delivery vehicles</li>
-                <li>Safe, contactless doorstep drop-off</li>
+                {profile?.showHalalLabel && <li>Authentic Halal certified sourcing</li>}
+                <li>Temperature-controlled local delivery</li>
+                <li>Safe, reliable doorstep drop-off</li>
               </ul>
             </div>
           </div>
@@ -212,28 +235,28 @@ export default async function HelpPage() {
                 className="flex items-center justify-between rounded-lg px-3 py-2 text-primary font-medium hover:bg-surface-muted transition-colors"
               >
                 <span>Browse Departments</span>
-                <Icon name="chevron-right" className="w-3.5 h-3.5 text-black/40" />
+                <Icon name="chevron-right" className="w-3.5 h-3.5 text-primary-muted" />
               </Link>
               <Link
                 href="/bundles"
                 className="flex items-center justify-between rounded-lg px-3 py-2 text-primary font-medium hover:bg-surface-muted transition-colors"
               >
                 <span>Value Bundles</span>
-                <Icon name="chevron-right" className="w-3.5 h-3.5 text-black/40" />
+                <Icon name="chevron-right" className="w-3.5 h-3.5 text-primary-muted" />
               </Link>
               <Link
                 href="/orders/lookup"
                 className="flex items-center justify-between rounded-lg px-3 py-2 text-primary font-medium hover:bg-surface-muted transition-colors"
               >
                 <span>Track Your Order</span>
-                <Icon name="chevron-right" className="w-3.5 h-3.5 text-black/40" />
+                <Icon name="chevron-right" className="w-3.5 h-3.5 text-primary-muted" />
               </Link>
               <Link
                 href="/contact"
                 className="flex items-center justify-between rounded-lg px-3 py-2 text-primary font-medium hover:bg-surface-muted transition-colors"
               >
                 <span>Send a Message or Complaint</span>
-                <Icon name="chevron-right" className="w-3.5 h-3.5 text-black/40" />
+                <Icon name="chevron-right" className="w-3.5 h-3.5 text-primary-muted" />
               </Link>
             </div>
           </div>
