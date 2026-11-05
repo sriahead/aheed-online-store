@@ -158,3 +158,37 @@ Four orders advanced during the checks were set back to `CONFIRMED`. Their extra
 - **F3 and F4:** the two `validation.md` commands are amended. The code was right.
 
 No `CHANGELOG.md` change: F1 alters a log line only, nothing a customer or staff member sees.
+
+## Validation pass 2 (2026-11-05, after commit `9253e8df`)
+
+**Also NOT independent:** the same context, on Opus.
+
+**Re-run from the top:**
+
+- **Pre-flight:** lint, typecheck, format, `npx vitest run --maxWorkers=4` (397 files, 5935 tests, including the new F1 test) and the production build.
+- **Every static row:**
+  - R1: no `DROP`, `#895` in the header, 10 columns, `prisma validate`;
+  - R2: the three repository tests pass;
+  - R6: the scheduler wiring;
+  - R9, amended: no old sender remains; six call `notifyOrderEvent`; the bulk action calls `notifyBulkStatusChange`;
+  - R12, amended: both files import `next-step`;
+  - R20: `motion-safe:` only;
+  - R21.5: no `getStepIndex`;
+  - R22, amended: no `<LiveRefresh` on the lookup page;
+  - R24: 12 phrases;
+  - R26: one constant, no second literal;
+  - R27: a CHANGELOG entry naming `#1435`;
+  - `kms:validate` and `kms:check-generated` pass.
+
+**Dynamic rows:**
+
+- **Re-run on a fresh preview build** (the fix changed only `safeReason`, plus the `loadStore` fallbacks committed with the build notes):
+  - **R7 / R9-E2E:** advancing `AHE-20260811-N8UZ52` logged the queued customer line with the zod reason on **one line**, with no `@`. With the pass-1 fixtures removed, no owner messages were produced, which matches R15's no-recipients case.
+  - **R4:** 405, 401 and 200.
+- **Not repeated, pass-1 results stand:** R5, R18-E2E, R21, R22, R23 and R26 exercise code the fix did not touch.
+
+**Cleanup:** the one row this run queued was deleted, `N8UZ52` was set back to `CONFIRMED`, and the probe scripts were removed.
+
+**Unverified until after Ship:** R16 staging E2E (a real Telegram owner message on staging). That row is defined as post-ship.
+
+**Result:** all rows pass, apart from that post-ship staging row.
