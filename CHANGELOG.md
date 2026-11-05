@@ -63,6 +63,15 @@ every branch merges.
 
 ### Added
 
+- **Telegram alerts for order-related inquiries** (issue `#1390`, spec `specs/2026-11-04-order-alerts-telegram/`).
+  - **Triggers:** an order-related email to a store address (sent to an Orders address, or naming one of the store's orders in the subject), and a Contact us complaint or message about the shopper's own order. The inbound-email Worker forwards first, then calls the new token-guarded `/api/inbound-email/alert`, which re-resolves the address. A failed alert is logged and never affects forwarding or the form.
+  - **Message:** five plain-text lines (store, order number, sender name, subject, route), tagged `[STAGING]`/`[DEV]` outside production. The message body, email address and phone number are never sent.
+  - **Channel-neutral:** recipients in `VendorOrderAlertRecipient` (vendor, channel, destination) behind `OrderAlertChannelAdapter` in `lib/order-alert/`. Telegram is the only channel; WhatsApp is `#1424`.
+  - **Client Setup:** an **Order alerts** card to add a chat ID, remove it, or send a test alert, plus the bot token status. `TELEGRAM_BOT_TOKEN` is an optional Worker secret; unset means alerts skip.
+  - **Privacy:** one sentence in section 3 saying a name and subject may reach store staff through a messaging service.
+  - **Migration:** one additive migration, `20261104160000_order_alert_recipient`.
+  - **Deferred:** `#1426` alert throttle, `#1427` self-service linking and store-admin access, `#1428` order numbers from the email body.
+
 - **Department-Scoped Promotional Discounts at Checkout** (issue `#1415`).
   - **Scoped Discount Arithmetic (`lib/discounts.ts`):** Added `eligibleSubtotalPence` support to `evaluateCode` and `computeCodeDiscountPence`. When a promotion is scoped to a department (or sub-department), percentage discounts compute strictly against eligible products belonging to that department, and fixed discounts are capped at the department's spend. Refuses with `"NO_ELIGIBLE_ITEMS"` if the cart has no products from the promoted department.
   - **Line Item Scoping in Preview & Claim (`lib/repositories/discounts.ts`):** `previewCode` and `claimCode` query active promotions linked to the discount code. If a promotion specifies `categoryId` (or `productId`), products in `cartItems` are resolved against the department hierarchy (`categoryId` and `category.parentId`), computing exact eligible spend without spilling discounts to other departments.

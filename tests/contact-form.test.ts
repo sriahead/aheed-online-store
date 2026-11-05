@@ -51,6 +51,7 @@ function deps(overrides: Partial<ContactDeps> = {}) {
     enqueue: vi.fn(async (row) => void queued.push(row)),
     markPending: vi.fn(async () => {}),
     logError: vi.fn(),
+    alert: vi.fn(async () => {}),
     now: () => new Date("2026-11-03T12:00:00.000Z"),
     ...overrides,
   };
@@ -288,5 +289,68 @@ describe("processContactSubmission (R13-R18)", () => {
       },
     ]);
     expect(d.markPending).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("processContactSubmission order alert (#1390 R12)", () => {
+  const alertMock = (d: ContactDeps) => d.alert as ReturnType<typeof vi.fn>;
+
+  it("a complaint with no order alerts once, with only the brief's fields", async () => {
+    const d = deps();
+    await processContactSubmission(VALID, d);
+    expect(alertMock(d)).toHaveBeenCalledTimes(1);
+    expect(alertMock(d).mock.calls[0][0]).toEqual({
+      source: "contact-form",
+      storeName: "Corner Shop",
+      orderNumber: null,
+      senderName: "Sam Shopper",
+      subject: "Missing items",
+    });
+  });
+
+  it("an enquiry about the shopper's own order alerts with its order number", async () => {
+    const d = deps({ userId: "user-1", findOwnOrder: vi.fn(async () => "AH-1042") });
+    await processContactSubmission({ ...VALID, type: "ENQUIRY", orderId: "AH-1042" }, d);
+    expect(alertMock(d)).toHaveBeenCalledTimes(1);
+    expect(alertMock(d).mock.calls[0][0]).toMatchObject({ orderNumber: "AH-1042" });
+  });
+
+  it("a complaint whose send failed alerts once, after the outbox enqueue", async () => {
+    const order: string[] = [];
+    const d = deps({
+      send: vi.fn(async () => ({ status: "failed", reason: "down" }) as EmailSendResult),
+      enqueue: vi.fn(async () => void order.push("enqueue")),
+      alert: vi.fn(async () => void order.push("alert")),
+    });
+    await processContactSubmission(VALID, d);
+    expect(order).toEqual(["enqueue", "alert"]);
+  });
+
+  it("an enquiry with no order does not alert", async () => {
+    const d = deps();
+    await processContactSubmission({ ...VALID, type: "ENQUIRY" }, d);
+    expect(alertMock(d)).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["honeypot", { ...VALID, website: "spam.example" }, {}],
+    ["invalid input", { ...VALID, message: "short" }, {}],
+    ["rate limited", VALID, { checkRateLimit: vi.fn(async () => ({ allowed: false })) }],
+    ["order not found", { ...VALID, orderId: "AH-1042" }, {}],
+    ["no recipient", VALID, { listAddresses: vi.fn(async () => []) }],
+  ] as const)("%s: no alert", async (_label, fields, overrides) => {
+    const d = deps(overrides as Partial<ContactDeps>);
+    await processContactSubmission({ ...fields }, d);
+    expect(alertMock(d)).not.toHaveBeenCalled();
+  });
+
+  it("a rejecting alert still succeeds and logs nothing personal", async () => {
+    const d = deps({ alert: vi.fn(async () => Promise.reject(new Error("telegram down"))) });
+    const state = await processContactSubmission(VALID, d);
+    expect(state.status).toBe("success");
+    const logged = (d.logError as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[0]));
+    expect(logged).toHaveLength(1);
+    expect(logged[0]).not.toContain("Missing items");
+    expect(logged[0]).not.toContain("Sam Shopper");
   });
 });

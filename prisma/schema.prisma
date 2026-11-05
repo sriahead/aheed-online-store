@@ -154,6 +154,7 @@ model Vendor {
   memberships               VendorMembership[]
   domains                   VendorDomain[]
   inboundAddresses          VendorInboundAddress[]
+  orderAlertRecipients      VendorOrderAlertRecipient[]
   contactAttempts           ContactAttempt[]
   contactOutbox             ContactOutbox[]
   carts                     Cart[]
@@ -352,6 +353,25 @@ model VendorInboundAddress {
   forwardTo String
   createdAt DateTime              @default(now())
 
+  @@index([vendorId])
+}
+
+// #1390 — who hears about an order-related email or contact-form message. One row per vendor,
+// channel and destination (a Telegram chat id today), so WhatsApp (#1424) is a new enum value and
+// adapter in lib/order-alert/, not a column rename. Managed from /staff/platform/client-setup.
+enum OrderAlertChannel {
+  TELEGRAM
+}
+
+model VendorOrderAlertRecipient {
+  id          String            @id @default(uuid())
+  vendorId    String
+  vendor      Vendor            @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  channel     OrderAlertChannel
+  destination String
+  createdAt   DateTime          @default(now())
+
+  @@unique([vendorId, channel, destination])
   @@index([vendorId])
 }
 

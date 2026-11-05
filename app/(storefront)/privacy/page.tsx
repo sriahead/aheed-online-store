@@ -79,7 +79,10 @@ export default async function PrivacyPage() {
               <p className="text-sm text-primary-muted leading-relaxed">
                 Your data is used to process payments (via Stripe), fulfil and deliver your orders,
                 and send order confirmations and updates. We do not sell your personal data to third
-                parties.
+                parties. {/* #1390 — order alerts to the store's staff (lib/order-alert/). */}
+                {
+                  "If you contact a store about an order, your name and the subject of your message may be passed to the store's staff through a messaging service so they can respond quickly; the message itself is not."
+                }
               </p>
               <p className="text-sm text-primary-muted leading-relaxed">
                 If you opt in, we may use your details for marketing and promotional purposes.
@@ -95,7 +98,10 @@ export default async function PrivacyPage() {
             <p className="text-sm text-primary-muted leading-relaxed">
               Your data is used solely to process payments (via Stripe), fulfil and deliver your
               orders, and send order confirmations and updates. We do not sell your personal data to
-              third parties.
+              third parties.{" "}
+              {
+                "If you contact a store about an order, your name and the subject of your message may be passed to the store's staff through a messaging service so they can respond quickly; the message itself is not."
+              }
             </p>
           )}
         </section>

@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.34.0"
-updated: 2026-11-01
+version: "1.35.0"
+updated: 2026-11-04
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -23,7 +23,7 @@ all values are present, and **never prints secret values**.
 | Store | Set by | Consumed by | Variables |
 |---|---|---|---|
 | **GitHub environment secrets** | `gh secret set … --env <env>` | CI deploy workflows (`.github/workflows/deploy-*.yml`) | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `DIRECT_URL` |
-| **Cloudflare Worker secrets** | `wrangler secret put … --env <env>` | the running app at runtime (`lib/config`) | `DATABASE_URL`, `INBOUND_EMAIL_TOKEN` *(also pushed to the inbound-email Worker, `#1217`)*, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION`, `CDN_BASE_URL`, `AUTH_COOKIE_FAMILY_DOMAIN` *(optional — see slice 3c)*, `STRIPE_SECRET_KEY` *(optional)*, `STRIPE_WEBHOOK_SECRET` *(optional)*, `RESEND_API_KEY`, `EMAIL_VERIFIED_DOMAINS`, `EMAIL_ALLOWED_RECIPIENTS` *(all optional, `#1217`)*, `JOB_INVOCATION_TOKEN` |
+| **Cloudflare Worker secrets** | `wrangler secret put … --env <env>` | the running app at runtime (`lib/config`) | `DATABASE_URL`, `INBOUND_EMAIL_TOKEN` *(also pushed to the inbound-email Worker, `#1217`)*, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION`, `CDN_BASE_URL`, `AUTH_COOKIE_FAMILY_DOMAIN` *(optional — see slice 3c)*, `STRIPE_SECRET_KEY` *(optional)*, `STRIPE_WEBHOOK_SECRET` *(optional)*, `RESEND_API_KEY`, `EMAIL_VERIFIED_DOMAINS`, `EMAIL_ALLOWED_RECIPIENTS` *(all optional, `#1217`)*, `TELEGRAM_BOT_TOKEN` *(optional, `#1390`)*, `JOB_INVOCATION_TOKEN` |
 
 Beyond the original list: **`S3_REGION`** is required by ADR-003's storage contract, and
 **`BETTER_AUTH_URL`** is now only a **fallback** origin — since ADR-004 slice 3c, `getAuth()` derives
@@ -984,6 +984,7 @@ sender name and address, and the receiving addresses with the mailbox each forwa
 | `INBOUND_FALLBACK_FORWARD` | Secret on the inbound Worker only | A verified destination mailbox that receives mail whenever the app cannot be asked (outage, bad token). |
 | `INBOUND_DEFAULT_FORWARD` | `wrangler.toml` `[vars]` (both envs) | The platform default inbox (`#1399`). It prefills **Forward to** when a receiving address is added in Client Setup, and stays editable. Unset means no prefill; a value that is not an email address prefills nothing, and Client Setup's status card shows "Invalid". |
 | `APP_ENV` | `wrangler.toml` `[vars]` (both envs) | Names the deployment (`#1409`): `staging` or `production`. Every outgoing subject, and the footer's `mailto:` subjects, gets `[STAGING] ` or `[DEV] `; production is untouched. **Anything else, unset included, means development**, so a forgotten value shows `[DEV]` rather than passing for production. |
+| `TELEGRAM_BOT_TOKEN` | Worker secret on the app only, optional (`#1390`) | The platform bot's token for order alerts (Client Setup, **Order alerts**). Unset means every alert is skipped and logged as skipped; nothing else changes. `configure-env` pushes it when present; the inbound-email Worker does not need it. |
 
 **The contact form (`#1409`).** Each storefront has a **Contact us** page (`/contact`) for complaints
 and enquiries; the footer links to it. A message is emailed to the store's Client Setup receiving

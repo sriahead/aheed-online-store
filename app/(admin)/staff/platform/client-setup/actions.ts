@@ -10,8 +10,15 @@ import {
   sendClientSetupTestEmail,
 } from "@/lib/client-setup-service";
 import {
+  addOrderAlertRecipient,
+  removeOrderAlertRecipient,
+  sendTestOrderAlert,
+} from "@/lib/order-alert-service";
+import {
   firstIssue,
   inboundAddressSchema,
+  orderAlertRecipientIdSchema,
+  orderAlertRecipientSchema,
   removeInboundAddressSchema,
   senderSchema,
   testEmailSchema,
@@ -141,5 +148,78 @@ export async function sendTestEmailAction(
     return refusal(`Failed: ${result.reason}.`);
   } catch {
     return refusal("Sending the test email failed. Try again in a moment.");
+  }
+}
+
+/** #1390 R14 — adds a Telegram chat as an order-alert recipient for the store. */
+export async function addOrderAlertRecipientAction(
+  _prev: ClientSetupFormState,
+  formData: FormData,
+): Promise<ClientSetupFormState> {
+  if (!(await platformAdminEmail())) return refusal("Platform admin only.");
+  const parsed = orderAlertRecipientSchema.safeParse({
+    vendorId: formData.get("vendorId"),
+    channel: formData.get("channel"),
+    destination: formData.get("destination"),
+  });
+  if (!parsed.success) return refusal(firstIssue(parsed.error));
+  try {
+    if (!(await knownVendor(parsed.data.vendorId))) return refusal("That store no longer exists.");
+    const outcome = await addOrderAlertRecipient(parsed.data.vendorId, {
+      channel: parsed.data.channel,
+      destination: parsed.data.destination,
+    });
+    if (!outcome.ok) return refusal("That chat is already an alert recipient for this store.");
+  } catch {
+    return refusal("Adding the recipient failed. Try again in a moment.");
+  }
+  revalidatePath(PAGE);
+  return { ok: true, message: "Recipient added." };
+}
+
+/** #1390 R14, R15 — removes one of THIS store's recipients; another store's id changes nothing. */
+export async function removeOrderAlertRecipientAction(
+  _prev: ClientSetupFormState,
+  formData: FormData,
+): Promise<ClientSetupFormState> {
+  if (!(await platformAdminEmail())) return refusal("Platform admin only.");
+  const parsed = orderAlertRecipientIdSchema.safeParse({
+    vendorId: formData.get("vendorId"),
+    id: formData.get("id"),
+  });
+  if (!parsed.success) return refusal(firstIssue(parsed.error));
+  try {
+    if (!(await knownVendor(parsed.data.vendorId))) return refusal("That store no longer exists.");
+    const removed = await removeOrderAlertRecipient(parsed.data.vendorId, parsed.data.id);
+    if (!removed) return refusal("That recipient was already removed.");
+  } catch {
+    return refusal("Removing the recipient failed. Try again in a moment.");
+  }
+  revalidatePath(PAGE);
+  return { ok: true, message: "Recipient removed." };
+}
+
+/** #1390 R14, R15 — a test message to one recipient, proving the bot can reach the chat. */
+export async function sendTestOrderAlertAction(
+  _prev: ClientSetupFormState,
+  formData: FormData,
+): Promise<ClientSetupFormState> {
+  if (!(await platformAdminEmail())) return refusal("Platform admin only.");
+  const parsed = orderAlertRecipientIdSchema.safeParse({
+    vendorId: formData.get("vendorId"),
+    id: formData.get("id"),
+  });
+  if (!parsed.success) return refusal(firstIssue(parsed.error));
+  try {
+    if (!(await knownVendor(parsed.data.vendorId))) return refusal("That store no longer exists.");
+    const result = await sendTestOrderAlert(parsed.data.vendorId, parsed.data.id);
+    if (result === null) return refusal("That recipient no longer exists.");
+    if (result.status === "sent") {
+      return { ok: true, message: "Test alert sent. Check the Telegram chat." };
+    }
+    if (result.status === "skipped") return refusal(`Skipped: ${result.reason}.`);
+    return refusal(`Failed: ${result.reason}.`);
+  } catch {
+    return refusal("Sending the test alert failed. Try again in a moment.");
   }
 }

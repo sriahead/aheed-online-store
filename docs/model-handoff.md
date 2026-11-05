@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.161.0"
-updated: 2026-11-04
+version: "1.162.0"
+updated: 2026-11-05
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -1509,6 +1509,21 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **P12 `#1390` — Telegram alerts for order-related inquiries — BUILT, NOT VALIDATED, NOT PUSHED
+  (2026-11-05).**
+  - **Where it is:** branch `feature/order-alerts-telegram`, built in a **separate git worktree**,
+    `E:\GitRepositories\aheed-online-store-alerts`. A concurrent session was using the main checkout,
+    and switched it to another branch mid-slice. Spec `specs/2026-11-04-order-alerts-telegram/`; read
+    its `build-notes.md` first.
+  - **Owner decisions:** Telegram now, WhatsApp later as a second adapter (`#1424`); alerts on both
+    order-related email and contact-form complaints or messages about an order; one platform bot.
+  - **Blocked on the owner:** a BotFather bot token (`TELEGRAM_BOT_TOKEN`, optional Worker secret,
+    added to `secrets/<env>.vars` then `configure-env`) and a staff group containing the bot. The
+    migration `20261104160000_order_alert_recipient` must also be applied to dev, which is an owner
+    command, before the preview rows can run.
+  - **Deferred, tracked:** `#1426` throttle, `#1427` self-service linking and store-admin access,
+    `#1428` order numbers from the email body.
 
 - **P11 `#1216` — placeholder manifests, catalogue importer, onboarding runbook — MERGED TO STAGING, NOT
   PROMOTED, DATABASE ROWS UNVERIFIED (2026-10-22).**

@@ -23,7 +23,7 @@ import { DESTINATIONS_UNAVAILABLE_MESSAGE } from "@/lib/client-setup/destination
  * re-checks the platform-admin gate itself; hiding these forms is courtesy, not the control.
  */
 
-function FormMessage({ state }: { state: ClientSetupFormState }) {
+export function FormMessage({ state }: { state: ClientSetupFormState }) {
   if (!state.message) return null;
   return state.ok ? (
     <p
