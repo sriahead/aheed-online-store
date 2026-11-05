@@ -95,6 +95,13 @@ vi.mock("@/lib/vendor-faqs-service", () => ({
   }),
 }));
 
+vi.mock("@/lib/categories-service", () => ({
+  getCategoryRepository: () => ({
+    listTopLevel: async () => [],
+    listPrimaryDepartments: async () => [],
+  }),
+}));
+
 async function renderHelp() {
   const { default: HelpPage } = await import("@/app/(storefront)/help/page");
   render(await HelpPage());

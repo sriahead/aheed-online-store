@@ -8,6 +8,19 @@ every branch merges.
 
 ### Added
 
+- **Quick View Cross-Product State Isolation & Storefront Layout Parity for Help Centre** (`components/product/QuickViewDrawer.tsx`, `app/(storefront)/help/page.tsx`, `tests/quick-view.test.tsx`, `tests/page-container.test.ts`, `tests/help-vendor-facts.test.tsx`):
+  - **Quick View Stale Image & Description Isolation (`components/product/QuickViewDrawer.tsx`):**
+    - Fixed a bug where opening Quick View for a product would retain images, description, or certifications from a previously viewed or prefetched product.
+    - Updated `displayImages`, `description`, and `hmcReference` derivations to strictly source from `currentData?.product` (verified matching `activeSlug`), falling back to `initialProduct` summary only when its slug matches `activeSlug`.
+    - Added `key={displayProduct.slug}` to `ProductImageGallery` in the drawer so image carousel indices reset to 0 upon switching products.
+    - Added unit test in `tests/quick-view.test.tsx` asserting complete isolation between consecutively opened products in Quick View.
+  - **Storefront Help Centre Layout Parity (`app/(storefront)/help/page.tsx`, `tests/page-container.test.ts`):**
+    - Updated Help Centre from `width="narrow"` (672px) to `<PageContainer width="wide" padY="tight">` (1280px), bringing it into visual alignment with the header, footer, and other primary storefront pages (`/categories`, `/categories/[slug]`, `/search`, `/bundles`).
+    - Added top `<DepartmentScroller />` with 3D category medallions to maintain consistent brand navigation across all store surfaces.
+    - Added breadcrumb navigation (`Home / Help Centre`) and an inviting Hero banner with quick jump anchor chips (`#delivery`, `#faqs`, `#journeys`, `#contact`).
+    - Introduced a responsive two-column layout: left sidebar with verified store address, Google Maps directions, customer service phone, opening hours, Halal quality guarantees, and quick navigation shortcuts; right area with FAQ answers, interactive role journey maps, staff runbook notice, and direct contact options.
+    - Updated `tests/page-container.test.ts` to track `/help` under wide pages, and verified all 28 related tests pass.
+
 - **Filter Deduplication & Subcategory Medallion Tiles** (`components/product/ProductFilterForm.tsx`, `components/product/SubcategoryLinks.tsx`, `app/(storefront)/categories/[slug]/page.tsx`, `app/(storefront)/search/page.tsx`):
   - **Sidebar Filter Deduplication (`ProductFilterForm.tsx`):** Removed duplicate Availability and Dietary & Lifestyle checkboxes from the left sidebar filter panel to eliminate visual clutter and redundant controls. All quick filters remain accessible via `<QuickFiltersRail />` directly above results, and active quick filters are preserved as hidden passthrough inputs when applying sidebar filters (Price, Origin, Brand, Attributes).
   - **Consistent Subcategory Medallion Layout (`SubcategoryLinks.tsx`):** Transformed subcategories from pill buttons into circular medallion tiles with icons/illustrations on top and titles underneath, matching the visual design, 64px diameter, hover animations, and layout of the main category scroller.
