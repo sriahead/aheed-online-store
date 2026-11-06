@@ -50,3 +50,27 @@ None.
   - the checker run against the 19 production chunks downloaded before the fix exits 1, naming `3794-d7cddff008311ab3.js:1:93924 — class static block`.
 - **`npm install` prunes `node_modules/@aheed/reference-client`** (a generated package). After any `npm install`, re-run `npm run db:generate` before building, or the build fails with `Can't resolve '@aheed/reference-client/wasm'`. That is what happened mid-build here. CI is unaffected (`npm ci`, then `db:generate`).
 - **Validation was not independent**: same context, under the 60% rule, if validated in place.
+
+## Validation pass 1 (2026-11-06, not independent)
+
+This pass ran in the same session that built the slice, on Opus rather than Sonnet, at the owner's choice. There was no `/clear` and no model switch. It is **not** an independent validation.
+
+- **Pre-flight:** lint, format, `tsc --noEmit` and `npm run build` all passed. The build ended with `check-client-syntax: 158 client file(s) parse on Safari / iOS 15.4.`. `npx vitest run --maxWorkers=4` ran 397 files and 5972 tests, with 0 failed.
+- **R1:** `browserslist` prints the exact array.
+- **R2:** `tests/browser-support.test.ts` passes. With `safari >= 16.4` substituted it fails (2 failed, 9 passed). After reverting, `git diff package.json` is empty.
+- **R3:**
+  - The clean `.next/static` exits 0 with 158 files.
+  - `class A{static{}}` in a temp directory exits 1, naming `a.js:1:9 — class static block`.
+  - An empty directory exits 1.
+  - An unparseable file exits 1 ("does not parse"), which goes beyond the row.
+- **R4:** the test file has one test per R4 bullet: static block, lookbehind `(?<=`/`(?<!`, `v` flag, lookbehind text in a string not flagged, static private and public fields not flagged, and clean script and module snippets. All pass.
+- **R5:** `scripts.postbuild` is `tsx scripts/check-client-syntax.ts`, and the build printed its success line. Both deploy workflows run plain `npm ci`, which includes devDependencies, so `tsx` and `acorn` are present when OpenNext's `npm run build` triggers `postbuild`.
+- **R6:** `grep -rlF 'static{' .next/static --include=*.js` matched 0 files.
+- **R7:** `devDependencies.acorn` is `8.18.0`, and the test asserts it (line 52).
+- **R8:** "15.4" appears in `specs/tech-stack.md` (5 times), `CLAUDE.md` (1) and `runtime-pitfalls.md` (1). Each passage was read.
+- **R10:** the CHANGELOG diff against `origin/staging` names `#1445`.
+- **R11:** passes locally. **CI `gates` is unverified until the PR runs.**
+- **R9: unverified, and it can only be checked after the staging deploy.** It is to be run at Ship.
+- **V-manual: unverified.** It needs the owner's iOS 15.4+ device and does not gate the merge.
+
+**Result:** every row checkable before deploy passes. R9 and CI are pending Ship; V-manual is the owner's.
