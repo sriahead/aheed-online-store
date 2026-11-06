@@ -56,3 +56,25 @@
 ## Dev migration (2026-11-06)
 
 The owner applied `20261106120000_slot_booking_cutoff` to dev (`ep-dry-morning-zab7dx08`) with `migrate deploy`. Afterwards, the three live-database tests listed under Known-shaky areas passed (3 of 3).
+
+## Validation pass 1 (2026-11-06, not independent)
+
+This pass ran in the same session that built the slice, at the owner's choice. It is **not** an independent validation.
+
+- **Pre-flight:** lint, format, `tsc --noEmit`, `npx vitest run --maxWorkers=4` (399 files, 5964 tests, 0 failed) and `npm run build` all passed.
+- **R1:** the column is on the field line after `slotHoldDurationMinutes`, with a two-line `#1441` comment between them; `prisma validate` passed.
+- **R2:** `migrate diff` from the `origin/staging` schema emits exactly the file's statement, Prisma's spacing included. `DROP` appears 0 times and the header names `#895`. `migrate status` against `ep-dry-morning` reports up to date.
+- **R3, R7, R8, R10, R11, R14, R15:** checked by reading and grepping the code. One export, no clock or env reads in `lib/slot-cutoff.ts`; `SlotPicker` and `slot-grid` untouched; `isSlotBookable` comes before `tx.order.count`; bounds 0 to 1440; the field is wired through the form, the read with `?? 60`, and the update. Docs versions are bumped, and the KMS validate, check-generated, assemble and site build all pass. The CHANGELOG names `#1441`.
+- **R4, R6, R9, R13:** covered by the full suite. The live-database `slot-capacity` and `concurrency-slot-booking` tests pass against the migrated dev database.
+- **R5 real-adapter check:** a tsx script using `PrismaNeonHttp`, the adapter `getPrisma()` uses, against dev. It called `getAvailableSlotsForDate` for Aheed DELIVERY on Monday 2026-11-09, which has slots at 09:00, 13:00 and 18:00, with `now` = 09:00 local. It returned `13:00` and `18:00`; the next Monday returned all 3. The script was deleted.
+- **R8 E2E on `npm run preview`:**
+  - A temporary dev COLLECTION slot was added for Friday at 02:00 (`r8-temp-slot-1441`), at about 01:35 local, so inside the cut-off. It was inserted with a script rather than through `/staff/fulfilment`; the row allowed either.
+  - As a guest, I added an item through the `addToCart` action, then submitted `placeOrderAction` as a no-JS form (`$ACTION_REF_1`) for that slot and today's date.
+  - The response carried `"error":"That time slot can no longer be booked. Please choose another."`. The vendor's order count stayed at 137, with 0 on the temporary slot.
+  - The slot was removed afterwards. The guest cart, holding 2 × Washing Up Liquid, remains on dev.
+- **R11/R12 E2E on preview,** as the demo store admin:
+  - `/staff/fulfilment` renders `id="slotBookingCutoffMinutes"` with `min="0"`, `max="1440"` and `value="60"`, after the slot hold input. The label and help text are present.
+  - Saving 90 through `saveFulfilmentSettings` reloaded as `90`. Saving 60 restored it, re-sending the page's existing values for every other field.
+- **R16:** the gates passed, as listed under Pre-flight.
+
+**Result:** every row passes. Nothing is unverified.
