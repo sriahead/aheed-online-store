@@ -183,6 +183,7 @@ model Vendor {
   paymentReconciliations    PaymentReconciliation[]
   searchQueryLogs           SearchQueryLog[]
   assistantConversations    AssistantConversation[]
+  inventoryAuditLogs        InventoryAuditLog[]
   searchSynonyms            SearchSynonym[]
   netContentSuggestions     NetContentSuggestion[]
   listNormalisationAttempts ListNormalisationAttempt[]
@@ -1002,8 +1003,29 @@ model Product {
   // Reset to 0 whenever an image is successfully saved, so a product that later loses
   // its image is retried rather than being permanently excluded by a historic failure.
   imageAttemptFailures      Int                          @default(0)
+  // Aheed catalogue import safeguards (PLU / barcode matching & manual edit protection)
+  plu                       String?
+  barcode                   String?
+  importBatchId             String?
+  importSourceRow           Int?
+  isManuallyEdited          Boolean                      @default(false)
+  manuallyEditedFields      String[]                     @default([])
+  lastManualEditAt          DateTime?
+  // VAT compliance & audit trail
+  vatRate                   Int                          @default(0)
+  originalVatRate           Int?
+  suggestedVatRate          Int?
+  vatNeedsReview            Boolean                      @default(false)
+  vatReviewReason           String?
+  vatConfirmedAt            DateTime?
+  vatConfirmedBy            String?
+  inventoryAuditLogs        InventoryAuditLog[]
 
   @@unique([vendorId, slug])
+  @@unique([vendorId, plu])
+  @@index([vendorId, barcode])
+  @@index([vendorId, importBatchId])
+  @@index([vendorId, vatNeedsReview])
   @@index([vendorId, categoryId, isActive])
   @@index([vendorId, isActive, basePrice]) // catalogue filter + sort
   @@index([vendorId, isActive, isFeatured]) // homepage featured rail
@@ -1187,10 +1209,49 @@ model Inventory {
   // code path that creates a row without choosing fails CLOSED (unbuyable), never open. Rows that
   // existed before the migration were given TRACKED, which is how they already behaved. Only
   // lib/cart-rules.ts's purchasableQuantity() turns this into "can a shopper buy it".
-  stockMode           StockMode @default(UNKNOWN)
-  updatedAt           DateTime  @updatedAt
+  stockMode           StockMode           @default(UNKNOWN)
+  version             Int                 @default(0)
+  updatedAt           DateTime            @updatedAt
+  auditLogs           InventoryAuditLog[]
 
   @@index([vendorId])
+}
+
+enum InventoryAuditSource {
+  SYSTEM_INITIAL_RESET
+  EXCEL_IMPORT
+  STAFF_ADJUSTMENT
+  STOCKTAKE
+  ORDER_RESERVED
+  ORDER_FULFILLED
+  ORDER_CANCELLED
+  RESTOCK
+  MIGRATION_ROLLBACK
+}
+
+model InventoryAuditLog {
+  id                 String               @id @default(uuid())
+  vendorId           String
+  vendor             Vendor               @relation(fields: [vendorId], references: [id])
+  productId          String
+  product            Product              @relation(fields: [productId], references: [id])
+  inventoryId        String
+  inventory          Inventory            @relation(fields: [inventoryId], references: [id])
+  previousQuantity   Int
+  newQuantity        Int
+  changeAmount       Int
+  previousStockMode  StockMode
+  newStockMode       StockMode
+  source             InventoryAuditSource
+  reason             String?
+  actorId            String?
+  actorType          String               @default("STAFF")
+  batchId            String?
+  createdAt          DateTime             @default(now())
+
+  @@index([vendorId, productId, createdAt])
+  @@index([vendorId, batchId])
+  @@index([inventoryId])
 }
 
 /// #1211 (ADR-007) — the restriction classes, most severe first. Severity order is load-bearing:

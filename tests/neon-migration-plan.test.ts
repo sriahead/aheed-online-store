@@ -71,6 +71,7 @@ describe("skipped models (R10)", () => {
     "AssistantConversation",
     "ProductRestrictionAuditLog",
     "VendorRoleAuditLog",
+    "InventoryAuditLog",
     "NetContentSuggestion",
     "DeliveryRefusalCount",
     "Review",
