@@ -5,15 +5,9 @@ import { quickUpdateInventory } from "@/lib/repositories/products";
 import { purchasableQuantity } from "@/lib/cart-rules";
 
 const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error("Neither DIRECT_URL nor DATABASE_URL is set in environment.");
-}
 
-const prisma = new PrismaClient({
-  adapter: new PrismaNeon({ connectionString }),
-});
-
-describe("Aheed Stock Management & Import Safeguards", () => {
+describe.skipIf(!connectionString)("Aheed Stock Management & Import Safeguards", () => {
+  let prisma: PrismaClient;
   const TEST_VENDOR_1 = "a4ed0000-0000-4000-a000-000000000001"; // Aheed Food Centre
   const TEST_VENDOR_2 = "5217a4a7-0000-4000-a000-000000000002"; // SriMart
   const FIXTURE_PREFIX = "test-safeguard-";
@@ -22,6 +16,9 @@ describe("Aheed Stock Management & Import Safeguards", () => {
   let testCatId2: string;
 
   beforeAll(async () => {
+    prisma = new PrismaClient({
+      adapter: new PrismaNeon({ connectionString: connectionString! }),
+    });
     // Find or create test categories
     const cat1 = await prisma.category.findFirst({ where: { vendorId: TEST_VENDOR_1 } });
     if (!cat1) throw new Error("No category for Aheed");
@@ -54,17 +51,19 @@ describe("Aheed Stock Management & Import Safeguards", () => {
   });
 
   afterAll(async () => {
-    // Clean up test fixtures
-    await prisma.inventoryAuditLog.deleteMany({
-      where: { product: { slug: { startsWith: FIXTURE_PREFIX } } },
-    });
-    await prisma.inventory.deleteMany({
-      where: { product: { slug: { startsWith: FIXTURE_PREFIX } } },
-    });
-    await prisma.product.deleteMany({
-      where: { slug: { startsWith: FIXTURE_PREFIX } },
-    });
-    await prisma.$disconnect();
+    if (prisma) {
+      // Clean up test fixtures
+      await prisma.inventoryAuditLog.deleteMany({
+        where: { product: { slug: { startsWith: FIXTURE_PREFIX } } },
+      });
+      await prisma.inventory.deleteMany({
+        where: { product: { slug: { startsWith: FIXTURE_PREFIX } } },
+      });
+      await prisma.product.deleteMany({
+        where: { slug: { startsWith: FIXTURE_PREFIX } },
+      });
+      await prisma.$disconnect();
+    }
   });
 
   it("1. PLU uniqueness per vendor and multi-tenant isolation", async () => {
