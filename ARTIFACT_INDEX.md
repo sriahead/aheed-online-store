@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-06T01:13:33.444Z` · commit `a286e4f6` · `317` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-06T11:52:46.973Z` · commit `b079fa8a` · `318` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -305,6 +305,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Promotion Intelligence Platform & Storefront Experience (plan)](specs/2026-11-04-promotions-landing-overhaul/plan.md) | spec | 2.0.0 | 2026-11-04 | draft | internal | Psychology-led promotion platform upgrading staff campaign management and landing hero display with behavioural economics, audience targeting, prioritisation, and phased analytics/experimentation. |
 | [Product Filter Polish, Subcategory Icons, Quick View Performance & Filter Persistence (plan)](specs/2026-11-05-filter-polish-quickview-perf/plan.md) | spec | 1.0.0 | 2026-11-05 | approved | internal | Implements four user-requested improvements to storefront product discovery — decluttering redundant filter inputs, adding visual icons to subcategories, accelerating Quick View to near-instant perceived latency, and persisting active filters and sorting across category and subcategory navigation. |
 | [Order updates: notification queue, owner email + Telegram, live order tracker (plan)](specs/2026-11-05-order-updates-notifications/plan.md) | spec | 1.0.0 | 2026-11-05 | draft | internal | Every paid-order event reaches the customer by email and the store owner by email and Telegram, through one channel-neutral queue that retries failures. The customer's order page becomes a live progress tracker, and the staff Orders page shows new orders without a reload. |
+| [iPhone 6s / Safari 15 compatibility: browser targets and a client-syntax guard (plan)](specs/2026-11-06-ios15-safari-compat/plan.md) | spec | 1.0.0 | 2026-11-06 | draft | internal | Next.js 16 compiled for Safari 16.4+, so on iOS 15 a framework chunk failed to parse and React never hydrated. That left Google sign-in, add to basket and every form dead. This slice sets browserslist to Safari/iOS 15.4 and adds a post-build guard. |
 | [Slot booking cut-off: stop offering slots that have started or start too soon (plan)](specs/2026-11-06-slot-booking-cutoff/plan.md) | spec | 1.0.0 | 2026-11-06 | draft | internal | Checkout stops offering, and placing an order refuses, any delivery or collection slot that starts within a per-store cut-off (default 60 minutes, set at /staff/fulfilment). Today's passed slots can no longer be booked. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.48.0 | 2026-11-05 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
