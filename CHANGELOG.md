@@ -116,6 +116,12 @@ every branch merges.
 
 ### Fixed
 
+- **Checkout no longer offers slots that have started or start too soon** (issue `#1441`, spec `specs/2026-11-06-slot-booking-cutoff/`).
+  - Each store now has a **Booking cut-off (minutes)** setting at `/staff/fulfilment`, defaulting to 60. It is stored in the new column `VendorConfig.slotBookingCutoffMinutes`, added by the hand-authored migration `20261106120000_slot_booking_cutoff` (`#895`).
+  - A slot can be booked only if it starts more than the cut-off from now, in the store's time zone. The check is `lib/slot-cutoff.ts` `isSlotBookable`.
+  - `getAvailableSlotsForDate` leaves out closed slots. `placeOrder` refuses one with `SLOT_CLOSED` ("That time slot can no longer be booked. Please choose another."), which covers a stale page or a direct request.
+  - Every existing store gets the 60-minute default on deploy.
+
 - **Server-to-Client Component Boundary Invariant on DepartmentScroller** (`components/layout/DepartmentScroller.tsx`, `app/(storefront)/categories/[slug]/page.tsx`, `app/(storefront)/search/page.tsx`):
   - Fixed HTTP 500 runtime crash on `/categories/[slug]` caused by passing a function prop (`hrefFor`) from Server Components across the RSC boundary to Client Component `<DepartmentScroller />`.
   - Replaced `hrefFor` with serializable string props `carriedQuery` and `searchMode`, generating safe category and search URLs while preserving active filter and sort queries.

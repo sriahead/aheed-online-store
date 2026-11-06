@@ -629,6 +629,9 @@ model VendorConfig {
   marketingConsentEnabled     Boolean            @default(false)
   bookingWindowDays           Int                @default(14)
   slotHoldDurationMinutes     Int                @default(15)
+  // #1441 — a slot can be booked only if it starts more than this many minutes from now (in
+  // `timezone`). 0 keeps booking open until the start. Set at /staff/fulfilment.
+  slotBookingCutoffMinutes    Int                @default(60)
   offerDeliverySlots          Boolean            @default(false)
   expressCollectionEnabled    Boolean            @default(false)
   pointsPerPoundEarned        Int                @default(1) // points per whole £1 of eligible spend

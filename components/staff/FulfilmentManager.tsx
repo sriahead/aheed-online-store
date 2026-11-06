@@ -13,6 +13,7 @@ import {
   dayName,
   initialFulfilmentState,
   MAX_BOOKING_WINDOW_DAYS,
+  MAX_SLOT_BOOKING_CUTOFF_MINUTES,
   MAX_SLOT_HOLD_MINUTES,
   supportedTimeZones,
   type FulfilmentFormState,
@@ -166,6 +167,26 @@ export function FulfilmentSettingsForm({ settings }: { settings: FulfilmentSetti
           />
           <p className="mt-1 text-xs text-primary-muted">
             How long an unpaid order keeps its slot before the space is released again.
+          </p>
+        </div>
+
+        <div>
+          <label className={labelClass} htmlFor="slotBookingCutoffMinutes">
+            Booking cut-off (minutes)
+          </label>
+          <input
+            id="slotBookingCutoffMinutes"
+            name="slotBookingCutoffMinutes"
+            type="number"
+            min={0}
+            max={MAX_SLOT_BOOKING_CUTOFF_MINUTES}
+            defaultValue={settings.slotBookingCutoffMinutes}
+            className={inputClass}
+            required
+          />
+          <p className="mt-1 text-xs text-primary-muted">
+            How close to a slot&apos;s start time customers can still book it. 0 lets them book
+            until it starts.
           </p>
         </div>
 

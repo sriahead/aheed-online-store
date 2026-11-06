@@ -76,7 +76,8 @@ describe("Concurrency Slot Booking (R8)", () => {
         },
       });
 
-      const fulfilmentDate = new Date("2026-09-14T00:00:00.000Z");
+      // A future Monday: #1441's cut-off closes a slot whose start has passed.
+      const fulfilmentDate = new Date("2030-09-16T00:00:00.000Z");
 
       const category = await prisma.category.create({
         data: { vendorId, slug: "cat-" + vendorId.substring(0, 8), name: "Test Cat" },

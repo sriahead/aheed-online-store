@@ -74,6 +74,7 @@ export async function saveFulfilmentSettings(
     expressCollectionEnabled: form.get("expressCollectionEnabled") === "on",
     bookingWindowDays: String(form.get("bookingWindowDays") ?? ""),
     slotHoldDurationMinutes: String(form.get("slotHoldDurationMinutes") ?? ""),
+    slotBookingCutoffMinutes: String(form.get("slotBookingCutoffMinutes") ?? ""),
     timezone: String(form.get("timezone") ?? ""),
   });
   if (!parsed.ok) {
