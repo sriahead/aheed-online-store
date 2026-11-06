@@ -154,8 +154,10 @@ model Vendor {
   memberships               VendorMembership[]
   domains                   VendorDomain[]
   inboundAddresses          VendorInboundAddress[]
+  orderAlertRecipients      VendorOrderAlertRecipient[]
   contactAttempts           ContactAttempt[]
   contactOutbox             ContactOutbox[]
+  notificationOutbox        NotificationOutbox[]
   carts                     Cart[]
   cartItems                 CartItem[]
   addresses                 Address[]
@@ -355,6 +357,25 @@ model VendorInboundAddress {
   @@index([vendorId])
 }
 
+// #1390 — who hears about an order-related email or contact-form message. One row per vendor,
+// channel and destination (a Telegram chat id today), so WhatsApp (#1424) is a new enum value and
+// adapter in lib/order-alert/, not a column rename. Managed from /staff/platform/client-setup.
+enum OrderAlertChannel {
+  TELEGRAM
+}
+
+model VendorOrderAlertRecipient {
+  id          String            @id @default(uuid())
+  vendorId    String
+  vendor      Vendor            @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  channel     OrderAlertChannel
+  destination String
+  createdAt   DateTime          @default(now())
+
+  @@unique([vendorId, channel, destination])
+  @@index([vendorId])
+}
+
 // #1409 — one row per accepted storefront contact-form submission, counted per store and hashed IP
 // for the rate limit (5 an hour). The OrderLookupAttempt shape: a counter only, so no raw IP at rest.
 model ContactAttempt {
@@ -383,6 +404,33 @@ model ContactOutbox {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// #1435 - an order-event message (customer or owner, email or Telegram) whose send FAILED, kept
+// only until it sends. Send first, queue on failure: the retry job
+// (/api/jobs/retry-notification-outbox) deletes a row once delivered, or after
+// NOTIFICATION_OUTBOX_RETENTION_HOURS (lib/data-retention.ts), because a stale order update is
+// worse than none. `subject` is EMAIL-only and untagged; the send path adds [STAGING]/[DEV].
+// ContactOutbox above stays contact-form-only, with its own 7-day retention.
+enum NotificationChannel {
+  EMAIL
+  TELEGRAM
+}
+
+model NotificationOutbox {
+  id          String              @id @default(uuid())
+  vendorId    String
+  vendor      Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  channel     NotificationChannel
+  destination String
+  subject     String?
+  body        String
+  replyTo     String?
+  attempts    Int                 @default(0)
+  lastError   String?
+  createdAt   DateTime            @default(now())
+
+  @@index([vendorId, createdAt])
 }
 
 // Per-vendor staff/admin grant (ADR-004 slice 3a). Identity stays global (User); this
@@ -581,6 +629,9 @@ model VendorConfig {
   marketingConsentEnabled     Boolean            @default(false)
   bookingWindowDays           Int                @default(14)
   slotHoldDurationMinutes     Int                @default(15)
+  // #1441 — a slot can be booked only if it starts more than this many minutes from now (in
+  // `timezone`). 0 keeps booking open until the start. Set at /staff/fulfilment.
+  slotBookingCutoffMinutes    Int                @default(60)
   offerDeliverySlots          Boolean            @default(false)
   expressCollectionEnabled    Boolean            @default(false)
   pointsPerPoundEarned        Int                @default(1) // points per whole £1 of eligible spend

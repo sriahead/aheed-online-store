@@ -8,6 +8,11 @@ import {
   toClientSetupFacts,
 } from "@/lib/client-setup-service";
 import {
+  isTelegramBotTokenSet,
+  listOrderAlertRecipientsForVendor,
+} from "@/lib/order-alert-service";
+import { ORDER_ALERT_CHANNEL_LABEL } from "@/lib/order-alert/channels";
+import {
   CLIENT_SETUP_SECTIONS,
   EMAIL_LIMITS,
   EMAIL_LIMITS_SOURCE,
@@ -24,6 +29,11 @@ import {
   SenderForm,
   TestEmailButton,
 } from "@/components/staff/client-setup/EmailSetupForms";
+import {
+  AddOrderAlertRecipientForm,
+  RemoveOrderAlertRecipientButton,
+  TestOrderAlertButton,
+} from "@/components/staff/client-setup/OrderAlertForms";
 
 export const dynamic = "force-dynamic";
 
@@ -150,8 +160,12 @@ async function ClientSetupSections({
   vendorId: string;
   adminEmail: string;
 }) {
-  const email = await getEmailSectionData(vendorId);
+  const [email, alertRecipients] = await Promise.all([
+    getEmailSectionData(vendorId),
+    listOrderAlertRecipientsForVendor(vendorId),
+  ]);
   const facts = toClientSetupFacts(email);
+  const botTokenSet = isTelegramBotTokenSet();
 
   return (
     <div className="space-y-8">
@@ -336,6 +350,52 @@ async function ClientSetupSections({
 
               <Card title="Test email">
                 <TestEmailButton vendorId={vendorId} adminEmail={adminEmail} />
+              </Card>
+
+              {/* #1390 — who hears about an order-related email or contact-form message. */}
+              <Card title="Order alerts">
+                <p className="mb-3 text-xs text-primary-muted">
+                  A short message (order number, sender name and subject) whenever an order-related
+                  email or contact-form message reaches this store.
+                </p>
+                {botTokenSet ? (
+                  <p className="mb-3 text-xs font-semibold" data-telegram-token="set">
+                    Telegram bot token: Set
+                  </p>
+                ) : (
+                  <p
+                    role="alert"
+                    className="mb-3 text-xs font-semibold text-danger"
+                    data-telegram-token="unset"
+                  >
+                    Telegram bot token: Not set
+                  </p>
+                )}
+                {alertRecipients.length === 0 ? (
+                  <p className="mb-3 text-sm text-primary-muted">No alert recipients yet.</p>
+                ) : (
+                  <ul className="mb-4 divide-y divide-slate-100 text-sm" data-alert-recipients>
+                    {alertRecipients.map((r) => (
+                      <li
+                        key={r.id}
+                        className="flex flex-wrap items-center justify-between gap-2 py-2"
+                        data-alert-recipient={r.destination}
+                      >
+                        <span className="min-w-0">
+                          <span className="text-xs text-primary-muted">
+                            {ORDER_ALERT_CHANNEL_LABEL[r.channel]}
+                          </span>
+                          <span className="ml-2 font-semibold">{r.destination}</span>
+                        </span>
+                        <span className="flex flex-wrap items-center gap-1">
+                          <TestOrderAlertButton vendorId={vendorId} id={r.id} />
+                          <RemoveOrderAlertRecipientButton vendorId={vendorId} id={r.id} />
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <AddOrderAlertRecipientForm vendorId={vendorId} />
               </Card>
 
               <div className="lg:col-span-2">

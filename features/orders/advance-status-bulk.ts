@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderRepository } from "@/lib/orders-service";
-import { sendOrderStatusEmail } from "./send-status-email";
+import { notifyBulkStatusChange } from "@/lib/order-notifications-service";
 
 /**
  * Advance a whole staff-selected batch along the ladder in one submit (P7a
@@ -38,13 +38,11 @@ export async function advanceStatusBulk(formData: FormData) {
 
   const result = await getOrderRepository().advanceBulk(pairs, { userId: auth.user.id });
 
-  // Emails are sent after the batch commits, one per order that actually
-  // moved — never inside advanceBulk's transaction, for the same reason a
-  // single advance sends its email after commit (an HTTP call inside a
-  // Prisma transaction holds it open against a 5s timeout).
-  for (const { order, toStatus } of result.moved) {
-    await sendOrderStatusEmail(order, toStatus);
-  }
+  // Sent after the batch commits — never inside advanceBulk's transaction, for
+  // the same reason a single advance notifies after commit (an HTTP call inside
+  // a Prisma transaction holds it open against a 5s timeout). One customer email
+  // per order that actually moved, but ONE owner digest per status (#1435 R18).
+  await notifyBulkStatusChange(result.moved);
 
   revalidatePath("/staff/orders");
 }

@@ -74,9 +74,10 @@ describe("Slot Capacity Calculation", () => {
         },
       });
 
-      const mondayDate = new Date("2026-09-14T00:00:00.000Z"); // Monday
+      // A future Monday, so #1441's booking cut-off never closes the slot.
+      const mondayDate = new Date("2030-09-16T00:00:00.000Z");
       // #811 — a bare calendar day, the wire format the picker now submits.
-      const mondayStr = "2026-09-14";
+      const mondayStr = "2030-09-16";
       await prisma.address.create({
         data: {
           id: addressId,

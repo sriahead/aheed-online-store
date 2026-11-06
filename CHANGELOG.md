@@ -8,6 +8,29 @@ every branch merges.
 
 ### Added
 
+- **Order updates: notification queue, owner email and Telegram, live order tracker** (issue `#1435`, spec `specs/2026-11-05-order-updates-notifications/`).
+  - **Notification queue.** A new `NotificationOutbox` table (hand-authored migration `20261105120000_notification_outbox`, `#895`) holds email and Telegram messages.
+    - A message is sent straight away and saved only if the send fails.
+    - `workers/scheduler` retries saved messages through `POST /api/jobs/retry-notification-outbox` while `notification-outbox:pending` is set, plus in its daily run.
+    - A message still unsent after 24 hours is deleted.
+    - `ContactOutbox` is unchanged.
+  - **One entry point.** `notifyOrderEvent` replaces `sendOrderConfirmationEmail` and `sendOrderStatusEmail` at all seven call sites.
+    - Customer order emails are now retried rather than lost.
+    - Staff "Resend confirmation email" still reaches only the customer.
+  - **Customer emails.** Each one leads with "what happens next" and the real slot, and has one "View your order" button.
+    - The confirmation says "You saved £X" only when a discount was actually recorded, and the confirmation and final emails show the points earned.
+    - A test blocks marketing and urgency wording.
+    - Every shopper-supplied string is escaped. Product names in status emails were not escaped before.
+  - **Owner notifications.** The store owner gets every paid-order event by email (the store's Orders mailbox, else its Support one) and on Telegram (the `#1390` recipients).
+    - The Telegram text carries no customer name, address, email or product names.
+    - A bulk status change sends one summary per status.
+  - **Website.** `OrderProgressTracker` shows every step of a delivery or collection order, including the steps to come, and what happens next.
+    - It replaces `OrderTimeline` on the account page.
+    - It replaces the lookup page's delivery-only stepper, which also printed the raw status code.
+    - It is added to the checkout confirmation page.
+    - `LiveRefresh` refreshes the account and checkout pages every 45 s while the tab is visible.
+    - `/staff/orders` refreshes every 30 s and shows "N new orders since you opened this page", with a sound that is off by default.
+  - **Privacy and docs.** The privacy page states what staff are told about an order and the 24-hour retry window. `architecture.md` v1.48.0, the platform admin guide, the staff playbook and the shopping guide are updated.
 - **Categorized Target Search in Visual Asset Gallery & Fulfilment/Trust Medallion Upgrades** (`components/staff/IconGalleryClient.tsx`, `lib/icon-slots.ts`, `components/layout/LocationControl.tsx`, `app/(landing)/page.tsx`, `tests/icon-slots.test.ts`, `tests/icon-gallery-deactivate.test.tsx`):
   - **Categorized Search & Functional Grouping in Visual Asset Generator (`IconGalleryClient.tsx`, `lib/icon-slots.ts`):**
     - Added `group: IconSlotGroup` to all 3D and flat slots in `lib/icon-slots.ts` categorizing every slot into semantic functional groups: *Fulfilment & Delivery*, *Trust & Security*, *Storefront & Navigation*, *Subcategories & Produce*, *Account & Orders*, *Rewards & Loyalty*, *Staff & Operations*, and *General UI*.
@@ -91,7 +114,17 @@ every branch merges.
     - `sort` is excluded from filter chips so sort order never renders as a removable facet.
   - **Unit & Integration Tests (`tests/product-sort-and-discovery.test.ts`):** Added comprehensive test coverage asserting sort parsing, URL preservation, chip isolation, Prisma `orderBy` generation, in-memory candidate sorting, and empty state relaxation.
 
+### Changed
+
+- **`main` merged back into `staging`** (no code change). PR #1439 sent the storefront commits from `#1425`-`#1437` to `main` from a release branch, so `staging` never had `main` as a parent and promotion PR #1443 conflicted in `CHANGELOG.md` and the two generated KMS index files. The merge keeps `staging`'s side of all three, and the resulting tree is identical to `staging`.
+
 ### Fixed
+
+- **Checkout no longer offers slots that have started or start too soon** (issue `#1441`, spec `specs/2026-11-06-slot-booking-cutoff/`).
+  - Each store now has a **Booking cut-off (minutes)** setting at `/staff/fulfilment`, defaulting to 60. It is stored in the new column `VendorConfig.slotBookingCutoffMinutes`, added by the hand-authored migration `20261106120000_slot_booking_cutoff` (`#895`).
+  - A slot can be booked only if it starts more than the cut-off from now, in the store's time zone. The check is `lib/slot-cutoff.ts` `isSlotBookable`.
+  - `getAvailableSlotsForDate` leaves out closed slots. `placeOrder` refuses one with `SLOT_CLOSED` ("That time slot can no longer be booked. Please choose another."), which covers a stale page or a direct request.
+  - Every existing store gets the 60-minute default on deploy.
 
 - **Server-to-Client Component Boundary Invariant on DepartmentScroller** (`components/layout/DepartmentScroller.tsx`, `app/(storefront)/categories/[slug]/page.tsx`, `app/(storefront)/search/page.tsx`):
   - Fixed HTTP 500 runtime crash on `/categories/[slug]` caused by passing a function prop (`hrefFor`) from Server Components across the RSC boundary to Client Component `<DepartmentScroller />`.
@@ -103,6 +136,15 @@ every branch merges.
   - **Unit Tests (`tests/promotions-ai.test.ts`):** Added tests pinning basis points to percentage conversion in prompt generation and verifying promotion-focused altText generation.
 
 ### Added
+
+- **Telegram alerts for order-related inquiries** (issue `#1390`, spec `specs/2026-11-04-order-alerts-telegram/`).
+  - **Triggers:** an order-related email to a store address (sent to an Orders address, or naming one of the store's orders in the subject), and a Contact us complaint or message about the shopper's own order. The inbound-email Worker forwards first, then calls the new token-guarded `/api/inbound-email/alert`, which re-resolves the address. A failed alert is logged and never affects forwarding or the form.
+  - **Message:** five plain-text lines (store, order number, sender name, subject, route), tagged `[STAGING]`/`[DEV]` outside production. The message body, email address and phone number are never sent.
+  - **Channel-neutral:** recipients in `VendorOrderAlertRecipient` (vendor, channel, destination) behind `OrderAlertChannelAdapter` in `lib/order-alert/`. Telegram is the only channel; WhatsApp is `#1424`.
+  - **Client Setup:** an **Order alerts** card to add a chat ID, remove it, or send a test alert, plus the bot token status. `TELEGRAM_BOT_TOKEN` is an optional Worker secret; unset means alerts skip.
+  - **Privacy:** one sentence in section 3 saying a name and subject may reach store staff through a messaging service.
+  - **Migration:** one additive migration, `20261104160000_order_alert_recipient`.
+  - **Deferred:** `#1426` alert throttle, `#1427` self-service linking and store-admin access, `#1428` order numbers from the email body.
 
 - **Department-Scoped Promotional Discounts at Checkout** (issue `#1415`).
   - **Scoped Discount Arithmetic (`lib/discounts.ts`):** Added `eligibleSubtotalPence` support to `evaluateCode` and `computeCodeDiscountPence`. When a promotion is scoped to a department (or sub-department), percentage discounts compute strictly against eligible products belonging to that department, and fixed discounts are capped at the department's spend. Refuses with `"NO_ELIGIBLE_ITEMS"` if the cart has no products from the promoted department.

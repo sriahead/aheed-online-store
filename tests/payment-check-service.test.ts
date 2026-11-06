@@ -20,8 +20,13 @@ vi.mock("@/lib/orders-service", () => ({
     confirm: vi.fn(),
   }),
 }));
-const sendOrderConfirmationEmail = vi.hoisted(() => vi.fn(async () => {}));
-vi.mock("@/features/checkout/send-confirmation", () => ({ sendOrderConfirmationEmail }));
+// #1435 — the resend goes through the notification service, customer only (R10).
+const notify = vi.hoisted(() => ({
+  notifyCustomerConfirmation: vi.fn(async () => {}),
+  notifyOrderEvent: vi.fn(async () => {}),
+}));
+vi.mock("@/lib/order-notifications-service", () => notify);
+const sendOrderConfirmationEmail = notify.notifyCustomerConfirmation;
 vi.mock("@/lib/payments", () => ({
   getPaymentService: vi.fn(),
   STRIPE_PAYMENT_PROVIDER: "stripe",
@@ -52,6 +57,8 @@ describe("resendConfirmation (R29)", () => {
       kind: "sent",
     });
     expect(sendOrderConfirmationEmail).toHaveBeenCalledTimes(1);
+    // R10: the owner hears nothing about a staff resend.
+    expect(notify.notifyOrderEvent).not.toHaveBeenCalled();
     expect(logSpy.mock.calls.map((c: unknown[]) => String(c[0]))).toContain(
       "confirmation email resent by staff order=AHD-1",
     );

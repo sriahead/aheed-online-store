@@ -4,8 +4,8 @@ title: "Order & Fulfilment Operations"
 audience: [staff, store-admin, dev, product, shopper]
 type: runbook
 status: approved
-version: "1.0.0"
-updated: "2026-09-22"
+version: "1.1.0"
+updated: "2026-11-06"
 visibility: internal
 summary: "Canonical rules for order status transitions, fulfilment slots, cancellations, and payment exceptions."
 tags: ["orders", "fulfilment", "payments", "cancellation", "staff", "admin"]
@@ -22,6 +22,7 @@ Customers choose a delivery or collection time slot at checkout. Slots act as a 
 
 *   **Capacity Limit:** Each slot has a `capacity`. Once filled by paid orders (or orders in their unpaid hold window), the slot is no longer offered.
 *   **Hold Window:** Unpaid orders (`PENDING_PAYMENT`) hold their slot temporarily. If payment is not completed within the hold window, the slot is released back to the pool.
+*   **Booking Cut-off:** A slot that has already started, or starts within the store's booking cut-off (default 60 minutes, set at `/staff/fulfilment`), is not offered at checkout, and placing an order for it is refused with "That time slot can no longer be booked. Please choose another." The cut-off is measured in the store's time zone (#1441).
 *   **Express Collection:** Offered only if Click & Collect is enabled in the Storefront settings and the current time falls within an active express window.
 *   **Time Zones:** Slot definitions are bound to the store's configured time zone (default `Europe/London`). Changing this setting does not migrate existing orders or slots; it merely changes how future times are interpreted.
 

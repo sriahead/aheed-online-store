@@ -160,6 +160,16 @@ export function getInboundDefaultForward(): InboundDefaultForward {
     : { status: "invalid" };
 }
 
+// #1390 — the platform bot that sends order alerts (lib/order-alert/). Its own reader, outside every
+// schema, for the INBOUND_DEFAULT_FORWARD reason: a missing token makes alerts skip and must never
+// break the resolve route, the contact form or Client Setup. Never throws.
+export type TelegramBotToken = { status: "set"; token: string } | { status: "unset" };
+
+export function getTelegramBotToken(): TelegramBotToken {
+  const raw = (readEnv("TELEGRAM_BOT_TOKEN") ?? "").trim();
+  return raw === "" ? { status: "unset" } : { status: "set", token: raw };
+}
+
 // #1409 — which deployment this is. NODE_ENV is "production" on both Workers (see
 // EMAIL_RECIPIENT_MODE above), so wrangler.toml `[vars]` names it. Anything but "production" or
 // "staging", unset included, is development: a forgotten var then tags mail [DEV] rather than

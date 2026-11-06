@@ -4,8 +4,8 @@ title: "Local Development Playbook — Windows shell, and proving things live wi
 audience: [dev]
 type: runbook
 status: approved
-version: "1.38.0"
-updated: 2026-10-31
+version: "1.40.0"
+updated: 2026-11-05
 visibility: internal
 summary: How to work on this repo on Windows and prove a change works live — shell/encoding traps, process cleanup, vitest forks-pool, KMS coverage vs gitignore, TZ overrides, curl-driven server actions, grep-vs-HTML pitfalls, vendor hosts, and what a session can and cannot drive when proving a payment path.
 tags: [local-dev, windows, validation, playbook]
@@ -990,3 +990,40 @@ What still works, and is enough for most upload rows:
 `scripts/lib/env-file.ts`'s `parseEnvFile` takes a **path**, not file contents. Passing contents makes
 it try to read the contents as a path, and the resulting error dumped the whole `.dev.vars` into the
 output. Pass `".dev.vars"`.
+
+## Working from a git worktree, and three preview-driving traps (#1390)
+
+Several sessions can share the main checkout `E:\GitRepositories\aheed-online-store`, and a branch
+switch there is global to that folder. `#1390` was built and shipped from a separate worktree
+(`git worktree add ../aheed-online-store-<slug> feature/<slug>`). The traps it hit:
+
+- **A worktree needs its own installs, twice.** Run `npm ci` and `npm run db:generate` at its root,
+  **and** `npm ci` in `kms/site-internal`. Without the second, the KMS site build fails with
+  `Cannot find package 'nextra'`, which looks like a broken docs change. Copy `.env` and `.dev.vars`
+  across too, then diff them against `secrets/*.vars` before any database work.
+- **`gh pr merge <N> --squash --delete-branch` from a worktree reports a failure AFTER merging.**
+  It prints `fatal: 'staging' is already used by worktree at '…'`, because its local cleanup tries
+  to check out `staging`, which the main folder holds. The merge on GitHub has already happened.
+  Check `gh pr view <N> --json state,mergeCommit` before retrying anything. If it is merged, delete
+  the remote branch with `git push origin --delete feature/<slug>`.
+- **Stop only the worktree's preview processes.** Another session may be running its own
+  `node`/`workerd` chain. Select by path:
+  `Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(node|workerd)\.exe$' -and $_.CommandLine -match 'aheed-online-store-<slug>' }`.
+- **A 500 under `npm run preview` can be read without a browser.** Query the local observability
+  store:
+  `curl -s -X POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query -H 'Content-Type: application/json' -d '{"sql":"SELECT trace_id, seq, message FROM logs WHERE level = \"error\" ORDER BY rowid DESC LIMIT 20"}'`
+  (tables `logs` and `spans`). At `#1390` this showed that intermittent Client Setup 500s were
+  `NeonDbError: … Network connection lost` (the crash class above), not the slice.
+- **Git Bash `curl` silently writes no cookie jar to a POSIX path.** `-c /tmp/x/a.jar` returned 200
+  from sign-in but left no file, so every later request was signed out. Pass a Windows path:
+  `-c "$(cygpath -m /tmp/x)/a.jar"`.
+- **Build a sign-in body containing a secret with Node, not shell interpolation.** A
+  `DEMO_ACCOUNT_PASSWORD` with JSON-significant characters gave `400`. Piping
+  `node -e '…JSON.stringify({email, password})…' | curl --data-binary @- …` worked.
+- **Under `npm run preview`, every email send fails unless `.dev.vars` sets `EMAIL_FROM`** (`#1435`).
+  Preview runs with `NODE_ENV=production`, so the email config rejects a missing sender with
+  `EMAIL_FROM is required in production`. It does so even with `EMAIL_PROVIDER="log"`. The send
+  returns `failed`, so an order-notification path queues a `NotificationOutbox` row instead of
+  logging `status=sent`. That looks like a provider outage, but it is local config. Set any
+  `EMAIL_FROM` in `.dev.vars` before testing a send. To test the queue, make the failure deliberate
+  instead, for example with an invalid `RESEND_API_KEY`.

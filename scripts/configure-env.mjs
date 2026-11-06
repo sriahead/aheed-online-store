@@ -68,6 +68,10 @@ const WORKER_SECRETS = [
 // #1217 — RESEND_API_KEY (the Resend fallback), EMAIL_VERIFIED_DOMAINS and
 // EMAIL_ALLOWED_RECIPIENTS are optional too: secrets rather than [vars] so a newly verified domain
 // or tester needs no commit, and an unset allowlist simply sends nothing on staging.
+//
+// #1390 — TELEGRAM_BOT_TOKEN, the platform bot behind order alerts, is optional: without it every
+// alert is skipped and nothing else changes. The app sends alerts, so it is NOT pushed to the
+// inbound-email Worker.
 const OPTIONAL_WORKER_SECRETS = [
   "RESEND_API_KEY",
   "EMAIL_VERIFIED_DOMAINS",
@@ -75,6 +79,7 @@ const OPTIONAL_WORKER_SECRETS = [
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "UK_LOCATION_REF_DATABASE_URL",
+  "TELEGRAM_BOT_TOKEN",
 ];
 
 // #1323 — the reference database's DIRECT url, used by sync-reference-data.yml and the reference

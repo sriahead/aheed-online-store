@@ -36,6 +36,8 @@ const TIME_OF_DAY = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 /** Upper bounds. Both are vendor-facing settings, not limits the schema imposes. */
 export const MAX_BOOKING_WINDOW_DAYS = 60;
 export const MAX_SLOT_HOLD_MINUTES = 120;
+/** #1441 — one day. A longer notice period belongs to the booking window, not the cut-off. */
+export const MAX_SLOT_BOOKING_CUTOFF_MINUTES = 1440;
 
 /** The `useActionState` shape shared by every form on /staff/fulfilment. */
 export interface FulfilmentFormState {
@@ -62,6 +64,7 @@ export interface FulfilmentSettingsInput {
   expressCollectionEnabled: boolean;
   bookingWindowDays: number;
   slotHoldDurationMinutes: number;
+  slotBookingCutoffMinutes: number;
   /** #363 — an IANA zone name, validated by `isSupportedTimeZone` below. */
   timezone: string;
 }
@@ -191,6 +194,7 @@ export function parseFulfilmentSettings(raw: {
   expressCollectionEnabled: boolean;
   bookingWindowDays: string;
   slotHoldDurationMinutes: string;
+  slotBookingCutoffMinutes: string;
   timezone: string;
 }): ParseResult<FulfilmentSettingsInput> {
   const timezone = raw.timezone.trim();
@@ -216,6 +220,16 @@ export function parseFulfilmentSettings(raw: {
   );
   if (!hold.ok) return hold;
 
+  // #1441 — 0 is allowed: booking then stays open until the slot starts.
+  const cutoff = parseBoundedInteger(
+    raw.slotBookingCutoffMinutes,
+    "slotBookingCutoffMinutes",
+    "The booking cut-off",
+    0,
+    MAX_SLOT_BOOKING_CUTOFF_MINUTES,
+  );
+  if (!cutoff.ok) return cutoff;
+
   return {
     ok: true,
     value: {
@@ -223,6 +237,7 @@ export function parseFulfilmentSettings(raw: {
       expressCollectionEnabled: raw.expressCollectionEnabled,
       bookingWindowDays: days.value,
       slotHoldDurationMinutes: hold.value,
+      slotBookingCutoffMinutes: cutoff.value,
       timezone,
     },
   };

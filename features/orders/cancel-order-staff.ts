@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { getOrderCancelService, getOrderRepository } from "@/lib/orders-service";
 import { canCancel } from "@/lib/order-status";
-import { sendOrderStatusEmail } from "./send-status-email";
+import { notifyOrderEvent } from "@/lib/order-notifications-service";
 
 /**
  * Staff cancellation of a paid order (P9.2, #696).
@@ -60,7 +60,7 @@ export async function cancelOrderStaff(formData: FormData) {
   // Prisma transaction holds a Postgres transaction open against a 5s timeout
   // (the defect P3c had to fix in createPayment). Never throws, like every other
   // caller of this function.
-  await sendOrderStatusEmail(cancelled, "CANCELLED");
+  await notifyOrderEvent(cancelled, "CANCELLED");
 
   revalidatePath("/staff/orders");
   revalidatePath(`/staff/orders/${orderNumber}`);

@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.34.0"
-updated: 2026-11-01
+version: "1.36.0"
+updated: 2026-11-05
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -23,7 +23,7 @@ all values are present, and **never prints secret values**.
 | Store | Set by | Consumed by | Variables |
 |---|---|---|---|
 | **GitHub environment secrets** | `gh secret set … --env <env>` | CI deploy workflows (`.github/workflows/deploy-*.yml`) | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `DIRECT_URL` |
-| **Cloudflare Worker secrets** | `wrangler secret put … --env <env>` | the running app at runtime (`lib/config`) | `DATABASE_URL`, `INBOUND_EMAIL_TOKEN` *(also pushed to the inbound-email Worker, `#1217`)*, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION`, `CDN_BASE_URL`, `AUTH_COOKIE_FAMILY_DOMAIN` *(optional — see slice 3c)*, `STRIPE_SECRET_KEY` *(optional)*, `STRIPE_WEBHOOK_SECRET` *(optional)*, `RESEND_API_KEY`, `EMAIL_VERIFIED_DOMAINS`, `EMAIL_ALLOWED_RECIPIENTS` *(all optional, `#1217`)*, `JOB_INVOCATION_TOKEN` |
+| **Cloudflare Worker secrets** | `wrangler secret put … --env <env>` | the running app at runtime (`lib/config`) | `DATABASE_URL`, `INBOUND_EMAIL_TOKEN` *(also pushed to the inbound-email Worker, `#1217`)*, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION`, `CDN_BASE_URL`, `AUTH_COOKIE_FAMILY_DOMAIN` *(optional — see slice 3c)*, `STRIPE_SECRET_KEY` *(optional)*, `STRIPE_WEBHOOK_SECRET` *(optional)*, `RESEND_API_KEY`, `EMAIL_VERIFIED_DOMAINS`, `EMAIL_ALLOWED_RECIPIENTS` *(all optional, `#1217`)*, `TELEGRAM_BOT_TOKEN` *(optional, `#1390`)*, `JOB_INVOCATION_TOKEN` |
 
 Beyond the original list: **`S3_REGION`** is required by ADR-003's storage contract, and
 **`BETTER_AUTH_URL`** is now only a **fallback** origin — since ADR-004 slice 3c, `getAuth()` derives
@@ -984,6 +984,7 @@ sender name and address, and the receiving addresses with the mailbox each forwa
 | `INBOUND_FALLBACK_FORWARD` | Secret on the inbound Worker only | A verified destination mailbox that receives mail whenever the app cannot be asked (outage, bad token). |
 | `INBOUND_DEFAULT_FORWARD` | `wrangler.toml` `[vars]` (both envs) | The platform default inbox (`#1399`). It prefills **Forward to** when a receiving address is added in Client Setup, and stays editable. Unset means no prefill; a value that is not an email address prefills nothing, and Client Setup's status card shows "Invalid". |
 | `APP_ENV` | `wrangler.toml` `[vars]` (both envs) | Names the deployment (`#1409`): `staging` or `production`. Every outgoing subject, and the footer's `mailto:` subjects, gets `[STAGING] ` or `[DEV] `; production is untouched. **Anything else, unset included, means development**, so a forgotten value shows `[DEV]` rather than passing for production. |
+| `TELEGRAM_BOT_TOKEN` | Worker secret on the app only, optional (`#1390`) | The platform bot's token for order alerts (Client Setup, **Order alerts**). Unset means every alert is skipped and logged as skipped; nothing else changes. `configure-env` pushes it when present; the inbound-email Worker does not need it. |
 
 **The contact form (`#1409`).** Each storefront has a **Contact us** page (`/contact`) for complaints
 and enquiries; the footer links to it. A message is emailed to the store's Client Setup receiving
@@ -1250,6 +1251,113 @@ Live checks (staging):
 8. Send six valid messages within an hour from one connection. Expected: the sixth says "Too many
    messages. Please try again later."
 9. After promotion, repeat 2-5 on `aheed.merqify.com`. A production subject has no tag.
+
+### Sanity check: order alerts on Telegram (`#1390`)
+
+**Last run:** 2026-11-05 on staging after PR #1431 (`4fa69aa`, deploy run `42020496874`). Quick
+checks 1-3 passed: the deploy applied `20261104160000_order_alert_recipient` and redeployed
+`aheed-inbound-email-staging`; health was OK; the alert route answered 405 and 401. Live checks 4-8
+then waited on the bot token. Later that day the owner set `TELEGRAM_BOT_TOKEN` on staging, and
+checks 1-3 passed again. Steps 4-5 passed: the group received
+`[STAGING] Test alert from Client Setup: Aheed Food Centre`. Steps 6-8 have not run yet.
+
+Two gotchas came up at step 4:
+
+- `getUpdates` returns `{"ok":true,"result":[]}` until a message the bot can see arrives after the
+  bot joins. With privacy mode on (the default), that means a command addressed to it, such as
+  `/start@<bot_username>`.
+- Use the `id` inside `"chat"`, never the one inside `"from"`, which is the sender's own user ID.
+
+Quick checks:
+
+1. `gh run list --branch staging --limit 4`. Expected: `deploy-staging` **success** on the merge
+   commit. Its log shows `Applying migration 20261104160000_order_alert_recipient` (first deploy
+   only) and `Deployed aheed-inbound-email-staging`.
+2. `curl -s --compressed https://aheed-staging.merqify.com/api/health`. Expected: `db.ok` true,
+   `reference.reachable` true, a non-empty `reference.sources`.
+3. `curl -s https://aheed-staging.merqify.com/api/inbound-email/alert` gives **405**, and
+   `curl -s -X POST -H 'content-type: application/json' -d '{}' https://aheed-staging.merqify.com/api/inbound-email/alert`
+   gives **401** `Unauthorized`. A **503** means `INBOUND_EMAIL_TOKEN` is missing on the app
+   Worker.
+
+Live checks (staging). These need a bot from BotFather, its token set with
+`npx wrangler secret put TELEGRAM_BOT_TOKEN --env staging`, and a Telegram group with the bot in
+it:
+
+4. Platform admin, `/staff/platform/client-setup` on `aheed-staging.merqify.com`, Aheed Food Centre:
+   the **Order alerts** card reads `Telegram bot token: Set`. Find the group's chat ID: send a
+   message in the group, then open `https://api.telegram.org/bot<token>/getUpdates` and read
+   `chat.id` (it starts with `-`). Add it as a recipient. Expected: it is listed as `Telegram` plus
+   the ID.
+5. Press **Send test alert**. Expected: "Test alert sent. Check the Telegram chat.", and the group
+   receives `[STAGING] Test alert from Client Setup: Aheed Food Centre` within a minute. "Failed:
+   telegram 400: Bad Request: chat not found" means the bot is not in the group or the ID is wrong.
+6. Run `npx wrangler tail aheed-store-staging --format pretty`. As a guest, send a **Complaint**
+   from `/contact`. Expected: the group receives five lines starting
+   `[STAGING] Order inquiry: Aheed Food Centre` and ending `Via: contact form`. The tail prints
+   `order alert vendorId=<id> channel=TELEGRAM status=sent`, with no subject or name.
+7. Send an email to the store's **Orders** receiving address. Run
+   `npx wrangler tail aheed-inbound-email-staging --format pretty` alongside step 6's tail.
+   Expected: the email is forwarded as before, and the group receives an alert ending `Via: email`.
+   Its `From:` line shows your display name, or `unknown` if your client sends only the address.
+   The inbound tail shows no `inbound-email alert call failed`.
+8. An **Enquiry** with no order number sends no alert, and nor does an email to a Support address
+   whose subject names no order.
+9. After promotion, set the production token, then repeat 1-7 on `aheed.merqify.com` with
+   `aheed-store-production` and `aheed-inbound-email`. A production alert has no tag.
+
+### Sanity check: order updates and notification queue (`#1435`)
+
+**Last run:** 2026-11-05 on staging after PR #1440 (`373f83f`, deploy run `42106863189`). Quick
+checks 1-4 passed: the deploy applied `20261105120000_notification_outbox` and redeployed
+`aheed-scheduler-staging`; health reported `373f83f` with the database and reference data reachable;
+the retry route answered 405 and 401; `/privacy` showed the new paragraph and `24 hours`.
+Step 6 passed early on 2026-11-06, on a paid collection order rather than an advance (owner). The
+group received
+`[STAGING] New order: Aheed Food Centre`, with the order (`AHE-20261106-EK4PPB`), total
+(`£5.08 (2 items)`), slot (`Collection: Friday 6 November, 13:00–15:00`) and staff-panel link lines.
+It had no customer name or product names. That test exposed a separate checkout bug: today's slots
+stay selectable after their time has passed. It is tracked separately. Steps 5 and 7-10 have not
+run.
+
+Quick checks:
+
+1. `gh run list --branch staging --limit 4`. Expected: `deploy-staging` **success** on the merge
+   commit. Its log shows `Applying migration 20261105120000_notification_outbox` (first deploy only)
+   and `Deployed aheed-scheduler-staging`.
+2. `curl -s --compressed https://aheed-staging.merqify.com/api/health`. Expected: `db.ok` true,
+   `reference.reachable` true, a non-empty `reference.sources`.
+3. `curl -si https://aheed-staging.merqify.com/api/jobs/retry-notification-outbox | head -1` gives
+   **405**, and the same with `-X POST` gives **401**. A **503** means `JOB_INVOCATION_TOKEN` is
+   missing on the app Worker. Don't use `-o /dev/null` in Git Bash: it reports `000`.
+4. `curl -s --compressed https://aheed-staging.merqify.com/privacy | grep -c '24 hours'`. Expected:
+   at least `1`, and the page contains "Order updates waiting to be sent."
+
+Live checks (staging). Use an Aheed staging order that is `CONFIRMED`, with Telegram set up as in
+the `#1390` guide above:
+
+5. Run `npx wrangler tail aheed-store-staging --format pretty`. As store staff, advance a delivery
+   order to **Out for delivery** from `/staff/orders`. Expected: one
+   `notification vendorId=<id> channel=TELEGRAM audience=OWNER event=OUT_FOR_DELIVERY status=sent`
+   line for each Telegram recipient. There is also one `channel=EMAIL audience=CUSTOMER` line:
+   `status=sent` if the buyer is on `EMAIL_ALLOWED_RECIPIENTS`, otherwise `status=skipped`. If the
+   store has an **Orders** or **Support** receiving address, there is also an
+   `audience=OWNER channel=EMAIL` line. No line contains an `@`, a name or a product.
+6. The Telegram group receives `[STAGING] Out for delivery: Aheed Food Centre`, then the order
+   number, total, slot and staff-panel link lines. It contains no customer name, address or product
+   names.
+7. If the buyer is allowlisted, they receive `[STAGING] Order <number> is on its way — Aheed Food Centre`.
+   It says what happens next and gives the slot, and it has one **View your order** button.
+8. Open that order's account page in one tab, and advance it to **Delivered** from the staff panel
+   in another. Expected: within about 45 s, without a reload, the tracker moves to **Delivered** and
+   the page stops refreshing.
+9. Open `/staff/orders`, then place and pay an order in another browser session (Stripe test card).
+   Expected: within about 30 s, `1 new order since you opened this page` appears. The sound box is
+   unchecked on first visit, and **Dismiss** clears the notice.
+10. Tick two orders and bulk-advance them. Expected: two customer lines, but only one owner Telegram
+    message per recipient, listing both order numbers.
+11. After promotion, set `TELEGRAM_BOT_TOKEN` on production, then repeat 1-6 on
+    `aheed.merqify.com` with `aheed-store-production`. A production message has no tag.
 
 ## Prerequisites (one-time)
 

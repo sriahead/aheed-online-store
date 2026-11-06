@@ -3,6 +3,7 @@ import type { FulfilmentMethod } from "@prisma/client";
 import type { CatalogueWriteResult } from "@/lib/repositories/products";
 import type { ExpressWindowInput, FulfilmentSettingsInput, SlotInput } from "@/lib/fulfilment-form";
 import { STORE_TIMEZONE, calendarDayToUtcMidnight } from "@/lib/local-datetime";
+import { isSlotBookable } from "@/lib/slot-cutoff";
 
 export type { FulfilmentMethod };
 
@@ -29,6 +30,8 @@ export async function getAvailableSlotsForDate(
   vendorId: string,
   method: FulfilmentMethod,
   day: string,
+  /** #1441 — the clock the booking cut-off is measured from. A parameter so tests can fix it. */
+  now: Date = new Date(),
 ): Promise<AvailableSlot[]> {
   /*
    * #811. `day` is a bare `YYYY-MM-DD` CALENDAR DAY, never an instant, and this is the whole fix.
@@ -54,6 +57,14 @@ export async function getAvailableSlotsForDate(
 
   if (!vendor || !vendor.config || vendor.fulfilmentSlots.length === 0) return [];
 
+  // #1441 — a slot that has started, or starts within the store's cut-off, is not offered at all.
+  // `placeOrder` applies the same rule, so a grid loaded before the cut-off cannot book it either.
+  const { timezone, slotBookingCutoffMinutes } = vendor.config;
+  const bookable = vendor.fulfilmentSlots.filter((slot) =>
+    isSlotBookable(day, slot.startTime, timezone, slotBookingCutoffMinutes, now),
+  );
+  if (bookable.length === 0) return [];
+
   const holdMinutes = vendor.config.slotHoldDurationMinutes;
   const cutoff = new Date(Date.now() - holdMinutes * 60000);
 
@@ -63,7 +74,7 @@ export async function getAvailableSlotsForDate(
     where: {
       vendorId,
       fulfilmentDate: date,
-      fulfilmentSlotId: { in: vendor.fulfilmentSlots.map((s) => s.id) },
+      fulfilmentSlotId: { in: bookable.map((s) => s.id) },
       OR: [
         {
           status: {
@@ -80,7 +91,7 @@ export async function getAvailableSlotsForDate(
 
   const usedMap = new Map(usedCounts.map((u) => [u.fulfilmentSlotId, u._count.id]));
 
-  return vendor.fulfilmentSlots
+  return bookable
     .map((slot) => {
       const used = usedMap.get(slot.id) || 0;
       return {
@@ -165,6 +176,8 @@ export interface FulfilmentSettings {
   expressCollectionEnabled: boolean;
   bookingWindowDays: number;
   slotHoldDurationMinutes: number;
+  /** #1441 — minutes before a slot's start after which it can no longer be booked. */
+  slotBookingCutoffMinutes: number;
   /** #363 — the vendor's IANA zone. Editable here because it governs when the slots below fall. */
   timezone: string;
   /** Not editable here — it belongs to /staff/storefront's delivery rules — but the page needs it
@@ -187,6 +200,7 @@ export async function getFulfilmentSettingsForVendor(
       expressCollectionEnabled: true,
       bookingWindowDays: true,
       slotHoldDurationMinutes: true,
+      slotBookingCutoffMinutes: true,
       timezone: true,
       offerCollection: true,
     },
@@ -197,6 +211,7 @@ export async function getFulfilmentSettingsForVendor(
     expressCollectionEnabled: config?.expressCollectionEnabled ?? false,
     bookingWindowDays: config?.bookingWindowDays ?? 14,
     slotHoldDurationMinutes: config?.slotHoldDurationMinutes ?? 15,
+    slotBookingCutoffMinutes: config?.slotBookingCutoffMinutes ?? 60,
     timezone: config?.timezone ?? STORE_TIMEZONE,
     offerCollection: config?.offerCollection ?? false,
   };
@@ -221,6 +236,7 @@ export async function updateFulfilmentSettingsForVendor(
       expressCollectionEnabled: input.expressCollectionEnabled,
       bookingWindowDays: input.bookingWindowDays,
       slotHoldDurationMinutes: input.slotHoldDurationMinutes,
+      slotBookingCutoffMinutes: input.slotBookingCutoffMinutes,
       timezone: input.timezone,
     },
     select: { id: true },
