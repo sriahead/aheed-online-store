@@ -1,11 +1,14 @@
 ---
 id: merchant-platform-terms
 title: "Merqify Platform Terms of Service — Merchant Schedule & Tax Disclaimer"
-status: draft-for-legal-review
+audience: [admin, platform-admin]
+type: doc
+status: review
 version: "1.0.0"
-date: 2026-11-06
-audience: [legal, commercial, merchant]
-summary: "Contractual terms governing the relationship between Merqify Ltd (Platform Provider) and merchants (Vendors), setting out responsibilities for catalogue, pricing, and HMRC VAT compliance."
+updated: 2026-11-06
+visibility: internal
+summary: Contractual terms governing Merqify Ltd (Platform Provider) and merchants (Vendors), defining responsibilities for catalogue, pricing, and HMRC VAT compliance.
+tags: [legal, merchant, vat, terms, compliance]
 ---
 
 # Merqify Platform Terms — Merchant Services Schedule

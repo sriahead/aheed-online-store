@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-06T12:06:35.906Z` · commit `d045cf36` · `318` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-06T19:56:59.392Z` · commit `bb9a621d` · `319` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -338,6 +338,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Store Operations Troubleshooting & Escalation Matrix](docs/client-help-centre/troubleshooting-escalation.md) | runbook | 1.0.0 | 2026-10-25 | approved | internal | Diagnostic procedures, symptoms, root causes, corrective actions, and support escalation paths for store operators and technical administrators. |
 | [Store Operations Tutorials & FAQ Management](docs/client-help-centre/tutorials-and-faqs.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Step-by-step tutorials for common operational workflows and instructions for managing customer FAQs via the in-app CMS. |
 | [Client & Role User Journey Maps](docs/client-help-centre/user-journeys.md) | guide | 1.1.0 | 2026-11-01 | approved | internal | Comprehensive end-to-end user journey maps with Mermaid flowcharts, step-by-step guides, permissions, and checklists for Platform Admin, Store Admin, Staff, and Customer. |
+| [Merqify Platform Terms of Service — Merchant Schedule & Tax Disclaimer](docs/legal/merchant-platform-terms.md) | doc | 1.0.0 | 2026-11-06 | review | internal | Contractual terms governing Merqify Ltd (Platform Provider) and merchants (Vendors), defining responsibilities for catalogue, pricing, and HMRC VAT compliance. |
 | [Operations & Fulfillment Procedures](docs/operations-research/operations-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for operations teams detailing the fulfillment lifecycle, stock management, and exception handling. |
 | [Order & Fulfilment Operations](docs/operations-research/order-fulfilment-core.md) | runbook | 1.1.0 | 2026-11-06 | approved | internal | Canonical rules for order status transitions, fulfilment slots, cancellations, and payment exceptions. |
 | [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.11.0 | 2026-11-05 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
