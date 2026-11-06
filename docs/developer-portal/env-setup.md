@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.36.0"
-updated: 2026-11-05
+version: "1.37.0"
+updated: 2026-11-06
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -1358,6 +1358,53 @@ the `#1390` guide above:
     message per recipient, listing both order numbers.
 11. After promotion, set `TELEGRAM_BOT_TOKEN` on production, then repeat 1-6 on
     `aheed.merqify.com` with `aheed-store-production`. A production message has no tag.
+
+### Sanity check: old iPhones / Safari 15.4 compatibility (`#1445`)
+
+Run this after any deploy that changes `package.json` `browserslist`, upgrades Next.js, or follows
+a report that buttons do nothing on an older iPhone. The floor is Safari / iOS 15.4
+(`specs/tech-stack.md`, "Application").
+
+**Last run:** 2026-11-06 on staging, after PR #1446 (`f72ad74`, deploy run `42253448213`).
+- Quick checks 1-4 passed:
+  - the deploy log printed `check-client-syntax: 156 client file(s) parse on Safari / iOS 15.4.`;
+  - health reported `f72ad74` with the database and reference data reachable;
+  - the 24 chunks behind `/`, `/login` and `/categories/groceries` passed the checker, with no
+    `static{`;
+  - in desktop Chrome, "Add" on a category page took the basket from `Cart, empty` to
+    `Cart, 1 items`, and `/login` rendered "Continue with Google".
+- Steps 5-6 have not run.
+
+Quick checks:
+
+1. `gh run list --workflow deploy-staging.yml --limit 1`. Expected: **success** on the merge commit.
+   Then run `gh run view <id> --log | grep check-client-syntax`. Expected:
+   `check-client-syntax: <n> client file(s) parse on Safari / iOS 15.4.`. A failing build stops
+   before `wrangler deploy` and names each `file:line:column — construct`.
+2. `curl -s --compressed https://aheed-staging.merqify.com/api/health`. Expected: `commit` is the
+   merge, `db.ok` true, `reference.reachable` true, a non-empty `reference.sources`.
+3. Download the `/_next/static/**.js` files referenced by `/`, `/login` and a category page into a
+   new directory, then run `npx tsx scripts/check-client-syntax.ts <dir>`. Expected: exit 0 and
+   `<n> client file(s) parse on Safari / iOS 15.4.`. Git Bash mangles `curl` paths, so prefix it
+   with `MSYS_NO_PATHCONV=1` (`CLAUDE.md`, "Windows shell"). PowerShell's `Invoke-WebRequest` avoids
+   that.
+4. In a current desktop browser on staging, press "Add" on a product card. Expected: the header
+   basket count goes up. `/login` shows "Continue with Google".
+
+Live checks (needs an iPhone on iOS 15.4-15.8, Safari):
+
+5. On staging:
+   - "Add" on a product card updates the basket count.
+   - Email sign-in works.
+   - "Continue with Google" opens Google's account chooser.
+   - Icons are visible.
+   - If nothing on the page responds while the layout looks right, the build has shipped syntax the
+     device cannot parse: re-run step 3.
+   - If the layout itself is unstyled, the device is below iOS 15.4: update it.
+6. After promotion, repeat 2-5 on `aheed.merqify.com`. **"Not Secure"** on `http://` is the
+   merqify.com Cloudflare zone, not the app.
+   - `curl -sI http://aheed.merqify.com/ | head -1`. Expected once the owner has turned on **Always
+     Use HTTPS**: `301`, not `200`.
 
 ## Prerequisites (one-time)
 
