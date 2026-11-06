@@ -2673,6 +2673,40 @@ export async function updateProductForVendor(
         toNetContent(input),
       );
 
+      // Manual edit protection tracking
+      const fullEditFields = [
+        "name",
+        "slug",
+        "description",
+        "categoryId",
+        "basePrice",
+        "originalPrice",
+        "unitLabel",
+        "netContentAmount",
+        "netContentUnit",
+        "origin",
+        "isVegetarian",
+        "isGlutenFree",
+        "isHmcCertified",
+        "isHalal",
+        "isFresh",
+        "isOrganic",
+        "isFeatured",
+        "isActive",
+        "quantity",
+        "stockMode",
+        "vatRate",
+      ];
+      const prodBefore = await tx.product.findUnique({
+        where: { id },
+        select: {
+          manuallyEditedFields: true,
+          inventory: { select: { id: true, quantity: true, stockMode: true } },
+        },
+      });
+      const fieldSet = new Set(prodBefore?.manuallyEditedFields || []);
+      for (const f of fullEditFields) fieldSet.add(f);
+
       await tx.product.update({
         where: { id, vendorId },
         data: {
@@ -2699,13 +2733,16 @@ export async function updateProductForVendor(
           isFeatured: input.isFeatured,
           isActive: input.isActive,
           allowsCustomNote: input.allowsCustomNote,
+          isManuallyEdited: true,
+          manuallyEditedFields: Array.from(fieldSet),
+          lastManualEditAt: new Date(),
         },
       });
 
       // upsert, not update: a product created before this slice may have no
       // Inventory row, and the owner's first save is where it should appear
       // rather than failing on a missing record.
-      await tx.inventory.upsert({
+      const invRow = await tx.inventory.upsert({
         where: { productId: id, vendorId },
         create: {
           vendorId,
@@ -2714,14 +2751,36 @@ export async function updateProductForVendor(
           stockMode: input.stockMode,
           lowStockThreshold: input.lowStockThreshold,
           expectedRestockDate: toRestockDate(input.expectedRestockDay),
+          version: 1,
         },
         update: {
           quantity: input.quantity,
           stockMode: input.stockMode,
           lowStockThreshold: input.lowStockThreshold,
           expectedRestockDate: toRestockDate(input.expectedRestockDay),
+          version: { increment: 1 },
         },
       });
+
+      const prevQty = prodBefore?.inventory?.quantity ?? 0;
+      const prevMode = prodBefore?.inventory?.stockMode ?? "UNKNOWN";
+      if (prevQty !== input.quantity || prevMode !== input.stockMode) {
+        await tx.inventoryAuditLog.create({
+          data: {
+            vendorId,
+            productId: id,
+            inventoryId: invRow.id,
+            previousQuantity: prevQty,
+            newQuantity: input.quantity,
+            changeAmount: input.quantity - prevQty,
+            previousStockMode: prevMode as any,
+            newStockMode: input.stockMode as any,
+            source: "STAFF_ADJUSTMENT",
+            reason: "Staff product form update",
+            actorType: "STAFF",
+          },
+        });
+      }
 
       // P8.5d (#348). Clearing both multi-buy fields DELETES the row rather than
       // deactivating it: "no multi-buy" and "a multi-buy that is switched off"
@@ -2995,6 +3054,44 @@ export async function reorderProductImages(
  * Fast-path for shop-floor staff to increment/decrement stock and toggle availability
  * without needing the full product edit payload (P6, #168).
  */
+export async function confirmProductVat(
+  prismaWs: DbWs,
+  vendorId: string,
+  productId: string,
+  confirmedRate: number,
+  userId?: string,
+): Promise<CatalogueWriteResult> {
+  try {
+    return await prismaWs.$transaction(async (tx) => {
+      const prod = await tx.product.findFirst({
+        where: { id: productId, vendorId },
+        select: { id: true, manuallyEditedFields: true },
+      });
+      if (!prod) return { ok: false as const, error: "Product not found." };
+
+      const fieldSet = new Set(prod.manuallyEditedFields || []);
+      fieldSet.add("vatRate");
+
+      await tx.product.update({
+        where: { id: productId },
+        data: {
+          vatRate: confirmedRate,
+          vatNeedsReview: false,
+          vatConfirmedAt: new Date(),
+          vatConfirmedBy: userId ?? "STAFF_CONFIRMED",
+          isManuallyEdited: true,
+          manuallyEditedFields: Array.from(fieldSet),
+          lastManualEditAt: new Date(),
+        },
+      });
+
+      return { ok: true as const, id: productId };
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+
 export async function quickUpdateInventory(
   prismaWs: DbWs,
   vendorId: string,
@@ -3008,7 +3105,10 @@ export async function quickUpdateInventory(
         select: {
           id: true,
           restriction: true,
-          inventory: { select: { quantity: true, lowStockThreshold: true } },
+          manuallyEditedFields: true,
+          inventory: {
+            select: { id: true, quantity: true, stockMode: true, lowStockThreshold: true },
+          },
         },
       });
       if (!existing) return { ok: false as const, error: "That product no longer exists." };
@@ -3017,25 +3117,82 @@ export async function quickUpdateInventory(
         return { ok: false as const, error: restrictedEnableError(existing.restriction) };
       }
 
-      if (data.isActive !== undefined) {
+      // Check: Product cannot be activated while stock count is UNKNOWN
+      if (data.isActive === true) {
+        const currentMode = existing.inventory?.stockMode ?? "UNKNOWN";
+        // If activating without updating stock, or updating stock still UNKNOWN:
+        if (currentMode === "UNKNOWN" && data.quantity === undefined) {
+          return {
+            ok: false as const,
+            error:
+              "Product cannot be activated while stock status is UNKNOWN. Enter a verified stock count first.",
+          };
+        }
+      }
+
+      // Check: Negative quantities not allowed
+      if (data.quantity !== undefined && data.quantity < 0) {
+        return { ok: false as const, error: "Quantity cannot be negative." };
+      }
+
+      // Track manual edits
+      const manualFields: string[] = [];
+      if (data.isActive !== undefined) manualFields.push("isActive");
+      if (data.quantity !== undefined) manualFields.push("quantity");
+
+      if (manualFields.length > 0) {
+        const fieldSet = new Set(existing.manuallyEditedFields || []);
+        for (const f of manualFields) fieldSet.add(f);
+
         await tx.product.update({
           where: { id: productId },
-          data: { isActive: data.isActive },
+          data: {
+            isActive: data.isActive !== undefined ? data.isActive : undefined,
+            isManuallyEdited: true,
+            manuallyEditedFields: Array.from(fieldSet),
+            lastManualEditAt: new Date(),
+          },
         });
       }
 
       if (data.quantity !== undefined) {
-        await tx.inventory.upsert({
+        const prevQty = existing.inventory?.quantity ?? 0;
+        const prevMode = existing.inventory?.stockMode ?? "UNKNOWN";
+        const newMode = "TRACKED";
+
+        const inv = await tx.inventory.upsert({
           where: { productId, vendorId },
           create: {
             vendorId,
             productId,
             quantity: data.quantity,
-            // #1211 — staff typing a count is tracking; never the column's UNKNOWN default.
-            stockMode: "TRACKED",
+            // Staff entering a count (including 0) transitions UNKNOWN -> TRACKED
+            stockMode: newMode,
             lowStockThreshold: 3,
+            version: 1,
           },
-          update: { quantity: data.quantity },
+          update: {
+            quantity: data.quantity,
+            stockMode: newMode,
+            version: { increment: 1 },
+          },
+        });
+
+        // Record audit log
+        await tx.inventoryAuditLog.create({
+          data: {
+            vendorId,
+            productId,
+            inventoryId: inv.id,
+            previousQuantity: prevQty,
+            newQuantity: data.quantity,
+            changeAmount: data.quantity - prevQty,
+            previousStockMode: prevMode as any,
+            newStockMode: newMode,
+            source: "STAFF_ADJUSTMENT",
+            reason: "Staff inventory quick update",
+            actorType: "STAFF",
+          },
         });
       }
 

@@ -8,6 +8,15 @@ every branch merges.
 
 ### Added
 
+- **Aheed Food Centre: Independent Stock Management, Staged Catalogue Onboarding & HMRC VAT Compliance**
+  - **Database migrations & schema safeguards.** Added `plu`, `barcode`, `importBatchId`, `importSourceRow`, `isManuallyEdited`, `manuallyEditedFields`, and `lastManualEditAt` to `Product` with compound unique index `[vendorId, plu]`. Added `version` to `Inventory` and created `InventoryAuditLog` table with `InventoryAuditSource` enum (`20261106140000_aheed_stock_import_safeguards`).
+  - **HMRC VAT compliance fields & review workflow.** Added `vatRate`, `originalVatRate`, `suggestedVatRate`, `vatNeedsReview`, `vatReviewReason`, `vatConfirmedAt`, and `vatConfirmedBy` to `Product` (`20261106150000_product_vat_compliance`).
+  - **Stock management & activation guards.** Recording a count of `0` transitions unverified stock from `UNKNOWN` to `TRACKED` with `quantity: 0`. Products with `stockMode: "UNKNOWN"` cannot be set to `isActive: true`.
+  - **Manual edit protection.** Subsequent import batches never overwrite product attributes or stock counts modified by staff, even if later reset.
+  - **Granular rollback & snapshot recovery.** Standalone rollback (`scripts/rollback-import-batch.ts`) and recovery (`scripts/restore-aheed-catalogue.ts`) tools verify and preserve orders, physical inventory, and staff edits.
+  - **HMRC VAT rules engine.** Comprehensive classification across all 27 departments adhering to UK VAT Act 1994, Sched. 8, Group 1 and HMRC Notice 701/14. Legacy EPOS discrepancies are flagged with transparent review citations.
+  - **Terms & Legal Disclaimers.** Added platform provision and merchant tax responsibility schedule (`app/(storefront)/terms/page.tsx`, `docs/legal/merchant-platform-terms.md`).
+
 - **Order updates: notification queue, owner email and Telegram, live order tracker** (issue `#1435`, spec `specs/2026-11-05-order-updates-notifications/`).
   - **Notification queue.** A new `NotificationOutbox` table (hand-authored migration `20261105120000_notification_outbox`, `#895`) holds email and Telegram messages.
     - A message is sent straight away and saved only if the send fails.
