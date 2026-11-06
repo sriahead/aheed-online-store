@@ -74,3 +74,12 @@ This pass ran in the same session that built the slice, on Opus rather than Sonn
 - **V-manual: unverified.** It needs the owner's iOS 15.4+ device and does not gate the merge.
 
 **Result:** every row checkable before deploy passes. R9 and CI are pending Ship; V-manual is the owner's.
+
+## Ship (2026-11-06)
+
+- PR #1446 squash-merged to `staging` as `f72ad74e`; CI `docs-gates`, `quality / kms`, `quality / quality` all passed.
+- `deploy-staging` run 42253448213 succeeded; its OpenNext build printed `check-client-syntax: 156 client file(s) parse on Safari / iOS 15.4.`, so the `postbuild` hook runs in CI as designed (R5 confirmed live).
+- `/api/health` on staging: `commit` `f72ad74`, `db.ok` true, reference reachable with 2 sources.
+- **R9: pass.** 24 chunks referenced by `/`, `/login` and a category page were downloaded; the checker exits 0, none contains `static{`, and the lowered `static #e=this.contextType` form is present.
+- Desktop Chrome on staging: "Add" moved the basket from `Cart, empty` to `Cart, 1 items`; `/login` renders "Continue with Google". The Google round-trip was not clicked through.
+- Still open: V-manual (owner's iOS 15.4+ device, including icons) and the merqify.com zone's Always Use HTTPS / minimum TLS 1.2. The sanity guide is in `docs/developer-portal/env-setup.md`, "Sanity check: old iPhones / Safari 15.4 compatibility".
