@@ -52,3 +52,7 @@
 - **R5 real-adapter check and R8 E2E** need the migrated dev database and `npm run preview`. They have not been run at Build.
 - **`fulfilmentDate` → day string.** `placeOrder` uses `toISOString().slice(0, 10)`, relying on `fulfilmentDate` being the UTC midnight of the vendor-local day. The checkout passes it in that form (`calendarDayToUtcMidnight`); any caller that passes a local-midnight instant would shift by a day.
 - **Behaviour change on deploy:** every existing store gets a 60-minute cut-off immediately. That is intended (owner ruling), but staging staff may notice slots disappearing earlier than before.
+
+## Dev migration (2026-11-06)
+
+The owner applied `20261106120000_slot_booking_cutoff` to dev (`ep-dry-morning-zab7dx08`) with `migrate deploy`. Afterwards, the three live-database tests listed under Known-shaky areas passed (3 of 3).

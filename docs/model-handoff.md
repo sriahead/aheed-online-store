@@ -1514,8 +1514,8 @@ All facts in this section require live verification:
   - **Where it is:** worktree `E:\GitRepositories\aheed-online-store-orders`, branch
     `feature/slot-booking-cutoff` (spec `4dd50e66`, implementation `7dd161ea`). Spec
     `specs/2026-11-06-slot-booking-cutoff/`; read its `build-notes.md` first.
-  - **Blocked on the owner:** migration `20261106120000_slot_booking_cutoff` is not applied to dev,
-    so three live-database tests fail locally until it is.
+  - **Dev database:** the owner applied migration `20261106120000_slot_booking_cutoff` to dev on
+    2026-11-06, and the live-database slot tests pass.
   - **What it changes:** checkout hides, and `placeOrder` refuses, any slot that starts within the
     store's booking cut-off (`VendorConfig.slotBookingCutoffMinutes`, default 60, set at
     `/staff/fulfilment`). Every existing store gets the 60-minute default on deploy.
