@@ -11,8 +11,12 @@ async function verify() {
 
   const aheedProducts = await prisma.product.count({ where: { vendorId: aheedId } });
   const aheedActive = await prisma.product.count({ where: { vendorId: aheedId, isActive: true } });
-  const aheedBatch1 = await prisma.product.count({ where: { vendorId: aheedId, importBatchId: "aheed-batch-1" } });
-  const aheedVatReview = await prisma.product.count({ where: { vendorId: aheedId, vatNeedsReview: true } });
+  const aheedBatch1 = await prisma.product.count({
+    where: { vendorId: aheedId, importBatchId: "aheed-batch-1" },
+  });
+  const aheedVatReview = await prisma.product.count({
+    where: { vendorId: aheedId, vatNeedsReview: true },
+  });
   const aheedOrders = await prisma.order.count({ where: { vendorId: aheedId } });
   const aheedOrderItems = await prisma.orderItem.count({ where: { order: { vendorId: aheedId } } });
 

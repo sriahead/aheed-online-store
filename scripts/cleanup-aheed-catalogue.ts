@@ -59,7 +59,9 @@ export async function cleanupCatalogue(options: CleanupOptions) {
   const orderItemCount = await prisma.orderItem.count({ where: { order: { vendorId } } });
 
   console.log(`Current State:`);
-  console.log(`- Products: ${initialProducts.length} (Active: ${initialProducts.filter((p) => p.isActive).length})`);
+  console.log(
+    `- Products: ${initialProducts.length} (Active: ${initialProducts.filter((p) => p.isActive).length})`,
+  );
   console.log(`- Orders:   ${orderCount}`);
   console.log(`- OrderItems: ${orderItemCount}`);
 
@@ -144,7 +146,9 @@ export async function cleanupCatalogue(options: CleanupOptions) {
   console.log(`- OrderItems Preserved:   ${postOrderItemCount} (Initial: ${orderItemCount})`);
 
   if (postOrderCount !== orderCount || postOrderItemCount !== orderItemCount) {
-    throw new Error("CRITICAL SAFETY VIOLATION: Orders or OrderItems were modified during cleanup!");
+    throw new Error(
+      "CRITICAL SAFETY VIOLATION: Orders or OrderItems were modified during cleanup!",
+    );
   }
 
   return {
@@ -159,7 +163,10 @@ export async function cleanupCatalogue(options: CleanupOptions) {
 
 if (process.argv[1] && process.argv[1].endsWith("cleanup-aheed-catalogue.ts")) {
   const vendorArgIndex = process.argv.indexOf("--vendor-id");
-  const vendorId = vendorArgIndex !== -1 ? process.argv[vendorArgIndex + 1] : "a4ed0000-0000-4000-a000-000000000001";
+  const vendorId =
+    vendorArgIndex !== -1
+      ? process.argv[vendorArgIndex + 1]
+      : "a4ed0000-0000-4000-a000-000000000001";
   const confirmReset = process.argv.includes("--confirm-reset");
 
   cleanupCatalogue({ vendorId, confirmReset })

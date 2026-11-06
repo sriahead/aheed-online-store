@@ -181,7 +181,9 @@ export async function backupCatalogue(vendorId: string, outputDir = ".backups"):
 
   fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
   console.log(`Catalogue backup saved to ${filePath}`);
-  console.log(`Summary: ${products.length} products, ${categories.length} categories, ${orderCount} orders, ${orderItemCount} order items.`);
+  console.log(
+    `Summary: ${products.length} products, ${categories.length} categories, ${orderCount} orders, ${orderItemCount} order items.`,
+  );
   return filePath;
 }
 

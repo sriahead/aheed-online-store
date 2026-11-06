@@ -2675,14 +2675,34 @@ export async function updateProductForVendor(
 
       // Manual edit protection tracking
       const fullEditFields = [
-        "name", "slug", "description", "categoryId", "basePrice",
-        "originalPrice", "unitLabel", "netContentAmount", "netContentUnit",
-        "origin", "isVegetarian", "isGlutenFree", "isHmcCertified",
-        "isHalal", "isFresh", "isOrganic", "isFeatured", "isActive", "quantity", "stockMode", "vatRate"
+        "name",
+        "slug",
+        "description",
+        "categoryId",
+        "basePrice",
+        "originalPrice",
+        "unitLabel",
+        "netContentAmount",
+        "netContentUnit",
+        "origin",
+        "isVegetarian",
+        "isGlutenFree",
+        "isHmcCertified",
+        "isHalal",
+        "isFresh",
+        "isOrganic",
+        "isFeatured",
+        "isActive",
+        "quantity",
+        "stockMode",
+        "vatRate",
       ];
       const prodBefore = await tx.product.findUnique({
         where: { id },
-        select: { manuallyEditedFields: true, inventory: { select: { id: true, quantity: true, stockMode: true } } },
+        select: {
+          manuallyEditedFields: true,
+          inventory: { select: { id: true, quantity: true, stockMode: true } },
+        },
       });
       const fieldSet = new Set(prodBefore?.manuallyEditedFields || []);
       for (const f of fullEditFields) fieldSet.add(f);
@@ -3039,7 +3059,7 @@ export async function confirmProductVat(
   vendorId: string,
   productId: string,
   confirmedRate: number,
-  userId?: string
+  userId?: string,
 ): Promise<CatalogueWriteResult> {
   try {
     return await prismaWs.$transaction(async (tx) => {
@@ -3086,7 +3106,9 @@ export async function quickUpdateInventory(
           id: true,
           restriction: true,
           manuallyEditedFields: true,
-          inventory: { select: { id: true, quantity: true, stockMode: true, lowStockThreshold: true } },
+          inventory: {
+            select: { id: true, quantity: true, stockMode: true, lowStockThreshold: true },
+          },
         },
       });
       if (!existing) return { ok: false as const, error: "That product no longer exists." };
@@ -3102,7 +3124,8 @@ export async function quickUpdateInventory(
         if (currentMode === "UNKNOWN" && data.quantity === undefined) {
           return {
             ok: false as const,
-            error: "Product cannot be activated while stock status is UNKNOWN. Enter a verified stock count first.",
+            error:
+              "Product cannot be activated while stock status is UNKNOWN. Enter a verified stock count first.",
           };
         }
       }

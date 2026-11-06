@@ -38,8 +38,8 @@ async function exportVatReview() {
         items,
       },
       null,
-      2
-    )
+      2,
+    ),
   );
 
   console.log(`VAT review export written: ${items.length} items`);

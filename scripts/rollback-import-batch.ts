@@ -26,7 +26,9 @@ export async function rollbackBatch(options: RollbackOptions) {
   console.log("=== ROLLBACK IMPORT BATCH ===");
   console.log(`Batch ID:  ${batchId}`);
   console.log(`Vendor ID: ${vendorId}`);
-  console.log(`Mode:      ${apply ? "APPLY (deleting unmodified batch products)" : "DRY RUN (preview only)"}`);
+  console.log(
+    `Mode:      ${apply ? "APPLY (deleting unmodified batch products)" : "DRY RUN (preview only)"}`,
+  );
 
   const productsInBatch = await prisma.product.findMany({
     where: {
@@ -48,7 +50,8 @@ export async function rollbackBatch(options: RollbackOptions) {
   console.log(`Found ${productsInBatch.length} products associated with batch ${batchId}.`);
 
   const deletableProducts: typeof productsInBatch = [];
-  const preservedProducts: Array<{ id: string; name: string; plu: string | null; reason: string }> = [];
+  const preservedProducts: Array<{ id: string; name: string; plu: string | null; reason: string }> =
+    [];
 
   for (const prod of productsInBatch) {
     if (prod._count.orderItems > 0) {
@@ -131,7 +134,9 @@ export async function rollbackBatch(options: RollbackOptions) {
     deletedCount++;
   }
 
-  console.log(`[ROLLBACK COMPLETE] Deleted ${deletedCount} unedited products; preserved ${preservedProducts.length} protected products.`);
+  console.log(
+    `[ROLLBACK COMPLETE] Deleted ${deletedCount} unedited products; preserved ${preservedProducts.length} protected products.`,
+  );
 
   return {
     dryRun: false,
@@ -144,17 +149,23 @@ export async function rollbackBatch(options: RollbackOptions) {
 
 if (process.argv[1] && process.argv[1].endsWith("rollback-import-batch.ts")) {
   const batchFlagIndex = process.argv.indexOf("--batch-id");
-  const batchIdArg = batchFlagIndex !== -1
-    ? process.argv[batchFlagIndex + 1]
-    : process.argv[2] && !process.argv[2].startsWith("--")
-      ? process.argv[2]
-      : undefined;
+  const batchIdArg =
+    batchFlagIndex !== -1
+      ? process.argv[batchFlagIndex + 1]
+      : process.argv[2] && !process.argv[2].startsWith("--")
+        ? process.argv[2]
+        : undefined;
   const vendorArgIndex = process.argv.indexOf("--vendor-id");
-  const vendorId = vendorArgIndex !== -1 ? process.argv[vendorArgIndex + 1] : "a4ed0000-0000-4000-a000-000000000001";
+  const vendorId =
+    vendorArgIndex !== -1
+      ? process.argv[vendorArgIndex + 1]
+      : "a4ed0000-0000-4000-a000-000000000001";
   const apply = process.argv.includes("--apply");
 
   if (!batchIdArg) {
-    console.error("Usage: npx tsx scripts/rollback-import-batch.ts <batchId> [--vendor-id <id>] [--apply]");
+    console.error(
+      "Usage: npx tsx scripts/rollback-import-batch.ts <batchId> [--vendor-id <id>] [--apply]",
+    );
     process.exit(1);
   }
 

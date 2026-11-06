@@ -100,7 +100,7 @@ describe("Aheed Stock Management & Import Safeguards", () => {
           plu: testPlu,
           isActive: false,
         },
-      })
+      }),
     ).rejects.toThrow();
 
     // SAME PLU under DIFFERENT vendor (SriMart) must SUCCEED (tenant isolation)
@@ -152,22 +152,18 @@ describe("Aheed Stock Management & Import Safeguards", () => {
     expect(purchasableBefore).toBe(0);
 
     // Attempting to activate product while UNKNOWN must be refused
-    const activateAttempt = await quickUpdateInventory(
-      prisma as any,
-      TEST_VENDOR_1,
-      p.id,
-      { isActive: true }
-    );
+    const activateAttempt = await quickUpdateInventory(prisma as any, TEST_VENDOR_1, p.id, {
+      isActive: true,
+    });
     expect(activateAttempt.ok).toBe(false);
-    expect((activateAttempt as any).error).toMatch(/cannot be activated while stock status is UNKNOWN/i);
+    expect((activateAttempt as any).error).toMatch(
+      /cannot be activated while stock status is UNKNOWN/i,
+    );
 
     // Staff performs physical count and enters 0
-    const countResult = await quickUpdateInventory(
-      prisma as any,
-      TEST_VENDOR_1,
-      p.id,
-      { quantity: 0 }
-    );
+    const countResult = await quickUpdateInventory(prisma as any, TEST_VENDOR_1, p.id, {
+      quantity: 0,
+    });
     expect(countResult.ok).toBe(true);
 
     // Check inventory: stockMode is now TRACKED with quantity 0
@@ -178,12 +174,9 @@ describe("Aheed Stock Management & Import Safeguards", () => {
     expect(invAfter?.quantity).toBe(0);
 
     // Now product can be activated because stock is verified (even though out of stock)
-    const activateAfter = await quickUpdateInventory(
-      prisma as any,
-      TEST_VENDOR_1,
-      p.id,
-      { isActive: true }
-    );
+    const activateAfter = await quickUpdateInventory(prisma as any, TEST_VENDOR_1, p.id, {
+      isActive: true,
+    });
     expect(activateAfter.ok).toBe(true);
 
     // But customer still cannot buy it because quantity is 0
@@ -399,7 +392,8 @@ describe("Aheed Stock Management & Import Safeguards", () => {
         suggestedVatRate: 20,
         vatRate: 20,
         vatNeedsReview: true,
-        vatReviewReason: "Spreadsheet listed 0% VAT. Suggested 20% based on HMRC Notice 700 (Alcohol). Client confirmation required.",
+        vatReviewReason:
+          "Spreadsheet listed 0% VAT. Suggested 20% based on HMRC Notice 700 (Alcohol). Client confirmation required.",
       },
     });
 
@@ -415,7 +409,7 @@ describe("Aheed Stock Management & Import Safeguards", () => {
       TEST_VENDOR_1,
       p.id,
       20,
-      "client-store-owner"
+      "client-store-owner",
     );
     expect(confirmResult.ok).toBe(true);
 

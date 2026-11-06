@@ -16,7 +16,7 @@ const prisma = new PrismaClient({
 
 export async function verifyAndRestoreBackup(
   backupFilePath: string,
-  options: { apply?: boolean; targetVendorId?: string } = {}
+  options: { apply?: boolean; targetVendorId?: string } = {},
 ) {
   if (!fs.existsSync(backupFilePath)) {
     throw new Error(`Backup file not found at: ${backupFilePath}`);
@@ -159,7 +159,9 @@ export async function verifyAndRestoreBackup(
     restoredCount++;
   }
 
-  console.log(`[RESTORE COMPLETED] Restored ${restoredCount} products with their inventory records.`);
+  console.log(
+    `[RESTORE COMPLETED] Restored ${restoredCount} products with their inventory records.`,
+  );
   return {
     success: true,
     mode: "APPLIED",
@@ -169,11 +171,12 @@ export async function verifyAndRestoreBackup(
 
 if (process.argv[1] && process.argv[1].endsWith("restore-aheed-catalogue.ts")) {
   const backupFlagIndex = process.argv.indexOf("--backup");
-  const file = backupFlagIndex !== -1
-    ? process.argv[backupFlagIndex + 1]
-    : process.argv[2] && !process.argv[2].startsWith("--")
-      ? process.argv[2]
-      : undefined;
+  const file =
+    backupFlagIndex !== -1
+      ? process.argv[backupFlagIndex + 1]
+      : process.argv[2] && !process.argv[2].startsWith("--")
+        ? process.argv[2]
+        : undefined;
   const apply = process.argv.includes("--apply");
   if (!file) {
     console.error("Usage: npx tsx scripts/restore-aheed-catalogue.ts <backup-file.json> [--apply]");

@@ -113,7 +113,9 @@ export async function importBatch(options: ImportBatchOptions) {
     const baseSlug = slugify(deptName) || "general";
     let catSlug = baseSlug;
     let counter = 1;
-    while (await prisma.category.findUnique({ where: { vendorId_slug: { vendorId, slug: catSlug } } })) {
+    while (
+      await prisma.category.findUnique({ where: { vendorId_slug: { vendorId, slug: catSlug } } })
+    ) {
       catSlug = `${baseSlug}-${counter++}`;
     }
 
@@ -172,9 +174,10 @@ export async function importBatch(options: ImportBatchOptions) {
             originalVatRate: item.legacyExcelVat,
             suggestedVatRate: item.taxRatePercent,
             vatNeedsReview: item.legacyExcelVat !== item.taxRatePercent,
-            vatReviewReason: item.legacyExcelVat !== item.taxRatePercent
-              ? `Spreadsheet listed ${item.legacyExcelVat}% VAT. Suggested ${item.taxRatePercent}% based on ${item.taxRule}. Client confirmation required.`
-              : null,
+            vatReviewReason:
+              item.legacyExcelVat !== item.taxRatePercent
+                ? `Spreadsheet listed ${item.legacyExcelVat}% VAT. Suggested ${item.taxRatePercent}% based on ${item.taxRule}. Client confirmation required.`
+                : null,
           },
         });
 
@@ -286,7 +289,7 @@ export async function importBatch(options: ImportBatchOptions) {
   }
   const reportPath = path.join(
     reportDir,
-    `report-${manifest.batchId}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`
+    `report-${manifest.batchId}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`,
   );
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), "utf8");
 
@@ -303,17 +306,23 @@ export async function importBatch(options: ImportBatchOptions) {
 
 if (process.argv[1] && process.argv[1].endsWith("import-catalogue-batch.ts")) {
   const manifestFlagIndex = process.argv.indexOf("--manifest");
-  const manifestArg = manifestFlagIndex !== -1
-    ? process.argv[manifestFlagIndex + 1]
-    : process.argv[2] && !process.argv[2].startsWith("--")
-      ? process.argv[2]
-      : undefined;
+  const manifestArg =
+    manifestFlagIndex !== -1
+      ? process.argv[manifestFlagIndex + 1]
+      : process.argv[2] && !process.argv[2].startsWith("--")
+        ? process.argv[2]
+        : undefined;
   const vendorArgIndex = process.argv.indexOf("--vendor-id");
-  const vendorId = vendorArgIndex !== -1 ? process.argv[vendorArgIndex + 1] : "a4ed0000-0000-4000-a000-000000000001";
+  const vendorId =
+    vendorArgIndex !== -1
+      ? process.argv[vendorArgIndex + 1]
+      : "a4ed0000-0000-4000-a000-000000000001";
   const apply = process.argv.includes("--apply");
 
   if (!manifestArg) {
-    console.error("Usage: npx tsx scripts/import-catalogue-batch.ts <manifest.json> [--vendor-id <id>] [--apply]");
+    console.error(
+      "Usage: npx tsx scripts/import-catalogue-batch.ts <manifest.json> [--vendor-id <id>] [--apply]",
+    );
     process.exit(1);
   }
 

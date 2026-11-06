@@ -62,9 +62,10 @@ export function parseSpreadsheet(filePath: string) {
     }
 
     const barcodeRaw = row[2];
-    const barcodeStr = barcodeRaw !== undefined && barcodeRaw !== null && String(barcodeRaw).trim() !== ""
-      ? String(barcodeRaw).trim()
-      : null;
+    const barcodeStr =
+      barcodeRaw !== undefined && barcodeRaw !== null && String(barcodeRaw).trim() !== ""
+        ? String(barcodeRaw).trim()
+        : null;
 
     const descRaw = row[3];
     const nameStr = descRaw ? String(descRaw).trim() : `Product ${pluStr}`;
@@ -78,7 +79,10 @@ export function parseSpreadsheet(filePath: string) {
     const costPriceRaw = row[6] ? parseFloat(String(row[6]).replace(/[^0-9.]/g, "")) : NaN;
     const costPricePence = !isNaN(costPriceRaw) ? Math.round(costPriceRaw * 100) : null;
 
-    const taxRaw = row[10] !== undefined && row[10] !== null ? parseFloat(String(row[10]).replace(/[^0-9.]/g, "")) : 0;
+    const taxRaw =
+      row[10] !== undefined && row[10] !== null
+        ? parseFloat(String(row[10]).replace(/[^0-9.]/g, ""))
+        : 0;
     const legacyExcelVat = !isNaN(taxRaw) ? taxRaw : 0;
 
     const deptRaw = row[11];
@@ -109,10 +113,7 @@ export function parseSpreadsheet(filePath: string) {
   return products;
 }
 
-export function generateManifests(
-  excelPath = "docs/StockList.xls",
-  outDir = ".import-manifests"
-) {
+export function generateManifests(excelPath = "docs/StockList.xls", outDir = ".import-manifests") {
   const allProducts = parseSpreadsheet(excelPath);
   console.log(`Parsed ${allProducts.length} product rows from ${excelPath}`);
 
@@ -184,11 +185,17 @@ export function generateManifests(
 
   console.log("=== Manifest Generation Complete ===");
   console.log(`Total Products In Excel: ${allProducts.length}`);
-  console.log(`Quarantined Rows:       ${quarantineManifest.totalQuarantinedRows} (${quarantineManifest.duplicateGroupCount} duplicate PLU groups)`);
+  console.log(
+    `Quarantined Rows:       ${quarantineManifest.totalQuarantinedRows} (${quarantineManifest.duplicateGroupCount} duplicate PLU groups)`,
+  );
   console.log(`Batch 1 Clean Products:  ${batch1Manifest.productCount} (${b1Path})`);
   console.log(`Batch 2 Clean Products:  ${batch2Manifest.productCount} (${b2Path})`);
-  console.log(`Clean Total:             ${batch1Manifest.productCount + batch2Manifest.productCount}`);
-  console.log(`Reconciled Sum:          ${cleanProducts.length + quarantineManifest.totalQuarantinedRows} === ${allProducts.length}`);
+  console.log(
+    `Clean Total:             ${batch1Manifest.productCount + batch2Manifest.productCount}`,
+  );
+  console.log(
+    `Reconciled Sum:          ${cleanProducts.length + quarantineManifest.totalQuarantinedRows} === ${allProducts.length}`,
+  );
 
   return {
     quarantineManifest,
