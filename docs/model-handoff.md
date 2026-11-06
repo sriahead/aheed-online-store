@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.165.0"
-updated: 2026-11-05
+version: "1.166.0"
+updated: 2026-11-06
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -1509,6 +1509,18 @@ mistake them for backlog.
 ## In-Flight Work
 
 All facts in this section require live verification:
+
+- **P10 `#1441` — slot booking cut-off — BUILT, NOT VALIDATED, NOT PUSHED (2026-11-06).**
+  - **Where it is:** worktree `E:\GitRepositories\aheed-online-store-orders`, branch
+    `feature/slot-booking-cutoff` (spec `4dd50e66`, implementation `7dd161ea`). Spec
+    `specs/2026-11-06-slot-booking-cutoff/`; read its `build-notes.md` first.
+  - **Blocked on the owner:** migration `20261106120000_slot_booking_cutoff` is not applied to dev,
+    so three live-database tests fail locally until it is.
+  - **What it changes:** checkout hides, and `placeOrder` refuses, any slot that starts within the
+    store's booking cut-off (`VendorConfig.slotBookingCutoffMinutes`, default 60, set at
+    `/staff/fulfilment`). Every existing store gets the 60-minute default on deploy.
+  - **Carry-forward:** the branch includes the three `#1435` post-ship doc commits from
+    `docs/1435-post-ship`.
 
 - **P10 `#1435` — order updates: notification queue, owner email + Telegram, live order tracker —
   MERGED TO STAGING, NOT PROMOTED (2026-11-05).**
