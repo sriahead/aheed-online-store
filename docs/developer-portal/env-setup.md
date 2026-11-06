@@ -1311,8 +1311,14 @@ it:
 **Last run:** 2026-11-05 on staging after PR #1440 (`373f83f`, deploy run `42106863189`). Quick
 checks 1-4 passed: the deploy applied `20261105120000_notification_outbox` and redeployed
 `aheed-scheduler-staging`; health reported `373f83f` with the database and reference data reachable;
-the retry route answered 405 and 401; `/privacy` showed the new paragraph and `24 hours`. Live
-checks 5-10 have not run yet.
+the retry route answered 405 and 401; `/privacy` showed the new paragraph and `24 hours`.
+Step 6 passed early on 2026-11-06, on a paid collection order rather than an advance (owner). The
+group received
+`[STAGING] New order: Aheed Food Centre`, with the order (`AHE-20261106-EK4PPB`), total
+(`£5.08 (2 items)`), slot (`Collection: Friday 6 November, 13:00–15:00`) and staff-panel link lines.
+It had no customer name or product names. That test exposed a separate checkout bug: today's slots
+stay selectable after their time has passed. It is tracked separately. Steps 5 and 7-10 have not
+run.
 
 Quick checks:
 

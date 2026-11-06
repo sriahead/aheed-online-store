@@ -1517,8 +1517,8 @@ All facts in this section require live verification:
     the same day). Spec `specs/2026-11-05-order-updates-notifications/`. Its `build-notes.md`
     records two validation passes (not independent) and the ship. The board shows **In Review**,
     and `#1435` stays open until promotion. Production gets the migration from `deploy-production`.
-  - **Not yet run:** a real owner Telegram message on staging (R16, sanity-check steps 5-6). Steps
-    7-10 are optional. The guide is in `docs/developer-portal/env-setup.md`, "Sanity check: order
+  - **Proven on 2026-11-06:** a real owner Telegram message arrived on staging (R16), for a paid
+    collection order. Steps 5 and 7-10 have not run. The guide is in `docs/developer-portal/env-setup.md`, "Sanity check: order
     updates and notification queue".
   - **What it changes for every later slice:**
     - Every paid-order event now goes through `notifyOrderEvent` (`lib/order-notifications-service.ts`).
