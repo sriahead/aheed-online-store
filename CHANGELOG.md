@@ -114,6 +114,10 @@ every branch merges.
     - `sort` is excluded from filter chips so sort order never renders as a removable facet.
   - **Unit & Integration Tests (`tests/product-sort-and-discovery.test.ts`):** Added comprehensive test coverage asserting sort parsing, URL preservation, chip isolation, Prisma `orderBy` generation, in-memory candidate sorting, and empty state relaxation.
 
+### Changed
+
+- **`main` merged back into `staging`** (no code change). PR #1439 sent the storefront commits from `#1425`-`#1437` to `main` from a release branch, so `staging` never had `main` as a parent and promotion PR #1443 conflicted in `CHANGELOG.md` and the two generated KMS index files. The merge keeps `staging`'s side of all three, and the resulting tree is identical to `staging`.
+
 ### Fixed
 
 - **Checkout no longer offers slots that have started or start too soon** (issue `#1441`, spec `specs/2026-11-06-slot-booking-cutoff/`).
