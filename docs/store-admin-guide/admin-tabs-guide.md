@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.20.0"
-updated: 2026-10-31
+version: "2.21.0"
+updated: 2026-11-06
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
@@ -464,7 +464,10 @@ and once it is full the slot stops being offered — it is the only thing preven
 orders than you can physically deliver. Slots repeat every week; there is no one-off or holiday slot.
 Times are 24-hour, so afternoon slots start at 13:00 rather than 1:00. **The booking window** is how
 many days ahead a customer may book. **The slot hold** is how long an unpaid order keeps its space
-before it is released for someone else. **The time zone** is your store's own clock: it decides
+before it is released for someone else. **The booking cut-off** is how close to a slot's start
+time customers can still book it. The default is 60 minutes, so a 13:00 slot can be booked until
+11:59, and a slot that has already started is never offered. Set it to 0 to allow booking right up
+to the start. **The time zone** is your store's own clock: it decides
 which calendar day a slot falls on for a customer booking from anywhere in the world, and how the
 start and end times you type on campaigns and discount codes are read. Leave it at `Europe/London`
 unless your shop is genuinely in another zone.

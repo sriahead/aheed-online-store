@@ -5,6 +5,7 @@ import {
   parseFulfilmentSettings,
   parseSlotInput,
   MAX_BOOKING_WINDOW_DAYS,
+  MAX_SLOT_BOOKING_CUTOFF_MINUTES,
   MAX_SLOT_HOLD_MINUTES,
   isSupportedTimeZone,
   supportedTimeZones,
@@ -35,6 +36,7 @@ const VALID_SETTINGS = {
   expressCollectionEnabled: false,
   bookingWindowDays: "14",
   slotHoldDurationMinutes: "15",
+  slotBookingCutoffMinutes: "60",
   timezone: "Europe/London",
 };
 
@@ -156,6 +158,7 @@ describe("parseFulfilmentSettings", () => {
         expressCollectionEnabled: true,
         bookingWindowDays: 14,
         slotHoldDurationMinutes: 15,
+        slotBookingCutoffMinutes: 60,
         timezone: "Europe/London",
       },
     });
@@ -195,6 +198,29 @@ describe("parseFulfilmentSettings", () => {
     const parsed = parseFulfilmentSettings({ ...VALID_SETTINGS, slotHoldDurationMinutes });
     expect(parsed.ok).toBe(false);
     expect(!parsed.ok && parsed.error.field).toBe("slotHoldDurationMinutes");
+  });
+
+  // #1441 — 0 is a real setting (book until the slot starts), so the lower bound is 0, not 1.
+  it.each([["0"], ["60"], [String(MAX_SLOT_BOOKING_CUTOFF_MINUTES)]])(
+    "accepts a booking cut-off of %s",
+    (slotBookingCutoffMinutes) => {
+      const parsed = parseFulfilmentSettings({ ...VALID_SETTINGS, slotBookingCutoffMinutes });
+      expect(parsed.ok && parsed.value.slotBookingCutoffMinutes).toBe(
+        Number(slotBookingCutoffMinutes),
+      );
+    },
+  );
+
+  it.each([
+    ["negative", "-1"],
+    ["above the maximum", String(MAX_SLOT_BOOKING_CUTOFF_MINUTES + 1)],
+    ["fractional", "1.5"],
+    ["empty", ""],
+  ])("rejects a %s booking cut-off", (_label, slotBookingCutoffMinutes) => {
+    const parsed = parseFulfilmentSettings({ ...VALID_SETTINGS, slotBookingCutoffMinutes });
+    expect(parsed.ok).toBe(false);
+    expect(!parsed.ok && parsed.error.field).toBe("slotBookingCutoffMinutes");
+    expect(!parsed.ok && parsed.error.message).toMatch(/^The booking cut-off/);
   });
 
   it("accepts both bounds exactly", () => {

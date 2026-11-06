@@ -156,6 +156,7 @@ async function main() {
           expressCollectionEnabled: before.expressCollectionEnabled,
           bookingWindowDays: before.bookingWindowDays,
           slotHoldDurationMinutes: before.slotHoldDurationMinutes,
+          slotBookingCutoffMinutes: before.slotBookingCutoffMinutes,
           timezone: "Asia/Karachi",
         });
         const after = await getFulfilmentSettingsForVendor(prisma, v.id);
@@ -167,6 +168,7 @@ async function main() {
           expressCollectionEnabled: before.expressCollectionEnabled,
           bookingWindowDays: before.bookingWindowDays,
           slotHoldDurationMinutes: before.slotHoldDurationMinutes,
+          slotBookingCutoffMinutes: before.slotBookingCutoffMinutes,
           timezone: "Indian/Kerguelen",
         });
         const obscure = await getFulfilmentSettingsForVendor(prisma, v.id);
@@ -181,6 +183,7 @@ async function main() {
           expressCollectionEnabled: before.expressCollectionEnabled,
           bookingWindowDays: before.bookingWindowDays,
           slotHoldDurationMinutes: before.slotHoldDurationMinutes,
+          slotBookingCutoffMinutes: before.slotBookingCutoffMinutes,
           timezone: before.timezone,
         });
         const restored = await getFulfilmentSettingsForVendor(prisma, v.id);

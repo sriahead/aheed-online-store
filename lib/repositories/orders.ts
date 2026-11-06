@@ -46,6 +46,7 @@ import { tieredLineTotalPence } from "@/lib/tier-pricing";
 import { listActiveTiersForProducts } from "@/lib/repositories/product-tiers";
 import { NOTE_ACCEPTANCE_SELECT, productAcceptsNote } from "@/lib/custom-note";
 import { slotLabel } from "@/lib/order-notifications/slot";
+import { isSlotBookable } from "@/lib/slot-cutoff";
 
 /**
  * Order read/write path (P3b, #96) — the ONLY DB access for orders. Pages,
@@ -70,7 +71,8 @@ export class CheckoutError extends Error {
       | "ORDER_NUMBER_COLLISION"
       | "PAYMENT_PROVIDER_FAILED"
       | "DISCOUNT_CODE"
-      | "SLOT_FULL",
+      | "SLOT_FULL"
+      | "SLOT_CLOSED",
     message: string,
     /**
      * #988 — why a `DISCOUNT_CODE` refusal happened, so the caller can tell an unknown code (which
@@ -181,6 +183,24 @@ export async function placeOrder(
         });
         const config = await tx.vendorConfig.findUnique({ where: { vendorId } });
         if (slot && config) {
+          // #1441 — the same rule the slot list applies, checked again here: a grid loaded before
+          // the cut-off passed, or a direct server-action call, must not book a closed slot.
+          // `fulfilmentDate` is the UTC midnight of the vendor-local day, so its UTC date is that day.
+          const day = input.fulfilmentDate.toISOString().slice(0, 10);
+          if (
+            !isSlotBookable(
+              day,
+              slot.startTime,
+              config.timezone,
+              config.slotBookingCutoffMinutes,
+              new Date(),
+            )
+          ) {
+            throw new CheckoutError(
+              "SLOT_CLOSED",
+              "That time slot can no longer be booked. Please choose another.",
+            );
+          }
           const holdMinutes = config.slotHoldDurationMinutes;
           const cutoff = new Date(Date.now() - holdMinutes * 60000);
           const used = await tx.order.count({
