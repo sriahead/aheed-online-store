@@ -4,8 +4,8 @@ title: "Runtime Pitfalls — code that passes every check and still fails on Wor
 audience: [dev]
 type: doc
 status: approved
-version: "1.4.0"
-updated: 2026-10-22
+version: "1.5.0"
+updated: 2026-11-06
 visibility: internal
 summary: The failure catalogue for this stack — Prisma and Neon on V8 isolates, storage credentials, edge caching, dependency traps, Workers AI and Better Auth. Everything here passes lint, typecheck, test and build, and fails at runtime anyway.
 tags: [runtime, workers, prisma, troubleshooting]
@@ -315,6 +315,16 @@ pitfalls rather than in `specs/architecture.md` §3.1.
 Version policy and the pins themselves live in `specs/tech-stack.md`. What follows is the set of
 version-adjacent facts that break a build or a runtime rather than a policy.
 
+- **A green build can still ship a page old Safari cannot run (`#1445`).**
+  - **Signature:** on an older iPhone the page renders, but no button works: no Google sign-in, no add
+    to basket, no form submit. Icons and layout look normal because they are server-rendered HTML.
+  - **Cause:** Next.js 16 compiles for Safari 16.4+ unless `package.json` sets `browserslist`. One
+    chunk with newer syntax (here a class static block in the App Router chunk) is a SyntaxError on
+    iOS 15, the browser discards the chunk, and React never hydrates.
+  - **Check a live site:** download the `/_next/static/**.js` files the HTML references, then run
+    `npx tsx scripts/check-client-syntax.ts <dir>`.
+  - The floor is Safari / iOS 15.4 and `postbuild` enforces it. Do not remove `browserslist` as
+    noise. Floor rationale: `specs/tech-stack.md`, "Application".
 - **Exact-pin infrastructure-adjacent packages** — DB drivers, adapters, runtime types. Their
   declared semver ranges are looser than real compatibility. **Locked today, and enforced by
   `tests/dependency-pins.test.ts`:** `@neondatabase/serverless` = **1.1.0 exact**,

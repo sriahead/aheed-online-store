@@ -4,8 +4,8 @@ title: Tech Stack
 audience: [dev]
 type: doc
 status: approved
-version: "1.7.0"
-updated: 2026-11-04
+version: "1.8.0"
+updated: 2026-11-06
 visibility: internal
 summary: Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal.
 tags: [tech-stack, guardrails]
@@ -24,6 +24,19 @@ environment-configured seam.
 - **Next.js** (App Router, React) with **TypeScript** — web storefront + admin.
 - **Deployed on Cloudflare** (Pages/Workers via the OpenNext adapter). Edge CDN + WAF in front.
 - **Tailwind CSS** — responsive UI (desktop/tablet/mobile browsers), mobile-first. English only.
+- **Browser floor: Safari / iOS 15.4** (`#1445`, `specs/2026-11-06-ios15-safari-compat/`). Other
+  engines keep Next.js 16's defaults (Chrome, Edge and Firefox 111). `package.json` `browserslist`
+  is `chrome >= 111`, `edge >= 111`, `firefox >= 111`, `safari >= 15.4`, `ios_saf >= 15.4`.
+  - **Without it, Next compiles for Safari 16.4.** The App Router chunk then ships a class static
+    block, iOS 15 cannot parse it, and nothing on the page can be clicked. The build stays green.
+  - **Why 15.4, not 15.0:** Tailwind v4 wraps its whole stylesheet in `@layer` (cascade layers, Safari
+    15.4), and Next's App Router calls `structuredClone` unguarded (Safari 15.4). An iPhone 6s
+    updates to iOS 15.8.
+  - **Guard:** the `postbuild` script `scripts/check-client-syntax.ts` parses every `.next/static`
+    `.js` file with **`acorn` 8.18.0 (exact-pinned devDependency, MIT)**. It fails the build on a
+    static block, a regex lookbehind literal or a regex `v` flag. OpenNext runs `npm run build`, so
+    both deploys run it. `tests/browser-support.test.ts` pins the targets, the hook and the acorn
+    version. The guard checks syntax only; a runtime API newer than 15.4 is not caught.
 - **Headless API** — Route Handlers + Server Actions serve web and admin now, and a **native mobile
   app later** without re-architecture. REST.
 

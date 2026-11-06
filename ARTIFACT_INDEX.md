@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-06T11:52:46.973Z` · commit `b079fa8a` · `318` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-06T12:06:35.906Z` · commit `d045cf36` · `318` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -38,7 +38,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Onboarding](docs/developer-portal/onboarding.md) | doc | 1.1.0 | 2026-08-06 | approved | internal | 5-minute start-here guide — where the project actually is, prerequisites, local setup, and how to get a new developer running, tested, and branching independently. |
 | [Manual Regression Test Register](docs/developer-portal/regression-tests.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Manual regression test cases for known critical issues — the hybrid Prisma client contract under Cloudflare Worker connection limits, and cart persistence across a cancelled Stripe checkout. |
 | [Repository Structure](docs/developer-portal/repo-structure.md) | doc | 1.2.0 | 2026-08-12 | approved | internal | The agreed target folder layout for the Next.js + Prisma + Cloudflare app, Clean Architecture layering, and which phase scaffolds each folder. |
-| [Runtime Pitfalls — code that passes every check and still fails on Workers](docs/developer-portal/runtime-pitfalls.md) | doc | 1.4.0 | 2026-10-22 | approved | internal | The failure catalogue for this stack — Prisma and Neon on V8 isolates, storage credentials, edge caching, dependency traps, Workers AI and Better Auth. Everything here passes lint, typecheck, test and build, and fails at runtime anyway. |
+| [Runtime Pitfalls — code that passes every check and still fails on Workers](docs/developer-portal/runtime-pitfalls.md) | doc | 1.5.0 | 2026-11-06 | approved | internal | The failure catalogue for this stack — Prisma and Neon on V8 isolates, storage credentials, edge caching, dependency traps, Workers AI and Better Auth. Everything here passes lint, typecheck, test and build, and fails at runtime anyway. |
 | [SDD Operator Runbook](docs/developer-portal/sdd/operator-runbook.md) | runbook | 1.2.0 | 2026-10-21 | approved | internal | Human-executable manual for the SDD delivery loop — Orient, Propose, Spec, Build, Document, Validate, Fix, Ship, Document — covering what each stage does behind the scenes, how to run it by hand, how to verify it worked, and how to diagnose and recover when it doesn't. |
 | [Phase 6.5 Gap Register (superseded by the master register)](docs/developer-portal/sdd/self-review/GAP-REGISTER.md) | doc | 2.0.0 | 2026-08-17 | approved | internal | The Phase 6.5 audit's gap register, now a pointer — its four findings (GAP-001..004) were folded into the single master register at docs/gap-register.md on 2026-08-17. |
 | [Phase 6.5 Autonomous Self-Review Report](docs/developer-portal/sdd/self-review/SELF-REVIEW.md) | doc | 1.1.0 | 2026-08-17 | approved | internal | Executive summary and status breakdown of Phase 6.5 audit loop across architecture, schema, security, payments, and deployment. |
@@ -320,7 +320,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Mission](specs/mission.md) | doc | 1.0.0 | 2026-08-06 | approved | internal | The problem Aheed's online store solves, target users (customers/staff/admin), MVP scope, success criteria, and open items carried into later phases. |
 | [Roadmap](specs/roadmap.md) | doc | 1.195.0 | 2026-11-05 | approved | internal | Master backlog and phase sequencing (M0, P0-P12, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, onboarding P11, Merqify move P12. |
 | [SDD Workflow](specs/sdd-workflow.md) | doc | 2.53.1 | 2026-10-31 | approved | internal | The SDD delivery loop — Orient, Propose, Spec, Build, Document (build notes), Clear, Validate, Fix, Ship, Document (final), Clear — with two context resets, plus the Discover, Learn and business case review stages that run at milestone close. Most stages are slash commands. |
-| [Tech Stack](specs/tech-stack.md) | doc | 1.7.0 | 2026-11-04 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
+| [Tech Stack](specs/tech-stack.md) | doc | 1.8.0 | 2026-11-06 | approved | internal | Technical guardrails for the Aheed Online Store — application, data, auth, storage, payments, email, hosting, caching, compliance, and testing choices, with the ADRs that govern where they differ from the original proposal. |
 
 ## Track 2 — Staff / Operations (`staff-ops`)  ·  audience: staff
 

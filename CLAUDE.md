@@ -41,6 +41,10 @@ are open owner-gated blockers — so no financial figure here is a realised numb
   `@cloudflare/next-on-pages`, **not** Next's `edge` runtime — never add an edge runtime export.
 - **Node.js runtime** (`nodejs_compat`); keep that flag and a recent `compatibility_date`.
 - Deploy: `opennextjs-cloudflare build`, then `wrangler deploy --env <env>`.
+- **Browser floor is Safari / iOS 15.4, set by `browserslist` in `package.json` — never remove it.**
+  Without it Next compiles for Safari 16.4. iOS 15 then fails to parse a framework chunk and every
+  button is dead, while the build stays green (`#1445`). `postbuild` (`scripts/check-client-syntax.ts`)
+  fails the build on such syntax.
 - **No `proxy.ts`/`middleware.ts` can ship at all.** No per-file workaround — pass a prop from the
   layout. `next build` stays green regardless, so it proves nothing.
 
