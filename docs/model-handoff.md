@@ -4,7 +4,7 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.166.0"
+version: "1.167.0"
 updated: 2026-11-06
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
@@ -1510,8 +1510,26 @@ mistake them for backlog.
 
 All facts in this section require live verification:
 
-- **P10 `#1441` — slot booking cut-off — BUILT, NOT VALIDATED, NOT PUSHED (2026-11-06).**
-  - **Where it is:** worktree `E:\GitRepositories\aheed-online-store-orders`, branch
+- **P10 `#1445` — iPhone 6s / Safari 15 compatibility — MERGED TO STAGING, NOT PROMOTED
+  (2026-11-06).**
+  - **Where it is:** PR **#1446** (squash `f72ad74`, `staging`); `deploy-staging` run
+    `42253448213`. No migration. Spec `specs/2026-11-06-ios15-safari-compat/`; its `build-notes.md`
+    records one validation pass (not independent) and the ship. The board shows **In Review**.
+  - **What it changes for every later slice:** the browser floor is Safari / iOS 15.4, set by
+    `browserslist` in `package.json`, and `npm run build` now runs a `postbuild` syntax guard over
+    `.next/static`. A build that fails with `check-client-syntax: … class static block` means a
+    dependency or target change broke old iPhones; fix the target, never remove the guard (rule in
+    `CLAUDE.md`, evidence in `runtime-pitfalls.md`).
+  - **Owner actions outstanding:** merqify.com zone Always Use HTTPS + minimum TLS 1.2 (the "Not
+    Secure" half of `#1445`), and the iOS 15.4+ device check including icons. Guide:
+    `docs/developer-portal/env-setup.md`, "Sanity check: old iPhones / Safari 15.4 compatibility".
+    Keep `#1445` open after promotion until both are done.
+  - **Carry-forward:** branch `docs/1445-post-ship` (worktree `E:\GitRepositories\aheed-ios15`)
+    holds the guide and this reconciliation.
+
+- **P10 `#1441` — slot booking cut-off — MERGED TO STAGING (PR #1442, squash `21c8a5c`), NOT
+  PROMOTED.** The rest of this entry predates that merge; that session's post-ship docs own it.
+  - **Where it was built:** worktree `E:\GitRepositories\aheed-online-store-orders`, branch
     `feature/slot-booking-cutoff` (spec `4dd50e66`, implementation `7dd161ea`). Spec
     `specs/2026-11-06-slot-booking-cutoff/`; read its `build-notes.md` first.
   - **Dev database:** the owner applied migration `20261106120000_slot_booking_cutoff` to dev on
