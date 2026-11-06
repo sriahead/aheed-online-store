@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
+    "postbuild": "tsx scripts/check-client-syntax.ts",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && wrangler deploy",
     "cf-typegen": "wrangler types",
@@ -38,6 +39,13 @@
     "icons:build": "tsx scripts/build-icons.ts",
     "icons:check": "tsx scripts/build-icons.ts --check"
   },
+  "browserslist": [
+    "chrome >= 111",
+    "edge >= 111",
+    "firefox >= 111",
+    "safari >= 15.4",
+    "ios_saf >= 15.4"
+  ],
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
     "@opennextjs/cloudflare": "^1.20.2",
@@ -66,6 +74,7 @@
     "@types/node": "^22.13.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "acorn": "8.18.0",
     "dom-accessibility-api": "^0.7.1",
     "dotenv": "^16.4.5",
     "esbuild": "0.28.1",

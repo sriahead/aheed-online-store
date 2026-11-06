@@ -120,6 +120,12 @@ every branch merges.
 
 ### Fixed
 
+- **The site works again on iPhone 6s / Safari 15: Google sign-in, add to basket and forms** (issue `#1445`, spec `specs/2026-11-06-ios15-safari-compat/`).
+  - **Cause.** Next.js 16 compiled client code for Safari 16.4+. The App Router chunk carried a class static block, which iOS 15 Safari cannot parse, so React never hydrated and every button and form on the page did nothing. The build was green throughout.
+  - **Fix.** `package.json` now sets `browserslist` to `chrome >= 111`, `edge >= 111`, `firefox >= 111`, `safari >= 15.4`, `ios_saf >= 15.4`. The other engines keep Next's defaults, and the built CSS is unchanged.
+  - **Guard.** A new `postbuild` script, `scripts/check-client-syntax.ts`, parses every built client file with `acorn` (new exact-pinned devDependency, 8.18.0). It fails the build on syntax Safari 15.4 cannot parse. It runs on every `npm run build`, so on both deploys too. Run against the production chunks from before the fix, it reports the static block in `3794-d7cddff008311ab3.js`. `tests/browser-support.test.ts` pins the targets, the hook and the parser.
+  - **Floor: Safari / iOS 15.4.** The stylesheet's cascade layers and Next's `structuredClone` both need it. An iPhone 6s updates to iOS 15.8. Recorded in `specs/tech-stack.md`, `docs/developer-portal/runtime-pitfalls.md` and `CLAUDE.md`.
+  - **Not in this change.** The "Not Secure" warning is the merqify.com Cloudflare zone serving plain HTTP without redirecting (Always Use HTTPS off; minimum TLS 1.0). That is an owner action tracked in `#1445`.
 - **Checkout no longer offers slots that have started or start too soon** (issue `#1441`, spec `specs/2026-11-06-slot-booking-cutoff/`).
   - Each store now has a **Booking cut-off (minutes)** setting at `/staff/fulfilment`, defaulting to 60. It is stored in the new column `VendorConfig.slotBookingCutoffMinutes`, added by the hand-authored migration `20261106120000_slot_booking_cutoff` (`#895`).
   - A slot can be booked only if it starts more than the cut-off from now, in the store's time zone. The check is `lib/slot-cutoff.ts` `isSlotBookable`.
