@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Brand Management Experience & Neuromarketing Table Operations**
+  - **Cognitive Framing & Neuromarketing KPI Anchors.** Transformed `/staff/brands` from a vertical stack of 80+ isolated cards into a streamlined, high-information-density table. Anchored key metrics at the top (Total Brands, Branded Products, Top Brand, and Empty Brands) reducing cognitive load and highlighting catalogue gaps via the Von Restorff effect.
+  - **Interactive Brand Products Quick View Drawer.** Added instant product drawer (`BrandProductQuickViewItem` and `getBrandProducts`) showing all products linked to a brand, price ranges, average price anchor, live stock badges (In Stock, Low Stock, Out of Stock), direct link to edit product (`/staff/products/{id}`), and single-click product unlinking (`unassignProductFromBrandAction`).
+  - **Instant Search, Filtering & Sorting (Hick's Law).** Real-time client search across brand names and slugs, filter tabs (`All`, `With Products`, `Empty`), and sorting by product volume or alphabetical order.
+  - **Safe CRUD Dialogs & Loss Aversion.** Interactive modal workflows for adding brands, editing names and logo keys, and safe deletion confirmation with explicit warning when products are assigned (preserving products in the catalogue).
+
 - **Excel Product Importer Encoding & Brand Dictionary Fixes**
   - **Windows-1252 & Currency Encoding Robustness.** Configured SheetJS parser in `StockFileImporter` with Windows-1252 codepage decoding (`codepage: 1252`) and updated `parsePricePence` in `price.ts` to cleanly strip currency replacement characters (`\uFFFD`, `\xA3`, `\u00A3`, currency symbols, and pence suffixes). Eliminates `BAD_PRICE` rejections on Excel files generated on UK Windows EPOS systems.
   - **Curated Grocery Brands Registry & Automated Backfill.** Added `CURATED_COMMON_BRANDS` to `lib/catalogue-import/brand.ts` featuring common South Asian and UK grocery brands (TRS, Natco, Shan, Laila, Regal, Aytac, Niru, Laziza, Tropical Sun, etc.). Implemented automated backfill (`scripts/backfill-brands-and-net-content.ts`), brand consolidation (`scripts/consolidate-brands.ts`), and staging import runner (`scripts/run-staging-import.ts`) supporting `--env-file` targets. Successfully created and enriched 83 brands across 3,799 live products on the Merqify Staging cell (`aheed-staging.merqify.com`).
