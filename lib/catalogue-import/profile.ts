@@ -26,6 +26,8 @@ export const importProfileSchema = z
         subDepartment: headerName.optional(),
         description: headerName.optional(),
         vat: headerName.optional(),
+        brand: headerName.optional(),
+        netContent: headerName.optional(),
       })
       .strict(),
     /** `pattern` is searched (case-insensitively) in the name cell; the first match is the unit label. */

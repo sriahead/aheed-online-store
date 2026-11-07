@@ -345,6 +345,38 @@ export async function placeOrder(
             `${line.productName} just sold out — please adjust your cart.`,
           );
         }
+
+        if (
+          "inventoryAuditLog" in tx &&
+          typeof (tx as any).inventoryAuditLog?.create === "function"
+        ) {
+          try {
+            const inv = await tx.inventory.findFirst({
+              where: { vendorId, productId: line.productId },
+              select: { id: true, quantity: true, stockMode: true },
+            });
+            if (inv) {
+              await (tx as any).inventoryAuditLog.create({
+                data: {
+                  vendorId,
+                  productId: line.productId,
+                  inventoryId: inv.id,
+                  previousQuantity: inv.quantity + line.quantity,
+                  newQuantity: inv.quantity,
+                  changeAmount: -line.quantity,
+                  previousStockMode: inv.stockMode,
+                  newStockMode: inv.stockMode,
+                  source: "ORDER_RESERVED",
+                  reason: "Stock reserved for order checkout",
+                  actorType: "CUSTOMER",
+                  actorId: input.userId,
+                },
+              });
+            }
+          } catch {
+            // Optional audit log in stub environments
+          }
+        }
       }
 
       let addressData = { vendorId, userId: input.userId, ...input.address };
@@ -672,6 +704,37 @@ async function releaseOrder(
         where: { vendorId, productId: item.productId, stockMode: "TRACKED" },
         data: { quantity: { increment: item.quantity } },
       });
+
+      if (
+        "inventoryAuditLog" in tx &&
+        typeof (tx as any).inventoryAuditLog?.create === "function"
+      ) {
+        try {
+          const inv = await tx.inventory.findFirst({
+            where: { vendorId, productId: item.productId, stockMode: "TRACKED" },
+            select: { id: true, quantity: true, stockMode: true },
+          });
+          if (inv) {
+            await (tx as any).inventoryAuditLog.create({
+              data: {
+                vendorId,
+                productId: item.productId,
+                inventoryId: inv.id,
+                previousQuantity: inv.quantity - item.quantity,
+                newQuantity: inv.quantity,
+                changeAmount: item.quantity,
+                previousStockMode: inv.stockMode,
+                newStockMode: inv.stockMode,
+                source: "ORDER_CANCELLED",
+                reason: "Order cancelled",
+                actorType: "SYSTEM",
+              },
+            });
+          }
+        } catch {
+          // Graceful fallback in stubs
+        }
+      }
     }
 
     await tx.payment.updateMany({ where: { orderId }, data: { status: "FAILED" } });
@@ -2095,6 +2158,37 @@ export async function cancelConfirmedOrder(
         where: { vendorId, productId: item.productId, stockMode: "TRACKED" },
         data: { quantity: { increment: item.quantity } },
       });
+
+      if (
+        "inventoryAuditLog" in tx &&
+        typeof (tx as any).inventoryAuditLog?.create === "function"
+      ) {
+        try {
+          const inv = await tx.inventory.findFirst({
+            where: { vendorId, productId: item.productId, stockMode: "TRACKED" },
+            select: { id: true, quantity: true, stockMode: true },
+          });
+          if (inv) {
+            await (tx as any).inventoryAuditLog.create({
+              data: {
+                vendorId,
+                productId: item.productId,
+                inventoryId: inv.id,
+                previousQuantity: inv.quantity - item.quantity,
+                newQuantity: inv.quantity,
+                changeAmount: item.quantity,
+                previousStockMode: inv.stockMode,
+                newStockMode: inv.stockMode,
+                source: "ORDER_CANCELLED",
+                reason: "Order cancelled",
+                actorType: "SYSTEM",
+              },
+            });
+          }
+        } catch {
+          // Graceful fallback in stubs
+        }
+      }
     }
 
     await tx.orderStatusEvent.create({

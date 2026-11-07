@@ -2184,12 +2184,17 @@ export interface StaffInventoryRow {
   id: string;
   slug: string;
   name: string;
-  unitLabel: string;
-  basePrice: number;
-  isActive: boolean;
+  sku: string;
+  brandName: string | null;
   categoryName: string;
+  netContentLabel: string | null;
+  basePrice: number;
+  unitLabel: string;
   quantity: number;
-  /** #1211 — the +/- control renders only for TRACKED; a restricted row cannot be toggled on. */
+  previousQuantity: number;
+  stockStatus: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "UNTRACKED";
+  isRestockNeeded: boolean;
+  isActive: boolean;
   stockMode: StockMode;
   restriction: ProductRestriction | null;
   primaryImage: ProductImageSummary | null;
@@ -2212,6 +2217,9 @@ export async function listInventoryForStaff(
     whereClause.OR = [
       { name: { contains: trimmed, mode: "insensitive" } },
       { description: { contains: trimmed, mode: "insensitive" } },
+      { plu: { contains: trimmed, mode: "insensitive" } },
+      { brand: { name: { contains: trimmed, mode: "insensitive" } } },
+      { category: { name: { contains: trimmed, mode: "insensitive" } } },
     ];
   }
 
@@ -2225,12 +2233,21 @@ export async function listInventoryForStaff(
         id: true,
         slug: true,
         name: true,
+        plu: true,
         unitLabel: true,
         basePrice: true,
         isActive: true,
         restriction: true,
+        netContentAmount: true,
+        netContentUnit: true,
         category: { select: { name: true } },
-        inventory: { select: { quantity: true, stockMode: true } },
+        brand: { select: { name: true } },
+        inventory: { select: { quantity: true, stockMode: true, lowStockThreshold: true } },
+        inventoryAuditLogs: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { previousQuantity: true, newQuantity: true },
+        },
         images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
       },
     }),
@@ -2240,19 +2257,59 @@ export async function listInventoryForStaff(
   const page = hasMore ? rows.slice(0, take) : rows;
 
   return {
-    items: page.map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      name: row.name,
-      unitLabel: row.unitLabel,
-      basePrice: row.basePrice,
-      isActive: row.isActive,
-      categoryName: row.category?.name ?? "Unknown",
-      quantity: row.inventory?.quantity ?? 0,
-      stockMode: stockModeOf(row.inventory),
-      restriction: row.restriction,
-      primaryImage: row.images?.[0] ?? null,
-    })),
+    items: page.map((row) => {
+      const quantity = row.inventory?.quantity ?? 0;
+      const stockMode = stockModeOf(row.inventory);
+      const threshold = row.inventory?.lowStockThreshold ?? 5;
+      const latestAudit = row.inventoryAuditLogs?.[0];
+      const previousQuantity = latestAudit ? latestAudit.previousQuantity : quantity;
+      const isRestockNeeded = stockMode === "TRACKED" && quantity === 0 && previousQuantity > 0;
+
+      let stockStatus: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "UNTRACKED";
+      if (stockMode === "UNTRACKED") {
+        stockStatus = "UNTRACKED";
+      } else if (quantity <= 0) {
+        stockStatus = "OUT_OF_STOCK";
+      } else if (quantity <= threshold) {
+        stockStatus = "LOW_STOCK";
+      } else {
+        stockStatus = "IN_STOCK";
+      }
+
+      let netContentLabel: string | null = null;
+      if (row.netContentAmount != null && row.netContentUnit) {
+        const unitMap: Record<string, string> = {
+          GRAM: "g",
+          KILOGRAM: "kg",
+          MILLILITRE: "ml",
+          LITRE: "L",
+          EACH: "pk",
+        };
+        netContentLabel = `${row.netContentAmount}${unitMap[row.netContentUnit] || row.netContentUnit.toLowerCase()}`;
+      } else {
+        netContentLabel = row.unitLabel || null;
+      }
+
+      return {
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        sku: row.plu || row.id.slice(0, 8).toUpperCase(),
+        brandName: row.brand?.name ?? null,
+        categoryName: row.category?.name ?? "Unknown",
+        netContentLabel,
+        basePrice: row.basePrice,
+        unitLabel: row.unitLabel,
+        quantity,
+        previousQuantity,
+        stockStatus,
+        isRestockNeeded,
+        isActive: row.isActive,
+        stockMode,
+        restriction: row.restriction,
+        primaryImage: row.images?.[0] ?? null,
+      };
+    }),
     nextCursor: hasMore ? page[page.length - 1].id : null,
   };
 }

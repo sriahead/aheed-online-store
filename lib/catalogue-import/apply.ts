@@ -1,5 +1,7 @@
 import { reimportedProductState } from "@/lib/catalogue-import-policy";
 import type { ProductRestriction, StockMode } from "@/lib/cart-rules";
+import { slugify } from "@/lib/catalogue-form";
+import type { NetContentUnit } from "@/components/product/unit-price";
 import { isUniqueViolation } from "./errors";
 import type { ImportPlan, PlannedProduct } from "./plan";
 
@@ -39,6 +41,11 @@ export type ProductWriteRow = {
   unitLabel: string;
   isActive: false;
   restriction: ProductRestriction | null;
+  brandId?: string | null;
+  netContentAmount?: number | null;
+  netContentUnit?: NetContentUnit | null;
+  unitPricePencePerBaseUnit?: number | null;
+  plu?: string | null;
 };
 export type CategoryWriteRow = {
   id: string;
@@ -78,6 +85,11 @@ export interface ImportTx {
   };
   inventory: { createMany(args: { data: InventoryWriteRow[] }): Promise<unknown> };
   productRestrictionAuditLog: { createMany(args: { data: AuditWriteRow[] }): Promise<unknown> };
+  brand?: {
+    create(args: {
+      data: { id: string; vendorId: string; name: string; slug: string };
+    }): Promise<unknown>;
+  };
 }
 
 export interface ImportDb {
@@ -89,7 +101,11 @@ export interface ImportDb {
   };
   product: {
     findMany(args: {
-      where: { vendorId: string; slug: { in: string[] } };
+      where: {
+        vendorId: string;
+        slug?: { in: string[] };
+        plu?: { in: string[] };
+      };
       select: {
         id: true;
         slug: true;
@@ -97,6 +113,7 @@ export interface ImportDb {
         basePrice: true;
         isActive: true;
         restriction: true;
+        plu?: true;
       };
     }): Promise<
       {
@@ -106,8 +123,15 @@ export interface ImportDb {
         basePrice: number;
         isActive: boolean;
         restriction: ProductRestriction | null;
+        plu?: string | null;
       }[]
     >;
+  };
+  brand?: {
+    findMany(args: {
+      where: { vendorId: string };
+      select: { id: true; name: true; slug: true };
+    }): Promise<{ id: string; name: string; slug: string }[]>;
   };
   $transaction<T>(
     fn: (tx: ImportTx) => Promise<T>,
@@ -185,6 +209,18 @@ export async function applyPlan(
       basePrice: number;
       isActive: boolean;
       restriction: ProductRestriction | null;
+      plu?: string | null;
+    }
+  >();
+  const existingProductsByPlu = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      basePrice: number;
+      isActive: boolean;
+      restriction: ProductRestriction | null;
+      plu?: string | null;
     }
   >();
   for (const slugs of chunk(
@@ -203,6 +239,47 @@ export async function applyPlan(
       },
     })) {
       existingProducts.set(row.slug, row);
+    }
+  }
+  const plus = plan.products
+    .map((p) => p.plu)
+    .filter((plu): plu is string => Boolean(plu && plu.trim()));
+  if (plus.length > 0) {
+    try {
+      for (const pluBatch of chunk(plus, 1000)) {
+        const rows = await db.product.findMany({
+          where: { vendorId, plu: { in: pluBatch } },
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            basePrice: true,
+            isActive: true,
+            restriction: true,
+            plu: true,
+          },
+        });
+        for (const row of rows) {
+          if (row.plu) existingProductsByPlu.set(row.plu, row);
+        }
+      }
+    } catch {
+      // Stub environments without plu support in mock findMany
+    }
+  }
+
+  const brandIdsByName = new Map<string, string>();
+  if (db.brand) {
+    try {
+      const existingBrands = await db.brand.findMany({
+        where: { vendorId },
+        select: { id: true, name: true, slug: true },
+      });
+      for (const b of existingBrands) {
+        brandIdsByName.set(b.name.trim().toLowerCase(), b.id);
+      }
+    } catch {
+      // Stub environments
     }
   }
 
@@ -244,7 +321,9 @@ export async function applyPlan(
     let unchanged = 0;
     const departmentDrift: DriftEntry[] = [];
     for (const planned of products) {
-      const existing = existingProducts.get(planned.slug);
+      const existing =
+        existingProducts.get(planned.slug) ??
+        (planned.plu ? existingProductsByPlu.get(planned.plu) : undefined);
       if (!existing) {
         toCreate.push({ planned, id: newId() });
         continue;
@@ -319,20 +398,54 @@ export async function applyPlan(
             });
           }
 
+          if (tx.brand) {
+            for (const { planned } of toCreate) {
+              if (planned.brandName) {
+                const key = planned.brandName.trim().toLowerCase();
+                if (!brandIdsByName.has(key)) {
+                  const brandId = newId();
+                  const brandSlug = slugify(planned.brandName) || `brand-${brandId.slice(0, 8)}`;
+                  await tx.brand.create({
+                    data: {
+                      id: brandId,
+                      vendorId,
+                      name: planned.brandName.trim(),
+                      slug: brandSlug,
+                    },
+                  });
+                  brandIdsByName.set(key, brandId);
+                }
+              }
+            }
+          }
+
           for (const batch of chunk(toCreate, BATCH)) {
             await tx.product.createMany({
-              data: batch.map(({ planned, id }) => ({
-                id,
-                vendorId,
-                slug: planned.slug,
-                name: planned.name,
-                description: planned.description,
-                categoryId: idFor(planned.categorySlug),
-                basePrice: planned.basePrice,
-                unitLabel: planned.unitLabel,
-                isActive: planned.isActive,
-                restriction: planned.restriction,
-              })),
+              data: batch.map(({ planned, id }) => {
+                const brandId = planned.brandName
+                  ? (brandIdsByName.get(planned.brandName.trim().toLowerCase()) ?? null)
+                  : null;
+                const row: ProductWriteRow = {
+                  id,
+                  vendorId,
+                  slug: planned.slug,
+                  name: planned.name,
+                  description: planned.description,
+                  categoryId: idFor(planned.categorySlug),
+                  basePrice: planned.basePrice,
+                  unitLabel: planned.unitLabel,
+                  isActive: planned.isActive,
+                  restriction: planned.restriction,
+                };
+                if (brandId) row.brandId = brandId;
+                if (planned.netContentAmount != null)
+                  row.netContentAmount = planned.netContentAmount;
+                if (planned.netContentUnit != null) row.netContentUnit = planned.netContentUnit;
+                if (planned.unitPricePencePerBaseUnit != null)
+                  row.unitPricePencePerBaseUnit = planned.unitPricePencePerBaseUnit;
+                if (planned.plu) row.plu = planned.plu;
+                return row;
+              }),
             });
             await tx.inventory.createMany({
               data: batch.map(({ planned, id }) => ({

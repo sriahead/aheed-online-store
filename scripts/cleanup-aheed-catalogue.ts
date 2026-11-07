@@ -3,10 +3,21 @@ import * as fs from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { backupCatalogue } from "./backup-aheed-catalogue";
+import { parseEnvFile } from "./lib/env-file";
 
-const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
+function resolveConnectionString(): string {
+  const envFlagIndex = process.argv.indexOf("--env-file");
+  if (envFlagIndex !== -1 && process.argv[envFlagIndex + 1]) {
+    const envVars = parseEnvFile(process.argv[envFlagIndex + 1]);
+    const conn = envVars.DIRECT_URL || envVars.DATABASE_URL;
+    if (conn) return conn;
+  }
+  return process.env.DIRECT_URL || process.env.DATABASE_URL || "";
+}
+
+const connectionString = resolveConnectionString();
 if (!connectionString) {
-  console.error("Neither DIRECT_URL nor DATABASE_URL is set in environment.");
+  console.error("Neither DIRECT_URL nor DATABASE_URL is set in environment or env-file.");
   process.exit(1);
 }
 

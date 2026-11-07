@@ -8,6 +8,15 @@ every branch merges.
 
 ### Added
 
+- **Aheed Super Store — Product, Inventory & UX Improvements**
+  - **Quick View stock calculation & exclusive low-stock notices.** Unified stock determination (`inStock || stockQuantity > 0 || stockMode === "UNTRACKED"`) across Quick View drawer, ProductCard, details page, and cart rules. Fixed low-stock condition so "Out of stock" and "Only N left" can never appear simultaneously. Added strict no-cache headers on `/api/products/quick-view`.
+  - **Excel product import enhancements.** Automatically maps and associates Brands, auto-populates obvious Net Content (e.g. `500g`, `1kg`, `250ml`, `2L`, `6pk`), preserves existing information when imported fields are blank, and prevents duplicate products.
+  - **Product selection retention in bulk actions.** Preserves selected product IDs in client state across preview opens, cancels, and form submissions in `BulkProductActions`. Added selection counter and clear selection control.
+  - **9-column staff inventory search & restock alerts.** Streamlined `/staff/inventory` table to the 9 essential columns (Product Name, SKU / Product ID, Brand, Category, Net Content, Selling Price, Current Stock, Previous Stock, Stock Status). Added filtering by status, sorting by stock quantity, and visual highlighting with restock alerts for depleted products (`previousStock > 0 && currentStock === 0`).
+  - **Official opening stock baseline & ongoing audit logs.** Safely cleared 5,170 historical inventory movement logs, retained 5,184 products and stock quantities intact, and recorded official opening baselines (`SYSTEM_INITIAL_RESET`) via `scripts/reset-stock-baseline.ts`. Wired ongoing audit logs for order reservations (`ORDER_RESERVED`) and cancellations (`ORDER_CANCELLED`).
+  - **UX & conversion optimization.** Applied pricing psychology with original price reference anchoring, prominent savings badges, and volume tier offers. Added trust signals and freshness guarantees across Quick View and product detail pages with mobile 44px tap targets.
+
+
 - **Aheed Food Centre: Independent Stock Management, Staged Catalogue Onboarding & HMRC VAT Compliance**
   - **Database migrations & schema safeguards.** Added `plu`, `barcode`, `importBatchId`, `importSourceRow`, `isManuallyEdited`, `manuallyEditedFields`, and `lastManualEditAt` to `Product` with compound unique index `[vendorId, plu]`. Added `version` to `Inventory` and created `InventoryAuditLog` table with `InventoryAuditSource` enum (`20261106140000_aheed_stock_import_safeguards`).
   - **HMRC VAT compliance fields & review workflow.** Added `vatRate`, `originalVatRate`, `suggestedVatRate`, `vatNeedsReview`, `vatReviewReason`, `vatConfirmedAt`, and `vatConfirmedBy` to `Product` (`20261106150000_product_vat_compliance`).

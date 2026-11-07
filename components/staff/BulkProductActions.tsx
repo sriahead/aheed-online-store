@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { bulkProductAction } from "@/features/admin/product-restrictions";
 import {
   BULK_ACTION_LABELS,
@@ -33,13 +33,83 @@ const selectClass =
  */
 export function BulkProductActions() {
   const [state, action, pending] = useActionState(bulkProductAction, initialBulkActionState);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [prevPhase, setPrevPhase] = useState(state.phase);
+
+  // Synchronize selection state during render when phase transitions
+  if (state.phase !== prevPhase) {
+    setPrevPhase(state.phase);
+    if (state.phase === "applied") {
+      setSelectedIds(new Set());
+    } else if (state.phase === "preview" && state.productIds.length > 0) {
+      const next = new Set(selectedIds);
+      for (const id of state.productIds) next.add(id);
+      setSelectedIds(next);
+    }
+  }
+
+  // Listen for checkbox changes on the page to maintain selection state across renders/submits
+  useEffect(() => {
+    const handleCheckboxChange = (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      if (
+        target &&
+        target.type === "checkbox" &&
+        target.getAttribute("form") === BULK_PRODUCTS_FORM_ID &&
+        target.name === "productId"
+      ) {
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          if (target.checked) {
+            next.add(target.value);
+          } else {
+            next.delete(target.value);
+          }
+          return next;
+        });
+      }
+    };
+
+    document.addEventListener("change", handleCheckboxChange);
+    return () => document.removeEventListener("change", handleCheckboxChange);
+  }, []);
+
+  // Ensure DOM checkboxes stay checked matching selectedIds whenever state or selections change
+  useEffect(() => {
+    const checkboxes = document.querySelectorAll<HTMLInputElement>(
+      `input[type="checkbox"][name="productId"][form="${BULK_PRODUCTS_FORM_ID}"]`,
+    );
+    checkboxes.forEach((box) => {
+      box.checked = selectedIds.has(box.value);
+    });
+  }, [selectedIds, state]);
 
   const selectAllOnPage = (checked: boolean) => {
-    document
-      .querySelectorAll<HTMLInputElement>(`input[type="checkbox"][form="${BULK_PRODUCTS_FORM_ID}"]`)
-      .forEach((box) => {
+    const checkboxes = document.querySelectorAll<HTMLInputElement>(
+      `input[type="checkbox"][name="productId"][form="${BULK_PRODUCTS_FORM_ID}"]`,
+    );
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      checkboxes.forEach((box) => {
         box.checked = checked;
+        if (checked) {
+          next.add(box.value);
+        } else {
+          next.delete(box.value);
+        }
       });
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    const checkboxes = document.querySelectorAll<HTMLInputElement>(
+      `input[type="checkbox"][name="productId"][form="${BULK_PRODUCTS_FORM_ID}"]`,
+    );
+    checkboxes.forEach((box) => {
+      box.checked = false;
+    });
+    setSelectedIds(new Set());
   };
 
   return (
@@ -51,10 +121,36 @@ export function BulkProductActions() {
             type="checkbox"
             className="h-4 w-4"
             aria-label="Select all products on this page"
+            checked={
+              selectedIds.size > 0 &&
+              typeof document !== "undefined" &&
+              document.querySelectorAll<HTMLInputElement>(
+                `input[type="checkbox"][name="productId"][form="${BULK_PRODUCTS_FORM_ID}"]`,
+              ).length > 0 &&
+              [
+                ...document.querySelectorAll<HTMLInputElement>(
+                  `input[type="checkbox"][name="productId"][form="${BULK_PRODUCTS_FORM_ID}"]`,
+                ),
+              ].every((cb) => selectedIds.has(cb.value))
+            }
             onChange={(event) => selectAllOnPage(event.target.checked)}
           />
           Select all on this page
         </label>
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+              {selectedIds.size} selected
+            </span>
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="text-xs text-primary-muted hover:text-danger underline"
+            >
+              Clear selection
+            </button>
+          </div>
+        )}
         <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-wide text-primary">
           With selected
           <select name="bulkAction" defaultValue="ENABLE" className={selectClass}>
@@ -67,7 +163,7 @@ export function BulkProductActions() {
         </label>
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || selectedIds.size === 0}
           className="rounded-2xl bg-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
         >
           Preview

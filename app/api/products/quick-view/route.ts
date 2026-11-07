@@ -52,7 +52,7 @@ export async function GET(request: Request) {
     },
     {
       headers: {
-        "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
+        "Cache-Control": "private, no-cache, no-store, must-revalidate",
       },
     },
   );

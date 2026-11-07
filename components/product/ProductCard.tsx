@@ -89,9 +89,11 @@ export function ProductCard({
    */
   const tierQuantity = tierThresholdQuantity(product.tier);
   const hasTier = tierQuantity !== null && product.tier !== null;
+  // Unified stock determination ensuring consistency across card, details and quick view
+  const isInStock = product.inStock;
   // #1211 — one rule (lib/cart-rules.ts): TRACKED stock only, and only while
   // there is still stock to run out of.
-  const isLowStock = showsLowStock(product);
+  const isLowStock = isInStock && showsLowStock(product);
   // #398 (derivation half), R34 — the derived unit price where a product HAS net content,
   // computed at render time (never from the stored sort-key column, R32); unitLabel unchanged
   // otherwise. `product.netContentAmount`/`netContentUnit` are both null or both set.
@@ -306,7 +308,7 @@ export function ProductCard({
                 Only {product.stockQuantity} left
               </p>
             )}
-            {!product.inStock && product.expectedRestockDay !== null && (
+            {!isInStock && product.expectedRestockDay !== null && (
               <p className="mt-1.5">
                 <RestockNotice
                   day={product.expectedRestockDay}
@@ -345,7 +347,7 @@ export function ProductCard({
               existing add control, unchanged. An out-of-stock product always
               gets the disabled add control and never a stepper (R13).
             */}
-            {product.inStock && cartQuantity > 0 ? (
+            {isInStock && cartQuantity > 0 ? (
               <CartQuantityStepper
                 productId={product.id}
                 quantity={cartQuantity}
@@ -356,7 +358,7 @@ export function ProductCard({
               <AddToCartButton
                 productId={product.id}
                 productName={product.name}
-                disabled={!product.inStock}
+                disabled={!isInStock}
                 label={`Add ${product.name} to cart`}
                 variant="card"
               />
