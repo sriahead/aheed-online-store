@@ -9,6 +9,9 @@ const CHUNK_SIZE = 1000;
  */
 export async function listVendorBrandNames(vendorId: string): Promise<string[]> {
   const prisma = getPrisma();
+  if (!prisma.brand?.findMany) {
+    return [];
+  }
   const brands = await prisma.brand.findMany({
     where: { vendorId },
     select: { name: true },
