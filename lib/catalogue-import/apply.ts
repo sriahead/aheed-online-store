@@ -80,7 +80,14 @@ export interface ImportTx {
     createMany(args: { data: ProductWriteRow[] }): Promise<unknown>;
     update(args: {
       where: { id: string; vendorId: string };
-      data: { restriction: ProductRestriction; isActive: false };
+      data: {
+        restriction?: ProductRestriction;
+        isActive?: false;
+        brandId?: string | null;
+        netContentAmount?: number | null;
+        netContentUnit?: NetContentUnit | null;
+        unitPricePencePerBaseUnit?: number | null;
+      };
     }): Promise<unknown>;
   };
   inventory: { createMany(args: { data: InventoryWriteRow[] }): Promise<unknown> };
@@ -114,6 +121,11 @@ export interface ImportDb {
         isActive: true;
         restriction: true;
         plu?: true;
+        brandId?: true;
+        netContentAmount?: true;
+        netContentUnit?: true;
+        isManuallyEdited?: true;
+        manuallyEditedFields?: true;
       };
     }): Promise<
       {
@@ -124,6 +136,11 @@ export interface ImportDb {
         isActive: boolean;
         restriction: ProductRestriction | null;
         plu?: string | null;
+        brandId?: string | null;
+        netContentAmount?: number | null;
+        netContentUnit?: NetContentUnit | null;
+        isManuallyEdited?: boolean;
+        manuallyEditedFields?: string[];
       }[]
     >;
   };
@@ -144,6 +161,7 @@ export interface DepartmentOutcome {
   status: "WRITTEN" | "UNCHANGED" | "ALREADY_EXISTS" | "FAILED";
   categoriesCreated: number;
   productsCreated: number;
+  productsUpdated: number;
   restrictionTightened: number;
   error?: string;
 }
@@ -167,6 +185,7 @@ export interface ApplyResult {
   departments: DepartmentOutcome[];
   categoriesCreated: number;
   productsCreated: number;
+  productsUpdated: number;
   existingUnchanged: number;
   restrictionTightened: number;
   failedDepartments: number;
@@ -186,7 +205,9 @@ export async function applyPlan(
   db: ImportDb,
   vendorId: string,
   plan: ImportPlan,
+  options: { enrichExisting?: boolean } = {},
 ): Promise<ApplyResult> {
+  const { enrichExisting = false } = options;
   // Existing rows are READ once, up front. An existing category keeps its id and name; an existing
   // product is only ever considered for a tightened restriction.
   const categoryIds = new Map<string, string>();
@@ -210,6 +231,11 @@ export async function applyPlan(
       isActive: boolean;
       restriction: ProductRestriction | null;
       plu?: string | null;
+      brandId?: string | null;
+      netContentAmount?: number | null;
+      netContentUnit?: NetContentUnit | null;
+      isManuallyEdited?: boolean;
+      manuallyEditedFields?: string[];
     }
   >();
   const existingProductsByPlu = new Map<
@@ -221,6 +247,11 @@ export async function applyPlan(
       isActive: boolean;
       restriction: ProductRestriction | null;
       plu?: string | null;
+      brandId?: string | null;
+      netContentAmount?: number | null;
+      netContentUnit?: NetContentUnit | null;
+      isManuallyEdited?: boolean;
+      manuallyEditedFields?: string[];
     }
   >();
   for (const slugs of chunk(
@@ -236,6 +267,12 @@ export async function applyPlan(
         basePrice: true,
         isActive: true,
         restriction: true,
+        plu: true,
+        brandId: true,
+        netContentAmount: true,
+        netContentUnit: true,
+        isManuallyEdited: true,
+        manuallyEditedFields: true,
       },
     })) {
       existingProducts.set(row.slug, row);
@@ -257,6 +294,11 @@ export async function applyPlan(
             isActive: true,
             restriction: true,
             plu: true,
+            brandId: true,
+            netContentAmount: true,
+            netContentUnit: true,
+            isManuallyEdited: true,
+            manuallyEditedFields: true,
           },
         });
         for (const row of rows) {
@@ -283,10 +325,27 @@ export async function applyPlan(
     }
   }
 
+  // Pre-assign deterministic IDs for any new brands to be created
+  const newBrandIdsByName = new Map<string, string>();
+  for (const p of plan.products) {
+    if (p.brandName) {
+      const key = p.brandName.trim().toLowerCase();
+      if (!brandIdsByName.has(key) && !newBrandIdsByName.has(key)) {
+        newBrandIdsByName.set(key, newId());
+      }
+    }
+  }
+  const brandIdFor = (name: string | null | undefined): string | null => {
+    if (!name) return null;
+    const key = name.trim().toLowerCase();
+    return brandIdsByName.get(key) ?? newBrandIdsByName.get(key) ?? null;
+  };
+
   const result: ApplyResult = {
     departments: [],
     categoriesCreated: 0,
     productsCreated: 0,
+    productsUpdated: 0,
     existingUnchanged: 0,
     restrictionTightened: 0,
     failedDepartments: 0,
@@ -318,6 +377,17 @@ export async function applyPlan(
       from: ProductRestriction | null;
       to: ProductRestriction;
     }[] = [];
+    const updates: {
+      id: string;
+      data: {
+        restriction?: ProductRestriction;
+        isActive?: false;
+        brandId?: string | null;
+        netContentAmount?: number | null;
+        netContentUnit?: NetContentUnit | null;
+        unitPricePencePerBaseUnit?: number | null;
+      };
+    }[] = [];
     let unchanged = 0;
     const departmentDrift: DriftEntry[] = [];
     for (const planned of products) {
@@ -332,6 +402,17 @@ export async function applyPlan(
         { isActive: existing.isActive, restriction: existing.restriction },
         planned.restriction,
       );
+
+      const updateData: {
+        restriction?: ProductRestriction;
+        isActive?: false;
+        brandId?: string | null;
+        netContentAmount?: number | null;
+        netContentUnit?: NetContentUnit | null;
+        unitPricePencePerBaseUnit?: number | null;
+      } = {};
+      let hasUpdate = false;
+
       if (next.tightened && next.restriction !== null) {
         tightenings.push({
           id: existing.id,
@@ -339,9 +420,53 @@ export async function applyPlan(
           from: existing.restriction,
           to: next.restriction,
         });
+        updateData.restriction = next.restriction;
+        updateData.isActive = false;
+        hasUpdate = true;
+      }
+
+      // Reliable enrichment: only when enrichExisting is enabled and field is missing on existing product
+      if (enrichExisting) {
+        if (planned.brandName && existing.brandId == null) {
+          const brandProtected = Boolean(
+            existing.isManuallyEdited && existing.manuallyEditedFields?.includes("brandId"),
+          );
+          if (!brandProtected) {
+            const brandId = brandIdFor(planned.brandName);
+            if (brandId) {
+              updateData.brandId = brandId;
+              hasUpdate = true;
+            }
+          }
+        }
+
+        if (
+          planned.netContentAmount != null &&
+          planned.netContentUnit != null &&
+          existing.netContentAmount == null
+        ) {
+          const netProtected = Boolean(
+            existing.isManuallyEdited &&
+            (existing.manuallyEditedFields?.includes("netContent") ||
+              existing.manuallyEditedFields?.includes("netContentAmount")),
+          );
+          if (!netProtected) {
+            updateData.netContentAmount = planned.netContentAmount;
+            updateData.netContentUnit = planned.netContentUnit;
+            if (planned.unitPricePencePerBaseUnit != null) {
+              updateData.unitPricePencePerBaseUnit = planned.unitPricePencePerBaseUnit;
+            }
+            hasUpdate = true;
+          }
+        }
+      }
+
+      if (hasUpdate) {
+        updates.push({ id: existing.id, data: updateData });
       } else {
         unchanged += 1;
       }
+
       if (existing.name !== planned.name) {
         departmentDrift.push({
           sourceRow: planned.sourceRow,
@@ -362,16 +487,21 @@ export async function applyPlan(
       }
     }
 
+    const enrichedUpdatesCount = updates.filter(
+      (u) => !tightenings.some((t) => t.id === u.id),
+    ).length;
+
     const outcome: DepartmentOutcome = {
       department: department.name,
       status: "WRITTEN",
       categoriesCreated: newCategoryIds.size,
       productsCreated: toCreate.length,
+      productsUpdated: enrichedUpdatesCount,
       restrictionTightened: tightenings.length,
     };
 
     const nothingToWrite =
-      newCategoryIds.size === 0 && toCreate.length === 0 && tightenings.length === 0;
+      newCategoryIds.size === 0 && toCreate.length === 0 && updates.length === 0;
     if (nothingToWrite) outcome.status = "UNCHANGED";
 
     try {
@@ -399,11 +529,11 @@ export async function applyPlan(
           }
 
           if (tx.brand) {
-            for (const { planned } of toCreate) {
+            for (const planned of products) {
               if (planned.brandName) {
                 const key = planned.brandName.trim().toLowerCase();
                 if (!brandIdsByName.has(key)) {
-                  const brandId = newId();
+                  const brandId = brandIdFor(planned.brandName)!;
                   const brandSlug = slugify(planned.brandName) || `brand-${brandId.slice(0, 8)}`;
                   await tx.brand.create({
                     data: {
@@ -422,9 +552,7 @@ export async function applyPlan(
           for (const batch of chunk(toCreate, BATCH)) {
             await tx.product.createMany({
               data: batch.map(({ planned, id }) => {
-                const brandId = planned.brandName
-                  ? (brandIdsByName.get(planned.brandName.trim().toLowerCase()) ?? null)
-                  : null;
+                const brandId = brandIdFor(planned.brandName);
                 const row: ProductWriteRow = {
                   id,
                   vendorId,
@@ -474,10 +602,10 @@ export async function applyPlan(
             }
           }
 
-          for (const t of tightenings) {
+          for (const u of updates) {
             await tx.product.update({
-              where: { id: t.id, vendorId },
-              data: { restriction: t.to, isActive: false },
+              where: { id: u.id, vendorId },
+              data: u.data,
             });
           }
           if (tightenings.length > 0) {
@@ -501,6 +629,7 @@ export async function applyPlan(
       outcome.error = error instanceof Error ? error.message : String(error);
       outcome.categoriesCreated = 0;
       outcome.productsCreated = 0;
+      outcome.productsUpdated = 0;
       outcome.restrictionTightened = 0;
       result.departments.push(outcome);
       result.failedDepartments += 1;
@@ -513,6 +642,7 @@ export async function applyPlan(
     result.departments.push(outcome);
     result.categoriesCreated += outcome.categoriesCreated;
     result.productsCreated += outcome.productsCreated;
+    result.productsUpdated += outcome.productsUpdated;
     result.restrictionTightened += outcome.restrictionTightened;
     result.existingUnchanged += unchanged;
     result.drift.push(...departmentDrift);

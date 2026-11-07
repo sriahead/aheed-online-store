@@ -6,8 +6,18 @@ import {
   type DepartmentRestrictionPolicy,
 } from "@/lib/catalogue-import-policy";
 import type { ProductRestriction, StockMode } from "@/lib/cart-rules";
-import { deriveUnitPricePenceForSort, type NetContentUnit } from "@/components/product/unit-price";
-import { extractObviousNetContent } from "./net-content";
+import {
+  deriveUnitPriceLabel,
+  deriveUnitPricePenceForSort,
+  type NetContentUnit,
+} from "@/components/product/unit-price";
+import {
+  extractDetailedNetContent,
+  extractObviousNetContent,
+  compareNetContents,
+  formatNetContentDisplay,
+} from "./net-content";
+import { identifyProductBrand } from "./brand";
 import { parsePricePence } from "./price";
 import type { ImportProfile } from "./profile";
 import type { SourceRow } from "./rows";
@@ -78,6 +88,37 @@ export interface PlannedProduct {
   unitPricePencePerBaseUnit?: number | null;
 }
 
+export interface EnrichedProductInfo {
+  sourceRow: number;
+  plu: string;
+  name: string;
+  categorySlug: string;
+  brandName: string | null;
+  brandSource: "COLUMN" | "KNOWN_BRAND" | "DELIMITED_PREFIX" | null;
+  netContentAmount: number | null;
+  netContentUnit: NetContentUnit | null;
+  packCount: number | null;
+  formattedNetContent: string | null;
+  unitPricePencePerBaseUnit: number | null;
+  unitPriceLabel: string | null;
+  pricePence: number;
+  restriction: ProductRestriction | null;
+  warnings?: string[];
+}
+
+export interface ReviewWarning {
+  sourceRow: number;
+  plu: string;
+  name: string;
+  type:
+    | "NET_CONTENT_CONFLICT"
+    | "PRICE_ANOMALY"
+    | "ANOMALOUS_NET_CONTENT"
+    | "PRICE_DRIFT"
+    | "UNREVIEWED_DEPARTMENT";
+  message: string;
+}
+
 export interface CategoryVariant {
   slug: string;
   /** The name the category was created with: the first occurrence in source row order. */
@@ -107,12 +148,14 @@ export interface VatSummary {
 export interface ImportPlan {
   categories: PlannedCategory[];
   products: PlannedProduct[];
+  enrichedProducts: EnrichedProductInfo[];
   rejected: RejectedRow[];
   unreviewedDepartments: UnreviewedDepartment[];
   flattenedSubDepartments: FlattenedSubDepartment[];
   categoryNameVariants: CategoryVariant[];
   restrictionCounts: Record<ProductRestriction, number>;
   vat: VatSummary;
+  reviewWarnings: ReviewWarning[];
 }
 
 /** Spelling of the unit pattern's match, verbatim, else the profile's documented default (R16). */
@@ -194,7 +237,9 @@ export function buildPlan(rows: readonly SourceRow[], profile: ImportProfile): I
   const variants = new Map<string, CategoryVariant>();
   const flattened = new Map<string, FlattenedSubDepartment>();
   const products: PlannedProduct[] = [];
+  const enrichedProducts: EnrichedProductInfo[] = [];
   const productSlugs = new Map<string, number>();
+  const reviewWarnings: ReviewWarning[] = [];
   const restrictionCounts: Record<ProductRestriction, number> = {
     PROHIBITED: 0,
     AGE_RESTRICTED: 0,
@@ -318,7 +363,6 @@ export function buildPlan(rows: readonly SourceRow[], profile: ImportProfile): I
     );
     const state = newImportedProductState(restriction);
     productSlugs.set(slug, row.sourceRow);
-    if (state.restriction !== null) restrictionCounts[state.restriction] += 1;
 
     const rate = normaliseVat(row.vatRaw);
     vat.byRate[rate] = (vat.byRate[rate] ?? 0) + 1;
@@ -330,17 +374,69 @@ export function buildPlan(rows: readonly SourceRow[], profile: ImportProfile): I
       });
     }
 
-    const rawNet = row.netContentRaw || "";
-    const extractedNet =
-      extractObviousNetContent(rawNet) ||
-      extractObviousNetContent(row.name) ||
-      extractObviousNetContent(row.description);
-    const netContentAmount = extractedNet?.amount ?? null;
-    const netContentUnit = extractedNet?.unit ?? null;
-    const unitPricePencePerBaseUnit = extractedNet
-      ? deriveUnitPricePenceForSort(price.pence, extractedNet)
+    const rowWarnings: string[] = [];
+
+    // Net Content extraction, normalization & conflict detection
+    const colNet = row.netContentRaw ? extractDetailedNetContent(row.netContentRaw) : null;
+    const nameNet = extractDetailedNetContent(row.name);
+    const descNet = row.description ? extractDetailedNetContent(row.description) : null;
+
+    let hasNetContentConflict = false;
+    if (colNet && nameNet && !compareNetContents(colNet, nameNet)) {
+      hasNetContentConflict = true;
+      const warningMsg = `Conflicting net content: column indicates "${colNet.formattedLabel}", but product name indicates "${nameNet.formattedLabel}"`;
+      rowWarnings.push(warningMsg);
+      reviewWarnings.push({
+        sourceRow: row.sourceRow,
+        plu: row.plu,
+        name: row.name,
+        type: "NET_CONTENT_CONFLICT",
+        message: warningMsg,
+      });
+    }
+
+    // High confidence selection: column value preferred if valid, otherwise product name, then description
+    const chosenNet = colNet || nameNet || descNet;
+    const netContentAmount = chosenNet?.amount ?? null;
+    const netContentUnit = chosenNet?.unit ?? null;
+    const formattedNetContent = chosenNet
+      ? formatNetContentDisplay({
+          amount: chosenNet.amount,
+          unit: chosenNet.unit,
+          packCount: chosenNet.packCount,
+        })
       : null;
-    const brandName = row.brand?.trim() ? row.brand.trim() : null;
+    const unitPricePencePerBaseUnit = chosenNet
+      ? deriveUnitPricePenceForSort(price.pence, chosenNet)
+      : null;
+
+    // Price anomaly verification (> £1,000 retail grocery threshold)
+    let isPriceAnomaly = false;
+    if (price.pence > 100_000) {
+      isPriceAnomaly = true;
+      const warningMsg = `Unusually high retail price: £${(price.pence / 100).toFixed(2)}`;
+      rowWarnings.push(warningMsg);
+      reviewWarnings.push({
+        sourceRow: row.sourceRow,
+        plu: row.plu,
+        name: row.name,
+        type: "PRICE_ANOMALY",
+        message: warningMsg,
+      });
+    }
+
+    // Brand identification with high confidence (column -> delimited prefix -> known vendor brands)
+    const brandResult = identifyProductBrand(row.brand, row.name, profile.knownBrands);
+    const brandName = brandResult.brandName;
+
+    // Restriction resolution: if conflict or anomaly exists, tighten to NEEDS_REVIEW
+    let effectiveRestriction: ProductRestriction | null = state.restriction;
+    if ((hasNetContentConflict || isPriceAnomaly) && effectiveRestriction === null) {
+      effectiveRestriction = "NEEDS_REVIEW";
+    }
+    if (effectiveRestriction !== null) {
+      restrictionCounts[effectiveRestriction] += 1;
+    }
 
     const plannedProduct: PlannedProduct = {
       sourceRow: row.sourceRow,
@@ -352,29 +448,53 @@ export function buildPlan(rows: readonly SourceRow[], profile: ImportProfile): I
       categorySlug,
       departmentSlug,
       isActive: state.isActive,
-      restriction: state.restriction,
+      restriction: effectiveRestriction,
       stockMode: state.stockMode,
       plu: row.plu,
       sourceDepartment: row.department,
     };
-    if (brandName) plannedProduct.brandName = brandName;
+    if (brandName) {
+      plannedProduct.brandName = brandName;
+    }
     if (netContentAmount != null) plannedProduct.netContentAmount = netContentAmount;
     if (netContentUnit != null) plannedProduct.netContentUnit = netContentUnit;
     if (unitPricePencePerBaseUnit != null)
       plannedProduct.unitPricePencePerBaseUnit = unitPricePencePerBaseUnit;
 
     products.push(plannedProduct);
+
+    enrichedProducts.push({
+      sourceRow: row.sourceRow,
+      plu: row.plu,
+      name: row.name,
+      categorySlug,
+      brandName,
+      brandSource: brandResult.source,
+      netContentAmount,
+      netContentUnit,
+      packCount: chosenNet?.packCount ?? null,
+      formattedNetContent,
+      unitPricePencePerBaseUnit,
+      unitPriceLabel: chosenNet
+        ? deriveUnitPriceLabel(price.pence, { amount: chosenNet.amount, unit: chosenNet.unit })
+        : null,
+      pricePence: price.pence,
+      restriction: effectiveRestriction,
+      warnings: rowWarnings.length > 0 ? rowWarnings : undefined,
+    });
   }
 
   return {
     categories: [...categories.values()],
     products,
+    enrichedProducts,
     rejected,
     unreviewedDepartments,
     flattenedSubDepartments: [...flattened.values()],
     categoryNameVariants: [...variants.values()],
     restrictionCounts,
     vat,
+    reviewWarnings,
   };
 }
 

@@ -5,6 +5,21 @@ import type { ImportPlan } from "@/lib/catalogue-import/plan";
 const CHUNK_SIZE = 1000;
 
 /**
+ * Lists all known brand names for the vendor for high-confidence import matching.
+ */
+export async function listVendorBrandNames(vendorId: string): Promise<string[]> {
+  const prisma = getPrisma();
+  if (!prisma.brand?.findMany) {
+    return [];
+  }
+  const brands = await prisma.brand.findMany({
+    where: { vendorId },
+    select: { name: true },
+  });
+  return brands.map((b) => b.name);
+}
+
+/**
  * Counts how many products matching the given slugs already exist for this vendor.
  * Runs read-only queries using the lightweight HTTP client.
  */
@@ -31,11 +46,16 @@ export async function countExistingProductsBySlugs(
 
 /**
  * Executes an ImportPlan for the vendor using the WebSocket client for interactive transactions.
+ * Enriches missing reliable fields on existing products while strictly preserving existing valid data.
  */
 export async function applyImportPlanForVendor(
   vendorId: string,
   plan: ImportPlan,
+  options?: { enrichExisting?: boolean },
 ): Promise<ApplyResult> {
   const prismaWs = getPrismaWs();
-  return applyPlan(prismaWs as unknown as ImportDb, vendorId, plan);
+  return applyPlan(prismaWs as unknown as ImportDb, vendorId, plan, {
+    enrichExisting: true,
+    ...options,
+  });
 }

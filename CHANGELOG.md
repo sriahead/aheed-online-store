@@ -8,6 +8,14 @@ every branch merges.
 
 ### Added
 
+- **Excel Product Import & Data Validation Enhancements**
+  - **High-confidence Brand & Label Information auto-population.** Deterministically parses Brands from explicit columns, delimited product title prefixes (e.g. `Brand - Product`), and known vendor brands dictionary matching. Auto-populates Net Content, weights, sizes, and multipack configurations (e.g. `6 x 330ml`, `4 x 400g`, `2 x 1.5L`) into standardized base units.
+  - **Strict high-confidence heuristic.** Never guesses or invents brands or measurements from ambiguous nouns ("Large", "Family Pack", "Medium") or placeholder values ("N/A", "Generic", "None").
+  - **Product-specific validation rules & conflict flagging.** Automatically compares column net content against title net content; flags disagreements (`NET_CONTENT_CONFLICT`) and extreme price anomalies (`PRICE_ANOMALY` > £1,000) with `NEEDS_REVIEW` restrictions.
+  - **Reliable update & blank preservation.** Safely enriches missing fields on existing products without ever overwriting existing valid data when incoming cells are blank or unconfident. Fully respects field-level manual protection (`isManuallyEdited` and `manuallyEditedFields`).
+  - **Deduplication.** Prevents duplicate products within import files and against existing vendor database records.
+  - **Pre-import enriched preview & staff catalogue visibility.** Added enriched preview metrics, review warning inspection tables, and a 50-row preview table in `/staff/products/import`. Automatically displays enriched brand badges and net content labels in `/staff/products` catalogue list and inventory table.
+
 - **Aheed Super Store — Product, Inventory & UX Improvements**
   - **Quick View stock calculation & exclusive low-stock notices.** Unified stock determination (`inStock || stockQuantity > 0 || stockMode === "UNTRACKED"`) across Quick View drawer, ProductCard, details page, and cart rules. Fixed low-stock condition so "Out of stock" and "Only N left" can never appear simultaneously. Added strict no-cache headers on `/api/products/quick-view`.
   - **Excel product import enhancements.** Automatically maps and associates Brands, auto-populates obvious Net Content (e.g. `500g`, `1kg`, `250ml`, `2L`, `6pk`), preserves existing information when imported fields are blank, and prevents duplicate products.

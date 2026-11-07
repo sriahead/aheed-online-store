@@ -15,6 +15,9 @@ vi.mock("@/lib/auth-rbac", () => ({
 
 vi.mock("@/lib/db", () => ({
   getPrisma: vi.fn(() => ({
+    brand: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
     product: {
       count: countMock,
       findMany: vi.fn().mockResolvedValue([]),

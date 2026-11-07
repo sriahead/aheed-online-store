@@ -7,6 +7,7 @@ import { buildPlan } from "@/lib/catalogue-import/plan";
 import {
   countExistingProductsBySlugs,
   applyImportPlanForVendor,
+  listVendorBrandNames,
 } from "@/lib/catalogue-import-service";
 import type { ApplyActionResponse, PreviewSummary, ValidateActionResponse } from "./types";
 
@@ -40,7 +41,10 @@ export async function validateStockFileAction(payload: {
     };
   }
 
-  const profile = resolveImportProfile(grid);
+  const knownBrands = await listVendorBrandNames(auth.vendorId);
+
+  const baseProfile = resolveImportProfile(grid);
+  const profile = { ...baseProfile, knownBrands };
   const readResult = readRows(grid, profile);
   if (!readResult.ok) {
     return { ok: false, error: readResult.error };
@@ -54,6 +58,25 @@ export async function validateStockFileAction(payload: {
     plan.products.map((p) => p.slug),
   );
 
+  const enrichedBrandsCount = plan.enrichedProducts.filter((p) => p.brandName != null).length;
+  const enrichedNetContentCount = plan.enrichedProducts.filter(
+    (p) => p.netContentAmount != null,
+  ).length;
+
+  const previewProducts = plan.enrichedProducts.slice(0, 50).map((p) => ({
+    sourceRow: p.sourceRow,
+    plu: p.plu,
+    name: p.name,
+    category: p.categorySlug,
+    brand: p.brandName,
+    brandSource: p.brandSource,
+    netContent: p.formattedNetContent,
+    unitPriceLabel: p.unitPriceLabel,
+    pricePence: p.pricePence,
+    restriction: p.restriction,
+    warnings: p.warnings,
+  }));
+
   const preview: PreviewSummary = {
     fileName: payload.fileName ?? "stock-upload",
     totalGridRows: grid.length,
@@ -66,6 +89,11 @@ export async function validateStockFileAction(payload: {
     rejectedRows: plan.rejected,
     unreviewedDepartments: plan.unreviewedDepartments,
     restrictionCounts: plan.restrictionCounts,
+    enrichedBrandsCount,
+    enrichedNetContentCount,
+    reviewWarningsCount: plan.reviewWarnings.length,
+    reviewWarnings: plan.reviewWarnings,
+    previewProducts,
   };
 
   return { ok: true, preview };
@@ -98,7 +126,10 @@ export async function applyStockFileAction(payload: {
     };
   }
 
-  const profile = resolveImportProfile(grid);
+  const knownBrands = await listVendorBrandNames(auth.vendorId);
+
+  const baseProfile = resolveImportProfile(grid);
+  const profile = { ...baseProfile, knownBrands };
   const readResult = readRows(grid, profile);
   if (!readResult.ok) {
     return { ok: false, error: readResult.error };
@@ -114,6 +145,7 @@ export async function applyStockFileAction(payload: {
     receipt: {
       categoriesCreated: result.categoriesCreated,
       productsCreated: result.productsCreated,
+      productsUpdated: result.productsUpdated,
       existingUnchanged: result.existingUnchanged,
       restrictionTightened: result.restrictionTightened,
       failedDepartments: result.failedDepartments,
