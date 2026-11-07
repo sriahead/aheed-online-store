@@ -188,7 +188,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
     <div className="space-y-6">
       {/* 1. Anchoring & Overview Metrics (Neuromarketing KPI Cards) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <Card className="flex flex-col justify-between p-4 bg-card border border-border shadow-sm">
+        <Card className="flex flex-col justify-between p-4 shadow-sm">
           <div className="flex items-center justify-between text-primary-muted">
             <span className="text-xs font-semibold uppercase tracking-wider">Total Brands</span>
             <Icon name="tag" className="h-4 w-4 text-primary" />
@@ -199,7 +199,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
           </div>
         </Card>
 
-        <Card className="flex flex-col justify-between p-4 bg-card border border-border shadow-sm">
+        <Card className="flex flex-col justify-between p-4 shadow-sm">
           <div className="flex items-center justify-between text-primary-muted">
             <span className="text-xs font-semibold uppercase tracking-wider">Branded Products</span>
             <Icon name="package" className="h-4 w-4 text-action" />
@@ -212,7 +212,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
           </div>
         </Card>
 
-        <Card className="flex flex-col justify-between p-4 bg-card border border-border shadow-sm">
+        <Card className="flex flex-col justify-between p-4 shadow-sm">
           <div className="flex items-center justify-between text-primary-muted">
             <span className="text-xs font-semibold uppercase tracking-wider">Top Brand</span>
             <Icon name="featured-star" className="h-4 w-4 text-amber-500" />
@@ -225,7 +225,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
           </div>
         </Card>
 
-        <Card className="flex flex-col justify-between p-4 bg-card border border-border shadow-sm">
+        <Card className="flex flex-col justify-between p-4 shadow-sm">
           <div className="flex items-center justify-between text-primary-muted">
             <span className="text-xs font-semibold uppercase tracking-wider">Empty Brands</span>
             <Icon
@@ -288,7 +288,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
       )}
 
       {/* 2. Controls & Search Toolbar (Hick's Law & Low Friction) */}
-      <Card className="p-4 bg-card border border-border shadow-sm">
+      <Card className="p-4 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           {/* Search bar with visual icon */}
           <div className="relative flex-1 max-w-md">
@@ -317,13 +317,13 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
 
           {/* Filter Pills & Sort Controls */}
           <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex rounded-xl bg-surface-muted p-1 border border-border/60">
+            <div className="inline-flex rounded-xl bg-surface-muted p-1 border border-black/10">
               <button
                 type="button"
                 onClick={() => setActiveTab("ALL")}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   activeTab === "ALL"
-                    ? "bg-card text-primary shadow-sm font-semibold"
+                    ? "bg-white text-primary shadow-xs font-semibold"
                     : "text-primary-muted hover:text-primary"
                 }`}
               >
@@ -334,7 +334,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
                 onClick={() => setActiveTab("WITH_PRODUCTS")}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   activeTab === "WITH_PRODUCTS"
-                    ? "bg-card text-primary shadow-sm font-semibold"
+                    ? "bg-white text-primary shadow-xs font-semibold"
                     : "text-primary-muted hover:text-primary"
                 }`}
               >
@@ -345,7 +345,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
                 onClick={() => setActiveTab("EMPTY")}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   activeTab === "EMPTY"
-                    ? "bg-card text-amber-700 shadow-sm font-semibold"
+                    ? "bg-white text-amber-700 shadow-xs font-semibold"
                     : "text-primary-muted hover:text-primary"
                 }`}
               >
@@ -361,7 +361,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
                 id="brand-sort"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOrder)}
-                className="rounded-xl border border-border bg-card px-3 py-1.5 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-action"
+                className="rounded-xl border border-black/15 bg-white px-3 py-1.5 text-xs text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
               >
                 <option value="MOST_PRODUCTS">Most Products</option>
                 <option value="LEAST_PRODUCTS">Fewest Products</option>
@@ -387,11 +387,11 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
       </Card>
 
       {/* 3. The Brands Table (High Information Scent & Scannability) */}
-      <Card className="overflow-hidden bg-card border border-border shadow-sm">
+      <Card className="overflow-hidden p-0 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm border-collapse">
             <thead>
-              <tr className="border-b border-border bg-surface-muted/60 text-xs font-semibold text-primary-muted uppercase tracking-wider">
+              <tr className="border-b border-black/10 bg-surface-muted/60 text-xs font-semibold text-primary-muted uppercase tracking-wider">
                 <th className="py-3.5 pl-6 pr-4">Brand</th>
                 <th className="py-3.5 px-4">Slug</th>
                 <th className="py-3.5 px-4">Catalog Breadth</th>
@@ -399,7 +399,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
                 <th className="py-3.5 pl-4 pr-6 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/60">
+            <tbody className="divide-y divide-black/10">
               {filteredBrands.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-primary-muted">
@@ -522,7 +522,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
                           <button
                             type="button"
                             onClick={() => handleOpenQuickView(brand)}
-                            className="inline-flex items-center gap-1 rounded-xl border border-border px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-surface-muted transition"
+                            className="inline-flex items-center gap-1 rounded-xl border border-black/15 bg-white px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-surface-muted transition shadow-2xs"
                             title="Quick view brand products"
                           >
                             <Icon name="eye" className="h-3.5 w-3.5 text-primary-muted" />
@@ -536,7 +536,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
                               setEditingBrand(brand);
                               setActionError(null);
                             }}
-                            className="inline-flex items-center gap-1 rounded-xl border border-border px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-surface-muted transition"
+                            className="inline-flex items-center gap-1 rounded-xl border border-black/15 bg-white px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-surface-muted transition shadow-2xs"
                             title="Edit brand name & logo"
                           >
                             <Icon name="pencil" className="h-3.5 w-3.5 text-primary-muted" />
@@ -571,193 +571,212 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-end bg-black/40 backdrop-blur-sm transition-opacity"
+          aria-labelledby="brand-quick-view-title"
+          className="fixed inset-0 z-50 overflow-hidden bg-black/50"
         >
-          <div className="h-full w-full max-w-2xl bg-card border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
-            {/* Drawer Header */}
-            <div className="p-6 border-b border-border bg-surface-muted/30">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-tint text-primary font-bold text-xs">
-                      {quickViewBrand.name.slice(0, 2).toUpperCase()}
-                    </span>
-                    <h2 className="text-xl font-bold text-primary">{quickViewBrand.name}</h2>
-                    <code className="text-xs text-primary-muted bg-surface-muted px-2 py-0.5 rounded">
-                      {quickViewBrand.slug}
-                    </code>
+          {/* Backdrop button to dismiss */}
+          <button
+            type="button"
+            aria-hidden="true"
+            tabIndex={-1}
+            className="absolute inset-0 h-full w-full cursor-default"
+            onClick={() => setQuickViewBrand(null)}
+          />
+
+          <div className="fixed inset-y-0 right-0 flex max-w-full pl-6 sm:pl-10">
+            <div className="flex w-screen max-w-2xl flex-col border-l border-black/10 bg-white shadow-2xl">
+              {/* Drawer Header */}
+              <div className="border-b border-black/10 bg-surface-muted/60 p-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-tint text-primary font-bold text-xs">
+                        {quickViewBrand.name.slice(0, 2).toUpperCase()}
+                      </span>
+                      <h2 id="brand-quick-view-title" className="text-xl font-bold text-primary">
+                        {quickViewBrand.name}
+                      </h2>
+                      <code className="text-xs text-primary-muted bg-white border border-black/10 px-2 py-0.5 rounded">
+                        {quickViewBrand.slug}
+                      </code>
+                    </div>
+                    <p className="text-xs text-primary-muted mt-1">
+                      {quickViewProducts.length}{" "}
+                      {quickViewProducts.length === 1 ? "catalog item" : "catalog items"} linked to
+                      this brand
+                    </p>
                   </div>
-                  <p className="text-xs text-primary-muted mt-1">
-                    {quickViewProducts.length}{" "}
-                    {quickViewProducts.length === 1 ? "catalog item" : "catalog items"} linked to
-                    this brand
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setQuickViewBrand(null)}
+                    className="rounded-lg p-1.5 text-primary-muted hover:text-primary hover:bg-black/5 transition"
+                    aria-label="Close drawer"
+                  >
+                    <Icon name="x" className="h-5 w-5" />
+                  </button>
                 </div>
-                <button
+
+                {/* Pricing Psychology & Inventory Anchors */}
+                {quickViewPricing && (
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+                    <div className="rounded-xl border border-black/10 bg-white p-2.5 shadow-xs">
+                      <span className="text-primary-muted block">Price Range</span>
+                      <span className="font-bold text-primary">
+                        {formatPrice(quickViewPricing.minPrice)} –{" "}
+                        {formatPrice(quickViewPricing.maxPrice)}
+                      </span>
+                    </div>
+                    <div className="rounded-xl border border-black/10 bg-white p-2.5 shadow-xs">
+                      <span className="text-primary-muted block">Average Price</span>
+                      <span className="font-bold text-action">
+                        {formatPrice(quickViewPricing.avgPrice)}
+                      </span>
+                    </div>
+                    <div className="rounded-xl border border-black/10 bg-white p-2.5 shadow-xs">
+                      <span className="text-primary-muted block">Availability</span>
+                      <span className="font-bold text-emerald-700">
+                        {quickViewPricing.inStockCount} / {quickViewProducts.length} In Stock
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Drawer Search */}
+                <div className="relative mt-4">
+                  <Icon
+                    name="search"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary-muted"
+                  />
+                  <input
+                    type="search"
+                    value={quickViewSearch}
+                    onChange={(e) => setQuickViewSearch(e.target.value)}
+                    placeholder={`Filter ${quickViewBrand.name} products...`}
+                    className={`${inputClass} pl-8 py-1.5 text-xs bg-white`}
+                  />
+                </div>
+              </div>
+
+              {/* Drawer Body (Products List) */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-white">
+                {isLoadingQuickView ? (
+                  <div className="py-16 text-center text-primary-muted">
+                    <Icon
+                      name="loader-circle"
+                      className="h-8 w-8 animate-spin mx-auto text-action"
+                    />
+                    <p className="mt-2 text-sm">Loading brand products...</p>
+                  </div>
+                ) : quickViewFiltered.length === 0 ? (
+                  <div className="py-12 text-center text-primary-muted">
+                    <p className="font-semibold text-primary">
+                      {quickViewProducts.length === 0
+                        ? "No products currently linked to this brand."
+                        : "No products match your search filter."}
+                    </p>
+                    <p className="text-xs mt-1">
+                      Assign products to this brand from the product edit screen or through Excel
+                      import.
+                    </p>
+                  </div>
+                ) : (
+                  quickViewFiltered.map((product) => {
+                    const inStock = product.stockMode === "UNTRACKED" || product.stockQuantity > 0;
+                    return (
+                      <div
+                        key={product.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-black/10 p-3.5 bg-white hover:border-action/50 transition-colors shadow-xs"
+                      >
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-baseline gap-2 flex-wrap">
+                            <span className="font-semibold text-sm text-primary">
+                              {product.name}
+                            </span>
+                            {product.plu && (
+                              <span className="text-[11px] font-mono text-primary-muted bg-surface-muted px-1.5 py-0.5 rounded">
+                                PLU {product.plu}
+                              </span>
+                            )}
+                            <span className="text-[11px] text-primary-muted">
+                              {product.categoryName}
+                            </span>
+                          </div>
+
+                          {/* Pricing & Net Content */}
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="font-bold text-action text-sm">
+                              {formatPrice(product.basePrice)}
+                            </span>
+                            {product.unitLabel && (
+                              <span className="text-primary-muted">{product.unitLabel}</span>
+                            )}
+                            {product.netContentAmount && product.netContentUnit && (
+                              <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[11px] text-primary-muted">
+                                {product.netContentAmount} {product.netContentUnit.toLowerCase()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Stock Status Badge & Actions */}
+                        <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-black/10">
+                          <div>
+                            {inStock ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                                {product.stockMode === "UNTRACKED"
+                                  ? "Untracked"
+                                  : `${product.stockQuantity} in stock`}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[11px] font-medium text-rose-800">
+                                <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
+                                Out of stock
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <Link
+                              href={`/staff/products/${product.id}`}
+                              target="_blank"
+                              className="inline-flex items-center gap-1 rounded-xl border border-black/15 bg-white px-2.5 py-1 text-xs font-medium text-primary hover:bg-surface-muted transition"
+                            >
+                              <span>Edit</span>
+                              <Icon name="external-link" className="h-3 w-3 text-primary-muted" />
+                            </Link>
+
+                            <button
+                              type="button"
+                              disabled={isPending}
+                              onClick={() => handleUnassignProduct(product.id)}
+                              className="inline-flex items-center justify-center rounded-xl p-1 text-primary-muted hover:text-danger hover:bg-danger-tint transition"
+                              title="Unlink product from brand"
+                              aria-label={`Unlink ${product.name} from ${quickViewBrand.name}`}
+                            >
+                              <Icon name="trash" className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="p-4 border-t border-black/10 bg-surface-muted/40 flex items-center justify-between">
+                <span className="text-xs text-primary-muted">
+                  Showing {quickViewFiltered.length} of {quickViewProducts.length} items
+                </span>
+                <Button
                   type="button"
                   onClick={() => setQuickViewBrand(null)}
-                  className="rounded-lg p-1.5 text-primary-muted hover:text-primary hover:bg-surface-muted transition"
-                  aria-label="Close drawer"
+                  className="text-xs py-1.5 px-4"
                 >
-                  <Icon name="x" className="h-5 w-5" />
-                </button>
+                  Done
+                </Button>
               </div>
-
-              {/* Pricing Psychology & Inventory Anchors */}
-              {quickViewPricing && (
-                <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-                  <div className="rounded-xl border border-border bg-card p-2.5">
-                    <span className="text-primary-muted block">Price Range</span>
-                    <span className="font-bold text-primary">
-                      {formatPrice(quickViewPricing.minPrice)} –{" "}
-                      {formatPrice(quickViewPricing.maxPrice)}
-                    </span>
-                  </div>
-                  <div className="rounded-xl border border-border bg-card p-2.5">
-                    <span className="text-primary-muted block">Average Price</span>
-                    <span className="font-bold text-action">
-                      {formatPrice(quickViewPricing.avgPrice)}
-                    </span>
-                  </div>
-                  <div className="rounded-xl border border-border bg-card p-2.5">
-                    <span className="text-primary-muted block">Availability</span>
-                    <span className="font-bold text-emerald-700">
-                      {quickViewPricing.inStockCount} / {quickViewProducts.length} In Stock
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Drawer Search */}
-              <div className="relative mt-4">
-                <Icon
-                  name="search"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary-muted"
-                />
-                <input
-                  type="search"
-                  value={quickViewSearch}
-                  onChange={(e) => setQuickViewSearch(e.target.value)}
-                  placeholder={`Filter ${quickViewBrand.name} products...`}
-                  className={`${inputClass} pl-8 py-1.5 text-xs`}
-                />
-              </div>
-            </div>
-
-            {/* Drawer Body (Products List) */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-3">
-              {isLoadingQuickView ? (
-                <div className="py-16 text-center text-primary-muted">
-                  <Icon name="loader-circle" className="h-8 w-8 animate-spin mx-auto text-action" />
-                  <p className="mt-2 text-sm">Loading brand products...</p>
-                </div>
-              ) : quickViewFiltered.length === 0 ? (
-                <div className="py-12 text-center text-primary-muted">
-                  <p className="font-semibold text-primary">
-                    {quickViewProducts.length === 0
-                      ? "No products currently linked to this brand."
-                      : "No products match your search filter."}
-                  </p>
-                  <p className="text-xs mt-1">
-                    Assign products to this brand from the product edit screen or through Excel
-                    import.
-                  </p>
-                </div>
-              ) : (
-                quickViewFiltered.map((product) => {
-                  const inStock = product.stockMode === "UNTRACKED" || product.stockQuantity > 0;
-                  return (
-                    <div
-                      key={product.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-border p-3.5 bg-card hover:border-action/40 transition-colors"
-                    >
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-baseline gap-2 flex-wrap">
-                          <span className="font-semibold text-sm text-primary">{product.name}</span>
-                          {product.plu && (
-                            <span className="text-[11px] font-mono text-primary-muted bg-surface-muted px-1.5 py-0.5 rounded">
-                              PLU {product.plu}
-                            </span>
-                          )}
-                          <span className="text-[11px] text-primary-muted">
-                            {product.categoryName}
-                          </span>
-                        </div>
-
-                        {/* Pricing & Net Content */}
-                        <div className="flex items-center gap-3 text-xs">
-                          <span className="font-bold text-action text-sm">
-                            {formatPrice(product.basePrice)}
-                          </span>
-                          {product.unitLabel && (
-                            <span className="text-primary-muted">{product.unitLabel}</span>
-                          )}
-                          {product.netContentAmount && product.netContentUnit && (
-                            <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[11px] text-primary-muted">
-                              {product.netContentAmount} {product.netContentUnit.toLowerCase()}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Stock Status Badge & Actions */}
-                      <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
-                        <div>
-                          {inStock ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-                              {product.stockMode === "UNTRACKED"
-                                ? "Untracked"
-                                : `${product.stockQuantity} in stock`}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[11px] font-medium text-rose-800">
-                              <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
-                              Out of stock
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <Link
-                            href={`/staff/products/${product.id}`}
-                            target="_blank"
-                            className="inline-flex items-center gap-1 rounded-xl border border-border px-2.5 py-1 text-xs font-medium text-primary hover:bg-surface-muted transition"
-                          >
-                            <span>Edit</span>
-                            <Icon name="external-link" className="h-3 w-3 text-primary-muted" />
-                          </Link>
-
-                          <button
-                            type="button"
-                            disabled={isPending}
-                            onClick={() => handleUnassignProduct(product.id)}
-                            className="inline-flex items-center justify-center rounded-xl p-1 text-primary-muted hover:text-danger hover:bg-danger-tint transition"
-                            title="Unlink product from brand"
-                            aria-label={`Unlink ${product.name} from ${quickViewBrand.name}`}
-                          >
-                            <Icon name="trash" className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Drawer Footer */}
-            <div className="p-4 border-t border-border bg-surface-muted/20 flex items-center justify-between">
-              <span className="text-xs text-primary-muted">
-                Showing {quickViewFiltered.length} of {quickViewProducts.length} items
-              </span>
-              <Button
-                type="button"
-                onClick={() => setQuickViewBrand(null)}
-                className="text-xs py-1.5 px-4"
-              >
-                Done
-              </Button>
             </div>
           </div>
         </div>
@@ -768,9 +787,16 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
         >
-          <div className="w-full max-w-md rounded-2xl bg-card border border-border shadow-2xl p-6 animate-in zoom-in-95 duration-150">
+          <button
+            type="button"
+            aria-hidden="true"
+            tabIndex={-1}
+            className="absolute inset-0 h-full w-full cursor-default"
+            onClick={() => setShowAddModal(false)}
+          />
+          <div className="relative w-full max-w-md rounded-2xl bg-white border border-black/10 shadow-2xl p-6 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Icon name="tag" className="h-5 w-5 text-action" />
@@ -823,7 +849,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
                 <Button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="bg-transparent text-primary hover:bg-surface-muted border border-border"
+                  className="bg-transparent text-primary hover:bg-surface-muted border border-black/15"
                 >
                   Cancel
                 </Button>
@@ -842,10 +868,17 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
         >
-          <div className="w-full max-w-lg rounded-2xl bg-card border border-border shadow-2xl p-6 animate-in zoom-in-95 duration-150 space-y-5">
-            <div className="flex items-center justify-between border-b border-border pb-3">
+          <button
+            type="button"
+            aria-hidden="true"
+            tabIndex={-1}
+            className="absolute inset-0 h-full w-full cursor-default"
+            onClick={() => setEditingBrand(null)}
+          />
+          <div className="relative w-full max-w-lg rounded-2xl bg-white border border-black/10 shadow-2xl p-6 animate-in zoom-in-95 duration-150 space-y-5">
+            <div className="flex items-center justify-between border-b border-black/10 pb-3">
               <div className="flex items-center gap-2">
                 <Icon name="pencil" className="h-5 w-5 text-action" />
                 <h3 className="text-lg font-bold text-primary">Edit Brand: {editingBrand.name}</h3>
@@ -904,7 +937,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
               </div>
             </form>
 
-            <hr className="border-border/60" />
+            <hr className="border-black/10" />
 
             {/* Image Key Form */}
             <form
@@ -960,9 +993,16 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
         >
-          <div className="w-full max-w-md rounded-2xl bg-card border border-border shadow-2xl p-6 animate-in zoom-in-95 duration-150 space-y-4">
+          <button
+            type="button"
+            aria-hidden="true"
+            tabIndex={-1}
+            className="absolute inset-0 h-full w-full cursor-default"
+            onClick={() => setDeletingBrand(null)}
+          />
+          <div className="relative w-full max-w-md rounded-2xl bg-white border border-black/10 shadow-2xl p-6 animate-in zoom-in-95 duration-150 space-y-4">
             <div className="flex items-center gap-3 text-danger">
               <div className="rounded-xl bg-danger-tint p-2">
                 <Icon name="trash" className="h-5 w-5 text-danger" />
@@ -1022,7 +1062,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
                 <Button
                   type="button"
                   onClick={() => setDeletingBrand(null)}
-                  className="bg-transparent text-primary hover:bg-surface-muted border border-border"
+                  className="bg-transparent text-primary hover:bg-surface-muted border border-black/15"
                 >
                   Cancel
                 </Button>
