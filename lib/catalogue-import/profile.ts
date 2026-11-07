@@ -56,6 +56,8 @@ export const importProfileSchema = z
         unrestrictedDepartments: z.array(z.string()),
       })
       .strict(),
+    /** Optional list of known vendor brands for high-confidence identification. */
+    knownBrands: z.array(z.string()).optional(),
   })
   .strict();
 

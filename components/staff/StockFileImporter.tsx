@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/icons/Icon";
 import { IconMedallion } from "@/components/icons/IconMedallion";
+import { formatPrice } from "@/components/product/format-price";
 import { parseCsvToGrid } from "@/lib/catalogue-import/csv";
 import {
   validateStockFileAction,
@@ -234,7 +235,7 @@ export function StockFileImporter() {
             </div>
 
             {/* Metrics Grid */}
-            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               <div className="rounded-xl border border-black/10 bg-surface-muted p-4">
                 <p className="text-xs font-bold uppercase tracking-wider text-primary-muted">
                   New Products
@@ -257,12 +258,32 @@ export function StockFileImporter() {
 
               <div className="rounded-xl border border-black/10 bg-surface-muted p-4">
                 <p className="text-xs font-bold uppercase tracking-wider text-primary-muted">
-                  Existing Records
+                  Existing
                 </p>
                 <p className="mt-1 text-2xl font-black text-primary">
                   {preview.matchingExistingProducts}
                 </p>
-                <p className="text-[11px] text-primary-muted">Preserved without change</p>
+                <p className="text-[11px] text-primary-muted">Preserved & safely updated</p>
+              </div>
+
+              <div className="rounded-xl border border-black/10 bg-surface-muted p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-primary-muted">
+                  Brands Enriched
+                </p>
+                <p className="mt-1 text-2xl font-black text-primary">
+                  {preview.enrichedBrandsCount}
+                </p>
+                <p className="text-[11px] text-primary-muted">High-confidence match</p>
+              </div>
+
+              <div className="rounded-xl border border-black/10 bg-surface-muted p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-primary-muted">
+                  Net Content
+                </p>
+                <p className="mt-1 text-2xl font-black text-primary">
+                  {preview.enrichedNetContentCount}
+                </p>
+                <p className="text-[11px] text-primary-muted">Weight, size & pack</p>
               </div>
 
               <div className="rounded-xl border border-black/10 bg-surface-muted p-4">
@@ -294,6 +315,128 @@ export function StockFileImporter() {
                 </span>
               </div>
             </div>
+
+            {/* Flagged Review Warnings */}
+            {preview.reviewWarnings && preview.reviewWarnings.length > 0 && (
+              <div className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900">
+                <div className="flex items-center gap-2">
+                  <Icon name="circle-alert" className="h-4 w-4 shrink-0 text-amber-700" />
+                  <h4 className="font-bold uppercase tracking-wider text-amber-900">
+                    Flagged for Review ({preview.reviewWarnings.length} items)
+                  </h4>
+                </div>
+                <p className="mt-1 text-amber-800">
+                  These rows carry conflicting or anomalous data and will be assigned the{" "}
+                  <strong>NEEDS_REVIEW</strong> safeguard restriction upon import.
+                </p>
+                <div className="mt-3 max-h-48 overflow-y-auto rounded-lg border border-amber-200 bg-white">
+                  <table className="w-full text-left">
+                    <thead className="bg-amber-100/60 text-amber-900">
+                      <tr>
+                        <th className="p-2">Row</th>
+                        <th className="p-2">PLU</th>
+                        <th className="p-2">Product</th>
+                        <th className="p-2">Issue</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-100">
+                      {preview.reviewWarnings.map((w, idx) => (
+                        <tr key={idx} className="hover:bg-amber-50/50">
+                          <td className="p-2 font-mono font-bold">{w.sourceRow}</td>
+                          <td className="p-2 font-mono">{w.plu || "—"}</td>
+                          <td className="p-2 font-medium">{w.name}</td>
+                          <td className="p-2 text-amber-900">{w.message}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Enriched Products Preview Table */}
+            {preview.previewProducts && preview.previewProducts.length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-center justify-between pb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
+                    Enriched Products Preview (Sample of {preview.previewProducts.length})
+                  </h4>
+                  <span className="text-[11px] text-primary-muted">
+                    Automatically extracted from available Excel data
+                  </span>
+                </div>
+                <div className="max-h-72 overflow-y-auto rounded-xl border border-black/10 text-xs">
+                  <table className="w-full text-left">
+                    <thead className="sticky top-0 bg-surface-muted text-primary-muted shadow-xs">
+                      <tr>
+                        <th className="p-2.5">Row</th>
+                        <th className="p-2.5">PLU</th>
+                        <th className="p-2.5">Product Name</th>
+                        <th className="p-2.5">Brand</th>
+                        <th className="p-2.5">Net Content</th>
+                        <th className="p-2.5">Price</th>
+                        <th className="p-2.5">Unit Price</th>
+                        <th className="p-2.5">Safeguard</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/10">
+                      {preview.previewProducts.map((p, idx) => (
+                        <tr key={idx} className="hover:bg-surface-muted/50">
+                          <td className="p-2.5 font-mono text-primary-muted">{p.sourceRow}</td>
+                          <td className="p-2.5 font-mono text-primary">{p.plu || "—"}</td>
+                          <td className="p-2.5 font-medium text-primary">
+                            <div>{p.name}</div>
+                            {p.warnings && p.warnings.length > 0 && (
+                              <div className="mt-0.5 text-[10px] text-amber-700 font-normal">
+                                ⚠ {p.warnings.join("; ")}
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-2.5">
+                            {p.brand ? (
+                              <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 font-semibold text-primary">
+                                {p.brand}
+                                {p.brandSource && (
+                                  <span className="text-[9px] font-normal text-primary-muted">
+                                    ({p.brandSource === "COLUMN" ? "col" : "parsed"})
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="text-black/60 italic">—</span>
+                            )}
+                          </td>
+                          <td className="p-2.5">
+                            {p.netContent ? (
+                              <span className="inline-flex items-center rounded bg-surface-muted px-1.5 py-0.5 font-medium text-primary">
+                                {p.netContent}
+                              </span>
+                            ) : (
+                              <span className="text-black/60 italic">—</span>
+                            )}
+                          </td>
+                          <td className="p-2.5 font-bold text-primary">
+                            {formatPrice(p.pricePence)}
+                          </td>
+                          <td className="p-2.5 text-primary-muted">{p.unitPriceLabel || "—"}</td>
+                          <td className="p-2.5">
+                            {p.restriction ? (
+                              <span className="rounded bg-danger-tint px-1.5 py-0.5 text-[10px] font-bold uppercase text-danger">
+                                {p.restriction}
+                              </span>
+                            ) : (
+                              <span className="rounded bg-action-tint px-1.5 py-0.5 text-[10px] font-semibold text-action">
+                                UNRESTRICTED
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Invariants safeguard note */}
             <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-xs text-primary">
@@ -393,12 +536,18 @@ export function StockFileImporter() {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
             <div className="rounded-xl border border-black/10 bg-surface-muted p-4">
               <p className="text-xs font-bold uppercase tracking-wider text-primary-muted">
                 Products Created
               </p>
               <p className="mt-1 text-2xl font-black text-primary">{receipt.productsCreated}</p>
+            </div>
+            <div className="rounded-xl border border-black/10 bg-surface-muted p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-primary-muted">
+                Enriched & Updated
+              </p>
+              <p className="mt-1 text-2xl font-black text-primary">{receipt.productsUpdated}</p>
             </div>
             <div className="rounded-xl border border-black/10 bg-surface-muted p-4">
               <p className="text-xs font-bold uppercase tracking-wider text-primary-muted">
@@ -408,7 +557,7 @@ export function StockFileImporter() {
             </div>
             <div className="rounded-xl border border-black/10 bg-surface-muted p-4">
               <p className="text-xs font-bold uppercase tracking-wider text-primary-muted">
-                Existing Unchanged
+                Existing Preserved
               </p>
               <p className="mt-1 text-2xl font-black text-primary">{receipt.existingUnchanged}</p>
             </div>

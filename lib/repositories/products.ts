@@ -2067,6 +2067,9 @@ export interface AdminProductRow {
   /** #1211 — shown on the list so a reviewer can see why a product is hidden. */
   restriction: ProductRestriction | null;
   stockMode: StockMode;
+  brandName?: string | null;
+  netContentAmount?: number | null;
+  netContentUnit?: NetContentUnit | null;
 }
 
 export interface AdminProductPage {
@@ -2399,6 +2402,9 @@ export async function listProductsForAdmin(
         imageNeedsReview: true,
         restriction: true,
         category: { select: { name: true } },
+        brand: { select: { name: true } },
+        netContentAmount: true,
+        netContentUnit: true,
         inventory: { select: { quantity: true, stockMode: true } },
       },
     }),
@@ -2415,6 +2421,9 @@ export async function listProductsForAdmin(
       basePrice: row.basePrice,
       isActive: row.isActive,
       categoryName: row.category?.name ?? "Unknown",
+      brandName: row.brand?.name ?? null,
+      netContentAmount: row.netContentAmount,
+      netContentUnit: row.netContentUnit,
       quantity: row.inventory?.quantity ?? 0,
       imageNeedsReview: row.imageNeedsReview,
       restriction: row.restriction,

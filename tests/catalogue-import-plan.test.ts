@@ -642,7 +642,13 @@ interface StubState {
   products: (ProductWriteRow & { id: string })[];
   inventory: InventoryWriteRow[];
   audit: AuditWriteRow[];
-  updates: { id: string; vendorId: string; restriction: string; isActive: false }[];
+  updates: {
+    id: string;
+    vendorId: string;
+    restriction?: string;
+    isActive?: false;
+    [key: string]: unknown;
+  }[];
 }
 
 function stubDb(
