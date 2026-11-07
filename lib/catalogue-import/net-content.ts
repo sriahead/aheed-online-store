@@ -22,7 +22,9 @@ export function extractObviousNetContent(
   }
 
   // 2. Kilograms: e.g. "1kg", "2.5 kg", "1 kilo", "1.5 kilograms"
-  const kgMatch = /(?:^|\b|\s)(\d+(?:\.\d+)?)\s*(?:kg|kilo|kilogram|kilograms)(?!\p{L})/iu.exec(trimmed);
+  const kgMatch = /(?:^|\b|\s)(\d+(?:\.\d+)?)\s*(?:kg|kilo|kilogram|kilograms)(?!\p{L})/iu.exec(
+    trimmed,
+  );
   if (kgMatch) {
     const val = parseFloat(kgMatch[1]);
     if (val > 0) {
@@ -34,7 +36,9 @@ export function extractObviousNetContent(
   }
 
   // 3. Millilitres: e.g. "250ml", "330 ml", "500 millilitres"
-  const mlMatch = /(?:^|\b|\s)(\d+(?:\.\d+)?)\s*(?:ml|millilitre|millilitres)(?!\p{L})/iu.exec(trimmed);
+  const mlMatch = /(?:^|\b|\s)(\d+(?:\.\d+)?)\s*(?:ml|millilitre|millilitres)(?!\p{L})/iu.exec(
+    trimmed,
+  );
   if (mlMatch) {
     const val = parseFloat(mlMatch[1]);
     if (val > 0) return { amount: Math.round(val), unit: "MILLILITRE" };
@@ -60,7 +64,8 @@ export function extractObviousNetContent(
   }
 
   // 6. Each / Pack count: e.g. "6 pack", "10pk", "pack of 4", "12 pcs"
-  const packMatch = /(?:^|\b|\s)(?:pack of\s*(\d+)|(\d+)\s*(?:pk|pack|pcs|count|pieces))(?!\p{L})/iu.exec(trimmed);
+  const packMatch =
+    /(?:^|\b|\s)(?:pack of\s*(\d+)|(\d+)\s*(?:pk|pack|pcs|count|pieces))(?!\p{L})/iu.exec(trimmed);
   if (packMatch) {
     const rawVal = packMatch[1] || packMatch[2];
     const val = parseInt(rawVal, 10);

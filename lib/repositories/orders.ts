@@ -346,7 +346,10 @@ export async function placeOrder(
           );
         }
 
-        if ("inventoryAuditLog" in tx && typeof (tx as any).inventoryAuditLog?.create === "function") {
+        if (
+          "inventoryAuditLog" in tx &&
+          typeof (tx as any).inventoryAuditLog?.create === "function"
+        ) {
           try {
             const inv = await tx.inventory.findFirst({
               where: { vendorId, productId: line.productId },
@@ -702,7 +705,10 @@ async function releaseOrder(
         data: { quantity: { increment: item.quantity } },
       });
 
-      if ("inventoryAuditLog" in tx && typeof (tx as any).inventoryAuditLog?.create === "function") {
+      if (
+        "inventoryAuditLog" in tx &&
+        typeof (tx as any).inventoryAuditLog?.create === "function"
+      ) {
         try {
           const inv = await tx.inventory.findFirst({
             where: { vendorId, productId: item.productId, stockMode: "TRACKED" },
@@ -2153,7 +2159,10 @@ export async function cancelConfirmedOrder(
         data: { quantity: { increment: item.quantity } },
       });
 
-      if ("inventoryAuditLog" in tx && typeof (tx as any).inventoryAuditLog?.create === "function") {
+      if (
+        "inventoryAuditLog" in tx &&
+        typeof (tx as any).inventoryAuditLog?.create === "function"
+      ) {
         try {
           const inv = await tx.inventory.findFirst({
             where: { vendorId, productId: item.productId, stockMode: "TRACKED" },

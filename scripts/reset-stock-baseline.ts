@@ -54,10 +54,16 @@ export async function resetStockBaseline(vendorId: string, confirm: boolean) {
   console.log(`  - Existing Inventory Audit Logs: ${auditLogCount.toLocaleString()}`);
 
   if (!confirm) {
-    console.log(`\n[DRY RUN] Run with '--confirm-baseline' to apply the official stock baseline reset.`);
+    console.log(
+      `\n[DRY RUN] Run with '--confirm-baseline' to apply the official stock baseline reset.`,
+    );
     console.log(`  - Will delete ${auditLogCount.toLocaleString()} historical inventory logs.`);
-    console.log(`  - Will retain all ${productCount.toLocaleString()} products and actual stock counts.`);
-    console.log(`  - Will write ${inventoryCount.toLocaleString()} official opening baseline records.`);
+    console.log(
+      `  - Will retain all ${productCount.toLocaleString()} products and actual stock counts.`,
+    );
+    console.log(
+      `  - Will write ${inventoryCount.toLocaleString()} official opening baseline records.`,
+    );
     return {
       dryRun: true,
       backupPath,
@@ -149,10 +155,16 @@ export async function resetStockBaseline(vendorId: string, confirm: boolean) {
   console.log(`\nSUCCESS: Baseline successfully established.`);
   console.log(`Summary:`);
   console.log(`  - Products retained intact: ${finalProductCount.toLocaleString()}`);
-  console.log(`  - Current stock quantities retained intact: ${finalInventoryCount.toLocaleString()}`);
-  console.log(`  - Historical movement records cleared: ${result.deletedAuditLogs.toLocaleString()}`);
+  console.log(
+    `  - Current stock quantities retained intact: ${finalInventoryCount.toLocaleString()}`,
+  );
+  console.log(
+    `  - Historical movement records cleared: ${result.deletedAuditLogs.toLocaleString()}`,
+  );
   console.log(`  - Opening baseline records created: ${finalAuditCount.toLocaleString()}`);
-  console.log(`  - Unknown modes transitioned to Tracked: ${result.stockModesTransitioned.toLocaleString()}`);
+  console.log(
+    `  - Unknown modes transitioned to Tracked: ${result.stockModesTransitioned.toLocaleString()}`,
+  );
   console.log(`  - Permanent backup saved at: ${backupPath}\n`);
 
   return {

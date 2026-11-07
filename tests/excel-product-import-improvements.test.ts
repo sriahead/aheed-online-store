@@ -131,7 +131,9 @@ describe("Excel Product Import Improvements (Requirement 2)", () => {
         },
       },
       brand: {
-        findMany: async () => [{ id: "brand-existing", name: "Existing Brand", slug: "existing-brand" }],
+        findMany: async () => [
+          { id: "brand-existing", name: "Existing Brand", slug: "existing-brand" },
+        ],
       },
       $transaction: async (fn) => {
         return fn({

@@ -8,7 +8,8 @@ import { RESTRICTION_LABELS, STOCK_MODE_LABELS } from "@/lib/product-restriction
 import type { StaffInventoryRow } from "@/lib/repositories/products";
 import { Icon } from "@/components/icons/Icon";
 
-type StockStatusFilter = "ALL" | "RESTOCK_NEEDED" | "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "UNTRACKED";
+type StockStatusFilter =
+  "ALL" | "RESTOCK_NEEDED" | "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "UNTRACKED";
 type SortOption = "STOCK_ASC" | "STOCK_DESC" | "NAME_ASC" | "PRICE_ASC" | "PRICE_DESC";
 
 export function InventoryTable({
@@ -42,7 +43,9 @@ export function InventoryTable({
   };
 
   const restockNeededCount = useMemo(() => {
-    return initialItems.filter((item) => item.isRestockNeeded || (item.previousQuantity > 0 && item.quantity === 0)).length;
+    return initialItems.filter(
+      (item) => item.isRestockNeeded || (item.previousQuantity > 0 && item.quantity === 0),
+    ).length;
   }, [initialItems]);
 
   const filteredAndSortedItems = useMemo(() => {
@@ -50,7 +53,9 @@ export function InventoryTable({
 
     // Status filter
     if (statusFilter === "RESTOCK_NEEDED") {
-      result = result.filter((item) => item.isRestockNeeded || (item.previousQuantity > 0 && item.quantity === 0));
+      result = result.filter(
+        (item) => item.isRestockNeeded || (item.previousQuantity > 0 && item.quantity === 0),
+      );
     } else if (statusFilter === "IN_STOCK") {
       result = result.filter((item) => item.stockStatus === "IN_STOCK");
     } else if (statusFilter === "LOW_STOCK") {
@@ -136,9 +141,7 @@ export function InventoryTable({
               className="rounded-xl border border-black/20 bg-white px-3 py-1.5 text-xs font-medium text-primary focus-visible:border-primary focus-visible:outline-none"
             >
               <option value="ALL">All Items ({initialItems.length})</option>
-              <option value="RESTOCK_NEEDED">
-                Restock Needed ({restockNeededCount})
-              </option>
+              <option value="RESTOCK_NEEDED">Restock Needed ({restockNeededCount})</option>
               <option value="OUT_OF_STOCK">Out of Stock</option>
               <option value="LOW_STOCK">Low Stock</option>
               <option value="IN_STOCK">In Stock</option>
@@ -173,7 +176,8 @@ export function InventoryTable({
           <div className="flex items-center gap-2 text-amber-900 font-medium">
             <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
             <span>
-              <strong>{restockNeededCount} products</strong> previously had stock but are now depleted and need restocking.
+              <strong>{restockNeededCount} products</strong> previously had stock but are now
+              depleted and need restocking.
             </span>
           </div>
           <button
@@ -228,7 +232,9 @@ export function InventoryTable({
               <tr>
                 <td colSpan={9} className="px-6 py-12 text-center text-black/60">
                   <p className="font-semibold text-base mb-1">No products match your criteria</p>
-                  <p className="text-xs text-black/40">Try adjusting your search terms or filters.</p>
+                  <p className="text-xs text-black/40">
+                    Try adjusting your search terms or filters.
+                  </p>
                 </td>
               </tr>
             )}
@@ -315,9 +321,7 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
       </td>
 
       {/* 4. Category */}
-      <td className="px-4 py-3 text-xs font-medium text-black/80">
-        {item.categoryName}
-      </td>
+      <td className="px-4 py-3 text-xs font-medium text-black/80">{item.categoryName}</td>
 
       {/* 5. Net Content */}
       <td className="px-4 py-3 text-xs text-black/80">
@@ -371,12 +375,18 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
         <div className="inline-flex items-center gap-1 text-xs text-black/70 font-mono">
           <span>{item.previousQuantity}</span>
           {item.previousQuantity > optimisticQuantity && (
-            <span className="text-red-500 font-bold" title={`Decreased by ${item.previousQuantity - optimisticQuantity}`}>
+            <span
+              className="text-red-500 font-bold"
+              title={`Decreased by ${item.previousQuantity - optimisticQuantity}`}
+            >
               ↓
             </span>
           )}
           {item.previousQuantity < optimisticQuantity && (
-            <span className="text-emerald-500 font-bold" title={`Increased by ${optimisticQuantity - item.previousQuantity}`}>
+            <span
+              className="text-emerald-500 font-bold"
+              title={`Increased by ${optimisticQuantity - item.previousQuantity}`}
+            >
               ↑
             </span>
           )}

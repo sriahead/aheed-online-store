@@ -93,7 +93,7 @@ export function ProductCard({
   const isInStock = Boolean(
     product.inStock ||
     (product.stockQuantity !== undefined && product.stockQuantity > 0) ||
-    product.stockMode === "UNTRACKED"
+    product.stockMode === "UNTRACKED",
   );
   // #1211 — one rule (lib/cart-rules.ts): TRACKED stock only, and only while
   // there is still stock to run out of.

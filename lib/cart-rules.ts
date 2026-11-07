@@ -102,7 +102,8 @@ export function showsLowStock(product: {
   stockQuantity: number;
   lowStockThreshold: number;
 }): boolean {
-  const isInStock = product.inStock || product.stockQuantity > 0 || product.stockMode === "UNTRACKED";
+  const isInStock =
+    product.inStock || product.stockQuantity > 0 || product.stockMode === "UNTRACKED";
   return (
     isInStock &&
     product.stockMode === "TRACKED" &&

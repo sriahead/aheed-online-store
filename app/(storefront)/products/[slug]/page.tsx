@@ -108,7 +108,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const isInStock = Boolean(
     product.inStock ||
     (product.stockQuantity !== undefined && product.stockQuantity > 0) ||
-    product.stockMode === "UNTRACKED"
+    product.stockMode === "UNTRACKED",
   );
   const isLowStock = isInStock && showsLowStock(product);
   const hasDiscount = product.originalPrice != null && product.originalPrice > product.basePrice;
@@ -135,7 +135,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <span className="font-bold uppercase tracking-wider text-primary-muted">
                 {product.brand.name}
               </span>
-            ) : <span />}
+            ) : (
+              <span />
+            )}
             <ProductRating
               averageRating={product.averageRating}
               reviewCount={product.reviewCount}
@@ -182,9 +184,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               }`}
             >
               <span
-                className={`h-2.5 w-2.5 rounded-full ${
-                  isInStock ? "bg-emerald-500" : "bg-danger"
-                }`}
+                className={`h-2.5 w-2.5 rounded-full ${isInStock ? "bg-emerald-500" : "bg-danger"}`}
               />
               {isInStock ? "In stock — ready for collection / delivery" : "Out of stock"}
             </span>
@@ -250,7 +250,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               </div>
               <div className="text-xs">
                 <p className="font-bold text-primary">Flexible Store Pickup & Local Delivery</p>
-                <p className="text-primary-muted">Choose your convenient collection or delivery slot at checkout.</p>
+                <p className="text-primary-muted">
+                  Choose your convenient collection or delivery slot at checkout.
+                </p>
               </div>
             </div>
             {product.isHalal && (
@@ -278,8 +280,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
           {/* Specifications */}
           {product.specifications.length > 0 && (
-            <section aria-labelledby="specifications-heading" className="pt-2 border-t border-black/10">
-              <h2 id="specifications-heading" className="text-xs font-bold uppercase tracking-wider text-black/50 mb-2">
+            <section
+              aria-labelledby="specifications-heading"
+              className="pt-2 border-t border-black/10"
+            >
+              <h2
+                id="specifications-heading"
+                className="text-xs font-bold uppercase tracking-wider text-black/50 mb-2"
+              >
                 Specifications
               </h2>
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">

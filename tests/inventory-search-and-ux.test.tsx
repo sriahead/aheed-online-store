@@ -118,7 +118,9 @@ describe("InventoryTable — 9 Essential Columns & Stock Management", () => {
     render(<InventoryTable initialItems={mockItems} cdnBaseUrl="https://cdn.example.com" />);
 
     // Restock banner
-    expect(screen.getByText(/previously had stock but are now depleted and need restocking/i)).toBeDefined();
+    expect(
+      screen.getByText(/previously had stock but are now depleted and need restocking/i),
+    ).toBeDefined();
 
     // Restock badge on item
     expect(screen.getByText("Restock Needed")).toBeDefined();

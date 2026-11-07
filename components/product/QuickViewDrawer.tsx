@@ -222,20 +222,26 @@ export function QuickViewDrawer() {
         displayProduct.inStock ||
         (displayProduct.stockQuantity !== undefined && displayProduct.stockQuantity > 0) ||
         displayProduct.stockMode === "UNTRACKED" ||
-        (validInitialProduct && (validInitialProduct.inStock || (validInitialProduct.stockQuantity !== undefined && validInitialProduct.stockQuantity > 0)))
+        (validInitialProduct &&
+          (validInitialProduct.inStock ||
+            (validInitialProduct.stockQuantity !== undefined &&
+              validInitialProduct.stockQuantity > 0))),
       )
     : false;
 
   const effectiveStockQuantity = Math.max(
     displayProduct?.stockQuantity ?? 0,
-    validInitialProduct?.stockQuantity ?? 0
+    validInitialProduct?.stockQuantity ?? 0,
   );
 
   // #1211 — low-stock notice applies only when product is actually in stock
-  const isLowStock = displayProduct && isInStock
-    ? showsLowStock(displayProduct) ||
-      (displayProduct.stockMode === "TRACKED" && effectiveStockQuantity > 0 && effectiveStockQuantity <= (displayProduct.lowStockThreshold ?? 3))
-    : false;
+  const isLowStock =
+    displayProduct && isInStock
+      ? showsLowStock(displayProduct) ||
+        (displayProduct.stockMode === "TRACKED" &&
+          effectiveStockQuantity > 0 &&
+          effectiveStockQuantity <= (displayProduct.lowStockThreshold ?? 3))
+      : false;
 
   const displayImages =
     currentData?.product?.images ??

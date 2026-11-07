@@ -404,8 +404,7 @@ export async function applyPlan(
                 const key = planned.brandName.trim().toLowerCase();
                 if (!brandIdsByName.has(key)) {
                   const brandId = newId();
-                  const brandSlug =
-                    slugify(planned.brandName) || `brand-${brandId.slice(0, 8)}`;
+                  const brandSlug = slugify(planned.brandName) || `brand-${brandId.slice(0, 8)}`;
                   await tx.brand.create({
                     data: {
                       id: brandId,
@@ -424,7 +423,7 @@ export async function applyPlan(
             await tx.product.createMany({
               data: batch.map(({ planned, id }) => {
                 const brandId = planned.brandName
-                  ? brandIdsByName.get(planned.brandName.trim().toLowerCase()) ?? null
+                  ? (brandIdsByName.get(planned.brandName.trim().toLowerCase()) ?? null)
                   : null;
                 const row: ProductWriteRow = {
                   id,
@@ -441,8 +440,7 @@ export async function applyPlan(
                 if (brandId) row.brandId = brandId;
                 if (planned.netContentAmount != null)
                   row.netContentAmount = planned.netContentAmount;
-                if (planned.netContentUnit != null)
-                  row.netContentUnit = planned.netContentUnit;
+                if (planned.netContentUnit != null) row.netContentUnit = planned.netContentUnit;
                 if (planned.unitPricePencePerBaseUnit != null)
                   row.unitPricePencePerBaseUnit = planned.unitPricePencePerBaseUnit;
                 if (planned.plu) row.plu = planned.plu;
