@@ -226,7 +226,7 @@ export async function getAuth() {
     },
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: true,
+      requireEmailVerification: false,
       sendResetPassword: async ({ user, url }) => {
         // Sender identity is the resolved vendor's (ADR-004 slice 4). The From address is the
         // vendor's own once its domain is verified, else the platform's with Reply-To (#1217).

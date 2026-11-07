@@ -17,9 +17,16 @@ export async function generateMetadata() {
   return { title: `Create account — ${profile?.name ?? "Aheed Food Centre"}` };
 }
 
-export default async function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ next?: string | string[] }>;
+}) {
   const env = getEnv();
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+  const { next: rawNext } = searchParams ? await searchParams : { next: undefined };
+  const next = typeof rawNext === "string" && rawNext !== "" ? rawNext : undefined;
+
   // #1134 — the marketing checkbox renders only where this store asks for consent. The sign-up
   // hook re-checks the switch and rebuilds this statement server-side before recording anything.
   const profile = await getCurrentVendorProfile();
@@ -31,11 +38,11 @@ export default async function RegisterPage() {
     <PageContainer width="narrow">
       <div className="mx-auto max-w-sm">
         <h1 className="mb-6 text-2xl font-semibold text-primary">Create account</h1>
-        <RegisterForm marketingStatement={marketingStatement} />
+        <RegisterForm marketingStatement={marketingStatement} next={next} />
         {googleEnabled && (
           <>
             <p className="my-4 text-center text-sm text-black/60">or</p>
-            <GoogleSignInButton />
+            <GoogleSignInButton next={next} />
           </>
         )}
       </div>

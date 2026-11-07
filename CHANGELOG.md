@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Customer Onboarding Unblock: Immediate Registration Sign-in & Post-Signup Redirect**
+  - **Immediate Store Access Post-Registration.** Configured `requireEmailVerification: false` in `lib/auth.ts`. Customers who register with email and password are now immediately authenticated into their store session rather than blocked waiting for email verification delivery. Verification emails continue to send asynchronously in the background.
+  - **Seamless Registration Redirection.** Updated `RegisterForm.tsx` to automatically navigate new customers to their intended destination (`next` parameter or `/`) via `signedInPath(next)` and refresh state upon successful sign-up, eliminating dead-end friction.
+  - **OAuth & Register Route Forwarding.** Forwarded the `next` query parameter across `RegisterPage`, `RegisterForm`, and `GoogleSignInButton` to preserve customer cart and checkout context upon account creation.
+  - **Automated Registration Tests.** Extended `tests/register-form-marketing.test.tsx` to assert immediate redirection and session refresh on successful sign-up.
+
 - **Halal Tag Reset, Google OAuth Account Linking & Email Delivery Go-Live Readiness**
   - **Catalogue Halal Tag Reset.** Safely reset legacy synthetic `isHalal` flags across 711 products under vendor Aheed Food Centre (`a4ed0000-0000-4000-a000-000000000001`) to `false` and cleared unverified HMC certification fields. Store staff can now curate accurate Halal certifications with verified provenance via `/staff/products`. Secondary tenants (SriMart) preserved untouched.
   - **Better Auth Google Account Linking.** Configured `account.accountLinking` with `trustedProviders: ["google"]` in `lib/auth.ts`. Allows customers who registered with email or Gmail to seamlessly authenticate via Google, automatically linking accounts and marking email as verified without encountering `account_not_linked` or unverified lockout.
