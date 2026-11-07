@@ -5,6 +5,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { getBrandRepository } from "@/lib/brands-service";
 import type { CatalogueFormState } from "@/lib/catalogue-form";
 import type { CatalogueWriteResult } from "@/lib/repositories/products";
+import type { BrandProductQuickViewItem } from "@/lib/repositories/brands";
 
 /**
  * Brand admin actions (P2.6 slice 6, #569) — the write half of /staff/brands.
@@ -131,4 +132,52 @@ export async function deleteBrand(
 
   revalidateBrandSurfaces();
   return { error: null, field: null, saved: true };
+}
+
+/**
+ * Fetch products associated with a brand for staff quick-view.
+ */
+export async function getBrandProducts(brandId: string): Promise<{
+  ok: boolean;
+  error?: string;
+  products: BrandProductQuickViewItem[];
+}> {
+  const auth = await requireVendorRole("STAFF", "ADMIN");
+  if (!auth.ok) {
+    return { ok: false, error: "Unauthorized", products: [] };
+  }
+
+  const id = brandId.trim();
+  if (!id) {
+    return { ok: false, error: "Missing brand ID", products: [] };
+  }
+
+  const products = await getBrandRepository().listProducts(id);
+  return { ok: true, products };
+}
+
+/**
+ * Unassign a single product from its brand directly from quick-view.
+ */
+export async function unassignProductFromBrandAction(productId: string): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  const auth = await requireVendorRole("STAFF", "ADMIN");
+  if (!auth.ok) {
+    return { ok: false, error: "Unauthorized" };
+  }
+
+  const id = productId.trim();
+  if (!id) {
+    return { ok: false, error: "Missing product ID" };
+  }
+
+  const result = await getBrandRepository().unassignProduct(id);
+  if (!result.ok) {
+    return { ok: false, error: result.error };
+  }
+
+  revalidateBrandSurfaces();
+  return { ok: true };
 }

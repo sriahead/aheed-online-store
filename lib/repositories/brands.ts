@@ -36,14 +36,31 @@ export interface AdminBrandRow extends BrandSummary {
   productCount: number;
 }
 
+export interface BrandProductQuickViewItem {
+  id: string;
+  name: string;
+  slug: string;
+  plu: string | null;
+  basePrice: number;
+  unitLabel: string;
+  netContentAmount: number | null;
+  netContentUnit: string | null;
+  isActive: boolean;
+  categoryName: string;
+  stockQuantity: number;
+  stockMode: string;
+}
+
 export interface BrandRepository {
   listForAdmin(): Promise<AdminBrandRow[]>;
   listSummaries(): Promise<BrandSummary[]>;
   getBySlug(slug: string): Promise<BrandSummary | null>;
+  listProducts(brandId: string): Promise<BrandProductQuickViewItem[]>;
   create(name: string): Promise<CatalogueWriteResult>;
   rename(id: string, name: string): Promise<CatalogueWriteResult>;
   setImageKey(id: string, imageKey: string | null): Promise<CatalogueWriteResult>;
   delete(id: string, confirmed: boolean): Promise<CatalogueWriteResult>;
+  unassignProduct(productId: string): Promise<CatalogueWriteResult>;
 }
 
 const DUPLICATE: CatalogueWriteResult = {
@@ -208,4 +225,62 @@ export async function deleteBrandForVendor(
   if (row._count.products > 0 && !input.confirmed) return NOT_CONFIRMED;
   await prisma.brand.deleteMany({ where: { id: input.id, vendorId } });
   return { ok: true, id: input.id };
+}
+
+/**
+ * List products assigned to a brand for staff quick view.
+ */
+export async function listProductsForBrand(
+  prisma: Db,
+  vendorId: string,
+  brandId: string,
+): Promise<BrandProductQuickViewItem[]> {
+  const rows = await prisma.product.findMany({
+    where: { vendorId, brandId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      plu: true,
+      basePrice: true,
+      unitLabel: true,
+      netContentAmount: true,
+      netContentUnit: true,
+      isActive: true,
+      category: { select: { name: true } },
+      inventory: { select: { quantity: true, stockMode: true } },
+    },
+    orderBy: { name: "asc" },
+  });
+
+  return rows.map((p) => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    plu: p.plu,
+    basePrice: p.basePrice,
+    unitLabel: p.unitLabel,
+    netContentAmount: p.netContentAmount,
+    netContentUnit: p.netContentUnit,
+    isActive: p.isActive,
+    categoryName: p.category?.name ?? "Uncategorised",
+    stockQuantity: p.inventory?.quantity ?? 0,
+    stockMode: p.inventory?.stockMode ?? "UNKNOWN",
+  }));
+}
+
+/**
+ * Unassign a product from a brand.
+ */
+export async function unassignProductFromBrand(
+  prismaWs: DbWs,
+  vendorId: string,
+  productId: string,
+): Promise<CatalogueWriteResult> {
+  const updated = await prismaWs.product.updateMany({
+    where: { id: productId, vendorId },
+    data: { brandId: null },
+  });
+  if (updated.count === 0) return NOT_FOUND;
+  return { ok: true, id: productId };
 }
