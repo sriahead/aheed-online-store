@@ -404,7 +404,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-primary-muted">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <Icon name="tag" className="h-8 w-8 text-primary-muted/50" />
+                      <Icon name="tag" className="h-6 w-6 text-primary-subtle" />
                       <p className="font-medium text-base text-primary">
                         No brands match your filter
                       </p>
@@ -452,7 +452,7 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
                                 {brand.imageKey}
                               </span>
                             ) : (
-                              <span className="text-[11px] text-primary-muted/70 italic">
+                              <span className="text-[11px] text-primary-subtle italic">
                                 No logo set
                               </span>
                             )}
