@@ -9,6 +9,7 @@ every branch merges.
 ### Added
 
 - **Brand Management Experience & Neuromarketing Table Operations**
+  - **Surface Purity & Design System Constitution Alignment.** Refactored `/staff/brands` surfaces, KPI cards, and modals to eliminate transparent `bg-card` classes and glossy `backdrop-blur-*` filters. Aligned overlay scrims with the canonical `bg-black/50` pattern from `CartDrawerShell` and `QuickViewDrawer`. Replaced all surfaces with solid, opaque `bg-white` and standard `border-black/10` borders to ensure high visual contrast, WCAG AA legibility, and zero visual bleed-through.
   - **Cognitive Framing & Neuromarketing KPI Anchors.** Transformed `/staff/brands` from a vertical stack of 80+ isolated cards into a streamlined, high-information-density table. Anchored key metrics at the top (Total Brands, Branded Products, Top Brand, and Empty Brands) reducing cognitive load and highlighting catalogue gaps via the Von Restorff effect.
   - **Interactive Brand Products Quick View Drawer.** Added instant product drawer (`BrandProductQuickViewItem` and `getBrandProducts`) showing all products linked to a brand, price ranges, average price anchor, live stock badges (In Stock, Low Stock, Out of Stock), direct link to edit product (`/staff/products/{id}`), and single-click product unlinking (`unassignProductFromBrandAction`).
   - **Instant Search, Filtering & Sorting (Hick's Law).** Real-time client search across brand names and slugs, filter tabs (`All`, `With Products`, `Empty`), and sorting by product volume or alphabetical order.
