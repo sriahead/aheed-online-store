@@ -18,6 +18,7 @@ import { BulkProductActions } from "@/components/staff/BulkProductActions";
 import { BULK_PRODUCTS_FORM_ID } from "@/lib/product-restriction-form";
 import { RESTRICTION_LABELS, STOCK_MODE_LABELS } from "@/lib/product-restriction";
 import { formatPrice } from "@/components/product/format-price";
+import { formatNetContentDisplay } from "@/lib/catalogue-import/net-content";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { BackfillImagesButton } from "@/components/staff/BackfillImagesButton";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -293,9 +294,30 @@ export default async function StaffProductsPage({
                       </span>
                     )}
                   </p>
-                  <p className="mt-0.5 truncate text-xs text-primary-muted">
-                    {product.categoryName} · {product.slug}
-                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-primary-muted">
+                    <span className="font-medium text-primary">{product.categoryName}</span>
+                    {product.brandName && (
+                      <>
+                        <span>·</span>
+                        <span className="inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
+                          Brand: {product.brandName}
+                        </span>
+                      </>
+                    )}
+                    {product.netContentAmount && product.netContentUnit && (
+                      <>
+                        <span>·</span>
+                        <span className="inline-flex items-center rounded bg-surface-muted px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                          {formatNetContentDisplay({
+                            amount: product.netContentAmount,
+                            unit: product.netContentUnit,
+                          })}
+                        </span>
+                      </>
+                    )}
+                    <span>·</span>
+                    <span className="truncate text-black/60">{product.slug}</span>
+                  </div>
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="font-bold text-primary">{formatPrice(product.basePrice)}</p>

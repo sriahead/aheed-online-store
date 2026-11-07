@@ -71,7 +71,24 @@ export default async function TermsPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-primary">5. Governing Law</h2>
+          <h2 className="text-lg font-semibold text-primary">
+            5. Platform Provision & Tax Responsibility
+          </h2>
+          <p className="text-sm text-primary-muted leading-relaxed">
+            The ordering, catalogue, and inventory technology on this website is powered by Merqify
+            Ltd as a software platform provider. {vendorName} operates as an independent merchant
+            and is solely responsible for all product listings, descriptions, stock quantities, and
+            the accuracy of all Value Added Tax (VAT) rates and classifications under applicable UK
+            HM Revenue &amp; Customs (HMRC) regulations. Merqify Ltd provides software management
+            tools only and does not provide tax, legal, or accounting advice. Any automated VAT
+            suggestions, indicators, or system warnings provided through the platform are for
+            operational guidance only and do not replace the merchant&apos;s statutory
+            responsibility to verify and ensure compliant tax treatment.
+          </p>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold text-primary">6. Governing Law</h2>
           <p className="text-sm text-primary-muted leading-relaxed">
             These terms are governed by and construed in accordance with the laws of England and
             Wales.

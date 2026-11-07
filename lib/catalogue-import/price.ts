@@ -20,11 +20,14 @@ export function parsePricePence(raw: string): PriceResult {
     negative = true;
     text = text.slice(1).trim();
   }
-  if (text.startsWith("£")) text = text.slice(1).trim();
+  // Strip leading currency symbols, replacement character (\uFFFD), or windows-1252 pound (\xA3)
+  text = text.replace(/^[\s£$€\uFFFD\xA3\u00A3]+/g, "").trim();
   if (text.startsWith("-")) {
     negative = true;
     text = text.slice(1).trim();
   }
+  // Strip trailing currency symbols or pence suffixes ('p')
+  text = text.replace(/[\s£$€\uFFFD\xA3\u00A3pP]+$/g, "").trim();
 
   const match = PLAIN.exec(text) ?? THOUSANDS.exec(text);
   if (!match) return { ok: false, code: "BAD_PRICE", reason: `"${raw.trim()}" is not a price` };

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import { slugify } from "@/lib/catalogue-form";
@@ -7,8 +8,10 @@ import {
   getBrandBySlug,
   listBrandsForAdmin as listBrandsForAdminRepo,
   listBrandSummaries as listBrandSummariesRepo,
+  listProductsForBrand as listProductsForBrandRepo,
   renameBrandForVendor,
   setBrandImageKey as setBrandImageKeyRepo,
+  unassignProductFromBrand as unassignProductFromBrandRepo,
   type BrandRepository,
 } from "@/lib/repositories/brands";
 
@@ -59,5 +62,15 @@ export function getBrandRepository(): BrandRepository {
       // `deleteMany` is safe on the HTTP client; see deleteBrandForVendor.
       return deleteBrandForVendor(prisma, await vendorId(), { id, confirmed });
     },
+    async listProducts(brandId: string) {
+      return listProductsForBrandRepo(prisma, await vendorId(), brandId);
+    },
+    async unassignProduct(productId: string) {
+      return unassignProductFromBrandRepo(prismaWs, await vendorId(), productId);
+    },
   };
 }
+
+export const listBrandsForAdmin = cache(async (vendorId: string) =>
+  listBrandsForAdminRepo(getPrisma(), vendorId),
+);

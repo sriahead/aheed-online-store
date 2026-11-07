@@ -1,5 +1,7 @@
 import { reimportedProductState } from "@/lib/catalogue-import-policy";
 import type { ProductRestriction, StockMode } from "@/lib/cart-rules";
+import { slugify } from "@/lib/catalogue-form";
+import type { NetContentUnit } from "@/components/product/unit-price";
 import { isUniqueViolation } from "./errors";
 import type { ImportPlan, PlannedProduct } from "./plan";
 
@@ -39,6 +41,11 @@ export type ProductWriteRow = {
   unitLabel: string;
   isActive: false;
   restriction: ProductRestriction | null;
+  brandId?: string | null;
+  netContentAmount?: number | null;
+  netContentUnit?: NetContentUnit | null;
+  unitPricePencePerBaseUnit?: number | null;
+  plu?: string | null;
 };
 export type CategoryWriteRow = {
   id: string;
@@ -73,11 +80,23 @@ export interface ImportTx {
     createMany(args: { data: ProductWriteRow[] }): Promise<unknown>;
     update(args: {
       where: { id: string; vendorId: string };
-      data: { restriction: ProductRestriction; isActive: false };
+      data: {
+        restriction?: ProductRestriction;
+        isActive?: false;
+        brandId?: string | null;
+        netContentAmount?: number | null;
+        netContentUnit?: NetContentUnit | null;
+        unitPricePencePerBaseUnit?: number | null;
+      };
     }): Promise<unknown>;
   };
   inventory: { createMany(args: { data: InventoryWriteRow[] }): Promise<unknown> };
   productRestrictionAuditLog: { createMany(args: { data: AuditWriteRow[] }): Promise<unknown> };
+  brand?: {
+    create(args: {
+      data: { id: string; vendorId: string; name: string; slug: string };
+    }): Promise<unknown>;
+  };
 }
 
 export interface ImportDb {
@@ -89,7 +108,11 @@ export interface ImportDb {
   };
   product: {
     findMany(args: {
-      where: { vendorId: string; slug: { in: string[] } };
+      where: {
+        vendorId: string;
+        slug?: { in: string[] };
+        plu?: { in: string[] };
+      };
       select: {
         id: true;
         slug: true;
@@ -97,6 +120,12 @@ export interface ImportDb {
         basePrice: true;
         isActive: true;
         restriction: true;
+        plu?: true;
+        brandId?: true;
+        netContentAmount?: true;
+        netContentUnit?: true;
+        isManuallyEdited?: true;
+        manuallyEditedFields?: true;
       };
     }): Promise<
       {
@@ -106,8 +135,20 @@ export interface ImportDb {
         basePrice: number;
         isActive: boolean;
         restriction: ProductRestriction | null;
+        plu?: string | null;
+        brandId?: string | null;
+        netContentAmount?: number | null;
+        netContentUnit?: NetContentUnit | null;
+        isManuallyEdited?: boolean;
+        manuallyEditedFields?: string[];
       }[]
     >;
+  };
+  brand?: {
+    findMany(args: {
+      where: { vendorId: string };
+      select: { id: true; name: true; slug: true };
+    }): Promise<{ id: string; name: string; slug: string }[]>;
   };
   $transaction<T>(
     fn: (tx: ImportTx) => Promise<T>,
@@ -120,6 +161,7 @@ export interface DepartmentOutcome {
   status: "WRITTEN" | "UNCHANGED" | "ALREADY_EXISTS" | "FAILED";
   categoriesCreated: number;
   productsCreated: number;
+  productsUpdated: number;
   restrictionTightened: number;
   error?: string;
 }
@@ -143,6 +185,7 @@ export interface ApplyResult {
   departments: DepartmentOutcome[];
   categoriesCreated: number;
   productsCreated: number;
+  productsUpdated: number;
   existingUnchanged: number;
   restrictionTightened: number;
   failedDepartments: number;
@@ -162,7 +205,9 @@ export async function applyPlan(
   db: ImportDb,
   vendorId: string,
   plan: ImportPlan,
+  options: { enrichExisting?: boolean } = {},
 ): Promise<ApplyResult> {
+  const { enrichExisting = false } = options;
   // Existing rows are READ once, up front. An existing category keeps its id and name; an existing
   // product is only ever considered for a tightened restriction.
   const categoryIds = new Map<string, string>();
@@ -185,6 +230,28 @@ export async function applyPlan(
       basePrice: number;
       isActive: boolean;
       restriction: ProductRestriction | null;
+      plu?: string | null;
+      brandId?: string | null;
+      netContentAmount?: number | null;
+      netContentUnit?: NetContentUnit | null;
+      isManuallyEdited?: boolean;
+      manuallyEditedFields?: string[];
+    }
+  >();
+  const existingProductsByPlu = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      basePrice: number;
+      isActive: boolean;
+      restriction: ProductRestriction | null;
+      plu?: string | null;
+      brandId?: string | null;
+      netContentAmount?: number | null;
+      netContentUnit?: NetContentUnit | null;
+      isManuallyEdited?: boolean;
+      manuallyEditedFields?: string[];
     }
   >();
   for (const slugs of chunk(
@@ -200,16 +267,85 @@ export async function applyPlan(
         basePrice: true,
         isActive: true,
         restriction: true,
+        plu: true,
+        brandId: true,
+        netContentAmount: true,
+        netContentUnit: true,
+        isManuallyEdited: true,
+        manuallyEditedFields: true,
       },
     })) {
       existingProducts.set(row.slug, row);
     }
   }
+  const plus = plan.products
+    .map((p) => p.plu)
+    .filter((plu): plu is string => Boolean(plu && plu.trim()));
+  if (plus.length > 0) {
+    try {
+      for (const pluBatch of chunk(plus, 1000)) {
+        const rows = await db.product.findMany({
+          where: { vendorId, plu: { in: pluBatch } },
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            basePrice: true,
+            isActive: true,
+            restriction: true,
+            plu: true,
+            brandId: true,
+            netContentAmount: true,
+            netContentUnit: true,
+            isManuallyEdited: true,
+            manuallyEditedFields: true,
+          },
+        });
+        for (const row of rows) {
+          if (row.plu) existingProductsByPlu.set(row.plu, row);
+        }
+      }
+    } catch {
+      // Stub environments without plu support in mock findMany
+    }
+  }
+
+  const brandIdsByName = new Map<string, string>();
+  if (db.brand) {
+    try {
+      const existingBrands = await db.brand.findMany({
+        where: { vendorId },
+        select: { id: true, name: true, slug: true },
+      });
+      for (const b of existingBrands) {
+        brandIdsByName.set(b.name.trim().toLowerCase(), b.id);
+      }
+    } catch {
+      // Stub environments
+    }
+  }
+
+  // Pre-assign deterministic IDs for any new brands to be created
+  const newBrandIdsByName = new Map<string, string>();
+  for (const p of plan.products) {
+    if (p.brandName) {
+      const key = p.brandName.trim().toLowerCase();
+      if (!brandIdsByName.has(key) && !newBrandIdsByName.has(key)) {
+        newBrandIdsByName.set(key, newId());
+      }
+    }
+  }
+  const brandIdFor = (name: string | null | undefined): string | null => {
+    if (!name) return null;
+    const key = name.trim().toLowerCase();
+    return brandIdsByName.get(key) ?? newBrandIdsByName.get(key) ?? null;
+  };
 
   const result: ApplyResult = {
     departments: [],
     categoriesCreated: 0,
     productsCreated: 0,
+    productsUpdated: 0,
     existingUnchanged: 0,
     restrictionTightened: 0,
     failedDepartments: 0,
@@ -241,10 +377,23 @@ export async function applyPlan(
       from: ProductRestriction | null;
       to: ProductRestriction;
     }[] = [];
+    const updates: {
+      id: string;
+      data: {
+        restriction?: ProductRestriction;
+        isActive?: false;
+        brandId?: string | null;
+        netContentAmount?: number | null;
+        netContentUnit?: NetContentUnit | null;
+        unitPricePencePerBaseUnit?: number | null;
+      };
+    }[] = [];
     let unchanged = 0;
     const departmentDrift: DriftEntry[] = [];
     for (const planned of products) {
-      const existing = existingProducts.get(planned.slug);
+      const existing =
+        existingProducts.get(planned.slug) ??
+        (planned.plu ? existingProductsByPlu.get(planned.plu) : undefined);
       if (!existing) {
         toCreate.push({ planned, id: newId() });
         continue;
@@ -253,6 +402,17 @@ export async function applyPlan(
         { isActive: existing.isActive, restriction: existing.restriction },
         planned.restriction,
       );
+
+      const updateData: {
+        restriction?: ProductRestriction;
+        isActive?: false;
+        brandId?: string | null;
+        netContentAmount?: number | null;
+        netContentUnit?: NetContentUnit | null;
+        unitPricePencePerBaseUnit?: number | null;
+      } = {};
+      let hasUpdate = false;
+
       if (next.tightened && next.restriction !== null) {
         tightenings.push({
           id: existing.id,
@@ -260,9 +420,53 @@ export async function applyPlan(
           from: existing.restriction,
           to: next.restriction,
         });
+        updateData.restriction = next.restriction;
+        updateData.isActive = false;
+        hasUpdate = true;
+      }
+
+      // Reliable enrichment: only when enrichExisting is enabled and field is missing on existing product
+      if (enrichExisting) {
+        if (planned.brandName && existing.brandId == null) {
+          const brandProtected = Boolean(
+            existing.isManuallyEdited && existing.manuallyEditedFields?.includes("brandId"),
+          );
+          if (!brandProtected) {
+            const brandId = brandIdFor(planned.brandName);
+            if (brandId) {
+              updateData.brandId = brandId;
+              hasUpdate = true;
+            }
+          }
+        }
+
+        if (
+          planned.netContentAmount != null &&
+          planned.netContentUnit != null &&
+          existing.netContentAmount == null
+        ) {
+          const netProtected = Boolean(
+            existing.isManuallyEdited &&
+            (existing.manuallyEditedFields?.includes("netContent") ||
+              existing.manuallyEditedFields?.includes("netContentAmount")),
+          );
+          if (!netProtected) {
+            updateData.netContentAmount = planned.netContentAmount;
+            updateData.netContentUnit = planned.netContentUnit;
+            if (planned.unitPricePencePerBaseUnit != null) {
+              updateData.unitPricePencePerBaseUnit = planned.unitPricePencePerBaseUnit;
+            }
+            hasUpdate = true;
+          }
+        }
+      }
+
+      if (hasUpdate) {
+        updates.push({ id: existing.id, data: updateData });
       } else {
         unchanged += 1;
       }
+
       if (existing.name !== planned.name) {
         departmentDrift.push({
           sourceRow: planned.sourceRow,
@@ -283,16 +487,21 @@ export async function applyPlan(
       }
     }
 
+    const enrichedUpdatesCount = updates.filter(
+      (u) => !tightenings.some((t) => t.id === u.id),
+    ).length;
+
     const outcome: DepartmentOutcome = {
       department: department.name,
       status: "WRITTEN",
       categoriesCreated: newCategoryIds.size,
       productsCreated: toCreate.length,
+      productsUpdated: enrichedUpdatesCount,
       restrictionTightened: tightenings.length,
     };
 
     const nothingToWrite =
-      newCategoryIds.size === 0 && toCreate.length === 0 && tightenings.length === 0;
+      newCategoryIds.size === 0 && toCreate.length === 0 && updates.length === 0;
     if (nothingToWrite) outcome.status = "UNCHANGED";
 
     try {
@@ -319,20 +528,52 @@ export async function applyPlan(
             });
           }
 
+          if (tx.brand) {
+            for (const planned of products) {
+              if (planned.brandName) {
+                const key = planned.brandName.trim().toLowerCase();
+                if (!brandIdsByName.has(key)) {
+                  const brandId = brandIdFor(planned.brandName)!;
+                  const brandSlug = slugify(planned.brandName) || `brand-${brandId.slice(0, 8)}`;
+                  await tx.brand.create({
+                    data: {
+                      id: brandId,
+                      vendorId,
+                      name: planned.brandName.trim(),
+                      slug: brandSlug,
+                    },
+                  });
+                  brandIdsByName.set(key, brandId);
+                }
+              }
+            }
+          }
+
           for (const batch of chunk(toCreate, BATCH)) {
             await tx.product.createMany({
-              data: batch.map(({ planned, id }) => ({
-                id,
-                vendorId,
-                slug: planned.slug,
-                name: planned.name,
-                description: planned.description,
-                categoryId: idFor(planned.categorySlug),
-                basePrice: planned.basePrice,
-                unitLabel: planned.unitLabel,
-                isActive: planned.isActive,
-                restriction: planned.restriction,
-              })),
+              data: batch.map(({ planned, id }) => {
+                const brandId = brandIdFor(planned.brandName);
+                const row: ProductWriteRow = {
+                  id,
+                  vendorId,
+                  slug: planned.slug,
+                  name: planned.name,
+                  description: planned.description,
+                  categoryId: idFor(planned.categorySlug),
+                  basePrice: planned.basePrice,
+                  unitLabel: planned.unitLabel,
+                  isActive: planned.isActive,
+                  restriction: planned.restriction,
+                };
+                if (brandId) row.brandId = brandId;
+                if (planned.netContentAmount != null)
+                  row.netContentAmount = planned.netContentAmount;
+                if (planned.netContentUnit != null) row.netContentUnit = planned.netContentUnit;
+                if (planned.unitPricePencePerBaseUnit != null)
+                  row.unitPricePencePerBaseUnit = planned.unitPricePencePerBaseUnit;
+                if (planned.plu) row.plu = planned.plu;
+                return row;
+              }),
             });
             await tx.inventory.createMany({
               data: batch.map(({ planned, id }) => ({
@@ -361,10 +602,10 @@ export async function applyPlan(
             }
           }
 
-          for (const t of tightenings) {
+          for (const u of updates) {
             await tx.product.update({
-              where: { id: t.id, vendorId },
-              data: { restriction: t.to, isActive: false },
+              where: { id: u.id, vendorId },
+              data: u.data,
             });
           }
           if (tightenings.length > 0) {
@@ -388,6 +629,7 @@ export async function applyPlan(
       outcome.error = error instanceof Error ? error.message : String(error);
       outcome.categoriesCreated = 0;
       outcome.productsCreated = 0;
+      outcome.productsUpdated = 0;
       outcome.restrictionTightened = 0;
       result.departments.push(outcome);
       result.failedDepartments += 1;
@@ -400,6 +642,7 @@ export async function applyPlan(
     result.departments.push(outcome);
     result.categoriesCreated += outcome.categoriesCreated;
     result.productsCreated += outcome.productsCreated;
+    result.productsUpdated += outcome.productsUpdated;
     result.restrictionTightened += outcome.restrictionTightened;
     result.existingUnchanged += unchanged;
     result.drift.push(...departmentDrift);

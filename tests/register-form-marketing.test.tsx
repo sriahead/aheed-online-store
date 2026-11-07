@@ -8,6 +8,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
  */
 
 const signUpEmail = vi.fn(async (_body: Record<string, unknown>) => ({ error: null }));
+const push = vi.fn();
+const refresh = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push, refresh }),
+}));
 
 vi.mock("@/features/auth/api-client", () => ({
   signUp: { email: (body: Record<string, unknown>) => signUpEmail(body) },
@@ -24,7 +30,10 @@ afterEach(cleanup);
 function fillAndSubmit() {
   fireEvent.change(screen.getByLabelText("Name"), { target: { value: "A Shopper" } });
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@example.com" } });
-  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password123" } });
+  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "Password123!" } });
+  fireEvent.change(screen.getByLabelText("Confirm Password"), {
+    target: { value: "Password123!" },
+  });
   fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 }
 
@@ -58,5 +67,18 @@ describe("RegisterForm marketing consent", () => {
     fillAndSubmit();
     await waitFor(() => expect(signUpEmail).toHaveBeenCalledTimes(1));
     expect(signUpEmail.mock.calls[0][0]).not.toHaveProperty("marketingOptIn");
+  });
+
+  it("renders verification notification upon successful registration", async () => {
+    render(<RegisterForm marketingStatement={null} next="/checkout" />);
+    fillAndSubmit();
+    await waitFor(() => {
+      expect(screen.getByText(/verify your email/i)).toBeTruthy();
+      expect(screen.getByText("a@example.com")).toBeTruthy();
+    });
+    const returnLink = screen.getByRole("link", {
+      name: /return to sign in/i,
+    }) as HTMLAnchorElement;
+    expect(returnLink.getAttribute("href")).toBe("/login?next=%2Fcheckout");
   });
 });

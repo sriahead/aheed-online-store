@@ -20,9 +20,17 @@ export interface CategoryOption {
   slug: string;
 }
 
+export interface BrandOption {
+  id: string;
+  name: string;
+  slug: string;
+  imageKey?: string | null;
+}
+
 export interface IconGalleryClientProps {
   initialAssets: CategoryAssetItem[];
   categories: CategoryOption[];
+  brands?: BrandOption[];
   /**
    * #1288 R7: only an admin can generate, activate, deactivate or delete — the routes behind those
    * controls are ADMIN-only, so a STAFF viewer gets the library read-only instead of buttons that 403.
@@ -37,6 +45,13 @@ function isFlatSlot(slot: string | null | undefined): boolean {
 
 /** Resolves human-readable surfaces where this asset renders in the storefront or admin. */
 function getSurfacesForAsset(asset: CategoryAssetItem): readonly string[] {
+  if (asset.slot?.startsWith("brand:")) {
+    return [
+      "Brand facet filter on Search & Catalogue",
+      "Storefront Brand Pills & Quick View",
+      "Staff Brand Management",
+    ];
+  }
   if (asset.slot) {
     const slot = getIconSlot(asset.slot);
     return slot?.surfaces ?? ["Storefront & Staff interface"];
@@ -86,10 +101,13 @@ function useOptionalRouter() {
 export function IconGalleryClient({
   initialAssets,
   categories,
+  brands = [],
   canManage,
 }: IconGalleryClientProps) {
   const [assets, setAssets] = useState<CategoryAssetItem[]>(initialAssets);
-  const [filterTab, setFilterTab] = useState<"all" | "categories" | "slots" | "flat">("all");
+  const [filterTab, setFilterTab] = useState<"all" | "categories" | "slots" | "flat" | "brands">(
+    "all",
+  );
   const [libraryGroupFilter, setLibraryGroupFilter] = useState<
     "all" | IconSlotGroup | "departments"
   >("all");
@@ -99,9 +117,14 @@ export function IconGalleryClient({
   );
 
   // Quick generator state
-  const [targetType, setTargetType] = useState<"category" | "slot">("category");
+  const [targetType, setTargetType] = useState<"category" | "slot" | "brand">("category");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(categories[0]?.id || "");
   const [selectedSlotId, setSelectedSlotId] = useState<string>(ICON_3D_SLOTS[0].id);
+  const [brandsList, setBrandsList] = useState<BrandOption[]>(brands);
+  const [selectedBrandId, setSelectedBrandId] = useState<string>(brands[0]?.id || "");
+  const [brandLogoMode, setBrandLogoMode] = useState<"upload" | "ai">("upload");
+  const [brandLogoUrlInput, setBrandLogoUrlInput] = useState("");
+  const [isUploadingBrandLogo, setIsUploadingBrandLogo] = useState(false);
   const [slotCategoryFilter, setSlotCategoryFilter] = useState<"all" | IconSlotGroup>("all");
   const [targetSearchQuery, setTargetSearchQuery] = useState("");
   const [genStyle, setGenStyle] = useState<CategoryImageStyle>("photo");
@@ -117,14 +140,19 @@ export function IconGalleryClient({
   const filteredAssets = useMemo(() => {
     return assets.filter((asset) => {
       if (filterTab === "categories" && !asset.categoryId) return false;
-      if (filterTab === "slots" && (!asset.slot || isFlatSlot(asset.slot))) return false;
+      if (filterTab === "brands" && !asset.slot?.startsWith("brand:")) return false;
+      if (
+        filterTab === "slots" &&
+        (!asset.slot || isFlatSlot(asset.slot) || asset.slot.startsWith("brand:"))
+      )
+        return false;
       if (filterTab === "flat" && !isFlatSlot(asset.slot)) return false;
 
       if (libraryGroupFilter !== "all") {
         if (libraryGroupFilter === "departments") {
           if (!asset.categoryId) return false;
         } else {
-          if (!asset.slot) return false;
+          if (!asset.slot || asset.slot.startsWith("brand:")) return false;
           const slot = getIconSlot(asset.slot);
           if (slot?.group !== libraryGroupFilter) return false;
         }
@@ -135,6 +163,10 @@ export function IconGalleryClient({
 
       const catName = asset.category?.name?.toLowerCase() || "";
       const slotName = asset.slot?.toLowerCase() || "";
+      const isBrand = Boolean(asset.slot?.startsWith("brand:"));
+      const brandName = isBrand
+        ? brands.find((b) => `brand:${b.slug}` === asset.slot)?.name.toLowerCase() || ""
+        : "";
       const slot = asset.slot ? getIconSlot(asset.slot) : undefined;
       const slotLabel = slot?.label.toLowerCase() || "";
       const slotGroup = slot?.group.toLowerCase() || "";
@@ -144,13 +176,14 @@ export function IconGalleryClient({
       return (
         catName.includes(q) ||
         slotName.includes(q) ||
+        brandName.includes(q) ||
         slotLabel.includes(q) ||
         slotGroup.includes(q) ||
         keyName.includes(q) ||
         surfacesText.includes(q)
       );
     });
-  }, [assets, filterTab, libraryGroupFilter, searchQuery]);
+  }, [assets, filterTab, libraryGroupFilter, searchQuery, brands]);
 
   const filteredSlots = useMemo(() => {
     return ICON_SLOTS.filter((slot) => {
@@ -175,11 +208,36 @@ export function IconGalleryClient({
     );
   }, [categories, targetSearchQuery]);
 
+  const filteredBrands = useMemo(() => {
+    if (!targetSearchQuery.trim()) return brandsList;
+    const q = targetSearchQuery.toLowerCase().trim();
+    return brandsList.filter(
+      (b) => b.name.toLowerCase().includes(q) || b.slug.toLowerCase().includes(q),
+    );
+  }, [brandsList, targetSearchQuery]);
+
   const selectedSlot = useMemo(() => {
     return getIconSlot(selectedSlotId);
   }, [selectedSlotId]);
 
+  const selectedBrand = useMemo(() => {
+    return brandsList.find((b) => b.id === selectedBrandId) || brandsList[0];
+  }, [brandsList, selectedBrandId]);
+
+  const activeBrandAsset = useMemo(() => {
+    if (!selectedBrand?.slug) return null;
+    return assets.find((a) => a.slot === `brand:${selectedBrand.slug}` && a.isSelected);
+  }, [assets, selectedBrand]);
+
   const currentTargetSurfaces = useMemo(() => {
+    if (targetType === "brand") {
+      const b = brandsList.find((br) => br.id === selectedBrandId);
+      return [
+        `Brand Filter & Storefront Facet: ${b ? b.name : "Selected brand"}`,
+        "Storefront Brand Quick View & Pills",
+        "Staff Brand Management",
+      ];
+    }
     if (targetType === "category") {
       const cat = categories.find((c) => c.id === selectedCategoryId);
       return [
@@ -189,18 +247,26 @@ export function IconGalleryClient({
     }
     const slot = getIconSlot(selectedSlotId);
     return slot?.surfaces ?? ["Storefront & Staff interface"];
-  }, [targetType, selectedCategoryId, selectedSlotId, categories]);
+  }, [targetType, selectedCategoryId, selectedSlotId, selectedBrandId, categories, brandsList]);
 
   async function handleGenerate() {
     setStatusMessage(null);
     setGenerating(true);
 
     try {
-      const payload: { categoryId?: string; slot?: string; style: CategoryImageStyle } = {
+      const payload: {
+        categoryId?: string;
+        slot?: string;
+        brandId?: string;
+        style: CategoryImageStyle;
+      } = {
         style: genStyle,
       };
 
-      if (targetType === "category") {
+      if (targetType === "brand") {
+        if (!selectedBrandId) throw new Error("Please select a brand");
+        payload.brandId = selectedBrandId;
+      } else if (targetType === "category") {
         if (!selectedCategoryId) throw new Error("Please select a category");
         payload.categoryId = selectedCategoryId;
       } else {
@@ -231,11 +297,14 @@ export function IconGalleryClient({
           isSelected: true,
         };
 
+        const brandSlug = selectedBrand?.slug;
+
         // Update local list
         setAssets((prev) => [
           newAsset,
           ...prev.map((a) => {
             if (
+              (targetType === "brand" && a.slot === `brand:${brandSlug}`) ||
               (targetType === "category" && a.categoryId === selectedCategoryId) ||
               (targetType === "slot" && a.slot === selectedSlotId)
             ) {
@@ -248,9 +317,11 @@ export function IconGalleryClient({
         setStatusMessage({
           type: "success",
           text: `Asset generated successfully and set as active for ${
-            targetType === "category"
-              ? categories.find((c) => c.id === selectedCategoryId)?.name
-              : selectedSlotId
+            targetType === "brand"
+              ? selectedBrand?.name
+              : targetType === "category"
+                ? categories.find((c) => c.id === selectedCategoryId)?.name
+                : selectedSlotId
           }.`,
         });
         router?.refresh();
@@ -262,6 +333,113 @@ export function IconGalleryClient({
       });
     } finally {
       setGenerating(false);
+    }
+  }
+
+  async function handleUploadBrandFile(file: File) {
+    if (!selectedBrandId) {
+      setStatusMessage({ type: "error", text: "Please select a brand first." });
+      return;
+    }
+    setIsUploadingBrandLogo(true);
+    setStatusMessage(null);
+    try {
+      const formData = new FormData();
+      formData.append("brandId", selectedBrandId);
+      formData.append("file", file);
+
+      const res = await fetch("/api/admin/brands/upload-logo", {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        imageKey?: string;
+        imageUrl?: string;
+        asset?: CategoryAssetItem;
+      };
+      if (!res.ok || !data.asset) {
+        throw new Error(data.error || "Failed to upload brand logo.");
+      }
+
+      const newAsset: CategoryAssetItem = {
+        ...data.asset,
+        imageUrl: data.imageUrl ?? "",
+        isSelected: true,
+      };
+      const brandSlug = selectedBrand?.slug;
+      setAssets((prev) => [
+        newAsset,
+        ...prev.map((a) => (a.slot === `brand:${brandSlug}` ? { ...a, isSelected: false } : a)),
+      ]);
+      setBrandsList((prev) =>
+        prev.map((b) => (b.id === selectedBrandId ? { ...b, imageKey: data.imageKey ?? null } : b)),
+      );
+      setStatusMessage({
+        type: "success",
+        text: `Authentic logo for ${selectedBrand?.name} uploaded and activated successfully!`,
+      });
+      router?.refresh();
+    } catch (err: any) {
+      setStatusMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to upload logo.",
+      });
+    } finally {
+      setIsUploadingBrandLogo(false);
+    }
+  }
+
+  async function handleImportBrandLogoFromUrl(url: string) {
+    if (!selectedBrandId) {
+      setStatusMessage({ type: "error", text: "Please select a brand first." });
+      return;
+    }
+    if (!url.trim()) return;
+    setIsUploadingBrandLogo(true);
+    setStatusMessage(null);
+    try {
+      const res = await fetch("/api/admin/brands/upload-logo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandId: selectedBrandId, url: url.trim() }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        imageKey?: string;
+        imageUrl?: string;
+        asset?: CategoryAssetItem;
+      };
+      if (!res.ok || !data.asset) {
+        throw new Error(data.error || "Failed to import brand logo from URL.");
+      }
+
+      const newAsset: CategoryAssetItem = {
+        ...data.asset,
+        imageUrl: data.imageUrl ?? "",
+        isSelected: true,
+      };
+      const brandSlug = selectedBrand?.slug;
+      setAssets((prev) => [
+        newAsset,
+        ...prev.map((a) => (a.slot === `brand:${brandSlug}` ? { ...a, isSelected: false } : a)),
+      ]);
+      setBrandsList((prev) =>
+        prev.map((b) => (b.id === selectedBrandId ? { ...b, imageKey: data.imageKey ?? null } : b)),
+      );
+      setBrandLogoUrlInput("");
+      setStatusMessage({
+        type: "success",
+        text: `Authentic logo for ${selectedBrand?.name} imported from URL and activated successfully!`,
+      });
+      router?.refresh();
+    } catch (err: any) {
+      setStatusMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to import logo from URL.",
+      });
+    } finally {
+      setIsUploadingBrandLogo(false);
     }
   }
 
@@ -444,6 +622,18 @@ export function IconGalleryClient({
                   >
                     System Icon
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTargetType("brand");
+                      setTargetSearchQuery("");
+                    }}
+                    className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+                      targetType === "brand" ? "bg-white text-primary shadow-sm" : "text-black/60"
+                    }`}
+                  >
+                    Brand Logo
+                  </button>
                 </div>
               </div>
 
@@ -465,9 +655,11 @@ export function IconGalleryClient({
                     value={targetSearchQuery}
                     onChange={(e) => setTargetSearchQuery(e.target.value)}
                     placeholder={
-                      targetType === "category"
-                        ? "Search department (e.g. bakery, halal, fruit)..."
-                        : "Search icon or surface (e.g. delivery, collect, all, halal, meat, shield)..."
+                      targetType === "brand"
+                        ? "Search brand (e.g. Shan, TRS, Laila, Natco)..."
+                        : targetType === "category"
+                          ? "Search department (e.g. bakery, halal, fruit)..."
+                          : "Search icon or surface (e.g. delivery, collect, all, halal, meat, shield)..."
                     }
                     className="w-full rounded-lg border border-black/15 bg-surface-muted py-1.5 pl-8 pr-7 text-xs text-primary placeholder:text-primary-subtle focus:border-action focus:bg-white focus:outline-none"
                   />
@@ -524,12 +716,41 @@ export function IconGalleryClient({
                 <div className="mb-1.5 flex items-center justify-between text-[11px]">
                   <span className="font-bold text-action">
                     Matching Targets (
-                    {targetType === "category" ? filteredCategories.length : filteredSlots.length}):
+                    {targetType === "brand"
+                      ? filteredBrands.length
+                      : targetType === "category"
+                        ? filteredCategories.length
+                        : filteredSlots.length}
+                    ):
                   </span>
-                  <span className="text-primary-muted">Click an icon below to select it</span>
+                  <span className="text-primary-muted">Click an item below to select it</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
-                  {targetType === "category" ? (
+                  {targetType === "brand" ? (
+                    filteredBrands.length === 0 ? (
+                      <span className="text-xs text-primary-muted py-1">
+                        No matching brands found
+                      </span>
+                    ) : (
+                      filteredBrands.map((b) => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => setSelectedBrandId(b.id)}
+                          className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold transition ${
+                            selectedBrandId === b.id
+                              ? "border-action bg-white text-action ring-2 ring-action/20 shadow-xs"
+                              : "border-black/10 bg-white text-primary hover:border-black/30"
+                          }`}
+                        >
+                          <span className="flex h-4 w-4 items-center justify-center rounded bg-primary-tint text-[9px] font-bold text-primary">
+                            {b.name.slice(0, 2).toUpperCase()}
+                          </span>
+                          <span className="truncate max-w-[150px]">{b.name}</span>
+                        </button>
+                      ))
+                    )
+                  ) : targetType === "category" ? (
                     filteredCategories.length === 0 ? (
                       <span className="text-xs text-primary-muted py-1">
                         No matching departments found
@@ -582,15 +803,33 @@ export function IconGalleryClient({
             )}
 
             {/* Target Selector Dropdown, Style Preset & Generate Button */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-1">
-              <div className="sm:col-span-2">
+            <div className="space-y-3 pt-1">
+              <div>
                 <label
                   htmlFor="quick-gen-target-select"
                   className="block text-xs font-semibold text-primary-muted mb-1"
                 >
-                  {targetType === "category" ? "Target Department:" : "Target System Icon Slot:"}
+                  {targetType === "brand"
+                    ? "Target Brand:"
+                    : targetType === "category"
+                      ? "Target Department:"
+                      : "Target System Icon Slot:"}
                 </label>
-                {targetType === "category" ? (
+                {targetType === "brand" ? (
+                  <select
+                    id="quick-gen-target-select"
+                    value={selectedBrandId}
+                    onChange={(e) => setSelectedBrandId(e.target.value)}
+                    disabled={generating || isUploadingBrandLogo}
+                    className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
+                  >
+                    {filteredBrands.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} ({b.slug}) {b.imageKey ? "— ✓ Logo set" : "— No logo"}
+                      </option>
+                    ))}
+                  </select>
+                ) : targetType === "category" ? (
                   <select
                     id="quick-gen-target-select"
                     value={selectedCategoryId}
@@ -630,45 +869,158 @@ export function IconGalleryClient({
                 )}
               </div>
 
-              <div>
-                <label
-                  htmlFor="quick-gen-style-select"
-                  className="block text-xs font-semibold text-primary-muted mb-1"
-                >
-                  Visual Preset:
-                </label>
-                <select
-                  id="quick-gen-style-select"
-                  value={genStyle}
-                  onChange={(e) => setGenStyle(e.target.value as CategoryImageStyle)}
-                  disabled={generating}
-                  className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
-                >
-                  <option value="photo">Studio Product Photography (Recommended)</option>
-                  <option value="3d-icon">Commercial 3D Rendered Icon</option>
-                </select>
-              </div>
+              {/* Brand Logo Ingestion vs AI Mode Switcher */}
+              {targetType === "brand" && (
+                <div className="flex items-center gap-2 pt-0.5">
+                  <span className="text-[11px] font-semibold text-primary-muted">Method:</span>
+                  <div className="flex rounded-lg border border-black/15 p-0.5 bg-surface-muted text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setBrandLogoMode("upload")}
+                      className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                        brandLogoMode === "upload"
+                          ? "bg-white text-primary shadow-xs"
+                          : "text-black/60 hover:text-black"
+                      }`}
+                    >
+                      Upload Official Logo / Image URL (Authentic)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBrandLogoMode("ai")}
+                      className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                        brandLogoMode === "ai"
+                          ? "bg-white text-primary shadow-xs"
+                          : "text-black/60 hover:text-black"
+                      }`}
+                    >
+                      AI Concept Medallion
+                    </button>
+                  </div>
+                </div>
+              )}
 
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={handleGenerate}
-                  disabled={generating}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-action px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-action-hover disabled:opacity-50"
-                >
-                  <Icon
-                    name="sparkles"
-                    className={`h-4 w-4 ${generating ? "animate-spin" : "text-amber-300"}`}
-                  />
-                  {generating ? "Generating…" : "Generate & Add to Library"}
-                </button>
-              </div>
+              {targetType === "brand" && brandLogoMode === "upload" ? (
+                <div className="rounded-xl border border-action/20 bg-action-tint/10 p-3.5 space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-primary">
+                      Set Authentic Official Logo for {selectedBrand?.name}
+                    </span>
+                    <span className="text-primary-muted text-[11px]">
+                      PNG, WebP, SVG, JPEG (max 5MB)
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <span className="block text-[11px] font-semibold text-primary-muted mb-1">
+                        Upload Official Logo File:
+                      </span>
+                      <label className="cursor-pointer block">
+                        <input
+                          type="file"
+                          accept="image/png,image/webp,image/svg+xml,image/jpeg"
+                          disabled={isUploadingBrandLogo}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleUploadBrandFile(file);
+                          }}
+                          className="hidden"
+                        />
+                        <span className="flex items-center justify-center gap-2 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-primary hover:border-action transition shadow-xs">
+                          <Icon name="upload" className="h-4 w-4 text-action" />
+                          {isUploadingBrandLogo ? "Uploading…" : "Browse & Upload File"}
+                        </span>
+                      </label>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="brand-logo-url-input"
+                        className="block text-[11px] font-semibold text-primary-muted mb-1"
+                      >
+                        Or Import via Image URL:
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id="brand-logo-url-input"
+                          type="url"
+                          value={brandLogoUrlInput}
+                          onChange={(e) => setBrandLogoUrlInput(e.target.value)}
+                          placeholder="https://.../brand-logo.png"
+                          disabled={isUploadingBrandLogo}
+                          className="w-full rounded-xl border border-black/15 bg-white px-2.5 py-1.5 text-xs text-primary placeholder:text-primary-subtle focus:border-action focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={isUploadingBrandLogo || !brandLogoUrlInput.trim()}
+                          onClick={() => handleImportBrandLogoFromUrl(brandLogoUrlInput)}
+                          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-action px-3 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-action-hover disabled:opacity-50 shrink-0"
+                        >
+                          <Icon name="globe" className="h-3.5 w-3.5" />
+                          {isUploadingBrandLogo ? "Importing…" : "Import"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="sm:col-span-2 md:col-span-3">
+                    <label
+                      htmlFor="quick-gen-style-select"
+                      className="block text-xs font-semibold text-primary-muted mb-1"
+                    >
+                      Visual Preset:
+                    </label>
+                    <select
+                      id="quick-gen-style-select"
+                      value={genStyle}
+                      onChange={(e) => setGenStyle(e.target.value as CategoryImageStyle)}
+                      disabled={generating}
+                      className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
+                    >
+                      <option value="photo">Studio Product Photography (Recommended)</option>
+                      <option value="3d-icon">Commercial 3D Rendered Icon</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={handleGenerate}
+                      disabled={generating}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-action px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-action-hover disabled:opacity-50"
+                    >
+                      <Icon
+                        name="sparkles"
+                        className={`h-4 w-4 ${generating ? "animate-spin" : "text-amber-300"}`}
+                      />
+                      {generating ? "Generating…" : "Generate"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Live Selected Target Details Card */}
             <div className="flex items-start gap-3 rounded-xl border border-black/10 bg-surface-muted p-3">
               <div className="shrink-0 pt-0.5">
-                {targetType === "category" ? (
+                {targetType === "brand" ? (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-black/10 overflow-hidden p-1 shadow-xs">
+                    {activeBrandAsset ? (
+                      <img
+                        src={activeBrandAsset.imageUrl}
+                        alt={selectedBrand?.name}
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <span className="font-bold text-xs text-primary">
+                        {selectedBrand ? selectedBrand.name.slice(0, 2).toUpperCase() : "BR"}
+                      </span>
+                    )}
+                  </div>
+                ) : targetType === "category" ? (
                   <IconMedallion icon="folder-tree" size={36} decorative />
                 ) : selectedSlot?.kind === "3d" ? (
                   <IconMedallion icon3d={selectedSlot.icon3d as any} size={36} decorative />
@@ -683,15 +1035,26 @@ export function IconGalleryClient({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold text-primary">
-                    {targetType === "category"
-                      ? categories.find((c) => c.id === selectedCategoryId)?.name
-                      : selectedSlot?.label}
+                    {targetType === "brand"
+                      ? selectedBrand?.name
+                      : targetType === "category"
+                        ? categories.find((c) => c.id === selectedCategoryId)?.name
+                        : selectedSlot?.label}
                   </span>
                   <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                    {targetType === "category" ? "Departments & Navigation" : selectedSlot?.group}
+                    {targetType === "brand"
+                      ? "Brand Facet & Logo"
+                      : targetType === "category"
+                        ? "Departments & Navigation"
+                        : selectedSlot?.group}
                   </span>
                   <span className="text-[10px] text-primary-muted font-mono">
-                    ID: {targetType === "category" ? selectedCategoryId : selectedSlotId}
+                    ID:{" "}
+                    {targetType === "brand"
+                      ? selectedBrandId
+                      : targetType === "category"
+                        ? selectedCategoryId
+                        : selectedSlotId}
                   </span>
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -768,6 +1131,15 @@ export function IconGalleryClient({
             >
               Flat icons ({assets.filter((a) => isFlatSlot(a.slot)).length})
             </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab("brands")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                filterTab === "brands" ? "bg-primary text-white" : "text-black/70 hover:bg-black/5"
+              }`}
+            >
+              Brand Logos ({assets.filter((a) => a.slot?.startsWith("brand:")).length})
+            </button>
           </div>
 
           <div className="relative sm:w-64">
@@ -820,7 +1192,13 @@ export function IconGalleryClient({
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {filteredAssets.map((asset) => {
             const isPending = actionPendingId === asset.id;
-            const targetLabel = asset.category?.name || asset.slot || "Unassigned";
+            const isBrand = Boolean(asset.slot?.startsWith("brand:"));
+            const brandSlug = isBrand ? asset.slot?.replace("brand:", "") : null;
+            const matchedBrand = isBrand ? brands.find((b) => b.slug === brandSlug) : null;
+            const targetLabel =
+              asset.category?.name ||
+              (isBrand ? `Brand: ${matchedBrand?.name || brandSlug}` : asset.slot) ||
+              "Unassigned";
 
             return (
               <div
@@ -972,9 +1350,17 @@ export function IconGalleryClient({
             <div className="flex items-center justify-between border-b border-black/10 pb-3">
               <div>
                 <h3 id="asset-preview-modal-title" className="text-base font-bold text-primary">
-                  {selectedAssetForPreview.category?.name ||
-                    selectedAssetForPreview.slot ||
-                    "Asset Preview"}
+                  {(() => {
+                    if (selectedAssetForPreview.category?.name) {
+                      return selectedAssetForPreview.category.name;
+                    }
+                    if (selectedAssetForPreview.slot?.startsWith("brand:")) {
+                      const slug = selectedAssetForPreview.slot.replace("brand:", "");
+                      const b = brands.find((brand) => brand.slug === slug);
+                      return `Brand: ${b?.name || slug}`;
+                    }
+                    return selectedAssetForPreview.slot || "Asset Preview";
+                  })()}
                 </h3>
                 <span className="text-xs text-primary-muted uppercase font-semibold">
                   Style: {selectedAssetForPreview.style}

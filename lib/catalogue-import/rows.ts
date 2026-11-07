@@ -25,6 +25,8 @@ export interface SourceRow {
   department: string;
   subDepartment: string;
   vatRaw: string;
+  brand?: string;
+  netContentRaw?: string;
 }
 
 export type ReadRowsResult =
@@ -86,6 +88,8 @@ export function readRows(
     subDepartment: at(profile.columns.subDepartment),
     description: at(profile.columns.description),
     vat: at(profile.columns.vat),
+    brand: at(profile.columns.brand),
+    netContent: at(profile.columns.netContent),
   };
   const cell = (row: readonly string[], index: number): string =>
     index < 0 ? "" : String(row[index] ?? "").trim();
@@ -109,6 +113,8 @@ export function readRows(
       department,
       subDepartment: cell(raw, col.subDepartment),
       vatRaw: cell(raw, col.vat),
+      brand: cell(raw, col.brand),
+      netContentRaw: cell(raw, col.netContent),
     });
   }
 

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
+import { getEnv } from "@/lib/config";
 import { getBrandRepository } from "@/lib/brands-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
-import { AddBrandForm, BrandRowForms } from "@/components/staff/BrandManager";
-import { Card } from "@/components/ui/Card";
+import { BrandTable } from "@/components/staff/BrandTable";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Icon } from "@/components/icons/Icon";
 
@@ -14,14 +14,10 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Brands" };
 
 /**
- * Brand management (P2.6 slice 6, #569).
+ * Brand management (P2.6 slice 6, #569, P10 UX improvements).
  *
- * Brands are a storefront filter facet, and a facet over a column nobody can populate is dead UI —
- * so this page ships in the same slice as the filter itself rather than as follow-up work.
- *
- * The refusal branch renders <PanelRefusal>, never `return null`. `app/(admin)/layout.tsx` wraps
- * whatever a page returns in the portal shell, so returning null would serve a 200 with a header
- * and a blank content area — indistinguishable from a loading state rather than a refusal.
+ * Brands are a storefront filter facet, and a facet over a column nobody can populate is dead UI.
+ * Now equipped with cognitive metrics, interactive quick-view drawer, and full CRUD operations.
  */
 export default async function StaffBrandsPage() {
   const auth = await requireVendorRole("STAFF", "ADMIN");
@@ -35,40 +31,23 @@ export default async function StaffBrandsPage() {
     );
   }
 
+  const { CDN_BASE_URL } = getEnv();
   const brands = await getBrandRepository().listForAdmin();
 
   return (
     <PageContainer width="wide">
-      <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-primary">
-        <Icon name="tag" className="h-5 w-5" />
-        Brands
-      </h1>
-      <p className="mb-6 text-sm text-primary-muted">
-        Brands a shopper can filter the catalogue by. Assign one to a product on its own edit page.
-      </p>
-
-      <Card as="section" className="mb-8">
-        <h2 className="mb-3 text-sm font-bold text-primary">Add a brand</h2>
-        <AddBrandForm />
-      </Card>
-
-      <h2 className="mb-3 text-sm font-bold text-primary">
-        {brands.length === 0 ? "No brands yet" : `${brands.length} brands`}
-      </h2>
-      {brands.length === 0 ? (
-        <p className="text-sm text-primary-muted">
-          Add a brand above. Until one exists, the storefront offers no brand filter — a control
-          with nothing behind it is worse than no control at all.
+      <div className="mb-6">
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-primary">
+          <Icon name="tag" className="h-6 w-6 text-action" />
+          Brand Management
+        </h1>
+        <p className="mt-1 text-sm text-primary-muted">
+          Organise brands, inspect linked products, monitor catalog breadth, and configure
+          storefront filters.
         </p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {brands.map((brand) => (
-            <Card as="li" key={brand.id}>
-              <BrandRowForms brand={brand} />
-            </Card>
-          ))}
-        </ul>
-      )}
+      </div>
+
+      <BrandTable initialBrands={brands} cdnBaseUrl={CDN_BASE_URL} />
     </PageContainer>
   );
 }

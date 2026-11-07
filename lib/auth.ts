@@ -181,6 +181,12 @@ export async function getAuth() {
       ? { advanced: { crossSubDomainCookies: origin.crossSubDomainCookies } }
       : {}),
     socialProviders: buildSocialProviders(env),
+    account: {
+      accountLinking: {
+        enabled: true,
+        trustedProviders: ["google"],
+      },
+    },
     // Better Auth enables its built-in rate limiter by default whenever
     // NODE_ENV is production (`options.rateLimit?.enabled ?? isProduction` —
     // this app never opted into it explicitly). Its storage wrapper calls the
@@ -192,6 +198,30 @@ export async function getAuth() {
     // disable the feature this app never deliberately enabled.
     rateLimit: { enabled: false },
     plugins: [authRateLimitPlugin],
+    logger: {
+      level: "debug",
+      log: (level, message, ...args) => {
+        if (level === "error") {
+          console.error("[BetterAuth]", message, ...args);
+          try {
+            const errArg = args[0] as { message?: string; error?: unknown } | string | undefined;
+            const detail =
+              typeof errArg === "object" && errArg !== null
+                ? errArg.message || JSON.stringify(errArg)
+                : String(errArg || message || "OAuth Error");
+            recordHandledErrorEvent({
+              message: `[BetterAuth Error] ${message}: ${detail}`,
+              stack: (errArg as { stack?: string })?.stack ?? null,
+              digest: null,
+              path: "/api/auth/callback",
+              method: "GET",
+              routerKind: "App Router",
+              routeType: "action",
+            }).catch(() => {});
+          } catch {}
+        }
+      },
+    },
     user: {
       additionalFields: {
         role: { type: "string", defaultValue: "CUSTOMER", input: false },

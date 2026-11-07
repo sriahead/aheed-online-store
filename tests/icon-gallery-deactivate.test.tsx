@@ -159,6 +159,156 @@ describe("IconGalleryClient (#1288 R4, R7, R9)", () => {
     ) as unknown as HTMLSelectElement;
     expect(select.value).toBe("delivery-van");
   });
+
+  it("supports Brand Logo target selection, search and generation", async () => {
+    fetchMock.mockImplementation(() =>
+      ok({
+        ok: true,
+        asset: {
+          id: "brand-asset-1",
+          vendorId: "v1",
+          categoryId: null,
+          slot: "brand:laila",
+          storageKey: "brands/v1/laila-123.png",
+          style: "3d-icon",
+          isSelected: true,
+          createdAt: "2026-11-07T13:00:00.000Z",
+          imageUrl: "https://cdn.example.com/brands/v1/laila-123.png",
+        },
+      }),
+    );
+
+    const BRANDS = [
+      { id: "b1", name: "Laila", slug: "laila", imageKey: null },
+      { id: "b2", name: "TRS", slug: "trs", imageKey: "brands/v1/trs-old.png" },
+    ];
+
+    render(
+      <IconGalleryClient initialAssets={[]} categories={CATEGORIES} brands={BRANDS} canManage />,
+    );
+
+    // Switch target to Brand Logo
+    fireEvent.click(screen.getByRole("button", { name: "Brand Logo" }));
+
+    // Verify search and brand listing
+    expect(screen.getByText("Target Brand:")).not.toBeNull();
+    expect(screen.getByRole("option", { name: /Laila \(laila\)/ })).not.toBeNull();
+    expect(screen.getByRole("option", { name: /TRS \(trs\)/ })).not.toBeNull();
+
+    // Search for TRS
+    const searchInput = screen.getByLabelText("Quick Search Target:");
+    fireEvent.change(searchInput, { target: { value: "TRS" } });
+    expect(screen.getAllByText("TRS").length).toBeGreaterThanOrEqual(1);
+
+    // Select TRS brand chip from matching results
+    const trsButtons = screen.getAllByRole("button", { name: /TRS/ });
+    fireEvent.click(trsButtons[0]);
+
+    // Switch to AI Concept Medallion method
+    fireEvent.click(screen.getByRole("button", { name: "AI Concept Medallion" }));
+
+    // Click Generate Asset
+    const generateBtn = screen.getByRole("button", { name: /Generate/ });
+    await act(async () => {
+      fireEvent.click(generateBtn);
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/admin/category-images/generate",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          style: "photo",
+          brandId: "b2",
+        }),
+      }),
+    );
+  });
+
+  it("supports Authentic Brand Logo import from URL in IconGalleryClient", async () => {
+    fetchMock.mockImplementation(() =>
+      ok({
+        ok: true,
+        imageKey: "brands/v1/trs-imported.png",
+        imageUrl: "https://cdn.example.com/brands/v1/trs-imported.png",
+        asset: {
+          id: "brand-asset-imported",
+          vendorId: "v1",
+          categoryId: null,
+          slot: "brand:trs",
+          storageKey: "brands/v1/trs-imported.png",
+          style: "photo",
+          isSelected: true,
+          createdAt: "2026-11-07T14:00:00.000Z",
+        },
+      }),
+    );
+
+    const BRANDS = [{ id: "b1", name: "TRS", slug: "trs", imageKey: null }];
+
+    render(
+      <IconGalleryClient initialAssets={[]} categories={CATEGORIES} brands={BRANDS} canManage />,
+    );
+
+    // Switch to Brand Logo target
+    fireEvent.click(screen.getByRole("button", { name: "Brand Logo" }));
+
+    // Authentic mode is active by default
+    expect(screen.getByText("Set Authentic Official Logo for TRS")).not.toBeNull();
+
+    // Type in logo URL
+    const urlInput = screen.getByPlaceholderText("https://.../brand-logo.png");
+    fireEvent.change(urlInput, { target: { value: "https://example.com/trs-logo.png" } });
+
+    // Click Import
+    const importBtn = screen.getByRole("button", { name: /Import/ });
+    await act(async () => {
+      fireEvent.click(importBtn);
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/admin/brands/upload-logo",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brandId: "b1",
+          url: "https://example.com/trs-logo.png",
+        }),
+      }),
+    );
+  });
+
+  it("filters brand logos in the Brand Logos tab and displays brand name", () => {
+    const BRANDS = [{ id: "b1", name: "Laila", slug: "laila", imageKey: null }];
+    render(
+      <IconGalleryClient
+        initialAssets={[
+          asset({
+            id: "b-asset",
+            slot: "brand:laila",
+            storageKey: "brands/v1/laila-logo.png",
+            imageUrl: "https://cdn.example.com/brands/v1/laila-logo.png",
+          }),
+          asset({
+            id: "cat-asset",
+            categoryId: "cat-1",
+            slot: null,
+            storageKey: "categories/v1/bakery.png",
+          }),
+        ]}
+        categories={CATEGORIES}
+        brands={BRANDS}
+        canManage
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Brand Logos/ }));
+
+    expect(screen.getByText("laila-logo.png")).not.toBeNull();
+    expect(screen.queryByText("bakery.png")).toBeNull();
+    expect(screen.getAllByText("Brand: Laila").length).toBeGreaterThanOrEqual(1);
+  });
 });
 
 describe("CategoryImageManager (#1288 R5)", () => {

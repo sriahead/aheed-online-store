@@ -2067,6 +2067,9 @@ export interface AdminProductRow {
   /** #1211 — shown on the list so a reviewer can see why a product is hidden. */
   restriction: ProductRestriction | null;
   stockMode: StockMode;
+  brandName?: string | null;
+  netContentAmount?: number | null;
+  netContentUnit?: NetContentUnit | null;
 }
 
 export interface AdminProductPage {
@@ -2184,12 +2187,17 @@ export interface StaffInventoryRow {
   id: string;
   slug: string;
   name: string;
-  unitLabel: string;
-  basePrice: number;
-  isActive: boolean;
+  sku: string;
+  brandName: string | null;
   categoryName: string;
+  netContentLabel: string | null;
+  basePrice: number;
+  unitLabel: string;
   quantity: number;
-  /** #1211 — the +/- control renders only for TRACKED; a restricted row cannot be toggled on. */
+  previousQuantity: number;
+  stockStatus: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "UNTRACKED";
+  isRestockNeeded: boolean;
+  isActive: boolean;
   stockMode: StockMode;
   restriction: ProductRestriction | null;
   primaryImage: ProductImageSummary | null;
@@ -2212,6 +2220,9 @@ export async function listInventoryForStaff(
     whereClause.OR = [
       { name: { contains: trimmed, mode: "insensitive" } },
       { description: { contains: trimmed, mode: "insensitive" } },
+      { plu: { contains: trimmed, mode: "insensitive" } },
+      { brand: { name: { contains: trimmed, mode: "insensitive" } } },
+      { category: { name: { contains: trimmed, mode: "insensitive" } } },
     ];
   }
 
@@ -2225,12 +2236,21 @@ export async function listInventoryForStaff(
         id: true,
         slug: true,
         name: true,
+        plu: true,
         unitLabel: true,
         basePrice: true,
         isActive: true,
         restriction: true,
+        netContentAmount: true,
+        netContentUnit: true,
         category: { select: { name: true } },
-        inventory: { select: { quantity: true, stockMode: true } },
+        brand: { select: { name: true } },
+        inventory: { select: { quantity: true, stockMode: true, lowStockThreshold: true } },
+        inventoryAuditLogs: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { previousQuantity: true, newQuantity: true },
+        },
         images: { where: { isPrimary: true }, take: 1, select: productImageSelect },
       },
     }),
@@ -2240,19 +2260,59 @@ export async function listInventoryForStaff(
   const page = hasMore ? rows.slice(0, take) : rows;
 
   return {
-    items: page.map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      name: row.name,
-      unitLabel: row.unitLabel,
-      basePrice: row.basePrice,
-      isActive: row.isActive,
-      categoryName: row.category?.name ?? "Unknown",
-      quantity: row.inventory?.quantity ?? 0,
-      stockMode: stockModeOf(row.inventory),
-      restriction: row.restriction,
-      primaryImage: row.images?.[0] ?? null,
-    })),
+    items: page.map((row) => {
+      const quantity = row.inventory?.quantity ?? 0;
+      const stockMode = stockModeOf(row.inventory);
+      const threshold = row.inventory?.lowStockThreshold ?? 5;
+      const latestAudit = row.inventoryAuditLogs?.[0];
+      const previousQuantity = latestAudit ? latestAudit.previousQuantity : quantity;
+      const isRestockNeeded = stockMode === "TRACKED" && quantity === 0 && previousQuantity > 0;
+
+      let stockStatus: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "UNTRACKED";
+      if (stockMode === "UNTRACKED") {
+        stockStatus = "UNTRACKED";
+      } else if (quantity <= 0) {
+        stockStatus = "OUT_OF_STOCK";
+      } else if (quantity <= threshold) {
+        stockStatus = "LOW_STOCK";
+      } else {
+        stockStatus = "IN_STOCK";
+      }
+
+      let netContentLabel: string | null = null;
+      if (row.netContentAmount != null && row.netContentUnit) {
+        const unitMap: Record<string, string> = {
+          GRAM: "g",
+          KILOGRAM: "kg",
+          MILLILITRE: "ml",
+          LITRE: "L",
+          EACH: "pk",
+        };
+        netContentLabel = `${row.netContentAmount}${unitMap[row.netContentUnit] || row.netContentUnit.toLowerCase()}`;
+      } else {
+        netContentLabel = row.unitLabel || null;
+      }
+
+      return {
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        sku: row.plu || row.id.slice(0, 8).toUpperCase(),
+        brandName: row.brand?.name ?? null,
+        categoryName: row.category?.name ?? "Unknown",
+        netContentLabel,
+        basePrice: row.basePrice,
+        unitLabel: row.unitLabel,
+        quantity,
+        previousQuantity,
+        stockStatus,
+        isRestockNeeded,
+        isActive: row.isActive,
+        stockMode,
+        restriction: row.restriction,
+        primaryImage: row.images?.[0] ?? null,
+      };
+    }),
     nextCursor: hasMore ? page[page.length - 1].id : null,
   };
 }
@@ -2342,6 +2402,9 @@ export async function listProductsForAdmin(
         imageNeedsReview: true,
         restriction: true,
         category: { select: { name: true } },
+        brand: { select: { name: true } },
+        netContentAmount: true,
+        netContentUnit: true,
         inventory: { select: { quantity: true, stockMode: true } },
       },
     }),
@@ -2358,6 +2421,9 @@ export async function listProductsForAdmin(
       basePrice: row.basePrice,
       isActive: row.isActive,
       categoryName: row.category?.name ?? "Unknown",
+      brandName: row.brand?.name ?? null,
+      netContentAmount: row.netContentAmount,
+      netContentUnit: row.netContentUnit,
       quantity: row.inventory?.quantity ?? 0,
       imageNeedsReview: row.imageNeedsReview,
       restriction: row.restriction,
@@ -2673,6 +2739,40 @@ export async function updateProductForVendor(
         toNetContent(input),
       );
 
+      // Manual edit protection tracking
+      const fullEditFields = [
+        "name",
+        "slug",
+        "description",
+        "categoryId",
+        "basePrice",
+        "originalPrice",
+        "unitLabel",
+        "netContentAmount",
+        "netContentUnit",
+        "origin",
+        "isVegetarian",
+        "isGlutenFree",
+        "isHmcCertified",
+        "isHalal",
+        "isFresh",
+        "isOrganic",
+        "isFeatured",
+        "isActive",
+        "quantity",
+        "stockMode",
+        "vatRate",
+      ];
+      const prodBefore = await tx.product.findUnique({
+        where: { id },
+        select: {
+          manuallyEditedFields: true,
+          inventory: { select: { id: true, quantity: true, stockMode: true } },
+        },
+      });
+      const fieldSet = new Set(prodBefore?.manuallyEditedFields || []);
+      for (const f of fullEditFields) fieldSet.add(f);
+
       await tx.product.update({
         where: { id, vendorId },
         data: {
@@ -2699,13 +2799,16 @@ export async function updateProductForVendor(
           isFeatured: input.isFeatured,
           isActive: input.isActive,
           allowsCustomNote: input.allowsCustomNote,
+          isManuallyEdited: true,
+          manuallyEditedFields: Array.from(fieldSet),
+          lastManualEditAt: new Date(),
         },
       });
 
       // upsert, not update: a product created before this slice may have no
       // Inventory row, and the owner's first save is where it should appear
       // rather than failing on a missing record.
-      await tx.inventory.upsert({
+      const invRow = await tx.inventory.upsert({
         where: { productId: id, vendorId },
         create: {
           vendorId,
@@ -2714,14 +2817,36 @@ export async function updateProductForVendor(
           stockMode: input.stockMode,
           lowStockThreshold: input.lowStockThreshold,
           expectedRestockDate: toRestockDate(input.expectedRestockDay),
+          version: 1,
         },
         update: {
           quantity: input.quantity,
           stockMode: input.stockMode,
           lowStockThreshold: input.lowStockThreshold,
           expectedRestockDate: toRestockDate(input.expectedRestockDay),
+          version: { increment: 1 },
         },
       });
+
+      const prevQty = prodBefore?.inventory?.quantity ?? 0;
+      const prevMode = prodBefore?.inventory?.stockMode ?? "UNKNOWN";
+      if (prevQty !== input.quantity || prevMode !== input.stockMode) {
+        await tx.inventoryAuditLog.create({
+          data: {
+            vendorId,
+            productId: id,
+            inventoryId: invRow.id,
+            previousQuantity: prevQty,
+            newQuantity: input.quantity,
+            changeAmount: input.quantity - prevQty,
+            previousStockMode: prevMode as any,
+            newStockMode: input.stockMode as any,
+            source: "STAFF_ADJUSTMENT",
+            reason: "Staff product form update",
+            actorType: "STAFF",
+          },
+        });
+      }
 
       // P8.5d (#348). Clearing both multi-buy fields DELETES the row rather than
       // deactivating it: "no multi-buy" and "a multi-buy that is switched off"
@@ -2995,6 +3120,44 @@ export async function reorderProductImages(
  * Fast-path for shop-floor staff to increment/decrement stock and toggle availability
  * without needing the full product edit payload (P6, #168).
  */
+export async function confirmProductVat(
+  prismaWs: DbWs,
+  vendorId: string,
+  productId: string,
+  confirmedRate: number,
+  userId?: string,
+): Promise<CatalogueWriteResult> {
+  try {
+    return await prismaWs.$transaction(async (tx) => {
+      const prod = await tx.product.findFirst({
+        where: { id: productId, vendorId },
+        select: { id: true, manuallyEditedFields: true },
+      });
+      if (!prod) return { ok: false as const, error: "Product not found." };
+
+      const fieldSet = new Set(prod.manuallyEditedFields || []);
+      fieldSet.add("vatRate");
+
+      await tx.product.update({
+        where: { id: productId },
+        data: {
+          vatRate: confirmedRate,
+          vatNeedsReview: false,
+          vatConfirmedAt: new Date(),
+          vatConfirmedBy: userId ?? "STAFF_CONFIRMED",
+          isManuallyEdited: true,
+          manuallyEditedFields: Array.from(fieldSet),
+          lastManualEditAt: new Date(),
+        },
+      });
+
+      return { ok: true as const, id: productId };
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+
 export async function quickUpdateInventory(
   prismaWs: DbWs,
   vendorId: string,
@@ -3008,7 +3171,10 @@ export async function quickUpdateInventory(
         select: {
           id: true,
           restriction: true,
-          inventory: { select: { quantity: true, lowStockThreshold: true } },
+          manuallyEditedFields: true,
+          inventory: {
+            select: { id: true, quantity: true, stockMode: true, lowStockThreshold: true },
+          },
         },
       });
       if (!existing) return { ok: false as const, error: "That product no longer exists." };
@@ -3017,25 +3183,82 @@ export async function quickUpdateInventory(
         return { ok: false as const, error: restrictedEnableError(existing.restriction) };
       }
 
-      if (data.isActive !== undefined) {
+      // Check: Product cannot be activated while stock count is UNKNOWN
+      if (data.isActive === true) {
+        const currentMode = existing.inventory?.stockMode ?? "UNKNOWN";
+        // If activating without updating stock, or updating stock still UNKNOWN:
+        if (currentMode === "UNKNOWN" && data.quantity === undefined) {
+          return {
+            ok: false as const,
+            error:
+              "Product cannot be activated while stock status is UNKNOWN. Enter a verified stock count first.",
+          };
+        }
+      }
+
+      // Check: Negative quantities not allowed
+      if (data.quantity !== undefined && data.quantity < 0) {
+        return { ok: false as const, error: "Quantity cannot be negative." };
+      }
+
+      // Track manual edits
+      const manualFields: string[] = [];
+      if (data.isActive !== undefined) manualFields.push("isActive");
+      if (data.quantity !== undefined) manualFields.push("quantity");
+
+      if (manualFields.length > 0) {
+        const fieldSet = new Set(existing.manuallyEditedFields || []);
+        for (const f of manualFields) fieldSet.add(f);
+
         await tx.product.update({
           where: { id: productId },
-          data: { isActive: data.isActive },
+          data: {
+            isActive: data.isActive !== undefined ? data.isActive : undefined,
+            isManuallyEdited: true,
+            manuallyEditedFields: Array.from(fieldSet),
+            lastManualEditAt: new Date(),
+          },
         });
       }
 
       if (data.quantity !== undefined) {
-        await tx.inventory.upsert({
+        const prevQty = existing.inventory?.quantity ?? 0;
+        const prevMode = existing.inventory?.stockMode ?? "UNKNOWN";
+        const newMode = "TRACKED";
+
+        const inv = await tx.inventory.upsert({
           where: { productId, vendorId },
           create: {
             vendorId,
             productId,
             quantity: data.quantity,
-            // #1211 — staff typing a count is tracking; never the column's UNKNOWN default.
-            stockMode: "TRACKED",
+            // Staff entering a count (including 0) transitions UNKNOWN -> TRACKED
+            stockMode: newMode,
             lowStockThreshold: 3,
+            version: 1,
           },
-          update: { quantity: data.quantity },
+          update: {
+            quantity: data.quantity,
+            stockMode: newMode,
+            version: { increment: 1 },
+          },
+        });
+
+        // Record audit log
+        await tx.inventoryAuditLog.create({
+          data: {
+            vendorId,
+            productId,
+            inventoryId: inv.id,
+            previousQuantity: prevQty,
+            newQuantity: data.quantity,
+            changeAmount: data.quantity - prevQty,
+            previousStockMode: prevMode as any,
+            newStockMode: newMode,
+            source: "STAFF_ADJUSTMENT",
+            reason: "Staff inventory quick update",
+            actorType: "STAFF",
+          },
         });
       }
 

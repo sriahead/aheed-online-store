@@ -87,11 +87,8 @@ UK_LOCATION_REF_POSTCODE_AREAS = "MK,RG"
 PLATFORM_NAME = "Merqify"
 PLATFORM_TAGLINE = "Your Merchandise, Digitised Quickly"
 # #1217 — the platform sender every provider uses when a vendor's own domain is not yet verified.
-# EMAIL_RECIPIENT_MODE is deliberately NOT set here: unset means allowlist, so staging only mails
-# EMAIL_ALLOWED_RECIPIENTS. EMAIL_VERIFIED_DOMAINS and EMAIL_ALLOWED_RECIPIENTS are set with
-# `wrangler secret put` (not here) so onboarding a domain or a tester needs no commit or deploy,
-# and secrets survive `wrangler deploy` where dashboard vars do not.
 EMAIL_FROM = "no-reply@merqify.com"
+EMAIL_RECIPIENT_MODE = "open"
 # #1399 — the platform default inbox, prefilled as Forward to in Client Setup. A business group
 # inbox, not a personal address, so committed config. The inbound Worker's INBOUND_FALLBACK_FORWARD
 # secret names the same inbox by convention; it must be a verified Email Routing destination.

@@ -96,6 +96,7 @@ export const MODEL_PLAN: Record<string, { class: Classification; reason: string 
   AssistantConversation: { class: "skip", reason: "log" },
   ProductRestrictionAuditLog: { class: "skip", reason: "audit log of the old database" },
   VendorRoleAuditLog: { class: "skip", reason: "audit log of the old database" },
+  InventoryAuditLog: { class: "skip", reason: "audit log of the old database" },
   NetContentSuggestion: { class: "skip", reason: "review queue of the old catalogue" },
   DeliveryRefusalCount: { class: "skip", reason: "counter" },
   OrderLookupAttempt: { class: "skip", reason: "rate-limit attempts" },

@@ -8,6 +8,102 @@ every branch merges.
 
 ### Added
 
+- **Email Verification Onboarding & Resend Verification Flow**
+  - **Restored Verification Requirement.** Configured `requireEmailVerification: true` in `lib/auth.ts`, ensuring customers registering with email and password must verify their email address before signing in.
+  - **Clear Verification Notification Screen.** Updated `RegisterForm.tsx` to render an informative post-submission verification view instructing customers to check their inbox (`Check {email} for a verification link before signing in`).
+  - **Self-Service Verification Resend.** Provided an integrated "Resend verification email" action button with live status feedback, powered by Better Auth's `sendVerificationEmail` client method.
+  - **Context-Preserving Return Path.** Included a direct "Return to sign in" link preserving the intended destination (`next` parameter) for smooth navigation once verified.
+  - **Automated Test Coverage.** Updated `tests/register-form-marketing.test.tsx` and `tests/register-form-password.test.tsx` verifying registration transition to verification instructions and successful email resend requests.
+
+- **Google Sign-in Redirection Resilience & Hang Prevention**
+  - **Explicit Browser Navigation.** Added direct `window.location.assign(res.data.url)` to `GoogleSignInButton.tsx` so social authorization navigation doesn't stall or depend solely on client fetch-plugin hooks.
+  - **Rejection & Error Trapping.** Wrapped sign-in initiation in a `try...catch` block, ensuring network errors, privacy extensions, or provider rejections surface clear error alerts and unlock the button.
+  - **Safety Timeout Guard.** Introduced an 8-second safety timeout that re-enables the button if navigation is delayed or cancelled, preventing users from ever getting stuck in a permanent "Redirecting…" state.
+  - **Automated Button Test Suite.** Added comprehensive component tests in `tests/google-signin-button.test.tsx` verifying successful redirection, callback paths, error recovery, and timeout fallbacks.
+
+- **Customer Sign-Up Security: Password Confirmation, Strict Requirements & Live Strength Feedback**
+  - **Confirm Password Verification.** Added Confirm Password input to `RegisterForm.tsx` ensuring matching credentials before permitting submission.
+  - **Strict Password Strength Criteria.** Implemented `features/auth/password-validation.ts` requiring at least 8 characters, uppercase letter, lowercase letter, number, and special character.
+  - **Dynamic Strength Meter & Requirement Checklist.** Rendered real-time visual progress bar and requirement checklist with checkmark badges confirming criteria satisfaction.
+  - **Show/Hide Password Controls.** Added accessible password visibility toggles (`eye` / `eye-off` icons) for both the Password and Confirm Password inputs.
+  - **Submission Prevention.** Disabled submit button and enforced client-side validation preventing registration until all password security criteria and matching requirements are satisfied.
+  - **Automated Validation Tests.** Added unit and component test suites in `tests/password-validation.test.ts` and `tests/register-form-password.test.tsx`.
+
+- **OAuth Diagnostic Visibility & Sign-in Error Recovery**
+  - **Social Sign-in Error Telemetry.** Added detailed error logger in `lib/auth.ts` capturing Better Auth OAuth lifecycle errors and streaming them to `recordHandledErrorEvent` (`ErrorEvent` table).
+  - **Dedicated Login Error Presentation.** Updated `LoginPage` to surface OAuth failure alerts when redirecting from failed social sign-ins with clear remediation guidance.
+  - **OAuth Failure Destination Scoping.** Updated `GoogleSignInButton.tsx` to explicitly supply `errorCallbackURL` routing users back to `/login` with preserved query parameters instead of dumping them on the root domain.
+  - **Staging Secret Reconciliation.** Synchronized `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on `aheed-store-staging` to ensure complete parity with the active Google Cloud Console credentials.
+
+- **Customer Onboarding Unblock: Immediate Registration Sign-in & Post-Signup Redirect**
+  - **Immediate Store Access Post-Registration.** Configured `requireEmailVerification: false` in `lib/auth.ts`. Customers who register with email and password are now immediately authenticated into their store session rather than blocked waiting for email verification delivery. Verification emails continue to send asynchronously in the background.
+  - **Seamless Registration Redirection.** Updated `RegisterForm.tsx` to automatically navigate new customers to their intended destination (`next` parameter or `/`) via `signedInPath(next)` and refresh state upon successful sign-up, eliminating dead-end friction.
+  - **OAuth & Register Route Forwarding.** Forwarded the `next` query parameter across `RegisterPage`, `RegisterForm`, and `GoogleSignInButton` to preserve customer cart and checkout context upon account creation.
+  - **Automated Registration Tests.** Extended `tests/register-form-marketing.test.tsx` to assert immediate redirection and session refresh on successful sign-up.
+
+- **Halal Tag Reset, Google OAuth Account Linking & Email Delivery Go-Live Readiness**
+  - **Catalogue Halal Tag Reset.** Safely reset legacy synthetic `isHalal` flags across 711 products under vendor Aheed Food Centre (`a4ed0000-0000-4000-a000-000000000001`) to `false` and cleared unverified HMC certification fields. Store staff can now curate accurate Halal certifications with verified provenance via `/staff/products`. Secondary tenants (SriMart) preserved untouched.
+  - **Better Auth Google Account Linking.** Configured `account.accountLinking` with `trustedProviders: ["google"]` in `lib/auth.ts`. Allows customers who registered with email or Gmail to seamlessly authenticate via Google, automatically linking accounts and marking email as verified without encountering `account_not_linked` or unverified lockout.
+  - **Staging Email Recipient Mode.** Updated staging `[env.staging.vars]` in `wrangler.toml` with `EMAIL_RECIPIENT_MODE = "open"`, ensuring verification and transactional emails are delivered to all tester and customer addresses rather than being dropped by the staging allowlist filter.
+  - **Maintenance Script & Automated Tests.** Created `scripts/reset-halal-tags.ts` (`PrismaNeon` WebSocket adapter for zero isolate socket exhaustion) and verified with automated test suite `tests/reset-halal-tags.test.ts`.
+
+### Added
+
+- **Staged Catalogue Onboarding Batch 2 (Slice 2) Ingestion & HMRC VAT Compliance**
+  - **Batch 2 Catalogue Ingestion.** Ingested and updated all 3,049 products from `.import-manifests/aheed-batch-2.json` for Aheed Food Centre (`a4ed0000-0000-4000-a000-000000000001`), tagging each product with `importBatchId = "aheed-batch-2"` and its spreadsheet `importSourceRow`.
+  - **Brand & Net Content Enrichment Pipeline.** Integrated `identifyProductBrand` and `extractDetailedNetContent` into `import-catalogue-batch.ts`. Automatically resolves and links `brandId` and derives standardized base units and `unitPricePencePerBaseUnit` sort keys while strictly preserving manual edits (`isManuallyEdited`, `manuallyEditedFields`).
+  - **HMRC VAT Notice 701/14 Compliance.** Automated VAT rate classification across UK VAT Act 1994 Group 1 zero-rating schedules, identifying and flagging 806 legacy EPOS discrepancies for manual client review. Exported `.import-reports/vat-review-aheed-batch-2.json`.
+  - **Stock Baseline Invariant.** Preserved existing physical stock quantities and opening audit log baselines untouched (zero stock drift). Verified multi-tenant isolation with zero side-effects on secondary tenants.
+
+
+- **Authentic Brand Logo Direct Upload & URL Ingestion (`/staff/icons` & `/staff/brands`)**
+  - **Direct File Upload & URL Ingestion Pipeline.** Implemented `ingestBrandLogo` and `ingestBrandLogoFromUrl` in `lib/category-image-pipeline.ts` with S3-compatible immutable storage (`brands/{vendorId}/{slug}-{random}{ext}`), SSRF protection, size validation (< 5MB), and multi-format support (`PNG`, `SVG`, `WebP`, `JPEG`). Added `POST /api/admin/brands/upload-logo` supporting both `multipart/form-data` and JSON URL payloads.
+  - **Visual Asset Studio Integration (`/staff/icons`).** Added "Upload Official Logo / Image URL (Authentic)" mode directly within `IconGalleryClient` for Brand targets. Operators can drag-and-drop or browse authentic logo files or paste official logo URLs to immediately ingest, activate, and assign logos.
+  - **Brand Management Table & Modal Upload (`/staff/brands`).** Updated `BrandTable` to display authentic brand logo thumbnails in table rows, the quick view drawer header, and the Edit Brand modal. Equipped the Edit Brand modal with one-click official logo file upload and image URL import.
+
+- **Brand Logo Visual Asset Target & Management (`/staff/icons`)**
+  - **First-Class Brand Target in Visual Asset Studio.** Introduced `brand` as a first-class target alongside `category` and `slot` in `IconGalleryClient` and `/staff/icons`. Operators can now search and select any vendor brand, configure visual styles (`3D icon`, `Realistic photo`), and generate brand medallion artwork metered via Cloudflare Workers AI.
+  - **Automated `Brand.imageKey` Synchronization.** Integrated brand logo lifecycle in `lib/repositories/category-assets.ts`: activating a brand asset (`brand:<slug>`) automatically updates `Brand.imageKey` to the relative storage key, deactivating clears it back to null, and deleting cascades to the next candidate asset or clears `Brand.imageKey`.
+  - **Dedicated Brand Library Controls.** Added `Brand Logos` filter tab in the asset library, brand monogram preview badges, surface usage indicators (Search & Catalogue brand filter facets, storefront brand pills, quick view drawers, and staff brand management), and candidate preview inspection modal.
+  - **Generation Pipeline & API Endpoint.** Added `buildBrandLogoKey` and `buildBrandLogoPrompt` to `lib/category-image.ts`, `runBrandLogoPipeline` to `lib/category-image-pipeline.ts`, and updated `/api/admin/category-images/generate` to accept `brandId` and trigger revalidation on `/staff/brands`.
+
+- **Brand Management Experience & Neuromarketing Table Operations**
+  - **Surface Purity & Design System Constitution Alignment.** Refactored `/staff/brands` surfaces, KPI cards, and modals to eliminate transparent `bg-card` classes and glossy `backdrop-blur-*` filters. Aligned overlay scrims with the canonical `bg-black/50` pattern from `CartDrawerShell` and `QuickViewDrawer`. Replaced all surfaces with solid, opaque `bg-white` and standard `border-black/10` borders to ensure high visual contrast, WCAG AA legibility, and zero visual bleed-through.
+  - **Cognitive Framing & Neuromarketing KPI Anchors.** Transformed `/staff/brands` from a vertical stack of 80+ isolated cards into a streamlined, high-information-density table. Anchored key metrics at the top (Total Brands, Branded Products, Top Brand, and Empty Brands) reducing cognitive load and highlighting catalogue gaps via the Von Restorff effect.
+  - **Interactive Brand Products Quick View Drawer.** Added instant product drawer (`BrandProductQuickViewItem` and `getBrandProducts`) showing all products linked to a brand, price ranges, average price anchor, live stock badges (In Stock, Low Stock, Out of Stock), direct link to edit product (`/staff/products/{id}`), and single-click product unlinking (`unassignProductFromBrandAction`).
+  - **Instant Search, Filtering & Sorting (Hick's Law).** Real-time client search across brand names and slugs, filter tabs (`All`, `With Products`, `Empty`), and sorting by product volume or alphabetical order.
+  - **Safe CRUD Dialogs & Loss Aversion.** Interactive modal workflows for adding brands, editing names and logo keys, and safe deletion confirmation with explicit warning when products are assigned (preserving products in the catalogue).
+
+- **Excel Product Importer Encoding & Brand Dictionary Fixes**
+  - **Windows-1252 & Currency Encoding Robustness.** Configured SheetJS parser in `StockFileImporter` with Windows-1252 codepage decoding (`codepage: 1252`) and updated `parsePricePence` in `price.ts` to cleanly strip currency replacement characters (`\uFFFD`, `\xA3`, `\u00A3`, currency symbols, and pence suffixes). Eliminates `BAD_PRICE` rejections on Excel files generated on UK Windows EPOS systems.
+  - **Curated Grocery Brands Registry & Automated Backfill.** Added `CURATED_COMMON_BRANDS` to `lib/catalogue-import/brand.ts` featuring common South Asian and UK grocery brands (TRS, Natco, Shan, Laila, Regal, Aytac, Niru, Laziza, Tropical Sun, etc.). Implemented automated backfill (`scripts/backfill-brands-and-net-content.ts`), brand consolidation (`scripts/consolidate-brands.ts`), and staging import runner (`scripts/run-staging-import.ts`) supporting `--env-file` targets. Successfully created and enriched 83 brands across 3,799 live products on the Merqify Staging cell (`aheed-staging.merqify.com`).
+
+- **Excel Product Import & Data Validation Enhancements**
+  - **High-confidence Brand & Label Information auto-population.** Deterministically parses Brands from explicit columns, delimited product title prefixes (e.g. `Brand - Product`), and known vendor brands dictionary matching. Auto-populates Net Content, weights, sizes, and multipack configurations (e.g. `6 x 330ml`, `4 x 400g`, `2 x 1.5L`) into standardized base units.
+  - **Strict high-confidence heuristic.** Never guesses or invents brands or measurements from ambiguous nouns ("Large", "Family Pack", "Medium") or placeholder values ("N/A", "Generic", "None").
+  - **Product-specific validation rules & conflict flagging.** Automatically compares column net content against title net content; flags disagreements (`NET_CONTENT_CONFLICT`) and extreme price anomalies (`PRICE_ANOMALY` > £1,000) with `NEEDS_REVIEW` restrictions.
+  - **Reliable update & blank preservation.** Safely enriches missing fields on existing products without ever overwriting existing valid data when incoming cells are blank or unconfident. Fully respects field-level manual protection (`isManuallyEdited` and `manuallyEditedFields`).
+  - **Deduplication.** Prevents duplicate products within import files and against existing vendor database records.
+  - **Pre-import enriched preview & staff catalogue visibility.** Added enriched preview metrics, review warning inspection tables, and a 50-row preview table in `/staff/products/import`. Automatically displays enriched brand badges and net content labels in `/staff/products` catalogue list and inventory table.
+
+- **Aheed Super Store — Product, Inventory & UX Improvements**
+  - **Quick View stock calculation & exclusive low-stock notices.** Unified stock determination (`inStock || stockQuantity > 0 || stockMode === "UNTRACKED"`) across Quick View drawer, ProductCard, details page, and cart rules. Fixed low-stock condition so "Out of stock" and "Only N left" can never appear simultaneously. Added strict no-cache headers on `/api/products/quick-view`.
+  - **Excel product import enhancements.** Automatically maps and associates Brands, auto-populates obvious Net Content (e.g. `500g`, `1kg`, `250ml`, `2L`, `6pk`), preserves existing information when imported fields are blank, and prevents duplicate products.
+  - **Product selection retention in bulk actions.** Preserves selected product IDs in client state across preview opens, cancels, and form submissions in `BulkProductActions`. Added selection counter and clear selection control.
+  - **9-column staff inventory search & restock alerts.** Streamlined `/staff/inventory` table to the 9 essential columns (Product Name, SKU / Product ID, Brand, Category, Net Content, Selling Price, Current Stock, Previous Stock, Stock Status). Added filtering by status, sorting by stock quantity, and visual highlighting with restock alerts for depleted products (`previousStock > 0 && currentStock === 0`).
+  - **Official opening stock baseline & ongoing audit logs.** Safely cleared 5,170 historical inventory movement logs, retained 5,184 products and stock quantities intact, and recorded official opening baselines (`SYSTEM_INITIAL_RESET`) via `scripts/reset-stock-baseline.ts`. Wired ongoing audit logs for order reservations (`ORDER_RESERVED`) and cancellations (`ORDER_CANCELLED`).
+  - **UX & conversion optimization.** Applied pricing psychology with original price reference anchoring, prominent savings badges, and volume tier offers. Added trust signals and freshness guarantees across Quick View and product detail pages with mobile 44px tap targets.
+
+
+- **Aheed Food Centre: Independent Stock Management, Staged Catalogue Onboarding & HMRC VAT Compliance**
+  - **Database migrations & schema safeguards.** Added `plu`, `barcode`, `importBatchId`, `importSourceRow`, `isManuallyEdited`, `manuallyEditedFields`, and `lastManualEditAt` to `Product` with compound unique index `[vendorId, plu]`. Added `version` to `Inventory` and created `InventoryAuditLog` table with `InventoryAuditSource` enum (`20261106140000_aheed_stock_import_safeguards`).
+  - **HMRC VAT compliance fields & review workflow.** Added `vatRate`, `originalVatRate`, `suggestedVatRate`, `vatNeedsReview`, `vatReviewReason`, `vatConfirmedAt`, and `vatConfirmedBy` to `Product` (`20261106150000_product_vat_compliance`).
+  - **Stock management & activation guards.** Recording a count of `0` transitions unverified stock from `UNKNOWN` to `TRACKED` with `quantity: 0`. Products with `stockMode: "UNKNOWN"` cannot be set to `isActive: true`.
+  - **Manual edit protection.** Subsequent import batches never overwrite product attributes or stock counts modified by staff, even if later reset.
+  - **Granular rollback & snapshot recovery.** Standalone rollback (`scripts/rollback-import-batch.ts`) and recovery (`scripts/restore-aheed-catalogue.ts`) tools verify and preserve orders, physical inventory, and staff edits.
+  - **HMRC VAT rules engine.** Comprehensive classification across all 27 departments adhering to UK VAT Act 1994, Sched. 8, Group 1 and HMRC Notice 701/14. Legacy EPOS discrepancies are flagged with transparent review citations.
+  - **Terms & Legal Disclaimers.** Added platform provision and merchant tax responsibility schedule (`app/(storefront)/terms/page.tsx`, `docs/legal/merchant-platform-terms.md`).
+
 - **Order updates: notification queue, owner email and Telegram, live order tracker** (issue `#1435`, spec `specs/2026-11-05-order-updates-notifications/`).
   - **Notification queue.** A new `NotificationOutbox` table (hand-authored migration `20261105120000_notification_outbox`, `#895`) holds email and Telegram messages.
     - A message is sent straight away and saved only if the send fails.
@@ -120,6 +216,12 @@ every branch merges.
 
 ### Fixed
 
+- **The site works again on iPhone 6s / Safari 15: Google sign-in, add to basket and forms** (issue `#1445`, spec `specs/2026-11-06-ios15-safari-compat/`).
+  - **Cause.** Next.js 16 compiled client code for Safari 16.4+. The App Router chunk carried a class static block, which iOS 15 Safari cannot parse, so React never hydrated and every button and form on the page did nothing. The build was green throughout.
+  - **Fix.** `package.json` now sets `browserslist` to `chrome >= 111`, `edge >= 111`, `firefox >= 111`, `safari >= 15.4`, `ios_saf >= 15.4`. The other engines keep Next's defaults, and the built CSS is unchanged.
+  - **Guard.** A new `postbuild` script, `scripts/check-client-syntax.ts`, parses every built client file with `acorn` (new exact-pinned devDependency, 8.18.0). It fails the build on syntax Safari 15.4 cannot parse. It runs on every `npm run build`, so on both deploys too. Run against the production chunks from before the fix, it reports the static block in `3794-d7cddff008311ab3.js`. `tests/browser-support.test.ts` pins the targets, the hook and the parser.
+  - **Floor: Safari / iOS 15.4.** The stylesheet's cascade layers and Next's `structuredClone` both need it. An iPhone 6s updates to iOS 15.8. Recorded in `specs/tech-stack.md`, `docs/developer-portal/runtime-pitfalls.md` and `CLAUDE.md`.
+  - **Not in this change.** The "Not Secure" warning is the merqify.com Cloudflare zone serving plain HTTP without redirecting (Always Use HTTPS off; minimum TLS 1.0). That is an owner action tracked in `#1445`.
 - **Checkout no longer offers slots that have started or start too soon** (issue `#1441`, spec `specs/2026-11-06-slot-booking-cutoff/`).
   - Each store now has a **Booking cut-off (minutes)** setting at `/staff/fulfilment`, defaulting to 60. It is stored in the new column `VendorConfig.slotBookingCutoffMinutes`, added by the hand-authored migration `20261106120000_slot_booking_cutoff` (`#895`).
   - A slot can be booked only if it starts more than the cut-off from now, in the store's time zone. The check is `lib/slot-cutoff.ts` `isSlotBookable`.
