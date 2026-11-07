@@ -3,10 +3,21 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
+import { parseEnvFile } from "./lib/env-file";
 
-const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
+function resolveConnectionString(): string {
+  const envFlagIndex = process.argv.indexOf("--env-file");
+  if (envFlagIndex !== -1 && process.argv[envFlagIndex + 1]) {
+    const envVars = parseEnvFile(process.argv[envFlagIndex + 1]);
+    const conn = envVars.DIRECT_URL || envVars.DATABASE_URL;
+    if (conn) return conn;
+  }
+  return process.env.DIRECT_URL || process.env.DATABASE_URL || "";
+}
+
+const connectionString = resolveConnectionString();
 if (!connectionString) {
-  console.error("Neither DIRECT_URL nor DATABASE_URL is set in environment.");
+  console.error("Neither DIRECT_URL nor DATABASE_URL is set in environment or env-file.");
   process.exit(1);
 }
 
@@ -188,7 +199,13 @@ export async function backupCatalogue(vendorId: string, outputDir = ".backups"):
 }
 
 if (process.argv[1] && process.argv[1].endsWith("backup-aheed-catalogue.ts")) {
-  const vendorId = process.argv[2] || "a4ed0000-0000-4000-a000-000000000001";
+  const vendorFlagIndex = process.argv.indexOf("--vendor-id");
+  const vendorId =
+    vendorFlagIndex !== -1
+      ? process.argv[vendorFlagIndex + 1]
+      : process.argv[2] && !process.argv[2].startsWith("--")
+        ? process.argv[2]
+        : "a4ed0000-0000-4000-a000-000000000001";
   backupCatalogue(vendorId)
     .catch((err) => {
       console.error("Backup failed:", err);

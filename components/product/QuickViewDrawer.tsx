@@ -216,8 +216,26 @@ export function QuickViewDrawer() {
       ? displayProduct.hmcReference
       : undefined);
 
-  // #1211 — the same rule as the card: TRACKED stock only.
-  const isLowStock = displayProduct ? showsLowStock(displayProduct) : false;
+  // Ensure consistent stock calculation across views: positive stock quantity, UNTRACKED mode, or initialProduct stock
+  const isInStock = displayProduct
+    ? Boolean(
+        displayProduct.inStock ||
+        (displayProduct.stockQuantity !== undefined && displayProduct.stockQuantity > 0) ||
+        displayProduct.stockMode === "UNTRACKED" ||
+        (validInitialProduct && (validInitialProduct.inStock || (validInitialProduct.stockQuantity !== undefined && validInitialProduct.stockQuantity > 0)))
+      )
+    : false;
+
+  const effectiveStockQuantity = Math.max(
+    displayProduct?.stockQuantity ?? 0,
+    validInitialProduct?.stockQuantity ?? 0
+  );
+
+  // #1211 — low-stock notice applies only when product is actually in stock
+  const isLowStock = displayProduct && isInStock
+    ? showsLowStock(displayProduct) ||
+      (displayProduct.stockMode === "TRACKED" && effectiveStockQuantity > 0 && effectiveStockQuantity <= (displayProduct.lowStockThreshold ?? 3))
+    : false;
 
   const displayImages =
     currentData?.product?.images ??
@@ -393,18 +411,18 @@ export function QuickViewDrawer() {
                   <div className="mt-1 flex items-center gap-2">
                     <span
                       className={`text-sm font-semibold ${
-                        displayProduct.inStock ? "text-action" : "text-danger"
+                        isInStock ? "text-action" : "text-danger"
                       }`}
                     >
-                      {displayProduct.inStock ? "In stock" : "Out of stock"}
+                      {isInStock ? "In stock" : "Out of stock"}
                     </span>
                     {isLowStock && (
                       <span className="flex items-center gap-1 text-xs font-semibold text-danger">
                         <Icon name="triangle-alert" className="h-3.5 w-3.5" />
-                        Only {displayProduct.stockQuantity} left
+                        Only {effectiveStockQuantity} left
                       </span>
                     )}
-                    {!displayProduct.inStock && displayProduct.expectedRestockDay !== null && (
+                    {!isInStock && displayProduct.expectedRestockDay !== null && (
                       <RestockNotice
                         day={displayProduct.expectedRestockDay}
                         className="text-xs"
@@ -456,14 +474,36 @@ export function QuickViewDrawer() {
                 )}
 
                 {/* Quantity Selector & Add to Cart */}
-                <div className="border-t border-black/10 pt-4">
+                <div className="border-t border-black/10 pt-4 flex flex-col gap-3">
                   <AddToCartButton
                     productId={displayProduct.id}
                     productName={displayProduct.name}
-                    disabled={!displayProduct.inStock}
+                    disabled={!isInStock}
                     variant="drawer"
                     label={`Add ${displayProduct.name} to cart`}
                   />
+
+                  {/* Trust Signals & Quality Guarantees */}
+                  <div className="rounded-xl border border-black/5 bg-surface-muted/40 p-2.5 flex items-center justify-around text-[11px] text-primary-muted font-medium">
+                    <span className="flex items-center gap-1">
+                      <Icon name="shield-check" className="h-3.5 w-3.5 text-action" />
+                      Freshness Guaranteed
+                    </span>
+                    <span className="text-black/20">•</span>
+                    <span className="flex items-center gap-1">
+                      <Icon name="truck" className="h-3.5 w-3.5 text-action" />
+                      Pickup / Fast Delivery
+                    </span>
+                    {displayProduct.isHalal && (
+                      <>
+                        <span className="text-black/20">•</span>
+                        <span className="flex items-center gap-1">
+                          <Icon name="circle-check" className="h-3.5 w-3.5 text-emerald-600" />
+                          Halal Verified
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Reviews & Ratings Section. #981 — `quick-view-body` is the measuring hook:

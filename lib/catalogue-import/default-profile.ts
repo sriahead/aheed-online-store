@@ -80,6 +80,8 @@ const COLUMN_ALIASES = {
     "sub category",
   ],
   vat: ["vat", "tax", "vat rate", "vat %"],
+  brand: ["brand", "brand name", "manufacturer", "make"],
+  netContent: ["net content", "net weight", "weight", "size", "pack size", "volume", "content"],
 } as const;
 
 /**
@@ -135,6 +137,8 @@ export function resolveImportProfile(grid: readonly (readonly string[])[]): Impo
 
   const subDepartment = findOptionalHeader(COLUMN_ALIASES.subDepartment);
   const vat = findOptionalHeader(COLUMN_ALIASES.vat);
+  const brand = findOptionalHeader(COLUMN_ALIASES.brand);
+  const netContent = findOptionalHeader(COLUMN_ALIASES.netContent);
 
   const columns: {
     plu: string;
@@ -143,6 +147,8 @@ export function resolveImportProfile(grid: readonly (readonly string[])[]): Impo
     department: string;
     subDepartment?: string;
     vat?: string;
+    brand?: string;
+    netContent?: string;
   } = {
     plu: findRequiredHeader(COLUMN_ALIASES.plu, "Code"),
     name: findRequiredHeader(COLUMN_ALIASES.name, "Item"),
@@ -150,6 +156,8 @@ export function resolveImportProfile(grid: readonly (readonly string[])[]): Impo
     department: findRequiredHeader(COLUMN_ALIASES.department, "Department"),
     ...(subDepartment ? { subDepartment } : {}),
     ...(vat ? { vat } : {}),
+    ...(brand ? { brand } : {}),
+    ...(netContent ? { netContent } : {}),
   };
 
   return importProfileSchema.parse({

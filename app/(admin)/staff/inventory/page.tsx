@@ -24,7 +24,7 @@ export default async function InventoryPage(props: { searchParams?: Promise<{ q?
   // In a complete implementation we'd add pagination to the table,
   // but this satisfies the P6 gap for quick stock adjustments.
   const page = await listInventoryForStaff(auth.vendorId, {
-    take: 100,
+    take: 500,
     query,
   });
 

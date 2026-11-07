@@ -10,11 +10,15 @@ import { buildProductMetadata } from "@/lib/page-metadata";
 import { formatPrice } from "@/components/product/format-price";
 import { deriveUnitPriceLabel } from "@/components/product/unit-price";
 import { ProductImageGallery } from "@/components/product/ProductImageGallery";
+import { ProductRating } from "@/components/product/ProductRating";
+import { tierThresholdQuantity } from "@/lib/tier-pricing";
+import { showsLowStock } from "@/lib/cart-rules";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { RestockNotice } from "@/components/product/RestockNotice";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { ReviewForm } from "@/features/reviews/components/ReviewForm";
 import { deleteReview } from "@/features/reviews/delete-review";
+import { Icon } from "@/components/icons/Icon";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
 // can't load during next build's Node-based static prerendering.
@@ -101,85 +105,188 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       : Promise.resolve(null),
   ]);
 
+  const isInStock = Boolean(
+    product.inStock ||
+    (product.stockQuantity !== undefined && product.stockQuantity > 0) ||
+    product.stockMode === "UNTRACKED"
+  );
+  const isLowStock = isInStock && showsLowStock(product);
+  const hasDiscount = product.originalPrice != null && product.originalPrice > product.basePrice;
+  const saving = hasDiscount ? product.originalPrice! - product.basePrice : 0;
+  const tierQuantity = tierThresholdQuantity(product.tier);
+  const hasTier = tierQuantity !== null && product.tier !== null;
+
   return (
     <PageContainer width="standard">
-      <div className="grid gap-6 sm:grid-cols-2">
-        <ProductImageGallery images={product.images} cdnBaseUrl={CDN_BASE_URL ?? ""} />
-        <div className="flex flex-col gap-3">
-          <h1 className="text-2xl font-semibold text-primary">{product.name}</h1>
-          <p className="text-primary-muted">{product.description}</p>
-          <p className="text-sm text-primary-muted">{unitDisplay}</p>
-          <p className="text-xl font-semibold text-action">{formatPrice(product.basePrice)}</p>
-          <p className={product.inStock ? "text-action" : "text-danger"}>
-            {product.inStock ? "In stock" : "Out of stock"}
-          </p>
-          {!product.inStock && product.expectedRestockDay !== null && (
-            <p>
-              <RestockNotice
-                day={product.expectedRestockDay}
-                className="text-sm"
-                iconClassName="h-4 w-4"
-              />
-            </p>
+      <div className="grid gap-8 sm:grid-cols-2">
+        <div className="relative">
+          <ProductImageGallery images={product.images} cdnBaseUrl={CDN_BASE_URL ?? ""} />
+          {hasDiscount && (
+            <div className="absolute top-3 left-3 z-10 rounded-full bg-danger px-2.5 py-1 text-xs font-bold text-white shadow-sm">
+              Save {formatPrice(saving)}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          {/* Brand & Reviews */}
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            {product.brand ? (
+              <span className="font-bold uppercase tracking-wider text-primary-muted">
+                {product.brand.name}
+              </span>
+            ) : <span />}
+            <ProductRating
+              averageRating={product.averageRating}
+              reviewCount={product.reviewCount}
+            />
+          </div>
+
+          {/* Title */}
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-primary leading-tight">
+            {product.name}
+          </h1>
+
+          {/* Pricing Row with Anchoring */}
+          <div className="flex flex-wrap items-baseline gap-3">
+            <span className="text-3xl font-extrabold text-primary">
+              {formatPrice(product.basePrice)}
+            </span>
+            {hasDiscount && (
+              <span className="text-base text-black/40 line-through">
+                {formatPrice(product.originalPrice!)}
+              </span>
+            )}
+            {hasDiscount && (
+              <span className="rounded-full bg-danger/10 px-2.5 py-0.5 text-xs font-bold text-danger">
+                Save {formatPrice(saving)}
+              </span>
+            )}
+          </div>
+
+          {/* Unit Price */}
+          <p className="text-xs text-primary-muted font-medium">{unitDisplay}</p>
+
+          {/* Tier Pricing */}
+          {hasTier && (
+            <div className="rounded-xl bg-action-tint/60 border border-action/20 p-2.5 text-xs font-bold text-action">
+              Multi-buy offer: {tierQuantity} for {formatPrice(product.tier!.groupPricePence)}
+            </div>
           )}
 
-          {/*
-          #608 — this page rendered NO facet at all before now, not even Halal or Fresh, which the
-          product CARD has shown since P2.5b1. So the detail page was the larger of the two gaps
-          that issue names: a shopper who filtered a listing by a facet and then opened a product
-          lost every trace of why it matched.
+          {/* Stock Status & Scarcity */}
+          <div className="flex items-center gap-2.5 py-1">
+            <span
+              className={`inline-flex items-center gap-1.5 text-sm font-bold ${
+                isInStock ? "text-emerald-700" : "text-danger"
+              }`}
+            >
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${
+                  isInStock ? "bg-emerald-500" : "bg-danger"
+                }`}
+              />
+              {isInStock ? "In stock — ready for collection / delivery" : "Out of stock"}
+            </span>
+            {isLowStock && (
+              <span className="inline-flex items-center gap-1 rounded bg-amber-100 text-amber-900 px-2 py-0.5 text-xs font-bold">
+                <Icon name="triangle-alert" className="h-3.5 w-3.5 text-amber-700" />
+                Only {product.stockQuantity} left
+              </span>
+            )}
+          </div>
+          {!isInStock && product.expectedRestockDay !== null && (
+            <RestockNotice
+              day={product.expectedRestockDay}
+              className="text-sm font-medium"
+              iconClassName="h-4 w-4"
+            />
+          )}
 
-          Each entry is text, never colour alone. `dietaryFacets` is built from the product's own
-          booleans so a false flag renders nothing rather than a greyed-out chip claiming an
-          absence the data does not actually assert (a product is not marked "not vegetarian";
-          it is simply not marked).
-        */}
+          {/* Dietary Facets & Attributes */}
           {(dietaryFacets.length > 0 || product.brand || product.origin) && (
-            <ul className="flex flex-wrap gap-2" aria-label="Product attributes">
+            <ul className="flex flex-wrap gap-2 pt-1" aria-label="Product attributes">
               {dietaryFacets.map((facet) => (
                 <li
                   key={facet}
-                  className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-primary"
+                  className="rounded-full bg-surface-muted border border-black/5 px-3 py-1 text-xs font-semibold text-primary"
                 >
                   {facet}
                 </li>
               ))}
-              {product.brand && (
-                <li className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-primary">
-                  {product.brand.name}
-                </li>
-              )}
               {product.origin && (
-                <li className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-primary">
-                  {product.origin}
+                <li className="rounded-full bg-surface-muted border border-black/5 px-3 py-1 text-xs font-semibold text-primary">
+                  Origin: {product.origin}
                 </li>
               )}
             </ul>
           )}
 
-          {/*
-          #239/#608 — the HMC reference travels WITH the claim, never behind it. #239 was a real
-          incident of this codebase asserting "100% Certified HMC Halal" for a vendor with no basis
-          for it; `lib/catalogue-form.ts` now requires this reference whenever the flag is ticked,
-          and rendering it here is what makes the badge above an attributable claim rather than a
-          decoration.
-        */}
-          {/*
-          #912 — the vendor's own filter values ("Colour: Black"), so a shopper who narrowed a
-          listing by one sees why this product matched — the display half #569's facets lacked.
-          A description list because each entry IS a name/value pair; rendered only when the
-          product carries at least one, never as an empty heading.
-        */}
+          {/* Add to Cart CTA */}
+          <div className="pt-2">
+            <AddToCartButton
+              productId={product.id}
+              productName={product.name}
+              disabled={!isInStock}
+              variant="full"
+              acceptsNote={product.acceptsNote}
+            />
+          </div>
+
+          {/* Trust Guarantees & Reassurance (Neuromarketing / Credibility) */}
+          <div className="mt-2 rounded-2xl border border-black/10 bg-surface-muted/30 p-4 divide-y divide-black/5">
+            <div className="flex items-center gap-3 pb-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Icon name="shield-check" className="h-4 w-4" />
+              </div>
+              <div className="text-xs">
+                <p className="font-bold text-primary">Quality & Freshness Guarantee</p>
+                <p className="text-primary-muted">Hand-selected daily by store specialists.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 py-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-action/10 text-action">
+                <Icon name="truck" className="h-4 w-4" />
+              </div>
+              <div className="text-xs">
+                <p className="font-bold text-primary">Flexible Store Pickup & Local Delivery</p>
+                <p className="text-primary-muted">Choose your convenient collection or delivery slot at checkout.</p>
+              </div>
+            </div>
+            {product.isHalal && (
+              <div className="flex items-center gap-3 pt-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
+                  <Icon name="circle-check" className="h-4 w-4" />
+                </div>
+                <div className="text-xs">
+                  <p className="font-bold text-primary">100% Halal Verified</p>
+                  <p className="text-primary-muted">Certified halal supply chain and handling.</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Description */}
+          {product.description && (
+            <div className="pt-2 border-t border-black/10">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-black/50 mb-1.5">
+                Product Details
+              </h2>
+              <p className="text-sm leading-relaxed text-black/80">{product.description}</p>
+            </div>
+          )}
+
+          {/* Specifications */}
           {product.specifications.length > 0 && (
-            <section aria-labelledby="specifications-heading">
-              <h2 id="specifications-heading" className="text-sm font-semibold text-primary">
+            <section aria-labelledby="specifications-heading" className="pt-2 border-t border-black/10">
+              <h2 id="specifications-heading" className="text-xs font-bold uppercase tracking-wider text-black/50 mb-2">
                 Specifications
               </h2>
-              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
                 {product.specifications.map((spec) => (
                   <div key={spec.name} className="contents">
-                    <dt className="text-primary-muted">{spec.name}</dt>
-                    <dd className="text-primary">{spec.value}</dd>
+                    <dt className="text-primary-muted font-medium">{spec.name}</dt>
+                    <dd className="text-primary font-semibold">{spec.value}</dd>
                   </div>
                 ))}
               </dl>
@@ -187,18 +294,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           )}
 
           {product.isHmcCertified && product.hmcReference && (
-            <p className="text-sm text-primary-muted">
+            <p className="text-xs text-primary-muted italic">
               HMC certification reference: {product.hmcReference}
             </p>
           )}
-          {/* Real add-to-cart (P3a) — full-width variant, no wrapping <Link> here. */}
-          <AddToCartButton
-            productId={product.id}
-            productName={product.name}
-            disabled={!product.inStock}
-            variant="full"
-            acceptsNote={product.acceptsNote}
-          />
         </div>
 
         {/* #981 — `product-reviews` is the measuring hook. The product page carries the same

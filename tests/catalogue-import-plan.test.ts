@@ -348,6 +348,9 @@ describe("what a planned product carries (R15, R16)", () => {
         "stockMode",
         "plu",
         "sourceDepartment",
+        "netContentAmount",
+        "netContentUnit",
+        "unitPricePencePerBaseUnit",
       ].sort(),
     );
     expect(JSON.stringify(product)).not.toMatch(/5000000000000|ACME|0\.50|-60/);
@@ -371,9 +374,11 @@ describe("what a planned product carries (R15, R16)", () => {
     expect(unitLabelFor("PLAIN TEA", PROFILE.unit)).toBe("each");
   });
 
-  it("never carries net content or a unit-price sort key", () => {
-    const [product] = buildPlan([row({ name: "TEA 500g" })], PROFILE).products;
-    expect(Object.keys(product).join()).not.toMatch(/netContent|unitPrice/);
+  it("carries net content and unit-price sort key when obvious from the name or data", () => {
+    const [product] = buildPlan([row({ name: "TEA 500g", priceRaw: "£2.50" })], PROFILE).products;
+    expect(product.netContentAmount).toBe(500);
+    expect(product.netContentUnit).toBe("GRAM");
+    expect(product.unitPricePencePerBaseUnit).toBe(500);
   });
 });
 
@@ -744,6 +749,10 @@ describe("applyPlan (R15, R21-R24)", () => {
         "slug",
         "unitLabel",
         "vendorId",
+        "netContentAmount",
+        "netContentUnit",
+        "unitPricePencePerBaseUnit",
+        "plu",
       ].sort(),
     );
     expect(Object.keys(state.inventory[0]).sort()).toEqual(

@@ -6,6 +6,8 @@ import {
   type DepartmentRestrictionPolicy,
 } from "@/lib/catalogue-import-policy";
 import type { ProductRestriction, StockMode } from "@/lib/cart-rules";
+import { deriveUnitPricePenceForSort, type NetContentUnit } from "@/components/product/unit-price";
+import { extractObviousNetContent } from "./net-content";
 import { parsePricePence } from "./price";
 import type { ImportProfile } from "./profile";
 import type { SourceRow } from "./rows";
@@ -70,6 +72,10 @@ export interface PlannedProduct {
   /** The client's PLU and department, kept for the trace and for drift checks. */
   plu: string;
   sourceDepartment: string;
+  brandName?: string | null;
+  netContentAmount?: number | null;
+  netContentUnit?: NetContentUnit | null;
+  unitPricePencePerBaseUnit?: number | null;
 }
 
 export interface CategoryVariant {
@@ -324,7 +330,19 @@ export function buildPlan(rows: readonly SourceRow[], profile: ImportProfile): I
       });
     }
 
-    products.push({
+    const rawNet = row.netContentRaw || "";
+    const extractedNet =
+      extractObviousNetContent(rawNet) ||
+      extractObviousNetContent(row.name) ||
+      extractObviousNetContent(row.description);
+    const netContentAmount = extractedNet?.amount ?? null;
+    const netContentUnit = extractedNet?.unit ?? null;
+    const unitPricePencePerBaseUnit = extractedNet
+      ? deriveUnitPricePenceForSort(price.pence, extractedNet)
+      : null;
+    const brandName = row.brand?.trim() ? row.brand.trim() : null;
+
+    const plannedProduct: PlannedProduct = {
       sourceRow: row.sourceRow,
       slug,
       name: row.name,
@@ -338,7 +356,14 @@ export function buildPlan(rows: readonly SourceRow[], profile: ImportProfile): I
       stockMode: state.stockMode,
       plu: row.plu,
       sourceDepartment: row.department,
-    });
+    };
+    if (brandName) plannedProduct.brandName = brandName;
+    if (netContentAmount != null) plannedProduct.netContentAmount = netContentAmount;
+    if (netContentUnit != null) plannedProduct.netContentUnit = netContentUnit;
+    if (unitPricePencePerBaseUnit != null)
+      plannedProduct.unitPricePencePerBaseUnit = unitPricePencePerBaseUnit;
+
+    products.push(plannedProduct);
   }
 
   return {
