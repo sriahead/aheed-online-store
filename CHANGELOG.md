@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **Authentic Brand Logo Direct Upload & URL Ingestion (`/staff/icons` & `/staff/brands`)**
+  - **Direct File Upload & URL Ingestion Pipeline.** Implemented `ingestBrandLogo` and `ingestBrandLogoFromUrl` in `lib/category-image-pipeline.ts` with S3-compatible immutable storage (`brands/{vendorId}/{slug}-{random}{ext}`), SSRF protection, size validation (< 5MB), and multi-format support (`PNG`, `SVG`, `WebP`, `JPEG`). Added `POST /api/admin/brands/upload-logo` supporting both `multipart/form-data` and JSON URL payloads.
+  - **Visual Asset Studio Integration (`/staff/icons`).** Added "Upload Official Logo / Image URL (Authentic)" mode directly within `IconGalleryClient` for Brand targets. Operators can drag-and-drop or browse authentic logo files or paste official logo URLs to immediately ingest, activate, and assign logos.
+  - **Brand Management Table & Modal Upload (`/staff/brands`).** Updated `BrandTable` to display authentic brand logo thumbnails in table rows, the quick view drawer header, and the Edit Brand modal. Equipped the Edit Brand modal with one-click official logo file upload and image URL import.
+
 - **Brand Logo Visual Asset Target & Management (`/staff/icons`)**
   - **First-Class Brand Target in Visual Asset Studio.** Introduced `brand` as a first-class target alongside `category` and `slot` in `IconGalleryClient` and `/staff/icons`. Operators can now search and select any vendor brand, configure visual styles (`3D icon`, `Realistic photo`), and generate brand medallion artwork metered via Cloudflare Workers AI.
   - **Automated `Brand.imageKey` Synchronization.** Integrated brand logo lifecycle in `lib/repositories/category-assets.ts`: activating a brand asset (`brand:<slug>`) automatically updates `Brand.imageKey` to the relative storage key, deactivating clears it back to null, and deleting cascades to the next candidate asset or clears `Brand.imageKey`.

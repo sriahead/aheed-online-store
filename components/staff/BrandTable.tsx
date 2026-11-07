@@ -19,15 +19,17 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/icons/Icon";
 import { formatPrice } from "@/components/product/format-price";
+import { composePublicUrl } from "@/lib/storage";
 
 type FilterTab = "ALL" | "WITH_PRODUCTS" | "EMPTY";
 type SortOrder = "MOST_PRODUCTS" | "LEAST_PRODUCTS" | "NAME_ASC" | "NAME_DESC";
 
 interface BrandTableProps {
   initialBrands: AdminBrandRow[];
+  cdnBaseUrl?: string;
 }
 
-export function BrandTable({ initialBrands }: BrandTableProps) {
+export function BrandTable({ initialBrands, cdnBaseUrl }: BrandTableProps) {
   const router = useRouter();
   const [brands, setBrands] = useState<AdminBrandRow[]>(initialBrands);
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,6 +49,72 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
   const [isPending, startTransition] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  // Logo upload & import states
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoUrlInput, setLogoUrlInput] = useState("");
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+
+  const handleUploadBrandFile = async (brandId: string, file: File) => {
+    setIsUploadingLogo(true);
+    setLogoUploadError(null);
+    try {
+      const formData = new FormData();
+      formData.append("brandId", brandId);
+      formData.append("file", file);
+
+      const res = await fetch("/api/admin/brands/upload-logo", {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await res.json()) as { error?: string; imageKey?: string };
+      if (!res.ok || !data.imageKey) {
+        throw new Error(data.error || "Failed to upload logo.");
+      }
+
+      const key = data.imageKey;
+      setBrands((prev) => prev.map((b) => (b.id === brandId ? { ...b, imageKey: key } : b)));
+      if (editingBrand?.id === brandId) {
+        setEditingBrand((prev) => (prev ? { ...prev, imageKey: key } : prev));
+      }
+      setActionSuccess("Authentic brand logo uploaded successfully.");
+      router.refresh();
+    } catch (err: any) {
+      setLogoUploadError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleImportBrandUrl = async (brandId: string, url: string) => {
+    if (!url.trim()) return;
+    setIsUploadingLogo(true);
+    setLogoUploadError(null);
+    try {
+      const res = await fetch("/api/admin/brands/upload-logo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandId, url: url.trim() }),
+      });
+      const data = (await res.json()) as { error?: string; imageKey?: string };
+      if (!res.ok || !data.imageKey) {
+        throw new Error(data.error || "Failed to import logo from URL.");
+      }
+
+      const key = data.imageKey;
+      setBrands((prev) => prev.map((b) => (b.id === brandId ? { ...b, imageKey: key } : b)));
+      if (editingBrand?.id === brandId) {
+        setEditingBrand((prev) => (prev ? { ...prev, imageKey: key } : prev));
+      }
+      setLogoUrlInput("");
+      setActionSuccess("Authentic brand logo imported from URL successfully.");
+      router.refresh();
+    } catch (err: any) {
+      setLogoUploadError(err instanceof Error ? err.message : "Import failed.");
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
 
   // Behavioral Economics / Neuromarketing Metric Anchors
   const stats = useMemo(() => {
@@ -439,14 +507,24 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
                       {/* Brand Name & Image Key */}
                       <td className="py-4 pl-6 pr-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-tint text-primary font-bold text-sm">
-                            {brand.name.slice(0, 2).toUpperCase()}
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/10 bg-white p-1 overflow-hidden shadow-xs">
+                            {brand.imageKey && cdnBaseUrl ? (
+                              <img
+                                src={composePublicUrl(cdnBaseUrl, brand.imageKey)}
+                                alt={brand.name}
+                                className="h-full w-full object-contain"
+                              />
+                            ) : (
+                              <span className="font-bold text-sm text-primary">
+                                {brand.name.slice(0, 2).toUpperCase()}
+                              </span>
+                            )}
                           </div>
                           <div>
                             <span className="font-semibold text-primary block">{brand.name}</span>
                             {brand.imageKey ? (
                               <span
-                                className="text-[11px] text-primary-muted truncate max-w-[180px] block"
+                                className="text-[11px] text-primary-muted truncate max-w-[180px] block font-mono"
                                 title={brand.imageKey}
                               >
                                 {brand.imageKey}
@@ -590,9 +668,19 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-tint text-primary font-bold text-xs">
-                        {quickViewBrand.name.slice(0, 2).toUpperCase()}
-                      </span>
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-black/10 bg-white p-0.5 overflow-hidden shadow-xs">
+                        {quickViewBrand.imageKey && cdnBaseUrl ? (
+                          <img
+                            src={composePublicUrl(cdnBaseUrl, quickViewBrand.imageKey)}
+                            alt={quickViewBrand.name}
+                            className="h-full w-full object-contain"
+                          />
+                        ) : (
+                          <span className="font-bold text-xs text-primary">
+                            {quickViewBrand.name.slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
                       <h2 id="brand-quick-view-title" className="text-xl font-bold text-primary">
                         {quickViewBrand.name}
                       </h2>
@@ -939,7 +1027,91 @@ export function BrandTable({ initialBrands }: BrandTableProps) {
 
             <hr className="border-black/10" />
 
-            {/* Image Key Form */}
+            {/* Authentic Brand Logo Management */}
+            <div className="space-y-3">
+              <span className={labelClass}>Authentic Brand Logo</span>
+
+              {/* Current Logo Preview */}
+              <div className="flex items-center gap-3 rounded-xl border border-black/10 bg-surface-muted p-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-black/10 bg-white p-1 overflow-hidden shadow-xs">
+                  {editingBrand.imageKey && cdnBaseUrl ? (
+                    <img
+                      src={composePublicUrl(cdnBaseUrl, editingBrand.imageKey)}
+                      alt={editingBrand.name}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <span className="font-bold text-sm text-primary">
+                      {editingBrand.name.slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 text-xs">
+                  <span className="font-semibold text-primary block">
+                    {editingBrand.imageKey ? "Active Official Logo" : "No Logo Uploaded Yet"}
+                  </span>
+                  <span className="text-primary-muted truncate block text-[11px] font-mono">
+                    {editingBrand.imageKey ?? "Using monogram initials as fallback"}
+                  </span>
+                </div>
+              </div>
+
+              {logoUploadError && (
+                <div className="rounded-lg bg-danger-tint p-2 text-xs text-danger font-medium">
+                  {logoUploadError}
+                </div>
+              )}
+
+              {/* Upload File & Import URL Controls */}
+              <div className="space-y-2">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <label className="flex-1 cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/png,image/webp,image/svg+xml,image/jpeg"
+                      disabled={isUploadingLogo}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadBrandFile(editingBrand.id, file);
+                      }}
+                      className="hidden"
+                    />
+                    <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-primary hover:border-action transition shadow-xs">
+                      <Icon name="upload" className="h-3.5 w-3.5 text-action" />
+                      {isUploadingLogo ? "Uploading…" : "Upload Official Logo File"}
+                    </span>
+                  </label>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={logoUrlInput}
+                    onChange={(e) => setLogoUrlInput(e.target.value)}
+                    placeholder="Or paste official logo image URL..."
+                    disabled={isUploadingLogo}
+                    className={`${inputClass} text-xs py-1.5 flex-1`}
+                  />
+                  <Button
+                    type="button"
+                    disabled={isUploadingLogo || !logoUrlInput.trim()}
+                    onClick={() => handleImportBrandUrl(editingBrand.id, logoUrlInput)}
+                    className="text-xs py-1.5 shrink-0"
+                  >
+                    <Icon name="globe" className="h-3.5 w-3.5" />
+                    {isUploadingLogo ? "Fetching…" : "Import URL"}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-primary-muted">
+                  Supports PNG, SVG, WebP, and JPEG. Files are stored immutably and linked to this
+                  brand.
+                </p>
+              </div>
+            </div>
+
+            <hr className="border-black/10" />
+
+            {/* Manual Image Key Form */}
             <form
               action={async (formData) => {
                 startTransition(async () => {
