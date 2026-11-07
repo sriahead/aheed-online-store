@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const brandId = typeof body.brandId === "string" ? body.brandId.trim() : "";
 
     if (!categoryId && !slot && !brandId) {
-      return NextResponse.json({ error: "Missing categoryId, slot, or brandId" }, { status: 400 });
+      return NextResponse.json({ error: "Missing categoryId" }, { status: 400 });
     }
 
     // #1288 R10: only a registered slot can be generated, checked before any AI budget is touched.
