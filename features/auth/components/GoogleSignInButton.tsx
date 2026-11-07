@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signIn } from "../api-client";
 import { signedInPath } from "../signed-in-path";
 
@@ -12,21 +12,50 @@ import { signedInPath } from "../signed-in-path";
 export function GoogleSignInButton({ next }: { next?: string } = {}) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   async function handleClick() {
     setError(null);
     setSubmitting(true);
 
-    const errorTarget = `/login${next ? `?next=${encodeURIComponent(next)}` : ""}`;
-    const { error: signInError } = await signIn.social({
-      provider: "google",
-      callbackURL: signedInPath(next),
-      errorCallbackURL: errorTarget,
-    });
-    setSubmitting(false);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    // Safety fallback: if browser has not navigated away after 8s, unlock button
+    timeoutRef.current = setTimeout(() => {
+      setSubmitting(false);
+    }, 8000);
 
-    if (signInError) {
-      setError(signInError.message ?? "Google sign-in failed. Please try again.");
+    try {
+      const errorTarget = `/login${next ? `?next=${encodeURIComponent(next)}` : ""}`;
+      const res = await signIn.social({
+        provider: "google",
+        callbackURL: signedInPath(next),
+        errorCallbackURL: errorTarget,
+      });
+
+      if (res?.error) {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        setSubmitting(false);
+        setError(res.error.message ?? "Google sign-in failed. Please try again.");
+        return;
+      }
+
+      // Explicitly trigger navigation if the auth URL was returned
+      if (res?.data?.url) {
+        window.location.assign(res.data.url);
+        return;
+      }
+    } catch (err: unknown) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setSubmitting(false);
+      const message =
+        err instanceof Error ? err.message : "Failed to initiate Google sign-in. Please try again.";
+      setError(message);
     }
   }
 
