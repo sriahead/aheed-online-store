@@ -495,14 +495,18 @@ export function QuickViewDrawer() {
                       <Icon name="shield-check" className="h-3.5 w-3.5 text-action" />
                       Freshness Guaranteed
                     </span>
-                    <span className="text-black/20">•</span>
+                    <span className="text-black/60" aria-hidden="true">
+                      •
+                    </span>
                     <span className="flex items-center gap-1">
                       <Icon name="truck" className="h-3.5 w-3.5 text-action" />
                       Pickup / Fast Delivery
                     </span>
                     {displayProduct.isHalal && (
                       <>
-                        <span className="text-black/20">•</span>
+                        <span className="text-black/60" aria-hidden="true">
+                          •
+                        </span>
                         <span className="flex items-center gap-1">
                           <Icon name="circle-check" className="h-3.5 w-3.5 text-emerald-600" />
                           Halal Verified

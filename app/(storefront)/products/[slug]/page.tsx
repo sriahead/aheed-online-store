@@ -155,7 +155,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               {formatPrice(product.basePrice)}
             </span>
             {hasDiscount && (
-              <span className="text-base text-black/40 line-through">
+              <span className="text-base text-black/60 line-through">
                 {formatPrice(product.originalPrice!)}
               </span>
             )}
@@ -271,7 +271,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           {/* Description */}
           {product.description && (
             <div className="pt-2 border-t border-black/10">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-black/50 mb-1.5">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-black/60 mb-1.5">
                 Product Details
               </h2>
               <p className="text-sm leading-relaxed text-black/80">{product.description}</p>
@@ -286,7 +286,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             >
               <h2
                 id="specifications-heading"
-                className="text-xs font-bold uppercase tracking-wider text-black/50 mb-2"
+                className="text-xs font-bold uppercase tracking-wider text-black/60 mb-2"
               >
                 Specifications
               </h2>

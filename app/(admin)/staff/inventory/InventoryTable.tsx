@@ -107,7 +107,7 @@ export function InventoryTable({
         <div className="relative flex-1 max-w-md">
           <Icon
             name="search"
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40"
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/60"
           />
           <input
             type="text"
@@ -120,7 +120,7 @@ export function InventoryTable({
             <button
               type="button"
               onClick={() => handleServerSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-black/40 hover:text-black"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-black/60 hover:text-black"
             >
               Clear
             </button>
@@ -232,7 +232,7 @@ export function InventoryTable({
               <tr>
                 <td colSpan={9} className="px-6 py-12 text-center text-black/60">
                   <p className="font-semibold text-base mb-1">No products match your criteria</p>
-                  <p className="text-xs text-black/40">
+                  <p className="text-xs text-black/60">
                     Try adjusting your search terms or filters.
                   </p>
                 </td>
@@ -317,7 +317,7 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
 
       {/* 3. Brand */}
       <td className="px-4 py-3 text-xs font-medium text-black/80">
-        {item.brandName || <span className="text-black/30 italic">—</span>}
+        {item.brandName || <span className="text-black/60 italic">—</span>}
       </td>
 
       {/* 4. Category */}
@@ -325,7 +325,7 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
 
       {/* 5. Net Content */}
       <td className="px-4 py-3 text-xs text-black/80">
-        {item.netContentLabel || item.unitLabel || <span className="text-black/30 italic">—</span>}
+        {item.netContentLabel || item.unitLabel || <span className="text-black/60 italic">—</span>}
       </td>
 
       {/* 6. Selling Price */}
@@ -336,7 +336,7 @@ function InventoryRow({ item, cdnBaseUrl }: { item: StaffInventoryRow; cdnBaseUr
       {/* 7. Current Stock */}
       <td className="px-4 py-3 text-center">
         {item.stockMode !== "TRACKED" ? (
-          <span className="text-xs font-semibold text-black/50">
+          <span className="text-xs font-semibold text-black/60">
             {STOCK_MODE_LABELS[item.stockMode]}
           </span>
         ) : (
