@@ -237,9 +237,7 @@ export async function importBatch(options: ImportBatchOptions) {
     console.log(`- Net content that will be enriched:         ${report.netContentEnriched}`);
     console.log(`- VAT discrepancies that will be flagged:    ${report.vatDiscrepanciesFlagged}`);
     console.log(`- Products with manual edit protection:      ${manualEditCount}`);
-    console.log(
-      `- Existing stock records that remain untouched: ${report.stockValuesPreserved}`,
-    );
+    console.log(`- Existing stock records that remain untouched: ${report.stockValuesPreserved}`);
     return report;
   }
 
