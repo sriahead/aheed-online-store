@@ -17,9 +17,11 @@ export function GoogleSignInButton({ next }: { next?: string } = {}) {
     setError(null);
     setSubmitting(true);
 
+    const errorTarget = `/login${next ? `?next=${encodeURIComponent(next)}` : ""}`;
     const { error: signInError } = await signIn.social({
       provider: "google",
       callbackURL: signedInPath(next),
+      errorCallbackURL: errorTarget,
     });
     setSubmitting(false);
 

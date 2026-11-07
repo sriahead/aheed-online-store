@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **OAuth Diagnostic Visibility & Sign-in Error Recovery**
+  - **Social Sign-in Error Telemetry.** Added detailed error logger in `lib/auth.ts` capturing Better Auth OAuth lifecycle errors and streaming them to `recordHandledErrorEvent` (`ErrorEvent` table).
+  - **Dedicated Login Error Presentation.** Updated `LoginPage` to surface OAuth failure alerts when redirecting from failed social sign-ins with clear remediation guidance.
+  - **OAuth Failure Destination Scoping.** Updated `GoogleSignInButton.tsx` to explicitly supply `errorCallbackURL` routing users back to `/login` with preserved query parameters instead of dumping them on the root domain.
+  - **Staging Secret Reconciliation.** Synchronized `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on `aheed-store-staging` to ensure complete parity with the active Google Cloud Console credentials.
+
 - **Customer Onboarding Unblock: Immediate Registration Sign-in & Post-Signup Redirect**
   - **Immediate Store Access Post-Registration.** Configured `requireEmailVerification: false` in `lib/auth.ts`. Customers who register with email and password are now immediately authenticated into their store session rather than blocked waiting for email verification delivery. Verification emails continue to send asynchronously in the background.
   - **Seamless Registration Redirection.** Updated `RegisterForm.tsx` to automatically navigate new customers to their intended destination (`next` parameter or `/`) via `signedInPath(next)` and refresh state upon successful sign-up, eliminating dead-end friction.
