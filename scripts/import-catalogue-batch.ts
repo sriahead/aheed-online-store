@@ -109,54 +109,116 @@ export async function importBatch(options: ImportBatchOptions) {
     brandMap.set(b.name.toLowerCase(), b.id);
   }
 
-  // Helpers to get or create category and brand
+  // Helpers to get or create category and brand (with promise deduplication for concurrent batches)
+  const categoryPromises = new Map<string, Promise<string>>();
   async function getOrCreateCategory(deptName: string): Promise<string> {
     const key = deptName.trim().toLowerCase();
     const existing = categoryMap.get(key);
     if (existing) return existing;
-
-    const baseSlug = slugify(deptName) || "general";
-    let catSlug = baseSlug;
-    let counter = 1;
-    while (
-      await db.category.findUnique({ where: { vendorId_slug: { vendorId, slug: catSlug } } })
-    ) {
-      catSlug = `${baseSlug}-${counter++}`;
+    if (categoryPromises.has(key)) {
+      return categoryPromises.get(key)!;
     }
 
-    const newCat = await db.category.create({
-      data: {
-        vendorId,
-        name: deptName.trim(),
-        slug: catSlug,
-        sortOrder: 0,
-      },
-    });
-    categoryMap.set(key, newCat.id);
-    return newCat.id;
+    const promise = (async () => {
+      const existingInDb = await db.category.findFirst({
+        where: { vendorId, name: { equals: deptName.trim(), mode: "insensitive" } },
+        select: { id: true },
+      });
+      if (existingInDb) {
+        categoryMap.set(key, existingInDb.id);
+        return existingInDb.id;
+      }
+
+      const baseSlug = slugify(deptName) || "general";
+      let catSlug = baseSlug;
+      let counter = 1;
+      while (
+        await db.category.findUnique({ where: { vendorId_slug: { vendorId, slug: catSlug } } })
+      ) {
+        catSlug = `${baseSlug}-${counter++}`;
+      }
+
+      try {
+        const newCat = await db.category.create({
+          data: {
+            vendorId,
+            name: deptName.trim(),
+            slug: catSlug,
+            sortOrder: 0,
+          },
+        });
+        categoryMap.set(key, newCat.id);
+        return newCat.id;
+      } catch {
+        const retry = await db.category.findFirst({
+          where: { vendorId, name: { equals: deptName.trim(), mode: "insensitive" } },
+          select: { id: true },
+        });
+        if (retry) {
+          categoryMap.set(key, retry.id);
+          return retry.id;
+        }
+        throw new Error(`Failed to create category for department: ${deptName}`);
+      }
+    })();
+
+    categoryPromises.set(key, promise);
+    return promise;
   }
 
+  const brandPromises = new Map<string, Promise<string>>();
   async function getOrCreateBrand(brandName: string): Promise<string> {
     const key = brandName.trim().toLowerCase();
     const existing = brandMap.get(key);
     if (existing) return existing;
-
-    const baseSlug = slugify(brandName) || `brand-${Date.now().toString(36)}`;
-    let brandSlug = baseSlug;
-    let counter = 1;
-    while (await db.brand.findUnique({ where: { vendorId_slug: { vendorId, slug: brandSlug } } })) {
-      brandSlug = `${baseSlug}-${counter++}`;
+    if (brandPromises.has(key)) {
+      return brandPromises.get(key)!;
     }
 
-    const newBrand = await db.brand.create({
-      data: {
-        vendorId,
-        name: brandName.trim(),
-        slug: brandSlug,
-      },
-    });
-    brandMap.set(key, newBrand.id);
-    return newBrand.id;
+    const promise = (async () => {
+      const existingInDb = await db.brand.findFirst({
+        where: { vendorId, name: { equals: brandName.trim(), mode: "insensitive" } },
+        select: { id: true },
+      });
+      if (existingInDb) {
+        brandMap.set(key, existingInDb.id);
+        return existingInDb.id;
+      }
+
+      const baseSlug = slugify(brandName) || `brand-${Date.now().toString(36)}`;
+      let brandSlug = baseSlug;
+      let counter = 1;
+      while (
+        await db.brand.findUnique({ where: { vendorId_slug: { vendorId, slug: brandSlug } } })
+      ) {
+        brandSlug = `${baseSlug}-${counter++}`;
+      }
+
+      try {
+        const newBrand = await db.brand.create({
+          data: {
+            vendorId,
+            name: brandName.trim(),
+            slug: brandSlug,
+          },
+        });
+        brandMap.set(key, newBrand.id);
+        return newBrand.id;
+      } catch {
+        const retry = await db.brand.findFirst({
+          where: { vendorId, name: { equals: brandName.trim(), mode: "insensitive" } },
+          select: { id: true },
+        });
+        if (retry) {
+          brandMap.set(key, retry.id);
+          return retry.id;
+        }
+        throw new Error(`Failed to create brand: ${brandName}`);
+      }
+    })();
+
+    brandPromises.set(key, promise);
+    return promise;
   }
 
   if (!apply) {
