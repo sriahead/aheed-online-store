@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { signUp } from "../api-client";
+import { signedInPath } from "../signed-in-path";
 import { MARKETING_OPT_IN_FIELD } from "@/lib/marketing-consent";
 
 /**
@@ -9,13 +11,19 @@ import { MARKETING_OPT_IN_FIELD } from "@/lib/marketing-consent";
  * `null` (#1134). Required so no caller can silently drop the choice. The checkbox is unticked and
  * optional: consent must be a separate, positive act, never a condition of creating an account.
  */
-export function RegisterForm({ marketingStatement }: { marketingStatement: string | null }) {
+export function RegisterForm({
+  marketingStatement,
+  next,
+}: {
+  marketingStatement: string | null;
+  next?: string;
+}) {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -37,15 +45,8 @@ export function RegisterForm({ marketingStatement }: { marketingStatement: strin
       setError(signUpError.message ?? "Registration failed. Check your details and try again.");
       return;
     }
-    setSubmitted(true);
-  }
-
-  if (submitted) {
-    return (
-      <p className="rounded-2xl border border-black/10 bg-surface-muted p-5">
-        Check <strong>{email}</strong> for a verification link before signing in.
-      </p>
-    );
+    router.push(signedInPath(next));
+    router.refresh();
   }
 
   return (

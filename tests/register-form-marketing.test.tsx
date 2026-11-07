@@ -8,6 +8,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
  */
 
 const signUpEmail = vi.fn(async (_body: Record<string, unknown>) => ({ error: null }));
+const push = vi.fn();
+const refresh = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push, refresh }),
+}));
 
 vi.mock("@/features/auth/api-client", () => ({
   signUp: { email: (body: Record<string, unknown>) => signUpEmail(body) },
@@ -58,5 +64,14 @@ describe("RegisterForm marketing consent", () => {
     fillAndSubmit();
     await waitFor(() => expect(signUpEmail).toHaveBeenCalledTimes(1));
     expect(signUpEmail.mock.calls[0][0]).not.toHaveProperty("marketingOptIn");
+  });
+
+  it("redirects and refreshes immediately on successful registration", async () => {
+    push.mockClear();
+    refresh.mockClear();
+    render(<RegisterForm marketingStatement={null} next="/checkout" />);
+    fillAndSubmit();
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/signed-in?next=%2Fcheckout"));
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 });
