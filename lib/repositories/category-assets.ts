@@ -258,6 +258,12 @@ export async function selectCategoryAsset(
         where: { id: asset.categoryId, vendorId },
         data: { imageKey: asset.storageKey },
       });
+    } else if (asset.slot?.startsWith("brand:")) {
+      const brandSlug = asset.slot.replace("brand:", "");
+      await tx.brand.updateMany({
+        where: { vendorId, slug: brandSlug },
+        data: { imageKey: asset.storageKey },
+      });
     }
 
     return { ok: true, asset: toSummary(updated) };
@@ -292,6 +298,12 @@ export async function deactivateCategoryAsset(
     if (asset.categoryId) {
       await tx.category.update({
         where: { id: asset.categoryId, vendorId },
+        data: { imageKey: null },
+      });
+    } else if (asset.slot?.startsWith("brand:")) {
+      const brandSlug = asset.slot.replace("brand:", "");
+      await tx.brand.updateMany({
+        where: { vendorId, slug: brandSlug },
         data: { imageKey: null },
       });
     }
@@ -360,6 +372,19 @@ export async function deleteCategoryAsset(
       await prismaWs.categoryAsset.update({
         where: { id: nextCandidate.id },
         data: { isSelected: true },
+      });
+      if (slot.startsWith("brand:")) {
+        const brandSlug = slot.replace("brand:", "");
+        await prismaWs.brand.updateMany({
+          where: { vendorId, slug: brandSlug },
+          data: { imageKey: nextCandidate.storageKey },
+        });
+      }
+    } else if (slot.startsWith("brand:")) {
+      const brandSlug = slot.replace("brand:", "");
+      await prismaWs.brand.updateMany({
+        where: { vendorId, slug: brandSlug },
+        data: { imageKey: null },
       });
     }
   }

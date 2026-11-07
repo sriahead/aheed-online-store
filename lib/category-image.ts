@@ -151,3 +151,41 @@ export function buildSlotAssetPrompt(
         `directly underneath, crisp silhouette, high contrast, clearly readable at 24px.`;
   return `${lead} ${paletteClause(palette)} ${CIRCULAR_FRAMING_CLAUSE}`;
 }
+
+/**
+ * Builds an immutable relative storage key for brand logos:
+ * `brands/{vendorId}/{slug}-{random}{ext}`
+ */
+export function buildBrandLogoKey(
+  vendorId: string,
+  slug: string,
+  contentType: string = IMAGE_CONTENT_TYPE,
+): string {
+  const safeSlug = slug
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-");
+  const randomSuffix = crypto.randomUUID().slice(0, 8);
+  const ext = imageExtensionForContentType(contentType);
+  return `brands/${vendorId}/${safeSlug}-${randomSuffix}${ext}`;
+}
+
+/**
+ * Constructs an AI generation prompt for a brand logo or brand emblem:
+ * Clean, recognizable logo badge on pure white background, suitable for circular framing.
+ */
+export function buildBrandLogoPrompt(
+  brandName: string,
+  style: CategoryImageStyle,
+  palette: PromptPalette,
+): string {
+  const cleanName = brandName.trim();
+  const lead =
+    style === "3d-icon"
+      ? `Commercial 3D rendered brand logo emblem for "${cleanName}". ` +
+        `Tactile embossed badge, smooth glossy metallic and enamel finishes, soft contact shadow ` +
+        `directly underneath, crisp geometric contours, premium retail presentation.`
+      : `Clean commercial grocery food brand logo and packaging emblem for "${cleanName}". ` +
+        `Professional high-contrast retail brand mark, crisp typography, studio presentation, sharp focus.`;
+  return `${lead} ${paletteClause(palette)} ${CIRCULAR_FRAMING_CLAUSE}`;
+}
