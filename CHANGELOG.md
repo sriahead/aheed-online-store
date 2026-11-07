@@ -8,6 +8,10 @@ every branch merges.
 
 ### Added
 
+- **Catalogue Batch Import Concurrency & Category/Brand Race Condition Protection**
+  - **In-Flight Promise Deduplication.** Added in-flight promise caching to `getOrCreateCategory` and `getOrCreateBrand` in `scripts/import-catalogue-batch.ts` preventing race conditions during concurrent batch ingestion.
+  - **Case-Insensitive DB Fallback.** Added fallback retrieval ensuring concurrent row processing gracefully recovers existing records if simultaneous creation occurs.
+
 - **Email Verification Onboarding & Resend Verification Flow**
   - **Restored Verification Requirement.** Configured `requireEmailVerification: true` in `lib/auth.ts`, ensuring customers registering with email and password must verify their email address before signing in.
   - **Clear Verification Notification Screen.** Updated `RegisterForm.tsx` to render an informative post-submission verification view instructing customers to check their inbox (`Check {email} for a verification link before signing in`).
