@@ -90,11 +90,7 @@ export function ProductCard({
   const tierQuantity = tierThresholdQuantity(product.tier);
   const hasTier = tierQuantity !== null && product.tier !== null;
   // Unified stock determination ensuring consistency across card, details and quick view
-  const isInStock = Boolean(
-    product.inStock ||
-    (product.stockQuantity !== undefined && product.stockQuantity > 0) ||
-    product.stockMode === "UNTRACKED",
-  );
+  const isInStock = product.inStock;
   // #1211 — one rule (lib/cart-rules.ts): TRACKED stock only, and only while
   // there is still stock to run out of.
   const isLowStock = isInStock && showsLowStock(product);
