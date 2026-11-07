@@ -8,6 +8,14 @@ every branch merges.
 
 ### Added
 
+- **Halal Tag Reset, Google OAuth Account Linking & Email Delivery Go-Live Readiness**
+  - **Catalogue Halal Tag Reset.** Safely reset legacy synthetic `isHalal` flags across 711 products under vendor Aheed Food Centre (`a4ed0000-0000-4000-a000-000000000001`) to `false` and cleared unverified HMC certification fields. Store staff can now curate accurate Halal certifications with verified provenance via `/staff/products`. Secondary tenants (SriMart) preserved untouched.
+  - **Better Auth Google Account Linking.** Configured `account.accountLinking` with `trustedProviders: ["google"]` in `lib/auth.ts`. Allows customers who registered with email or Gmail to seamlessly authenticate via Google, automatically linking accounts and marking email as verified without encountering `account_not_linked` or unverified lockout.
+  - **Staging Email Recipient Mode.** Updated staging `[env.staging.vars]` in `wrangler.toml` with `EMAIL_RECIPIENT_MODE = "open"`, ensuring verification and transactional emails are delivered to all tester and customer addresses rather than being dropped by the staging allowlist filter.
+  - **Maintenance Script & Automated Tests.** Created `scripts/reset-halal-tags.ts` (`PrismaNeon` WebSocket adapter for zero isolate socket exhaustion) and verified with automated test suite `tests/reset-halal-tags.test.ts`.
+
+### Added
+
 - **Staged Catalogue Onboarding Batch 2 (Slice 2) Ingestion & HMRC VAT Compliance**
   - **Batch 2 Catalogue Ingestion.** Ingested and updated all 3,049 products from `.import-manifests/aheed-batch-2.json` for Aheed Food Centre (`a4ed0000-0000-4000-a000-000000000001`), tagging each product with `importBatchId = "aheed-batch-2"` and its spreadsheet `importSourceRow`.
   - **Brand & Net Content Enrichment Pipeline.** Integrated `identifyProductBrand` and `extractDetailedNetContent` into `import-catalogue-batch.ts`. Automatically resolves and links `brandId` and derives standardized base units and `unitPricePencePerBaseUnit` sort keys while strictly preserving manual edits (`isManuallyEdited`, `manuallyEditedFields`).

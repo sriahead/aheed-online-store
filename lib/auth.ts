@@ -181,6 +181,12 @@ export async function getAuth() {
       ? { advanced: { crossSubDomainCookies: origin.crossSubDomainCookies } }
       : {}),
     socialProviders: buildSocialProviders(env),
+    account: {
+      accountLinking: {
+        enabled: true,
+        trustedProviders: ["google"],
+      },
+    },
     // Better Auth enables its built-in rate limiter by default whenever
     // NODE_ENV is production (`options.rateLimit?.enabled ?? isProduction` —
     // this app never opted into it explicitly). Its storage wrapper calls the
