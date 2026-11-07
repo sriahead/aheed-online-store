@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Staged Catalogue Onboarding Batch 2 (Slice 2) Ingestion & HMRC VAT Compliance**
+  - **Batch 2 Catalogue Ingestion.** Ingested and updated all 3,049 products from `.import-manifests/aheed-batch-2.json` for Aheed Food Centre (`a4ed0000-0000-4000-a000-000000000001`), tagging each product with `importBatchId = "aheed-batch-2"` and its spreadsheet `importSourceRow`.
+  - **Brand & Net Content Enrichment Pipeline.** Integrated `identifyProductBrand` and `extractDetailedNetContent` into `import-catalogue-batch.ts`. Automatically resolves and links `brandId` and derives standardized base units and `unitPricePencePerBaseUnit` sort keys while strictly preserving manual edits (`isManuallyEdited`, `manuallyEditedFields`).
+  - **HMRC VAT Notice 701/14 Compliance.** Automated VAT rate classification across UK VAT Act 1994 Group 1 zero-rating schedules, identifying and flagging 806 legacy EPOS discrepancies for manual client review. Exported `.import-reports/vat-review-aheed-batch-2.json`.
+  - **Stock Baseline Invariant.** Preserved existing physical stock quantities and opening audit log baselines untouched (zero stock drift). Verified multi-tenant isolation with zero side-effects on secondary tenants.
+
+
 - **Authentic Brand Logo Direct Upload & URL Ingestion (`/staff/icons` & `/staff/brands`)**
   - **Direct File Upload & URL Ingestion Pipeline.** Implemented `ingestBrandLogo` and `ingestBrandLogoFromUrl` in `lib/category-image-pipeline.ts` with S3-compatible immutable storage (`brands/{vendorId}/{slug}-{random}{ext}`), SSRF protection, size validation (< 5MB), and multi-format support (`PNG`, `SVG`, `WebP`, `JPEG`). Added `POST /api/admin/brands/upload-logo` supporting both `multipart/form-data` and JSON URL payloads.
   - **Visual Asset Studio Integration (`/staff/icons`).** Added "Upload Official Logo / Image URL (Authentic)" mode directly within `IconGalleryClient` for Brand targets. Operators can drag-and-drop or browse authentic logo files or paste official logo URLs to immediately ingest, activate, and assign logos.
