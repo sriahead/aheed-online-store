@@ -1,8 +1,7 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { signUp } from "../api-client";
+import { signUp, sendVerificationEmail } from "../api-client";
 import { signedInPath } from "../signed-in-path";
 import { MARKETING_OPT_IN_FIELD } from "@/lib/marketing-consent";
 import { evaluatePassword, PASSWORD_RULES } from "../password-validation";
@@ -20,7 +19,6 @@ export function RegisterForm({
   marketingStatement: string | null;
   next?: string;
 }) {
-  const router = useRouter();
   const formId = useId();
 
   const [name, setName] = useState("");
@@ -33,7 +31,11 @@ export function RegisterForm({
   const [confirmTouched, setConfirmTouched] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   const evaluation = useMemo(() => evaluatePassword(password), [password]);
 
@@ -79,8 +81,79 @@ export function RegisterForm({
       setError(signUpError.message ?? "Registration failed. Check your details and try again.");
       return;
     }
-    router.push(signedInPath(next));
-    router.refresh();
+    setSubmitted(true);
+  }
+
+  async function handleResend() {
+    setResending(true);
+    setResendStatus(null);
+    try {
+      const { error: resendError } = await sendVerificationEmail({
+        email,
+        callbackURL: signedInPath(next),
+      });
+      if (resendError) {
+        setResendSuccess(false);
+        setResendStatus(
+          resendError.message ?? "Failed to resend verification email. Please try again.",
+        );
+      } else {
+        setResendSuccess(true);
+        setResendStatus("Verification email sent! Please check your inbox and spam folder.");
+      }
+    } catch {
+      setResendSuccess(false);
+      setResendStatus("Failed to resend verification email. Please try again.");
+    } finally {
+      setResending(false);
+    }
+  }
+
+  if (submitted) {
+    return (
+      <div className="rounded-2xl border border-black/10 bg-surface-muted p-6 text-center space-y-4">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-action/10 text-action">
+          <Icon name="check" className="h-6 w-6" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-primary">Verify your email</h2>
+          <p className="text-sm text-primary">
+            Check <strong>{email}</strong> for a verification link before signing in.
+          </p>
+        </div>
+
+        {resendStatus && (
+          <p
+            role="status"
+            className={`text-xs font-medium p-2.5 rounded-lg ${
+              resendSuccess
+                ? "bg-action/10 text-action border border-action/20"
+                : "bg-danger-tint text-danger border border-danger/20"
+            }`}
+          >
+            {resendStatus}
+          </p>
+        )}
+
+        <div className="pt-2 flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resending}
+            className="w-full rounded-full border border-black/20 bg-white px-4 py-2 text-sm font-semibold text-primary transition hover:bg-surface-muted disabled:opacity-50"
+          >
+            {resending ? "Sending verification email…" : "Resend verification email"}
+          </button>
+
+          <a
+            href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
+            className="text-sm font-medium text-primary underline hover:text-action"
+          >
+            Return to sign in
+          </a>
+        </div>
+      </div>
+    );
   }
 
   // Visual strength indicator bar width & color

@@ -69,12 +69,16 @@ describe("RegisterForm marketing consent", () => {
     expect(signUpEmail.mock.calls[0][0]).not.toHaveProperty("marketingOptIn");
   });
 
-  it("redirects and refreshes immediately on successful registration", async () => {
-    push.mockClear();
-    refresh.mockClear();
+  it("renders verification notification upon successful registration", async () => {
     render(<RegisterForm marketingStatement={null} next="/checkout" />);
     fillAndSubmit();
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/signed-in?next=%2Fcheckout"));
-    expect(refresh).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(screen.getByText(/verify your email/i)).toBeTruthy();
+      expect(screen.getByText("a@example.com")).toBeTruthy();
+    });
+    const returnLink = screen.getByRole("link", {
+      name: /return to sign in/i,
+    }) as HTMLAnchorElement;
+    expect(returnLink.getAttribute("href")).toBe("/login?next=%2Fcheckout");
   });
 });

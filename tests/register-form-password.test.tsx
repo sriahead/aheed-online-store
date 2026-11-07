@@ -3,23 +3,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const signUpEmail = vi.fn(async (_body: Record<string, unknown>) => ({ error: null }));
-const push = vi.fn();
-const refresh = vi.fn();
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push, refresh }),
+const sendVerificationEmail = vi.fn(async (_opts: { email: string; callbackURL?: string }) => ({
+  data: { status: true },
+  error: null,
 }));
 
 vi.mock("@/features/auth/api-client", () => ({
   signUp: { email: (body: Record<string, unknown>) => signUpEmail(body) },
+  sendVerificationEmail: (opts: { email: string; callbackURL?: string }) =>
+    sendVerificationEmail(opts),
 }));
 
 const { RegisterForm } = await import("@/features/auth/components/RegisterForm");
 
 beforeEach(() => {
   signUpEmail.mockClear();
-  push.mockClear();
-  refresh.mockClear();
+  sendVerificationEmail.mockClear();
 });
 afterEach(cleanup);
 
@@ -97,7 +96,7 @@ describe("RegisterForm password validation and controls", () => {
     expect(submitBtn.disabled).toBe(false);
   });
 
-  it("submits the form successfully when valid", async () => {
+  it("submits the form successfully and displays verification screen with resend option", async () => {
     render(<RegisterForm marketingStatement={null} />);
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Sarah Connor" } });
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "sarah@example.com" } });
@@ -114,6 +113,16 @@ describe("RegisterForm password validation and controls", () => {
       email: "sarah@example.com",
       password: "StrongPass123!",
     });
-    expect(push).toHaveBeenCalledWith("/signed-in");
+    await waitFor(() => expect(screen.getByText(/verify your email/i)).toBeTruthy());
+    expect(screen.getByText("sarah@example.com")).toBeTruthy();
+
+    const resendBtn = screen.getByRole("button", { name: /resend verification email/i });
+    fireEvent.click(resendBtn);
+    await waitFor(() => expect(sendVerificationEmail).toHaveBeenCalledTimes(1));
+    expect(sendVerificationEmail).toHaveBeenCalledWith({
+      email: "sarah@example.com",
+      callbackURL: "/signed-in",
+    });
+    expect(screen.getByText(/verification email sent/i)).toBeTruthy();
   });
 });
