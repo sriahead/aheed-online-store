@@ -79,6 +79,11 @@ describe("parsePricePence (R11)", () => {
     ["£4.10", 410],
     ["  £0.07 ", 7],
     ["£ 3.20", 320],
+    ["\uFFFD4.00", 400],
+    ["\uFFFD1.99", 199],
+    ["4.00p", 400],
+    ["€2.50", 250],
+    ["$10.00", 1000],
   ])("%s is %i pence", (raw, pence) => {
     expect(parsePricePence(raw)).toEqual({ ok: true, pence });
   });

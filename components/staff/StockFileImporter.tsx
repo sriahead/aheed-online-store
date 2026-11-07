@@ -20,7 +20,7 @@ declare global {
     XLSX?: {
       read(
         data: ArrayBuffer,
-        opts: { type: string; raw?: boolean },
+        opts: { type: string; raw?: boolean; codepage?: number },
       ): {
         SheetNames: string[];
         Sheets: Record<string, unknown>;
@@ -92,7 +92,7 @@ export function StockFileImporter() {
       } else if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
         const xlsx = await loadBrowserSheetJs();
         const buffer = await selectedFile.arrayBuffer();
-        const wb = xlsx.read(buffer, { type: "buffer", raw: false });
+        const wb = xlsx.read(buffer, { type: "buffer", raw: false, codepage: 1252 });
         const firstSheetName = wb.SheetNames[0];
         if (!firstSheetName) throw new Error("The spreadsheet contains no sheets.");
         const sheet = wb.Sheets[firstSheetName];

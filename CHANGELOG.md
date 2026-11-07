@@ -8,6 +8,10 @@ every branch merges.
 
 ### Added
 
+- **Excel Product Importer Encoding & Brand Dictionary Fixes**
+  - **Windows-1252 & Currency Encoding Robustness.** Configured SheetJS parser in `StockFileImporter` with Windows-1252 codepage decoding (`codepage: 1252`) and updated `parsePricePence` in `price.ts` to cleanly strip currency replacement characters (`\uFFFD`, `\xA3`, `\u00A3`, currency symbols, and pence suffixes). Eliminates `BAD_PRICE` rejections on Excel files generated on UK Windows EPOS systems.
+  - **Curated Grocery Brands Registry & Automated Backfill.** Added `CURATED_COMMON_BRANDS` to `lib/catalogue-import/brand.ts` featuring common South Asian and UK grocery brands (TRS, Natco, Shan, Laila, Regal, Aytac, Niru, Laziza, Tropical Sun, etc.). Implemented automated backfill (`scripts/backfill-brands-and-net-content.ts`) and staging import runner (`scripts/run-staging-import.ts`) successfully creating 145 brands and linking over 6,100 products.
+
 - **Excel Product Import & Data Validation Enhancements**
   - **High-confidence Brand & Label Information auto-population.** Deterministically parses Brands from explicit columns, delimited product title prefixes (e.g. `Brand - Product`), and known vendor brands dictionary matching. Auto-populates Net Content, weights, sizes, and multipack configurations (e.g. `6 x 330ml`, `4 x 400g`, `2 x 1.5L`) into standardized base units.
   - **Strict high-confidence heuristic.** Never guesses or invents brands or measurements from ambiguous nouns ("Large", "Family Pack", "Medium") or placeholder values ("N/A", "Generic", "None").
