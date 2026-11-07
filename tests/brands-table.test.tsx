@@ -91,7 +91,9 @@ describe("BrandTable UI & Behavioural Features", () => {
     const trsRows = screen.queryAllByRole("row").filter((r) => r.textContent?.includes("TRS"));
     expect(trsRows.length).toBe(0);
     // Empty Brand table row is removed
-    const emptyRows = screen.queryAllByRole("row").filter((r) => r.textContent?.includes("Empty Brand"));
+    const emptyRows = screen
+      .queryAllByRole("row")
+      .filter((r) => r.textContent?.includes("Empty Brand"));
     expect(emptyRows.length).toBe(0);
   });
 
@@ -111,7 +113,9 @@ describe("BrandTable UI & Behavioural Features", () => {
     fireEvent.click(withProductsTab);
 
     expect(screen.getByText("Shan")).not.toBeNull();
-    const emptyBrandRows = screen.queryAllByRole("row").filter((r) => r.textContent?.includes("Empty Brand"));
+    const emptyBrandRows = screen
+      .queryAllByRole("row")
+      .filter((r) => r.textContent?.includes("Empty Brand"));
     expect(emptyBrandRows.length).toBe(0);
   });
 
