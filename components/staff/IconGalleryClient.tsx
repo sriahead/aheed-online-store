@@ -120,7 +120,11 @@ export function IconGalleryClient({
   const [targetType, setTargetType] = useState<"category" | "slot" | "brand">("category");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(categories[0]?.id || "");
   const [selectedSlotId, setSelectedSlotId] = useState<string>(ICON_3D_SLOTS[0].id);
+  const [brandsList, setBrandsList] = useState<BrandOption[]>(brands);
   const [selectedBrandId, setSelectedBrandId] = useState<string>(brands[0]?.id || "");
+  const [brandLogoMode, setBrandLogoMode] = useState<"upload" | "ai">("upload");
+  const [brandLogoUrlInput, setBrandLogoUrlInput] = useState("");
+  const [isUploadingBrandLogo, setIsUploadingBrandLogo] = useState(false);
   const [slotCategoryFilter, setSlotCategoryFilter] = useState<"all" | IconSlotGroup>("all");
   const [targetSearchQuery, setTargetSearchQuery] = useState("");
   const [genStyle, setGenStyle] = useState<CategoryImageStyle>("photo");
@@ -205,24 +209,29 @@ export function IconGalleryClient({
   }, [categories, targetSearchQuery]);
 
   const filteredBrands = useMemo(() => {
-    if (!targetSearchQuery.trim()) return brands;
+    if (!targetSearchQuery.trim()) return brandsList;
     const q = targetSearchQuery.toLowerCase().trim();
-    return brands.filter(
+    return brandsList.filter(
       (b) => b.name.toLowerCase().includes(q) || b.slug.toLowerCase().includes(q),
     );
-  }, [brands, targetSearchQuery]);
+  }, [brandsList, targetSearchQuery]);
 
   const selectedSlot = useMemo(() => {
     return getIconSlot(selectedSlotId);
   }, [selectedSlotId]);
 
   const selectedBrand = useMemo(() => {
-    return brands.find((b) => b.id === selectedBrandId) || brands[0];
-  }, [brands, selectedBrandId]);
+    return brandsList.find((b) => b.id === selectedBrandId) || brandsList[0];
+  }, [brandsList, selectedBrandId]);
+
+  const activeBrandAsset = useMemo(() => {
+    if (!selectedBrand?.slug) return null;
+    return assets.find((a) => a.slot === `brand:${selectedBrand.slug}` && a.isSelected);
+  }, [assets, selectedBrand]);
 
   const currentTargetSurfaces = useMemo(() => {
     if (targetType === "brand") {
-      const b = brands.find((br) => br.id === selectedBrandId);
+      const b = brandsList.find((br) => br.id === selectedBrandId);
       return [
         `Brand Filter & Storefront Facet: ${b ? b.name : "Selected brand"}`,
         "Storefront Brand Quick View & Pills",
@@ -238,7 +247,7 @@ export function IconGalleryClient({
     }
     const slot = getIconSlot(selectedSlotId);
     return slot?.surfaces ?? ["Storefront & Staff interface"];
-  }, [targetType, selectedCategoryId, selectedSlotId, selectedBrandId, categories, brands]);
+  }, [targetType, selectedCategoryId, selectedSlotId, selectedBrandId, categories, brandsList]);
 
   async function handleGenerate() {
     setStatusMessage(null);
@@ -324,6 +333,113 @@ export function IconGalleryClient({
       });
     } finally {
       setGenerating(false);
+    }
+  }
+
+  async function handleUploadBrandFile(file: File) {
+    if (!selectedBrandId) {
+      setStatusMessage({ type: "error", text: "Please select a brand first." });
+      return;
+    }
+    setIsUploadingBrandLogo(true);
+    setStatusMessage(null);
+    try {
+      const formData = new FormData();
+      formData.append("brandId", selectedBrandId);
+      formData.append("file", file);
+
+      const res = await fetch("/api/admin/brands/upload-logo", {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        imageKey?: string;
+        imageUrl?: string;
+        asset?: CategoryAssetItem;
+      };
+      if (!res.ok || !data.asset) {
+        throw new Error(data.error || "Failed to upload brand logo.");
+      }
+
+      const newAsset: CategoryAssetItem = {
+        ...data.asset,
+        imageUrl: data.imageUrl ?? "",
+        isSelected: true,
+      };
+      const brandSlug = selectedBrand?.slug;
+      setAssets((prev) => [
+        newAsset,
+        ...prev.map((a) => (a.slot === `brand:${brandSlug}` ? { ...a, isSelected: false } : a)),
+      ]);
+      setBrandsList((prev) =>
+        prev.map((b) => (b.id === selectedBrandId ? { ...b, imageKey: data.imageKey ?? null } : b)),
+      );
+      setStatusMessage({
+        type: "success",
+        text: `Authentic logo for ${selectedBrand?.name} uploaded and activated successfully!`,
+      });
+      router?.refresh();
+    } catch (err: any) {
+      setStatusMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to upload logo.",
+      });
+    } finally {
+      setIsUploadingBrandLogo(false);
+    }
+  }
+
+  async function handleImportBrandLogoFromUrl(url: string) {
+    if (!selectedBrandId) {
+      setStatusMessage({ type: "error", text: "Please select a brand first." });
+      return;
+    }
+    if (!url.trim()) return;
+    setIsUploadingBrandLogo(true);
+    setStatusMessage(null);
+    try {
+      const res = await fetch("/api/admin/brands/upload-logo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandId: selectedBrandId, url: url.trim() }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        imageKey?: string;
+        imageUrl?: string;
+        asset?: CategoryAssetItem;
+      };
+      if (!res.ok || !data.asset) {
+        throw new Error(data.error || "Failed to import brand logo from URL.");
+      }
+
+      const newAsset: CategoryAssetItem = {
+        ...data.asset,
+        imageUrl: data.imageUrl ?? "",
+        isSelected: true,
+      };
+      const brandSlug = selectedBrand?.slug;
+      setAssets((prev) => [
+        newAsset,
+        ...prev.map((a) => (a.slot === `brand:${brandSlug}` ? { ...a, isSelected: false } : a)),
+      ]);
+      setBrandsList((prev) =>
+        prev.map((b) => (b.id === selectedBrandId ? { ...b, imageKey: data.imageKey ?? null } : b)),
+      );
+      setBrandLogoUrlInput("");
+      setStatusMessage({
+        type: "success",
+        text: `Authentic logo for ${selectedBrand?.name} imported from URL and activated successfully!`,
+      });
+      router?.refresh();
+    } catch (err: any) {
+      setStatusMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to import logo from URL.",
+      });
+    } finally {
+      setIsUploadingBrandLogo(false);
     }
   }
 
@@ -687,8 +803,8 @@ export function IconGalleryClient({
             )}
 
             {/* Target Selector Dropdown, Style Preset & Generate Button */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-1">
-              <div className="sm:col-span-2">
+            <div className="space-y-3 pt-1">
+              <div>
                 <label
                   htmlFor="quick-gen-target-select"
                   className="block text-xs font-semibold text-primary-muted mb-1"
@@ -704,12 +820,12 @@ export function IconGalleryClient({
                     id="quick-gen-target-select"
                     value={selectedBrandId}
                     onChange={(e) => setSelectedBrandId(e.target.value)}
-                    disabled={generating}
+                    disabled={generating || isUploadingBrandLogo}
                     className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
                   >
                     {filteredBrands.map((b) => (
                       <option key={b.id} value={b.id}>
-                        {b.name} ({b.slug}) — Brand Logo &amp; Filter Facet
+                        {b.name} ({b.slug}) {b.imageKey ? "— ✓ Logo set" : "— No logo"}
                       </option>
                     ))}
                   </select>
@@ -753,47 +869,156 @@ export function IconGalleryClient({
                 )}
               </div>
 
-              <div>
-                <label
-                  htmlFor="quick-gen-style-select"
-                  className="block text-xs font-semibold text-primary-muted mb-1"
-                >
-                  Visual Preset:
-                </label>
-                <select
-                  id="quick-gen-style-select"
-                  value={genStyle}
-                  onChange={(e) => setGenStyle(e.target.value as CategoryImageStyle)}
-                  disabled={generating}
-                  className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
-                >
-                  <option value="photo">Studio Product Photography (Recommended)</option>
-                  <option value="3d-icon">Commercial 3D Rendered Icon</option>
-                </select>
-              </div>
+              {/* Brand Logo Ingestion vs AI Mode Switcher */}
+              {targetType === "brand" && (
+                <div className="flex items-center gap-2 pt-0.5">
+                  <span className="text-[11px] font-semibold text-primary-muted">Method:</span>
+                  <div className="flex rounded-lg border border-black/15 p-0.5 bg-surface-muted text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setBrandLogoMode("upload")}
+                      className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                        brandLogoMode === "upload"
+                          ? "bg-white text-primary shadow-xs"
+                          : "text-black/60 hover:text-black"
+                      }`}
+                    >
+                      Upload Official Logo / Image URL (Authentic)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBrandLogoMode("ai")}
+                      className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                        brandLogoMode === "ai"
+                          ? "bg-white text-primary shadow-xs"
+                          : "text-black/60 hover:text-black"
+                      }`}
+                    >
+                      AI Concept Medallion
+                    </button>
+                  </div>
+                </div>
+              )}
 
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={handleGenerate}
-                  disabled={generating}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-action px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-action-hover disabled:opacity-50"
-                >
-                  <Icon
-                    name="sparkles"
-                    className={`h-4 w-4 ${generating ? "animate-spin" : "text-amber-300"}`}
-                  />
-                  {generating ? "Generating…" : "Generate & Add to Library"}
-                </button>
-              </div>
+              {targetType === "brand" && brandLogoMode === "upload" ? (
+                <div className="rounded-xl border border-action/20 bg-action-tint/10 p-3.5 space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-primary">
+                      Set Authentic Official Logo for {selectedBrand?.name}
+                    </span>
+                    <span className="text-primary-muted text-[11px]">
+                      PNG, WebP, SVG, JPEG (max 5MB)
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <span className="block text-[11px] font-semibold text-primary-muted mb-1">
+                        Upload Official Logo File:
+                      </span>
+                      <label className="cursor-pointer block">
+                        <input
+                          type="file"
+                          accept="image/png,image/webp,image/svg+xml,image/jpeg"
+                          disabled={isUploadingBrandLogo}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleUploadBrandFile(file);
+                          }}
+                          className="hidden"
+                        />
+                        <span className="flex items-center justify-center gap-2 rounded-xl border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-primary hover:border-action transition shadow-xs">
+                          <Icon name="upload" className="h-4 w-4 text-action" />
+                          {isUploadingBrandLogo ? "Uploading…" : "Browse & Upload File"}
+                        </span>
+                      </label>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="brand-logo-url-input"
+                        className="block text-[11px] font-semibold text-primary-muted mb-1"
+                      >
+                        Or Import via Image URL:
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id="brand-logo-url-input"
+                          type="url"
+                          value={brandLogoUrlInput}
+                          onChange={(e) => setBrandLogoUrlInput(e.target.value)}
+                          placeholder="https://.../brand-logo.png"
+                          disabled={isUploadingBrandLogo}
+                          className="w-full rounded-xl border border-black/15 bg-white px-2.5 py-1.5 text-xs text-primary placeholder:text-primary-subtle focus:border-action focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={isUploadingBrandLogo || !brandLogoUrlInput.trim()}
+                          onClick={() => handleImportBrandLogoFromUrl(brandLogoUrlInput)}
+                          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-action px-3 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-action-hover disabled:opacity-50 shrink-0"
+                        >
+                          <Icon name="globe" className="h-3.5 w-3.5" />
+                          {isUploadingBrandLogo ? "Importing…" : "Import"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="sm:col-span-2 md:col-span-3">
+                    <label
+                      htmlFor="quick-gen-style-select"
+                      className="block text-xs font-semibold text-primary-muted mb-1"
+                    >
+                      Visual Preset:
+                    </label>
+                    <select
+                      id="quick-gen-style-select"
+                      value={genStyle}
+                      onChange={(e) => setGenStyle(e.target.value as CategoryImageStyle)}
+                      disabled={generating}
+                      className="w-full rounded-lg border border-black/15 bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-primary focus:border-action focus:outline-none"
+                    >
+                      <option value="photo">Studio Product Photography (Recommended)</option>
+                      <option value="3d-icon">Commercial 3D Rendered Icon</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={handleGenerate}
+                      disabled={generating}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-action px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-action-hover disabled:opacity-50"
+                    >
+                      <Icon
+                        name="sparkles"
+                        className={`h-4 w-4 ${generating ? "animate-spin" : "text-amber-300"}`}
+                      />
+                      {generating ? "Generating…" : "Generate"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Live Selected Target Details Card */}
             <div className="flex items-start gap-3 rounded-xl border border-black/10 bg-surface-muted p-3">
               <div className="shrink-0 pt-0.5">
                 {targetType === "brand" ? (
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-tint text-primary font-bold text-xs border border-black/10">
-                    {selectedBrand ? selectedBrand.name.slice(0, 2).toUpperCase() : "BR"}
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-black/10 overflow-hidden p-1 shadow-xs">
+                    {activeBrandAsset ? (
+                      <img
+                        src={activeBrandAsset.imageUrl}
+                        alt={selectedBrand?.name}
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <span className="font-bold text-xs text-primary">
+                        {selectedBrand ? selectedBrand.name.slice(0, 2).toUpperCase() : "BR"}
+                      </span>
+                    )}
                   </div>
                 ) : targetType === "category" ? (
                   <IconMedallion icon="folder-tree" size={36} decorative />

@@ -141,4 +141,54 @@ describe("BrandTable UI & Behavioural Features", () => {
     expect(screen.getAllByText("£1.49").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("25 in stock")).not.toBeNull();
   });
+
+  it("renders authentic logo image when cdnBaseUrl is provided and imageKey exists", () => {
+    render(<BrandTable initialBrands={SAMPLE_BRANDS} cdnBaseUrl="https://images.example.com" />);
+
+    const logoImg = screen.getByAltText("Shan") as HTMLImageElement;
+    expect(logoImg).not.toBeNull();
+    expect(logoImg.src).toBe("https://images.example.com/brands/shan/logo.webp");
+  });
+
+  it("allows importing authentic logo from URL in Edit Brand modal", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          imageKey: "brands/v1/trs-new.png",
+          imageUrl: "https://images.example.com/brands/v1/trs-new.png",
+          asset: { id: "a1" },
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<BrandTable initialBrands={SAMPLE_BRANDS} cdnBaseUrl="https://images.example.com" />);
+
+    // Click edit on TRS (sorted first by MOST_PRODUCTS with 47 products)
+    const editBtns = screen.getAllByRole("button", { name: "Edit" });
+    fireEvent.click(editBtns[0]); // TRS
+
+    expect(screen.getByRole("heading", { name: /Edit Brand: TRS/i })).not.toBeNull();
+
+    // Type in logo URL
+    const urlInput = screen.getByPlaceholderText("Or paste official logo image URL...");
+    fireEvent.change(urlInput, { target: { value: "https://example.com/trs-official.png" } });
+
+    // Click Import URL
+    const importBtn = screen.getByRole("button", { name: /Import URL/i });
+    fireEvent.click(importBtn);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/admin/brands/upload-logo",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          brandId: "brand-2",
+          url: "https://example.com/trs-official.png",
+        }),
+      }),
+    );
+  });
 });

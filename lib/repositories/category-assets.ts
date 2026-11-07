@@ -155,6 +155,13 @@ export async function createCategoryAsset(
       },
       data: { isSelected: false },
     });
+    if (data.slot.startsWith("brand:")) {
+      const slug = data.slot.slice("brand:".length);
+      await prismaWs.brand.updateMany({
+        where: { vendorId, slug },
+        data: { imageKey: data.storageKey },
+      });
+    }
   }
 
   const asset = await prismaWs.categoryAsset.create({

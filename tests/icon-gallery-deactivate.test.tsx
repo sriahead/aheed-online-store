@@ -204,6 +204,9 @@ describe("IconGalleryClient (#1288 R4, R7, R9)", () => {
     const trsButtons = screen.getAllByRole("button", { name: /TRS/ });
     fireEvent.click(trsButtons[0]);
 
+    // Switch to AI Concept Medallion method
+    fireEvent.click(screen.getByRole("button", { name: "AI Concept Medallion" }));
+
     // Click Generate Asset
     const generateBtn = screen.getByRole("button", { name: /Generate/ });
     await act(async () => {
@@ -217,6 +220,60 @@ describe("IconGalleryClient (#1288 R4, R7, R9)", () => {
         body: JSON.stringify({
           style: "photo",
           brandId: "b2",
+        }),
+      }),
+    );
+  });
+
+  it("supports Authentic Brand Logo import from URL in IconGalleryClient", async () => {
+    fetchMock.mockImplementation(() =>
+      ok({
+        ok: true,
+        imageKey: "brands/v1/trs-imported.png",
+        imageUrl: "https://cdn.example.com/brands/v1/trs-imported.png",
+        asset: {
+          id: "brand-asset-imported",
+          vendorId: "v1",
+          categoryId: null,
+          slot: "brand:trs",
+          storageKey: "brands/v1/trs-imported.png",
+          style: "photo",
+          isSelected: true,
+          createdAt: "2026-11-07T14:00:00.000Z",
+        },
+      }),
+    );
+
+    const BRANDS = [{ id: "b1", name: "TRS", slug: "trs", imageKey: null }];
+
+    render(
+      <IconGalleryClient initialAssets={[]} categories={CATEGORIES} brands={BRANDS} canManage />,
+    );
+
+    // Switch to Brand Logo target
+    fireEvent.click(screen.getByRole("button", { name: "Brand Logo" }));
+
+    // Authentic mode is active by default
+    expect(screen.getByText("Set Authentic Official Logo for TRS")).not.toBeNull();
+
+    // Type in logo URL
+    const urlInput = screen.getByPlaceholderText("https://.../brand-logo.png");
+    fireEvent.change(urlInput, { target: { value: "https://example.com/trs-logo.png" } });
+
+    // Click Import
+    const importBtn = screen.getByRole("button", { name: /Import/ });
+    await act(async () => {
+      fireEvent.click(importBtn);
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/admin/brands/upload-logo",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brandId: "b1",
+          url: "https://example.com/trs-logo.png",
         }),
       }),
     );

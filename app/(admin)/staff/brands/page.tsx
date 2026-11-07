@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
+import { getEnv } from "@/lib/config";
 import { getBrandRepository } from "@/lib/brands-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { BrandTable } from "@/components/staff/BrandTable";
@@ -30,6 +31,7 @@ export default async function StaffBrandsPage() {
     );
   }
 
+  const { CDN_BASE_URL } = getEnv();
   const brands = await getBrandRepository().listForAdmin();
 
   return (
@@ -45,7 +47,7 @@ export default async function StaffBrandsPage() {
         </p>
       </div>
 
-      <BrandTable initialBrands={brands} />
+      <BrandTable initialBrands={brands} cdnBaseUrl={CDN_BASE_URL} />
     </PageContainer>
   );
 }
