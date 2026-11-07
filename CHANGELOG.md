@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Email Verification Onboarding & Resend Verification Flow**
+  - **Restored Verification Requirement.** Configured `requireEmailVerification: true` in `lib/auth.ts`, ensuring customers registering with email and password must verify their email address before signing in.
+  - **Clear Verification Notification Screen.** Updated `RegisterForm.tsx` to render an informative post-submission verification view instructing customers to check their inbox (`Check {email} for a verification link before signing in`).
+  - **Self-Service Verification Resend.** Provided an integrated "Resend verification email" action button with live status feedback, powered by Better Auth's `sendVerificationEmail` client method.
+  - **Context-Preserving Return Path.** Included a direct "Return to sign in" link preserving the intended destination (`next` parameter) for smooth navigation once verified.
+  - **Automated Test Coverage.** Updated `tests/register-form-marketing.test.tsx` and `tests/register-form-password.test.tsx` verifying registration transition to verification instructions and successful email resend requests.
+
 - **Google Sign-in Redirection Resilience & Hang Prevention**
   - **Explicit Browser Navigation.** Added direct `window.location.assign(res.data.url)` to `GoogleSignInButton.tsx` so social authorization navigation doesn't stall or depend solely on client fetch-plugin hooks.
   - **Rejection & Error Trapping.** Wrapped sign-in initiation in a `try...catch` block, ensuring network errors, privacy extensions, or provider rejections surface clear error alerts and unlock the button.
