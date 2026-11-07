@@ -30,7 +30,10 @@ afterEach(cleanup);
 function fillAndSubmit() {
   fireEvent.change(screen.getByLabelText("Name"), { target: { value: "A Shopper" } });
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@example.com" } });
-  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password123" } });
+  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "Password123!" } });
+  fireEvent.change(screen.getByLabelText("Confirm Password"), {
+    target: { value: "Password123!" },
+  });
   fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 }
 

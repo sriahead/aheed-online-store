@@ -8,6 +8,14 @@ every branch merges.
 
 ### Added
 
+- **Customer Sign-Up Security: Password Confirmation, Strict Requirements & Live Strength Feedback**
+  - **Confirm Password Verification.** Added Confirm Password input to `RegisterForm.tsx` ensuring matching credentials before permitting submission.
+  - **Strict Password Strength Criteria.** Implemented `features/auth/password-validation.ts` requiring at least 8 characters, uppercase letter, lowercase letter, number, and special character.
+  - **Dynamic Strength Meter & Requirement Checklist.** Rendered real-time visual progress bar and requirement checklist with checkmark badges confirming criteria satisfaction.
+  - **Show/Hide Password Controls.** Added accessible password visibility toggles (`eye` / `eye-off` icons) for both the Password and Confirm Password inputs.
+  - **Submission Prevention.** Disabled submit button and enforced client-side validation preventing registration until all password security criteria and matching requirements are satisfied.
+  - **Automated Validation Tests.** Added unit and component test suites in `tests/password-validation.test.ts` and `tests/register-form-password.test.tsx`.
+
 - **OAuth Diagnostic Visibility & Sign-in Error Recovery**
   - **Social Sign-in Error Telemetry.** Added detailed error logger in `lib/auth.ts` capturing Better Auth OAuth lifecycle errors and streaming them to `recordHandledErrorEvent` (`ErrorEvent` table).
   - **Dedicated Login Error Presentation.** Updated `LoginPage` to surface OAuth failure alerts when redirecting from failed social sign-ins with clear remediation guidance.
