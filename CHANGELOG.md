@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Brand Logo Visual Asset Target & Management (`/staff/icons`)**
+  - **First-Class Brand Target in Visual Asset Studio.** Introduced `brand` as a first-class target alongside `category` and `slot` in `IconGalleryClient` and `/staff/icons`. Operators can now search and select any vendor brand, configure visual styles (`3D icon`, `Realistic photo`), and generate brand medallion artwork metered via Cloudflare Workers AI.
+  - **Automated `Brand.imageKey` Synchronization.** Integrated brand logo lifecycle in `lib/repositories/category-assets.ts`: activating a brand asset (`brand:<slug>`) automatically updates `Brand.imageKey` to the relative storage key, deactivating clears it back to null, and deleting cascades to the next candidate asset or clears `Brand.imageKey`.
+  - **Dedicated Brand Library Controls.** Added `Brand Logos` filter tab in the asset library, brand monogram preview badges, surface usage indicators (Search & Catalogue brand filter facets, storefront brand pills, quick view drawers, and staff brand management), and candidate preview inspection modal.
+  - **Generation Pipeline & API Endpoint.** Added `buildBrandLogoKey` and `buildBrandLogoPrompt` to `lib/category-image.ts`, `runBrandLogoPipeline` to `lib/category-image-pipeline.ts`, and updated `/api/admin/category-images/generate` to accept `brandId` and trigger revalidation on `/staff/brands`.
+
 - **Brand Management Experience & Neuromarketing Table Operations**
   - **Surface Purity & Design System Constitution Alignment.** Refactored `/staff/brands` surfaces, KPI cards, and modals to eliminate transparent `bg-card` classes and glossy `backdrop-blur-*` filters. Aligned overlay scrims with the canonical `bg-black/50` pattern from `CartDrawerShell` and `QuickViewDrawer`. Replaced all surfaces with solid, opaque `bg-white` and standard `border-black/10` borders to ensure high visual contrast, WCAG AA legibility, and zero visual bleed-through.
   - **Cognitive Framing & Neuromarketing KPI Anchors.** Transformed `/staff/brands` from a vertical stack of 80+ isolated cards into a streamlined, high-information-density table. Anchored key metrics at the top (Total Brands, Branded Products, Top Brand, and Empty Brands) reducing cognitive load and highlighting catalogue gaps via the Von Restorff effect.

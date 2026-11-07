@@ -4,6 +4,7 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { getStorage } from "@/lib/storage";
 import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { listCategoryAssetsForVendor } from "@/lib/category-assets-service";
+import { listBrandsForAdmin } from "@/lib/brands-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { IconGalleryClient } from "@/components/staff/IconGalleryClient";
@@ -26,9 +27,10 @@ export default async function StaffIconsPage() {
 
   const storage = getStorage();
 
-  const [categories, rawAssets] = await Promise.all([
+  const [categories, rawAssets, rawBrands] = await Promise.all([
     listCategoriesForAdmin(auth.vendorId),
     listCategoryAssetsForVendor(auth.vendorId, { limit: 200 }),
+    listBrandsForAdmin(auth.vendorId),
   ]);
 
   const initialAssets = rawAssets.map((a) => ({
@@ -43,13 +45,20 @@ export default async function StaffIconsPage() {
     slug: c.slug,
   }));
 
+  const brandOptions = rawBrands.map((b) => ({
+    id: b.id,
+    name: b.name,
+    slug: b.slug,
+    imageKey: b.imageKey,
+  }));
+
   return (
     <PageContainer width="wide">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-primary">Icon &amp; Visual Asset Gallery</h1>
         <p className="mt-1 text-sm text-primary-muted">
-          Unified library of category photographs, app icons, and realistic system visual assets
-          across your store.
+          Unified library of category photographs, brand logos, app icons, and realistic system
+          visual assets across your store.
         </p>
       </div>
 
@@ -57,6 +66,7 @@ export default async function StaffIconsPage() {
       <IconGalleryClient
         initialAssets={initialAssets}
         categories={categoryOptions}
+        brands={brandOptions}
         canManage={auth.via !== "STAFF"}
       />
     </PageContainer>

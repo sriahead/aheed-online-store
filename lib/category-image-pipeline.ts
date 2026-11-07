@@ -3,6 +3,8 @@ import type { AiMeter } from "./ai-meter";
 import type { AiBudgetCheck } from "./ai-budget-message";
 import { getStorage } from "./storage";
 import {
+  buildBrandLogoKey,
+  buildBrandLogoPrompt,
   buildCategoryImageKey,
   buildCategoryImagePrompt,
   buildSlotAssetKey,
@@ -106,6 +108,54 @@ export async function runSlotAssetPipeline(
     storageKey: imageKey,
     style,
     isSelected: true,
+  });
+
+  return {
+    imageKey,
+    imageUrl: storage.publicUrl(imageKey),
+    asset,
+  };
+}
+
+export async function runBrandLogoPipeline(
+  brandId: string,
+  style: CategoryImageStyle,
+  vendorId: string,
+  options: { aiMeter: AiMeter },
+): Promise<CategoryPipelineResult | CategoryPipelineBudgetRefused | null> {
+  const prismaWs = getPrismaWs();
+  const brand = await prismaWs.brand.findFirst({
+    where: { id: brandId, vendorId },
+  });
+  if (!brand) return null;
+
+  const budgetCheck = await options.aiMeter.check();
+  if (!budgetCheck.allowed) {
+    return { budgetRefused: budgetCheck };
+  }
+
+  const prompt = buildBrandLogoPrompt(brand.name, style, await vendorPromptPalette(vendorId));
+  const aiSvc = getImageGenerationService();
+  const imageBuffer = await aiSvc.generateImage(prompt);
+  if (!imageBuffer) return null;
+
+  await options.aiMeter.recordImage({ model: IMAGE_GENERATION_MODEL });
+
+  const storage = getStorage();
+  const imageKey = buildBrandLogoKey(vendorId, brand.slug, "image/png");
+  await storage.putObject(imageKey, imageBuffer, "image/png");
+
+  const brandSlot = `brand:${brand.slug}`;
+  const asset = await createCategoryAsset(prismaWs, vendorId, {
+    slot: brandSlot,
+    storageKey: imageKey,
+    style,
+    isSelected: true,
+  });
+
+  await prismaWs.brand.update({
+    where: { id: brand.id },
+    data: { imageKey },
   });
 
   return {

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
 import { slugify } from "@/lib/catalogue-form";
@@ -69,3 +70,7 @@ export function getBrandRepository(): BrandRepository {
     },
   };
 }
+
+export const listBrandsForAdmin = cache(async (vendorId: string) =>
+  listBrandsForAdminRepo(getPrisma(), vendorId),
+);
