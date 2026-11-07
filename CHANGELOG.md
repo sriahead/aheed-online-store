@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Google Sign-in Redirection Resilience & Hang Prevention**
+  - **Explicit Browser Navigation.** Added direct `window.location.assign(res.data.url)` to `GoogleSignInButton.tsx` so social authorization navigation doesn't stall or depend solely on client fetch-plugin hooks.
+  - **Rejection & Error Trapping.** Wrapped sign-in initiation in a `try...catch` block, ensuring network errors, privacy extensions, or provider rejections surface clear error alerts and unlock the button.
+  - **Safety Timeout Guard.** Introduced an 8-second safety timeout that re-enables the button if navigation is delayed or cancelled, preventing users from ever getting stuck in a permanent "Redirecting…" state.
+  - **Automated Button Test Suite.** Added comprehensive component tests in `tests/google-signin-button.test.tsx` verifying successful redirection, callback paths, error recovery, and timeout fallbacks.
+
 - **Customer Sign-Up Security: Password Confirmation, Strict Requirements & Live Strength Feedback**
   - **Confirm Password Verification.** Added Confirm Password input to `RegisterForm.tsx` ensuring matching credentials before permitting submission.
   - **Strict Password Strength Criteria.** Implemented `features/auth/password-validation.ts` requiring at least 8 characters, uppercase letter, lowercase letter, number, and special character.
