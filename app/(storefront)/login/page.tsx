@@ -19,18 +19,29 @@ export async function generateMetadata() {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string | string[] }>;
+  searchParams: Promise<{ next?: string | string[]; error?: string | string[] }>;
 }) {
   const env = getEnv();
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
   // #1319 — forwarded to /signed-in, which accepts it only as a same-origin path.
-  const { next: rawNext } = await searchParams;
+  const { next: rawNext, error: rawError } = await searchParams;
   const next = typeof rawNext === "string" && rawNext !== "" ? rawNext : undefined;
+  const error = typeof rawError === "string" && rawError !== "" ? rawError : undefined;
 
   return (
     <PageContainer width="narrow">
       <div className="mx-auto max-w-sm">
         <h1 className="mb-6 text-2xl font-semibold text-primary">Sign in</h1>
+        {error && (
+          <div
+            role="alert"
+            className="mb-4 rounded-xl border border-danger/20 bg-danger-tint p-3 text-sm text-danger"
+          >
+            {error === "invalid_code"
+              ? "Google sign-in could not be completed. Please try again or sign in with your email and password."
+              : `Sign-in error: ${error}`}
+          </div>
+        )}
         <LoginForm next={next} />
         {googleEnabled && (
           <>
