@@ -7,7 +7,11 @@ import { readRows } from "../lib/catalogue-import/rows";
 import { buildPlan } from "../lib/catalogue-import/plan";
 import { applyPlan, type ImportDb } from "../lib/catalogue-import/apply";
 
-const env = parseEnvFile("secrets/staging.vars");
+const env = parseEnvFile(
+  process.argv.includes("--env-file")
+    ? process.argv[process.argv.indexOf("--env-file") + 1]
+    : "secrets/staging.vars",
+);
 const connectionString = env.DIRECT_URL || env.DATABASE_URL;
 
 const prisma = new PrismaClient({
