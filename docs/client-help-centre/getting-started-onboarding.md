@@ -29,8 +29,11 @@ flowchart TD
     S3 --> S4["4. Category Visual Assets<br/>(/staff/icons — Curate & Activate Icons)"]
     S4 --> S5["5. Stock Creation & Inventory<br/>(/staff/products — Attributes, Net Content, Stock Modes)"]
     S5 --> S6["6. Publication & Visibility<br/>(Prerequisites, Safeguards & Live Checks)"]
-    S6 --> S7["7. Launch Readiness Audit<br/>(/staff/onboarding — 100% Score)"]
-    S7 --> LIVE["Live Storefront Trading"]
+    S6 --> S7["7. Orders & Fulfilment<br/>(/staff/orders, /staff/fulfilment, /staff/payments)"]
+    S7 --> S8["8. Offers & Loyalty<br/>(/staff/discounts, /staff/promotions, /staff/bundles, /staff/loyalty)"]
+    S8 --> S9["9. Customers & Content<br/>(/staff/feedback, /staff/search-synonyms, /staff/faqs, /staff/customers, /staff/assistant)"]
+    S9 --> S10["10. Launch Readiness Audit<br/>(/staff/onboarding — 100% Score)"]
+    S10 --> LIVE["Live Storefront Trading"]
 ```
 
 ---
@@ -131,6 +134,51 @@ Before an item appears publicly on `https://aheed.merqify.com/`, it must satisfy
 
 ---
 
+### Step 7: Orders, Delivery & Fulfilment Operations
+Manage the complete order lifecycle from placement through dispatch and delivery:
+1. **Orders Queue Workflow (`/staff/orders`):**
+   - Review incoming live customer orders across `CONFIRMED`, `PREPARING`, `READY_FOR_COLLECTION`, `OUT_FOR_DELIVERY`, and `DELIVERED` status lanes.
+   - Use the **Advance Status** button to transition orders sequentially as staff pick and pack items.
+   - Filter orders by fulfilment method (Local Delivery vs Click & Collect) and inspection date.
+2. **Slot Booking Schedules & Capacity (`/staff/fulfilment`):**
+   - Configure morning, afternoon, and evening delivery windows with cut-off times and order capacity limits to prevent delivery driver overload.
+   - Set same-day collection opening hours and ready-time buffers.
+3. **Payment & Settlement Auditing (`/staff/payments`):**
+   - Inspect transaction logs, card payments, payment intents, and reconciliation statuses.
+   - Access automated stripe receipt references and investigate disputed or refunded orders.
+
+---
+
+### Step 8: Offers, Loyalty & Promotions Configuration
+Drive basket building, repeat retention, and seasonal promotions:
+1. **Discount Voucher Codes (`/staff/discounts`):**
+   - Create coupon promo codes (e.g. `WELCOME10`, `EIDMUBARAK`) offering percentage off or fixed pence reductions.
+   - Enforce minimum order spend floors, start/expiry windows, and global usage counters.
+2. **Campaign Promotions (`/staff/promotions`):**
+   - Configure scheduled marketing campaigns, banner headlines, and department-wide discount promotions.
+3. **Product Bundles & Multi-buys (`/staff/bundles`):**
+   - Create bundled recipes or multi-buy deals (e.g. Biryani Spice & Rice Kit) to drive higher average basket sizes.
+4. **Customer Loyalty Scheme (`/staff/loyalty`):**
+   - Configure point earning ratios (e.g. 1 point per £1 spent), redemption cash values (e.g. 100 points = £1.00 credit), and tiered customer membership perks.
+
+---
+
+### Step 9: Customers, Reviews & Content Moderation
+Build customer trust and curate discovery content:
+1. **Customer Review Moderation (`/staff/feedback`):**
+   - Review and moderate shopper product reviews and ratings before or after publication.
+   - Flag inappropriate comments and highlight verified reviews to elevate catalogue trust.
+2. **Shopper Search Dictionary (`/staff/search-synonyms`):**
+   - Add multilingual or regional grocery synonyms (e.g. linking `atta` → `flour`, `dhania` → `coriander`, `haldi` → `turmeric`) to optimize storefront search conversion.
+3. **Help Centre & FAQs (`/staff/faqs`):**
+   - Maintain client-facing answers to common shopper questions covering delivery policies, collection points, return policies, and operating hours.
+4. **Customer Accounts & Spend Profiles (`/staff/customers`):**
+   - View registered shopper accounts, lifetime order values, order frequencies, and loyalty tier standing.
+5. **Storefront Help Assistant (`/staff/assistant`):**
+   - Enable or disable the interactive storefront chat assistant and inspect common shopper queries to identify catalogue content gaps.
+
+---
+
 ## 3. Daily Staff Operational Procedures
 
 ### Order Fulfillment Routine
@@ -148,15 +196,28 @@ Before an item appears publicly on `https://aheed.merqify.com/`, it must satisfy
 
 ## 4. Launch Readiness Audit (`/staff/onboarding`)
 
-Before commencing public trading, open `/staff/onboarding` and confirm that all 6 readiness dimensions show green checks:
+### Access Control & Visibility
+- **Store Administrators (`ADMIN` role) & Platform Administrators:**
+  - View the complete **Launch Readiness Checklist** tab, overall completion percentage, required item counters (e.g. 18 of 18 required items complete), and responsibility breakdown (Store Operator vs Platform Admin).
+  - Can switch between the sequential **Staff Onboarding Guide** and the detailed **Launch Audit Checklist**.
+  - Can click any category summary card to inspect and filter individual readiness checks.
+- **Store Staff (`STAFF` role):**
+  - View the comprehensive, step-by-step operational onboarding guide without raw percentage metrics, audit scorecards, or internal infrastructure checks.
 
-| Dimension | Mandatory Requirements | Status Check |
+### The 8 Launch Readiness Dimensions
+
+Before commencing public trading, Store Administrators should confirm all 8 readiness categories in `/staff/onboarding` show 100% completion:
+
+| Category | Required Criteria | Remediation Link |
 | :--- | :--- | :--- |
-| **Store Profile** | Name, locality description, and WhatsApp number configured | Verified |
-| **Operating Hours** | At least one active day with valid hours | Verified |
-| **Delivery Areas** | At least one postcode prefix with fee & minimum order | Verified |
-| **Fulfilment Slots** | At least one active delivery or collection slot | Verified |
-| **Catalogue & Brands** | Minimum 10 active products in stock, brands assigned, and category icons set | Verified |
-| **Team & Access** | At least one active staff member invited | Verified |
+| **1. Storefront Identity & Chrome** | Store name, tagline, locality anchor, store logo, square mark | `/staff/storefront` |
+| **2. Visual Theme & Brand Primitives** | 8 hex color tokens, WCAG AA contrast check | `/staff/storefront` |
+| **3. Storefront Copy & Badges** | Hero supporting copy, dietary badges | `/staff/storefront` |
+| **4. Fulfilment & Delivery** | Standard delivery fee, minimum order value, delivery postcode areas | `/staff/storefront`, `/staff/delivery-areas` |
+| **5. Footer, Location & Legal Compliance** | Physical address, phone number, contact email, 7-day schedule, payment badges | `/staff/storefront` |
+| **6. Customer Communication & Community** | WhatsApp contact / community options | `/staff/storefront` |
+| **7. Catalogue & Inventory Safeguards** | Minimum active items, category icon coverage, stock mode compliance | `/staff/products`, `/staff/icons` |
+| **8. Platform Infrastructure & Governance** | Domain routing, live Stripe keys, verified email sender | Managed by Platform Admin |
 
-When all criteria pass, the status badge displays **"Ready for Storefront Launch"** (100% completion).
+> [!TIP]
+> If any category shows less than 100% (e.g. **Footer, Location & Legal Compliance** showing **80% - 4/5 required**), click that category card in `/staff/onboarding` to filter the table. Look for the item marked with a red **MISSING** status badge (such as Customer Contact Email, Weekly Trading Hours, or Accepted Payment Badges) and click **Edit in Storefront →** (`/staff/storefront`) to configure the missing setting.
