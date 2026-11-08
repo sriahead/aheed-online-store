@@ -356,7 +356,8 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
           "Click Quick View on any brand row to open the side drawer inspecting all linked products.",
           "Unassign individual products from a brand directly inside the quick-view drawer if needed.",
         ],
-        keyOutcome: "Brand ledger populated with authentic logos and verified product associations.",
+        keyOutcome:
+          "Brand ledger populated with authentic logos and verified product associations.",
       },
       {
         number: 5,
@@ -370,7 +371,8 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
           "Click Deactivate to revert to the default static icon without deleting the generated candidate.",
           "Inspect any asset in the large modal with tint controls (action, accent, danger) and live surface mapping.",
         ],
-        keyOutcome: "Polished, brand-aligned visual assets active across all storefront navigation surfaces.",
+        keyOutcome:
+          "Polished, brand-aligned visual assets active across all storefront navigation surfaces.",
       },
       {
         number: 6,
@@ -384,7 +386,8 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
           "Configure Stock Tracking: select TRACKED (with numerical quantity and low-stock threshold), UNTRACKED (always in stock), or INFINITE.",
           "Configure dietary badges (Halal, Fresh, Organic, Vegetarian, Gluten-Free, HMC Certification).",
         ],
-        keyOutcome: "Accurate product records with complete metadata, brand links, and stock rules.",
+        keyOutcome:
+          "Accurate product records with complete metadata, brand links, and stock rules.",
       },
       {
         number: 7,

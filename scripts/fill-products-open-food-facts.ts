@@ -55,7 +55,9 @@ async function main() {
 
   for (let i = 0; i < products.length; i++) {
     const product = products[i];
-    console.log(`[${i + 1}/${products.length}] Checking: "${product.name}" (PLU: ${product.plu || "none"})...`);
+    console.log(
+      `[${i + 1}/${products.length}] Checking: "${product.name}" (PLU: ${product.plu || "none"})...`,
+    );
 
     try {
       // 1. Query Open Food Facts (barcode if available, otherwise strict text search)
