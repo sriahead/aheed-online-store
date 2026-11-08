@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **Post-Ship Documentation & Roadmap Audit Reconciliation**
+  - **KMS Plan Indexing.** Added YAML front-matter to `specs/2026-11-08-platform-documentation-update/plan.md` and regenerated `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts` via `npm run kms:build-index` (322 total artifacts).
+  - **Build Notes Contract Conformance.** Standardized `specs/2026-11-08-onboarding-menus-and-store-admin-readiness/build-notes.md` with the four required template sections.
+  - **Roadmap & Promotion Tracking.** Updated `specs/roadmap.md` with closure entries for recent shipped slices (`specs/2026-11-06-slot-booking-cutoff/`, `specs/2026-11-08-platform-documentation-update/`, `specs/2026-11-08-app-improvements-vat-quickview-onboarding/`, `specs/2026-11-08-onboarding-menus-and-store-admin-readiness/`, and prior slices) and promotion PR citations (PR #1423, PR #1439, PR #1443, PR #1465, PR #1467, PR #1469, PR #1472, PR #1474). `npm run sdd:audit` exits 0 with 0 documentation gaps.
+
 - **Staff Onboarding Menu Coverage Expansion & Store Admin Readiness Checklist Access**
   - **Store Admin Launch Readiness Checklist Access.** Updated `app/(admin)/staff/onboarding/page.tsx` and `OnboardingReadinessDashboard.tsx` to grant Store Administrators (`ADMIN` vendor role) access to the Launch Readiness Checklist, completion score, requirement breakdown, and the 8 category audit cards alongside Platform Admin, while keeping internal metrics hidden from standard store staff (`STAFF`).
   - **Orders, Delivery & Fulfilment Operations (Step 7).** Integrated comprehensive operational onboarding procedures for `/staff/orders` (status lane transitions), `/staff/fulfilment` (delivery windows, capacity limits, collection cut-offs), and `/staff/payments` (transaction logs, reconciliation).

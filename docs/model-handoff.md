@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.166.0"
-updated: 2026-11-06
+version: "1.167.0"
+updated: 2026-11-08
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -38,6 +38,12 @@ Build Notes across the pre-validation Clear. Remove or replace stale information
 reconciliation. If overall project state did not materially change, leave this file untouched.
 
 ## Last Verified
+
+- **2026-11-08 (`#1474`, `#1470`, `#1468`, `#1441`): Onboarding Expansion, Store Admin Readiness, VAT & Stock Modes, Slot Booking Cut-off IN PRODUCTION on `merqify.com`** (promotion PR #1474 `092041e`, PR #1472 `4fa7ece`, PR #1469 `a2de1a9`, PR #1467 `12ea552`, PR #1465 `6ecd8eb`, PR #1443 `1329e39`).
+  - **`#1474` (Onboarding guide menu expansion & store admin checklist access)** is IN PRODUCTION (`092041e`). Expanded onboarding guide with Step 7 (Orders & Fulfilment), Step 8 (Offers & Loyalty), Step 9 (Customers & Content). Restored Launch Readiness Checklist and audit cards for Store Admin (`ADMIN` role) alongside Platform Admin.
+  - **`#1470` (Onboarding visibility, Quick View, Product VAT, Infinite stock & checkout VAT breakdown)** is IN PRODUCTION (`4fa7ece`, migration `20261108000000_vat_quickview_infinite_stock`). Standardized Quick View across icon gallery with 320px medallion; added `ProductVatRate` (0% zero-rate, 20% standard), `StockMode.INFINITE`, and persistent checkout VAT breakdown.
+  - **`#1468` (Platform documentation review & interactive onboarding guide)** is IN PRODUCTION (`a2de1a9`). Expanded Store Admin journey in `/help`, added interactive visual asset workflows and publication status verification.
+  - **`#1441` (Slot booking cut-off)** is IN PRODUCTION (`1329e39`, migration `20261106120000_slot_booking_cutoff`). Configurable cut-off (`VendorConfig.slotBookingCutoffMinutes`, default 60 min) prevents offering or booking expired or soon-to-start slots.
 
 - **2026-11-04 (`#1399`, `#1392` + `#1403`, `#1409`): incoming email works on `merqify.com`; outgoing reaches verified addresses, and reaching ordinary shoppers is unconfirmed.**
   - **`#1399` (default forward-to inbox) is IN PRODUCTION** (PR #1402, promoted in PR #1406,
