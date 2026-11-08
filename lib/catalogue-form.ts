@@ -69,6 +69,8 @@ export interface ProductFormValues {
   isActive: boolean;
   /** #1135 — shoppers may attach a note to this product's basket line. */
   allowsCustomNote: boolean;
+  /** Product-level VAT rate: 0 (zero-rated food) or 20 (standard-rated confectionery/alcohol/non-food). */
+  vatRate: number;
   quantity: number;
   /** #1211 — the product's stock mode, chosen explicitly on the form (a new product defaults to TRACKED). */
   stockMode: StockMode;
@@ -301,6 +303,22 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
     originalPrice = parsed;
   }
 
+  const vatRateRaw = text(raw, "vatRate");
+  let vatRate = 0;
+  if (vatRateRaw !== "") {
+    const parsedVat = Number(vatRateRaw);
+    if (parsedVat !== 0 && parsedVat !== 20) {
+      return {
+        ok: false,
+        error: {
+          field: "vatRate",
+          message: "VAT rate must be 0% (zero-rated food) or 20% (standard-rated).",
+        },
+      };
+    }
+    vatRate = parsedVat;
+  }
+
   const quantity = wholeNumber(raw, "quantity", "Stock", 0);
   if (!quantity.ok) return quantity;
 
@@ -366,6 +384,7 @@ export function parseProductForm(raw: RawForm): ParseResult<ProductFormValues> {
       isFeatured: checkbox(raw, "isFeatured"),
       isActive: checkbox(raw, "isActive"),
       allowsCustomNote: checkbox(raw, "allowsCustomNote"),
+      vatRate,
       quantity: quantity.value,
       stockMode: stockModeRaw,
       lowStockThreshold: lowStockThreshold.value,
@@ -642,6 +661,7 @@ export const PRODUCT_FIELDS = [
   "isFeatured",
   "isActive",
   "allowsCustomNote",
+  "vatRate",
   "quantity",
   "stockMode",
   "lowStockThreshold",

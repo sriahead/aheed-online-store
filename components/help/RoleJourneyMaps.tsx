@@ -369,7 +369,7 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
           "Generate new candidate imagery for any category (commercial studio photo or 3D icon style).",
           "Click Activate on a candidate to make it the live primary icon (updates Category.imageKey instantly).",
           "Click Deactivate to revert to the default static icon without deleting the generated candidate.",
-          "Inspect any asset in the large modal with tint controls (action, accent, danger) and live surface mapping.",
+          "Quick View any asset in the 320px circular medallion with theme tint controls (Action, Accent, Danger) and live storefront surface mapping.",
         ],
         keyOutcome:
           "Polished, brand-aligned visual assets active across all storefront navigation surfaces.",
@@ -383,7 +383,7 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
           "Create products on /staff/products/new or edit existing rows on /staff/products/[id].",
           "Ensure required fields are complete: Product Name, Category, and Base Price in integer pence.",
           "Assign Brand from the searchable brand selector and specify net content (e.g. 500 g, 1 L).",
-          "Configure Stock Tracking: select TRACKED (with numerical quantity and low-stock threshold), UNTRACKED (always in stock), or INFINITE.",
+          "Configure Stock Tracking & VAT Compliance: select 0% VAT (zero-rated food) or 20% VAT (standard-rated), and choose stock mode: TRACKED (with quantity and low-stock threshold), UNTRACKED, or INFINITE (guaranteed unlimited stock).",
           "Configure dietary badges (Halal, Fresh, Organic, Vegetarian, Gluten-Free, HMC Certification).",
         ],
         keyOutcome:

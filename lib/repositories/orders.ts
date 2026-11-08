@@ -7,7 +7,12 @@
 // to prove an atomicity or idempotence claim.
 import type { getPrisma, getPrismaWs } from "@/lib/db";
 import { keysetCursorArgs, runKeysetPage } from "@/lib/repositories/pagination";
-import { buildOrderNumber, computeTotals, type DeliveryRules } from "@/lib/order-totals";
+import {
+  buildOrderNumber,
+  computeTotals,
+  computeVatBreakdown,
+  type DeliveryRules,
+} from "@/lib/order-totals";
 import { CHECKOUT_SESSION_TTL_MS, getPaymentService } from "@/lib/payments";
 import { PURCHASABILITY_SELECT, purchasableQuantity } from "@/lib/cart-rules";
 import {
@@ -249,6 +254,7 @@ export async function placeOrder(
           id: true,
           name: true,
           basePrice: true,
+          vatRate: true,
           // #1211 — restriction, isActive and stock mode, for the one purchasability rule.
           ...PURCHASABILITY_SELECT,
           // #1135 — whether a line's note still travels is decided here, at this instant.
@@ -287,6 +293,7 @@ export async function placeOrder(
           productId: product.id,
           productName: product.name,
           unitPricePence: product.basePrice,
+          vatRate: product.vatRate ?? 0,
           quantity: item.quantity,
           available,
           // #1211 — only a TRACKED product's quantity is decremented (and later restored). An
@@ -455,6 +462,17 @@ export async function placeOrder(
         input.fulfilmentMethod,
       );
 
+      const vatBreakdown = computeVatBreakdown(
+        lines.map((l) => ({
+          unitPricePence: l.unitPricePence,
+          quantity: l.quantity,
+          lineTotalPence: l.lineTotalPence,
+          vatRate: l.vatRate,
+          available: l.available,
+        })),
+        totals.discountPence,
+      );
+
       // Retry against the unique index rather than assuming randomness never collides.
       let order: {
         id: string;
@@ -494,6 +512,9 @@ export async function placeOrder(
             discountPence: totals.discountPence,
             deliveryFeePence: totals.deliveryFeePence,
             totalPence: totals.totalPence,
+            vatTotalPence: vatBreakdown.vatTotalPence,
+            vatStandardPence: vatBreakdown.vatStandardPence,
+            vatZeroPence: vatBreakdown.vatZeroPence,
           },
           select: { id: true, orderNumber: true, confirmationToken: true, createdAt: true },
         });
@@ -536,21 +557,26 @@ export async function placeOrder(
       }
 
       await tx.orderItem.createMany({
-        data: lines.map((line) => ({
-          orderId: order.id,
-          vendorId,
-          productId: line.productId,
-          productName: line.productName,
-          unitPricePence: line.unitPricePence,
-          quantity: line.quantity,
-          // P8.5d (#348): the tiered total, NOT unitPricePence × quantity.
-          // `unitPricePence` stays the product's base unit price, so the two
-          // columns together record both what the product listed at and what this
-          // line actually charged — which is what makes the multi-buy auditable
-          // without a DiscountRedemption row.
-          lineTotalPence: line.lineTotalPence,
-          customNote: line.customNote,
-        })),
+        data: lines.map((line) => {
+          const lineVat = line.vatRate === 20 ? Math.round((line.lineTotalPence * 20) / 120) : 0;
+          return {
+            orderId: order.id,
+            vendorId,
+            productId: line.productId,
+            productName: line.productName,
+            unitPricePence: line.unitPricePence,
+            quantity: line.quantity,
+            // P8.5d (#348): the tiered total, NOT unitPricePence × quantity.
+            // `unitPricePence` stays the product's base unit price, so the two
+            // columns together record both what the product listed at and what this
+            // line actually charged — which is what makes the multi-buy auditable
+            // without a DiscountRedemption row.
+            lineTotalPence: line.lineTotalPence,
+            customNote: line.customNote,
+            vatRate: line.vatRate,
+            vatPence: lineVat,
+          };
+        }),
       });
 
       // NO external call inside the transaction (P3c R6). An HTTP round-trip to
@@ -1155,6 +1181,9 @@ export async function findOrderForViewer(
       discountPence: true,
       deliveryFeePence: true,
       totalPence: true,
+      vatTotalPence: true,
+      vatStandardPence: true,
+      vatZeroPence: true,
       userId: true,
       guestEmail: true,
       user: { select: { email: true } },
@@ -1166,6 +1195,8 @@ export async function findOrderForViewer(
           quantity: true,
           lineTotalPence: true,
           customNote: true,
+          vatRate: true,
+          vatPence: true,
         },
       },
       address: {
@@ -1292,6 +1323,8 @@ export async function findOrderForUser(
           quantity: true,
           lineTotalPence: true,
           customNote: true,
+          vatRate: true,
+          vatPence: true,
         },
       },
       address: {
@@ -1397,6 +1430,9 @@ export async function findOrderForStaff(
       discountPence: true,
       deliveryFeePence: true,
       totalPence: true,
+      vatTotalPence: true,
+      vatStandardPence: true,
+      vatZeroPence: true,
       guestEmail: true,
       userId: true,
       user: { select: { email: true } },
@@ -1408,6 +1444,8 @@ export async function findOrderForStaff(
           quantity: true,
           lineTotalPence: true,
           customNote: true,
+          vatRate: true,
+          vatPence: true,
         },
       },
       address: {
@@ -1801,6 +1839,8 @@ export async function findOrderForWebhook(
           quantity: true,
           lineTotalPence: true,
           customNote: true,
+          vatRate: true,
+          vatPence: true,
         },
       },
       ...ORDER_PROVENANCE_SELECT,

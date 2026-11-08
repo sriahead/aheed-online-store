@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-08T00:38:46.833Z` · commit `e9d774ba` · `319` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-08T06:17:46.245Z` · commit `20ae1a08` · `320` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -307,6 +307,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Order updates: notification queue, owner email + Telegram, live order tracker (plan)](specs/2026-11-05-order-updates-notifications/plan.md) | spec | 1.0.0 | 2026-11-05 | draft | internal | Every paid-order event reaches the customer by email and the store owner by email and Telegram, through one channel-neutral queue that retries failures. The customer's order page becomes a live progress tracker, and the staff Orders page shows new orders without a reload. |
 | [iPhone 6s / Safari 15 compatibility: browser targets and a client-syntax guard (plan)](specs/2026-11-06-ios15-safari-compat/plan.md) | spec | 1.0.0 | 2026-11-06 | draft | internal | Next.js 16 compiled for Safari 16.4+, so on iOS 15 a framework chunk failed to parse and React never hydrated. That left Google sign-in, add to basket and every form dead. This slice sets browserslist to Safari/iOS 15.4 and adds a post-build guard. |
 | [Slot booking cut-off: stop offering slots that have started or start too soon (plan)](specs/2026-11-06-slot-booking-cutoff/plan.md) | spec | 1.0.0 | 2026-11-06 | draft | internal | Checkout stops offering, and placing an order refuses, any delivery or collection slot that starts within a per-store cut-off (default 60 minutes, set at /staff/fulfilment). Today's passed slots can no longer be booked. |
+| [Application Improvements: Onboarding Visibility, Quick View, Product VAT, INFINITE Stock Mode & Checkout VAT Breakdown (plan)](specs/2026-11-08-app-improvements-vat-quickview-onboarding/plan.md) | spec | 1.0.0 | 2026-11-08 | draft | internal | Restrict onboarding statistics to Platform Admin, remove nocaped reference, standardize Quick View across icon gallery with 320px medallion and tint selectors, support configurable 0% and 20% VAT rates, support INFINITE stock mode, and compute/persist VAT breakdown at checkout. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.48.0 | 2026-11-05 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

@@ -78,6 +78,7 @@ export const RESTRICTION_LABELS: Record<ProductRestriction, string> = {
 export const STOCK_MODE_LABELS: Record<StockMode, string> = {
   TRACKED: "Tracked",
   UNTRACKED: "Not tracked",
+  INFINITE: "Infinite (guaranteed unlimited stock)",
   UNKNOWN: "Unknown — not for sale",
 };
 

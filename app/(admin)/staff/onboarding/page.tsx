@@ -20,10 +20,11 @@ export default async function OnboardingReadinessPage() {
   }
 
   const report = await evaluateVendorReadiness(auth.vendorId);
+  const isPlatformAdmin = auth.via === "platform-admin";
 
   return (
     <PageContainer width="standard">
-      <OnboardingReadinessDashboard report={report} />
+      <OnboardingReadinessDashboard report={report} isPlatformAdmin={isPlatformAdmin} />
     </PageContainer>
   );
 }

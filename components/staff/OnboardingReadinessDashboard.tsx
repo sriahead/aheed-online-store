@@ -13,13 +13,19 @@ import type {
 
 interface OnboardingReadinessDashboardProps {
   report: VendorReadinessReport;
+  isPlatformAdmin?: boolean;
 }
 
-export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDashboardProps) {
+export function OnboardingReadinessDashboard({
+  report,
+  isPlatformAdmin = false,
+}: OnboardingReadinessDashboardProps) {
   const [dashboardTab, setDashboardTab] = useState<"guide" | "audit">("guide");
   const [filter, setFilter] = useState<"ALL" | "MISSING" | "CONFIGURED" | "PLANNED">("ALL");
   const [roleFilter, setRoleFilter] = useState<"ALL" | SettingOwner>("ALL");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  const isAuditView = Boolean(isPlatformAdmin && dashboardTab === "audit");
 
   const getStatusBadge = (status: SettingStatus) => {
     switch (status) {
@@ -95,7 +101,7 @@ export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDash
               <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
                 {report.vendorName}
               </h1>
-              {getReadinessBadge()}
+              {isPlatformAdmin && getReadinessBadge()}
             </div>
             <p className="text-sm text-slate-600">
               Host:{" "}
@@ -117,80 +123,88 @@ export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDash
             </div>
           </div>
 
-          <div className="flex flex-col items-start gap-4 lg:items-end">
-            <div className="text-left lg:text-right">
-              <div className="text-3xl font-black text-slate-900">{report.overallCompletion}%</div>
-              <div className="text-xs font-medium text-slate-500">
-                {report.configuredRequiredSettings} of {report.totalRequiredSettings} required items
-                complete
+          {isPlatformAdmin ? (
+            <div className="flex flex-col items-start gap-4 lg:items-end">
+              <div className="text-left lg:text-right">
+                <div className="text-3xl font-black text-slate-900">
+                  {report.overallCompletion}%
+                </div>
+                <div className="text-xs font-medium text-slate-500">
+                  {report.configuredRequiredSettings} of {report.totalRequiredSettings} required
+                  items complete
+                </div>
+              </div>
+
+              {/* Responsibility Breakdown */}
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 font-semibold text-blue-800 border border-blue-200">
+                  Store Operator: {report.vendorConfiguredCount} / {report.vendorRequiredCount}
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 px-2.5 py-1 font-semibold text-purple-800 border border-purple-200">
+                  Platform Admin: {report.platformConfiguredCount} / {report.platformRequiredCount}
+                </span>
               </div>
             </div>
-
-            {/* Responsibility Breakdown */}
-            <div className="flex flex-wrap gap-2 text-xs">
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 font-semibold text-blue-800 border border-blue-200">
-                Store Operator: {report.vendorConfiguredCount} / {report.vendorRequiredCount}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 px-2.5 py-1 font-semibold text-purple-800 border border-purple-200">
-                Platform Admin: {report.platformConfiguredCount} / {report.platformRequiredCount}
+          ) : (
+            <div className="flex flex-col items-start gap-2 lg:items-end">
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
+                Staff Onboarding &amp; Operations Guide
               </span>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Overall Progress Bar */}
-        <div className="mt-6 space-y-2">
-          <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
-            <div
-              className={`h-full transition-all duration-500 ${
-                report.overallCompletion === 100
-                  ? "bg-emerald-600"
-                  : report.overallCompletion >= 60
-                    ? "bg-amber-500"
-                    : "bg-rose-600"
-              }`}
-              style={{ width: `${report.overallCompletion}%` }}
-            />
+        {/* Overall Progress Bar (Platform Admin only; benchmark link removed) */}
+        {isPlatformAdmin && (
+          <div className="mt-6 space-y-2">
+            <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
+              <div
+                className={`h-full transition-all duration-500 ${
+                  report.overallCompletion === 100
+                    ? "bg-emerald-600"
+                    : report.overallCompletion >= 60
+                      ? "bg-amber-500"
+                      : "bg-rose-600"
+                }`}
+                style={{ width: `${report.overallCompletion}%` }}
+              />
+            </div>
           </div>
-          <p className="text-xs text-slate-500">
-            Benchmarked against canonical operational profile:{" "}
-            <span className="font-semibold text-slate-700">
-              https://aheedfoodcentre.nocaped.com/
-            </span>
-          </p>
-        </div>
+        )}
 
-        {/* Navigation Tabs: Staff Guide vs Launch Audit */}
-        <div className="mt-8 border-t border-slate-100 pt-6">
-          <div className="flex flex-wrap gap-2 border-b border-black/10 pb-px">
-            <button
-              type="button"
-              onClick={() => setDashboardTab("guide")}
-              className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-bold transition ${
-                dashboardTab === "guide"
-                  ? "border-action text-action bg-action/5 rounded-t-xl"
-                  : "border-transparent text-primary-muted hover:text-primary"
-              }`}
-            >
-              <Icon name="book-open" className="h-4 w-4" />
-              Step-by-Step Staff Onboarding Guide
-            </button>
-            <button
-              type="button"
-              onClick={() => setDashboardTab("audit")}
-              className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-bold transition ${
-                dashboardTab === "audit"
-                  ? "border-action text-action bg-action/5 rounded-t-xl"
-                  : "border-transparent text-primary-muted hover:text-primary"
-              }`}
-            >
-              <Icon name="list-checks" className="h-4 w-4" />
-              Launch Readiness Checklist ({report.overallCompletion}%)
-            </button>
+        {/* Navigation Tabs: Staff Guide vs Launch Audit (Platform Admin only) */}
+        {isPlatformAdmin && (
+          <div className="mt-8 border-t border-slate-100 pt-6">
+            <div className="flex flex-wrap gap-2 border-b border-black/10 pb-px">
+              <button
+                type="button"
+                onClick={() => setDashboardTab("guide")}
+                className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-bold transition ${
+                  dashboardTab === "guide"
+                    ? "border-action text-action bg-action/5 rounded-t-xl"
+                    : "border-transparent text-primary-muted hover:text-primary"
+                }`}
+              >
+                <Icon name="book-open" className="h-4 w-4" />
+                Step-by-Step Staff Onboarding Guide
+              </button>
+              <button
+                type="button"
+                onClick={() => setDashboardTab("audit")}
+                className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-bold transition ${
+                  dashboardTab === "audit"
+                    ? "border-action text-action bg-action/5 rounded-t-xl"
+                    : "border-transparent text-primary-muted hover:text-primary"
+                }`}
+              >
+                <Icon name="list-checks" className="h-4 w-4" />
+                Launch Readiness Checklist ({report.overallCompletion}%)
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {dashboardTab === "audit" ? (
+        {isAuditView ? (
           /* Filter Navigation */
           <div className="mt-6 space-y-4 border-t border-slate-100 pt-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -281,17 +295,19 @@ export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDash
         ) : (
           <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
             <span>Operational onboarding guide for store staff and managers</span>
-            <button
-              onClick={() => setDashboardTab("audit")}
-              className="font-semibold text-action hover:underline"
-            >
-              Switch to Audit Checklist ({report.overallCompletion}% complete) →
-            </button>
+            {isPlatformAdmin && (
+              <button
+                onClick={() => setDashboardTab("audit")}
+                className="font-semibold text-action hover:underline"
+              >
+                Switch to Audit Checklist ({report.overallCompletion}% complete) →
+              </button>
+            )}
           </div>
         )}
       </div>
 
-      {dashboardTab === "guide" ? (
+      {!isAuditView ? (
         /* Sequential Staff Onboarding Guide */
         <div className="space-y-6">
           {/* Step 1 */}
@@ -487,9 +503,9 @@ export function OnboardingReadinessDashboard({ report }: OnboardingReadinessDash
                 artwork.
               </p>
               <p>
-                • <strong>Modal Inspector:</strong> Click any asset to preview it in a
-                high-resolution 320px circular medallion with theme tint selectors (Action, Accent,
-                Danger) and affected storefront surfaces.
+                • <strong>Quick View:</strong> Click any asset to preview it in a high-resolution
+                320px circular medallion with theme tint selectors (Action, Accent, Danger) and
+                affected storefront surfaces.
               </p>
             </div>
           </div>

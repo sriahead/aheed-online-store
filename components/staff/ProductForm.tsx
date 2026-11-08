@@ -235,6 +235,23 @@ export function ProductForm({
             </div>
 
             <div>
+              <label className={labelClass} htmlFor="vatRate">
+                VAT Rate (UK Compliance)
+              </label>
+              <select
+                id="vatRate"
+                name="vatRate"
+                defaultValue={product?.vatRate ?? 0}
+                {...fieldProps("vatRate")}
+              >
+                <option value={0}>0% VAT: Zero-rated domestic human food</option>
+                <option value={20}>
+                  20% VAT: Standard-rated (confectionery, alcohol &amp; non-food)
+                </option>
+              </select>
+            </div>
+
+            <div>
               <label className={labelClass} htmlFor="unitLabel">
                 Unit label — shown under the price
               </label>
@@ -336,7 +353,7 @@ export function ProductForm({
               </select>
               <p className="mt-1 text-xs text-black/60">
                 Tracked: sells while the stock count is above zero. Not tracked: sells without a
-                count. Unknown: not for sale.
+                count. Infinite: guaranteed unlimited stock. Unknown: not for sale.
               </p>
             </div>
 
