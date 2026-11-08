@@ -8,7 +8,7 @@ every branch merges.
 
 ### Added
 
-- **Cloudflare for SaaS Client Onboarding Runbook**
+- **Cloudflare for SaaS Client Onboarding Runbook (#1476)**
   - **Comprehensive Operational Runbook.** Added `docs/platform-admin-guide/cloudflare-saas-onboarding-runbook.md` establishing the canonical end-to-end standard operating procedure (SOP) for SaaS client onboarding from Cloudflare account creation, Free website container setup, zone delegation, fallback origin worker routing, custom hostnames, Neon database tenant mapping (`VendorDomain`), CDN asset WAF cross-domain permissions, and multi-tier verification probes.
   - **KMS Regeneration & Indexing.** Updated `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts` via `npm run kms:build-index` (323 registered artifacts) and verified clean static site compilation in `kms/site-internal`.
 
