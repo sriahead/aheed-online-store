@@ -1,7 +1,9 @@
 /** @vitest-environment jsdom */
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
+
+afterEach(cleanup);
 import { OnboardingReadinessDashboard } from "@/components/staff/OnboardingReadinessDashboard";
 import type { VendorReadinessReport } from "@/lib/vendor-readiness-service";
 import { computeVatBreakdown, computeTotals } from "@/lib/order-totals";
@@ -37,22 +39,43 @@ const mockReport: VendorReadinessReport = {
 };
 
 describe("1. Onboarding Page Visibility & Reference Removal", () => {
-  it("shows counts, statistics and responsibility breakdown only to Platform Admin", () => {
+  it("shows counts, statistics and launch readiness checklist to Platform Admin and Store Admin", () => {
+    // 1. Platform Admin view
     const { rerender } = render(
       <OnboardingReadinessDashboard report={mockReport} isPlatformAdmin={true} />,
     );
 
-    // Platform admin sees percentages and counts
     expect(screen.getByText("100%")).toBeDefined();
     expect(screen.getByText(/18 of 18 required items complete/i)).toBeDefined();
     expect(screen.getByText(/Store Operator: 14 \/ 14/i)).toBeDefined();
     expect(screen.getByText(/Platform Admin: 4 \/ 4/i)).toBeDefined();
     expect(screen.getByText(/Launch Readiness Checklist \(100%\)/i)).toBeDefined();
 
-    // Re-render as normal store staff / non-platform admin
-    rerender(<OnboardingReadinessDashboard report={mockReport} isPlatformAdmin={false} />);
+    // 2. Store Admin view (canViewChecklist = true)
+    rerender(
+      <OnboardingReadinessDashboard
+        report={mockReport}
+        isPlatformAdmin={false}
+        canViewChecklist={true}
+      />,
+    );
 
-    // Non-platform admin MUST NOT see the counts or statistics
+    expect(screen.getByText("100%")).toBeDefined();
+    expect(screen.getByText(/18 of 18 required items complete/i)).toBeDefined();
+    expect(screen.getByText(/Store Operator: 14 \/ 14/i)).toBeDefined();
+    expect(screen.getByText(/Platform Admin: 4 \/ 4/i)).toBeDefined();
+    expect(screen.getByText(/Launch Readiness Checklist \(100%\)/i)).toBeDefined();
+
+    // 3. Non-admin staff view (isPlatformAdmin = false, canViewChecklist = false)
+    rerender(
+      <OnboardingReadinessDashboard
+        report={mockReport}
+        isPlatformAdmin={false}
+        canViewChecklist={false}
+      />,
+    );
+
+    // Non-admin staff MUST NOT see the counts or statistics
     expect(screen.queryByText("100%")).toBeNull();
     expect(screen.queryByText(/18 of 18 required items complete/i)).toBeNull();
     expect(screen.queryByText(/Store Operator:/i)).toBeNull();
@@ -63,6 +86,26 @@ describe("1. Onboarding Page Visibility & Reference Removal", () => {
     expect(screen.queryByText(/\d+\/\d+ required/i)).toBeNull();
     expect(screen.getByText("Staff Onboarding & Operations Guide")).toBeDefined();
     expect(screen.getByText("System Access & Staff Navigation")).toBeDefined();
+  });
+
+  it("documents comprehensive configuration across Orders & Fulfilment, Offers & Loyalty, and Customers & Content in guide", () => {
+    render(<OnboardingReadinessDashboard report={mockReport} isPlatformAdmin={false} />);
+
+    // Step 7
+    expect(screen.getByText("Orders, Delivery & Fulfilment Operations")).toBeDefined();
+    expect(screen.getByText(/Orders Queue Workflow:/i)).toBeDefined();
+    expect(screen.getByText(/Slot Booking Schedules & Capacity:/i)).toBeDefined();
+
+    // Step 8
+    expect(screen.getByText("Offers, Loyalty & Promotions Configuration")).toBeDefined();
+    expect(screen.getByText(/Discount Voucher Codes:/i)).toBeDefined();
+    expect(screen.getByText(/Customer Loyalty Scheme:/i)).toBeDefined();
+
+    // Step 9
+    expect(screen.getByText("Customers, Reviews & Content Moderation")).toBeDefined();
+    expect(screen.getByText(/Customer Review Moderation:/i)).toBeDefined();
+    expect(screen.getByText(/Shopper Search Dictionary:/i)).toBeDefined();
+    expect(screen.getByText(/Help Centre & FAQs:/i)).toBeDefined();
   });
 
   it("completely removes the benchmarked against nocaped reference for all users", () => {
