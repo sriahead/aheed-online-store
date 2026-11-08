@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-08T10:42:26.242Z` · commit `8b9ef887` · `322` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-08T19:17:25.072Z` · commit `c3ca6bb5` · `323` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -344,6 +344,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Merqify Platform Terms of Service — Merchant Schedule & Tax Disclaimer](docs/legal/merchant-platform-terms.md) | doc | 1.0.0 | 2026-11-06 | review | internal | Contractual terms governing Merqify Ltd (Platform Provider) and merchants (Vendors), defining responsibilities for catalogue, pricing, and HMRC VAT compliance. |
 | [Operations & Fulfillment Procedures](docs/operations-research/operations-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for operations teams detailing the fulfillment lifecycle, stock management, and exception handling. |
 | [Order & Fulfilment Operations](docs/operations-research/order-fulfilment-core.md) | runbook | 1.1.0 | 2026-11-06 | approved | internal | Canonical rules for order status transitions, fulfilment slots, cancellations, and payment exceptions. |
+| [Cloudflare for SaaS Client Onboarding Runbook](docs/platform-admin-guide/cloudflare-saas-onboarding-runbook.md) | runbook | 1.0.0 | 2026-11-08 | approved | internal | Standard operating procedure for SaaS client onboarding from Cloudflare account creation, zone configuration, custom hostnames, Neon database mapping, to edge validation. |
 | [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.11.0 | 2026-11-05 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
 | [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.16.0 | 2026-11-05 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item. |
 | [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.21.0 | 2026-11-06 | approved | internal | How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access. |
