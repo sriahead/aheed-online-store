@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-06T19:56:59.392Z` · commit `bb9a621d` · `319` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-08T00:38:46.833Z` · commit `e9d774ba` · `319` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -329,11 +329,11 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Category Image Standards & Photography Guide](docs/client-help-centre/category-image-standards.md) | guide | 1.0.0 | 2026-10-27 | approved | internal | Technical image specifications, commercial studio photography standards, aspect ratios, candidate asset review, dedicated icon gallery, and onboarding requirements for store categories and departments. |
 | [Documentation Management & Governance Guide](docs/client-help-centre/documentation-management.md) | guide | 1.0.0 | 2026-10-26 | approved | internal | Governance, review workflows, freshness tracking, and restricted authoring procedures for the Knowledge Management System and in-app FAQs. |
 | [Store Features & Settings Reference Guide](docs/client-help-centre/features-settings-reference.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Detailed reference for store operating hours, delivery zone postcodes, fulfilment time slots, loyalty rules, and discount configurations. |
-| [Client Onboarding & Store Launch Readiness](docs/client-help-centre/getting-started-onboarding.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Step-by-step onboarding guide, store configuration sequence, and pre-launch audit checklists for store operators and platform administrators. |
+| [Client Onboarding & Store Launch Readiness](docs/client-help-centre/getting-started-onboarding.md) | guide | 2.0.0 | 2026-11-08 | approved | internal | Step-by-step onboarding guide, practical operational workflows, brand management, visual asset curation, catalogue publishing rules, and pre-launch audit checklists for store operators and new staff. |
 | [Platform Glossary & Release Notes](docs/client-help-centre/glossary-and-release-notes.md) | doc | 1.0.0 | 2026-10-25 | approved | internal | Platform terminology definitions, monetary conventions (integer pence), status indicator meanings, and recent feature release milestones. |
 | [Icon & Visual Asset Standards Guide](docs/client-help-centre/icon-and-visual-asset-standards.md) | guide | 1.2.0 | 2026-10-27 | approved | internal | Technical specifications, photorealistic 3D rendering guidelines, lighting models, alpha transparency cutouts, dedicated icon gallery, and client onboarding requirements for store icons and UI visual assets. |
 | [Platform Integrations & Technical Seams Guide](docs/client-help-centre/integrations-guide.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Setup instructions, architecture seams, configuration, and troubleshooting for Stripe, Cloudflare Workers AI, Better Auth, and WhatsApp support. |
-| [Products & Catalogue Management Guide](docs/client-help-centre/products-catalogue-guide.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Complete guide to catalogue management, bulk Excel spreadsheet imports, template specifications, validation error handling, and stock controls. |
+| [Products & Catalogue Management Guide](docs/client-help-centre/products-catalogue-guide.md) | guide | 2.0.0 | 2026-11-08 | approved | internal | Complete guide to catalogue management, brand assignment, stock creation, mandatory fields, VAT compliance, publication criteria, and stock safeguards. |
 | [Roles & Permissions Reference Matrix](docs/client-help-centre/roles-permissions-matrix.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Comprehensive matrix of platform roles (Platform Admin, Store Admin, Staff, Customer), capability boundaries, and tenant isolation rules. |
 | [Store Operations Troubleshooting & Escalation Matrix](docs/client-help-centre/troubleshooting-escalation.md) | runbook | 1.0.0 | 2026-10-25 | approved | internal | Diagnostic procedures, symptoms, root causes, corrective actions, and support escalation paths for store operators and technical administrators. |
 | [Store Operations Tutorials & FAQ Management](docs/client-help-centre/tutorials-and-faqs.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Step-by-step tutorials for common operational workflows and instructions for managing customer FAQs via the in-app CMS. |
