@@ -2104,6 +2104,8 @@ export interface AdminProductDetail {
   isActive: boolean;
   /** #1135 — this product takes a shopper note. */
   allowsCustomNote: boolean;
+  /** Product-level VAT rate: 0 or 20. */
+  vatRate: number;
   /** #1211 — the restriction, if any; the form's enable control is decided from it. */
   restriction: ProductRestriction | null;
   quantity: number;
@@ -2160,6 +2162,7 @@ export interface ProductWriteInput {
   isActive: boolean;
   /** #1135 — this product takes a shopper note. Absent leaves the stored value alone on update. */
   allowsCustomNote?: boolean;
+  vatRate?: number;
   quantity: number;
   /**
    * #1211 — required, so a form-driven Inventory write always states its mode and can never fall
@@ -2466,6 +2469,7 @@ export async function getProductForAdmin(
       isFeatured: true,
       isActive: true,
       allowsCustomNote: true,
+      vatRate: true,
       imageNeedsReview: true,
       restriction: true,
       inventory: {
@@ -2655,6 +2659,7 @@ export async function createProductForVendor(
         isFeatured: input.isFeatured,
         isActive: input.isActive,
         allowsCustomNote: input.allowsCustomNote,
+        vatRate: input.vatRate ?? 0,
         inventory: {
           create: {
             vendorId,
@@ -2799,6 +2804,7 @@ export async function updateProductForVendor(
           isFeatured: input.isFeatured,
           isActive: input.isActive,
           allowsCustomNote: input.allowsCustomNote,
+          ...(input.vatRate !== undefined ? { vatRate: input.vatRate } : {}),
           isManuallyEdited: true,
           manuallyEditedFields: Array.from(fieldSet),
           lastManualEditAt: new Date(),

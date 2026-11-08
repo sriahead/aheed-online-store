@@ -98,6 +98,72 @@ export function computeTotals(
   };
 }
 
+export interface VatBreakdown {
+  zeroRatedNetPence: number;
+  standardRatedNetPence: number;
+  vatStandardPence: number;
+  vatZeroPence: number;
+  vatTotalPence: number;
+}
+
+/**
+ * Computes UK VAT breakdown across grocery order lines.
+ * In UK grocery retail, shelf prices are VAT-inclusive (gross).
+ * - Zero-rated (0% VAT): domestic human food, produce, grains, etc.
+ * - Standard-rated (20% VAT): confectionery, soft drinks, alcohol, non-food, etc.
+ *   VAT fraction = 20 / 120 (1/6) of standard-rated gross.
+ */
+export function computeVatBreakdown(
+  lines: Array<{
+    unitPricePence: number;
+    quantity: number;
+    available?: boolean;
+    lineTotalPence?: number;
+    vatRate?: number | null;
+  }>,
+  appliedDiscountPence = 0,
+): VatBreakdown {
+  let rawZeroGross = 0;
+  let rawStandardGross = 0;
+
+  for (const line of lines) {
+    if (line.available === false) continue;
+    const amount = line.lineTotalPence ?? line.unitPricePence * line.quantity;
+    const rate = line.vatRate ?? 0;
+    if (rate === 20) {
+      rawStandardGross += amount;
+    } else {
+      rawZeroGross += amount;
+    }
+  }
+
+  const subtotal = rawZeroGross + rawStandardGross;
+  let standardGross = rawStandardGross;
+  let zeroGross = rawZeroGross;
+
+  // Allocate discount proportionally between standard-rated and zero-rated lines
+  if (appliedDiscountPence > 0 && subtotal > 0) {
+    const discount = Math.min(appliedDiscountPence, subtotal);
+    const standardDiscount = Math.round((rawStandardGross / subtotal) * discount);
+    standardGross = Math.max(0, rawStandardGross - standardDiscount);
+    zeroGross = Math.max(0, rawZeroGross - (discount - standardDiscount));
+  }
+
+  const vatStandardPence = Math.round((standardGross * 20) / 120);
+  const standardRatedNetPence = standardGross - vatStandardPence;
+  const zeroRatedNetPence = zeroGross;
+  const vatZeroPence = 0;
+  const vatTotalPence = vatStandardPence;
+
+  return {
+    zeroRatedNetPence,
+    standardRatedNetPence,
+    vatStandardPence,
+    vatZeroPence,
+    vatTotalPence,
+  };
+}
+
 /**
  * The discount code applied to an order, as an order page needs to render it.
  * `amountPence` is the SNAPSHOT stored on `DiscountRedemption` at redemption —

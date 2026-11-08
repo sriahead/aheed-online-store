@@ -8,6 +8,17 @@ every branch merges.
 
 ### Added
 
+- **Application Improvements: Onboarding Visibility, Quick View, Product VAT & Infinite Stock (#1470)**
+  - **Onboarding Page Visibility Restriction.** Restricted all completion percentages, counts, statistics, and responsibility breakdown metrics on `/staff/onboarding` to Platform Admin (`isPlatformAdmin = auth.via === "platform-admin"`). Other staff roles receive a clean, focused step-by-step onboarding walkthrough without internal operational percentages.
+  - **Benchmark Reference Removal.** Completely eliminated the unwanted benchmark link and text reference (`Benchmarked against canonical operational profile: https://aheedfoodcentre.nocaped.com/`) from the codebase.
+  - **Quick View Standardization.** Renamed "Modal Inspector" to "Quick View" across the application, visual asset gallery, staff runbooks, and KMS guides. Added full Quick View modal preview to `/staff/icons` featuring a 320px circular medallion, theme tint selectors (Action, Accent, Danger), and live storefront surfaces affected.
+  - **Product VAT Compliance & Configuration.** Supported configurable product-level VAT rates in product creation and editing (`/staff/products/new`, `/staff/products/[id]`): 0% VAT (Zero-rated domestic human food) and 20% VAT (Standard-rated confectionery, alcohol, and non-food items).
+  - **INFINITE Stock Mode.** Added `INFINITE` to `StockMode` enum and UI options for staple products with guaranteed unlimited availability, allowing them to bypass normal stock quantity decrements while remaining constantly purchasable up to the per-line cap.
+  - **Checkout VAT Breakdown & Order Audit Snapshot.** Implemented `computeVatBreakdown` in `lib/order-totals.ts`, displayed clear UK VAT summary in `CheckoutSummary.tsx` showing VAT included in order totals, and persisted VAT audit snapshots (`vatTotalPence`, `vatStandardPence`, `vatZeroPence` on `Order`; `vatRate`, `vatPence` on `OrderItem`) for accounting and reporting.
+  - **Hand-Authored Schema Migration.** Authored `prisma/migrations/20261108060000_order_vat_and_infinite_stock/migration.sql` adding `INFINITE` to `StockMode` and VAT columns to `Order` and `OrderItem`.
+  - **Documentation & KMS Guides Updated.** Updated `docs/client-help-centre/getting-started-onboarding.md`, `icon-and-visual-asset-standards.md`, `components/help/RoleJourneyMaps.tsx`, and regenerated index artefacts via `npm run kms:build-index`.
+  - **Automated Verification.** Authored comprehensive test suite in `tests/app-improvements-vat-quickview-onboarding.test.tsx` and extended `tests/cart-rules.test.ts`.
+
 - **Platform Documentation Review & Comprehensive Update (#1468)**
   - **Storefront Help Centre Journey Alignment.** Updated `components/help/RoleJourneyMaps.tsx` with dedicated operational workflows for Store Staff and Store Administrators covering brand creation, logo uploads, visual asset studio curation, product creation, stock tracking modes, and storefront publication rules.
   - **Interactive Staff Onboarding Workflow UI.** Enhanced `components/staff/OnboardingReadinessDashboard.tsx` with an interactive "Step-by-Step Staff Onboarding Guide" tab on `/staff/onboarding`, giving new team members sequential instructions and deep links across 6 operational phases.

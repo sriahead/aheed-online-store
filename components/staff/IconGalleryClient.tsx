@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons/Icon";
-import { IconMedallion } from "@/components/icons/IconMedallion";
+import { IconMedallion, type MedallionTint } from "@/components/icons/IconMedallion";
 import {
   FLAT_ICON_SLOTS,
   ICON_3D_SLOTS,
@@ -115,6 +115,7 @@ export function IconGalleryClient({
   const [selectedAssetForPreview, setSelectedAssetForPreview] = useState<CategoryAssetItem | null>(
     null,
   );
+  const [previewTint, setPreviewTint] = useState<MedallionTint>("action");
 
   // Quick generator state
   const [targetType, setTargetType] = useState<"category" | "slot" | "brand">("category");
@@ -1215,6 +1216,7 @@ export function IconGalleryClient({
                   onClick={() => setSelectedAssetForPreview(asset)}
                   className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-surface-muted focus:outline-none focus:ring-2 focus:ring-action"
                   title="Click to preview full asset"
+                  aria-label="Quick View"
                 >
                   {asset.imageUrl ? (
                     <IconMedallion
@@ -1305,7 +1307,8 @@ export function IconGalleryClient({
                     <button
                       type="button"
                       onClick={() => setSelectedAssetForPreview(asset)}
-                      title="Inspect asset"
+                      title="Quick View"
+                      aria-label="Quick View"
                       className="rounded-lg p-1 text-black/60 hover:bg-black/5 hover:text-black"
                     >
                       <Icon name="eye" className="h-3.5 w-3.5" />
@@ -1349,19 +1352,24 @@ export function IconGalleryClient({
           <div className="relative z-10 w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-black/10 pb-3">
               <div>
-                <h3 id="asset-preview-modal-title" className="text-base font-bold text-primary">
-                  {(() => {
-                    if (selectedAssetForPreview.category?.name) {
-                      return selectedAssetForPreview.category.name;
-                    }
-                    if (selectedAssetForPreview.slot?.startsWith("brand:")) {
-                      const slug = selectedAssetForPreview.slot.replace("brand:", "");
-                      const b = brands.find((brand) => brand.slug === slug);
-                      return `Brand: ${b?.name || slug}`;
-                    }
-                    return selectedAssetForPreview.slot || "Asset Preview";
-                  })()}
-                </h3>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-md bg-action/10 px-2 py-0.5 text-[11px] font-bold text-action uppercase tracking-wide">
+                    Quick View
+                  </span>
+                  <h3 id="asset-preview-modal-title" className="text-base font-bold text-primary">
+                    {(() => {
+                      if (selectedAssetForPreview.category?.name) {
+                        return selectedAssetForPreview.category.name;
+                      }
+                      if (selectedAssetForPreview.slot?.startsWith("brand:")) {
+                        const slug = selectedAssetForPreview.slot.replace("brand:", "");
+                        const b = brands.find((brand) => brand.slug === slug);
+                        return `Brand: ${b?.name || slug}`;
+                      }
+                      return selectedAssetForPreview.slot || "Asset Preview";
+                    })()}
+                  </h3>
+                </div>
                 <span className="text-xs text-primary-muted uppercase font-semibold">
                   Style: {selectedAssetForPreview.style}
                 </span>
@@ -1369,10 +1377,32 @@ export function IconGalleryClient({
               <button
                 type="button"
                 onClick={() => setSelectedAssetForPreview(null)}
+                aria-label="Close Quick View"
                 className="rounded-full p-1.5 text-black/60 hover:bg-black/5"
               >
                 <Icon name="x" className="h-5 w-5" />
               </button>
+            </div>
+
+            {/* Theme Tint Selector Chips */}
+            <div className="flex items-center justify-between rounded-xl bg-surface-muted px-3 py-2">
+              <span className="text-xs font-bold text-primary">Theme Tint:</span>
+              <div className="flex items-center gap-1.5">
+                {(["action", "accent", "danger"] as const).map((tint) => (
+                  <button
+                    key={tint}
+                    type="button"
+                    onClick={() => setPreviewTint(tint)}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-bold capitalize transition ${
+                      previewTint === tint
+                        ? "bg-slate-900 text-white shadow-sm ring-2 ring-slate-900 ring-offset-1"
+                        : "bg-white text-primary-muted border border-black/10 hover:bg-black/5"
+                    }`}
+                  >
+                    {tint}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-surface-muted flex items-center justify-center">
@@ -1382,9 +1412,15 @@ export function IconGalleryClient({
                   fallbackIcon="folder-tree"
                   size={PREVIEW_MEDALLION_SIZE}
                   label="High resolution preview"
+                  tint={previewTint}
                 />
               ) : (
-                <IconMedallion icon="folder-tree" size={PREVIEW_MEDALLION_SIZE} decorative />
+                <IconMedallion
+                  icon="folder-tree"
+                  size={PREVIEW_MEDALLION_SIZE}
+                  decorative
+                  tint={previewTint}
+                />
               )}
             </div>
 
@@ -1402,7 +1438,7 @@ export function IconGalleryClient({
                 {selectedAssetForPreview.isSelected ? "Active Primary" : "Candidate"}
               </div>
               <div className="pt-2 border-t border-black/10">
-                <strong className="text-primary font-sans">Storefront Surface Mapping:</strong>
+                <strong className="text-primary font-sans">Storefront Surfaces Affected:</strong>
                 <div className="mt-1 flex flex-wrap gap-1 font-sans">
                   {getSurfacesForAsset(selectedAssetForPreview).map((surface, idx) => (
                     <span

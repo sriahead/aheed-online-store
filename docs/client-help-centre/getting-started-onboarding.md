@@ -91,7 +91,7 @@ Visual assets provide clear, polished navigation for shoppers across all departm
 4. **Deactivate vs Delete:**
    - **Deactivate:** Reverts the slot or category to the default static icon without removing the artwork from storage.
    - **Delete:** Permanently removes the asset from R2 storage and the relational asset ledger.
-5. **Modal Inspector:** Click any asset card to open the 320px high-resolution medallion inspector, preview theme tint effects (*Action*, *Accent*, *Danger*), and view live storefront surfaces.
+5. **Quick View:** Click any asset card to open the 320px high-resolution medallion Quick View, preview theme tint effects (*Action*, *Accent*, *Danger*), and view live storefront surfaces affected.
 
 ---
 

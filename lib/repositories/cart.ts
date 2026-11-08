@@ -82,6 +82,8 @@ export interface CartLine {
   stock: number;
   /** false when the product went inactive or out of stock while sitting in the cart */
   available: boolean;
+  /** Product VAT rate: 0 or 20. */
+  vatRate?: number;
   /** #1135 — the shopper's note on this line, or null. */
   customNote: string | null;
   /**
@@ -245,6 +247,7 @@ async function decorate(
       name: true,
       unitLabel: true,
       basePrice: true,
+      vatRate: true,
       ...PURCHASABILITY_SELECT,
       ...NOTE_ACCEPTANCE_SELECT,
       images: {
@@ -280,6 +283,7 @@ async function decorate(
         name: p.name,
         unitLabel: p.unitLabel,
         unitPricePence: p.basePrice,
+        vatRate: p.vatRate ?? 0,
         quantity: item.quantity,
         lineTotalPence: tieredLineTotalPence(p.basePrice, item.quantity, tier),
         tierSavingPence: tierSavingPence(p.basePrice, item.quantity, tier),

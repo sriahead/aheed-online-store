@@ -1268,6 +1268,7 @@ enum StockMode {
   UNKNOWN
   TRACKED
   UNTRACKED
+  INFINITE
 }
 
 enum ProductRestrictionAuditAction {
@@ -1646,6 +1647,10 @@ model Order {
   discountPence        Int                     @default(0)
   deliveryFeePence     Int
   totalPence           Int
+  // VAT breakdown (pence) snapshot at checkout
+  vatTotalPence        Int                     @default(0)
+  vatStandardPence     Int                     @default(0)
+  vatZeroPence         Int                     @default(0)
   createdAt            DateTime                @default(now())
   updatedAt            DateTime                @updatedAt
   items                OrderItem[]
@@ -1680,6 +1685,8 @@ model OrderItem {
   unitPricePence Int
   quantity       Int
   lineTotalPence Int
+  vatRate        Int     @default(0)
+  vatPence       Int     @default(0)
   // #1135 — snapshot of the basket line's note, written by placeOrder only when the product still
   // accepted notes at that instant. Personal data: exported and nulled by erasure (data-rights.ts).
   customNote     String?

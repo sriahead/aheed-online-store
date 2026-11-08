@@ -42,6 +42,16 @@ describe("purchasableQuantity — stock states (ADR-007 Decision 4)", () => {
       { stockMode: "UNTRACKED", quantity: -5 },
       99,
     ],
+    [
+      "INFINITE: guaranteed unlimited availability, returns MAX_ADD_QUANTITY",
+      { stockMode: "INFINITE", quantity: 0 },
+      MAX_ADD_QUANTITY,
+    ],
+    [
+      "INFINITE with zero or negative quantity: still MAX_ADD_QUANTITY",
+      { stockMode: "INFINITE", quantity: -10 },
+      MAX_ADD_QUANTITY,
+    ],
   ])("%s", (_label, inventory, expected) => {
     expect(purchasableQuantity(live(inventory))).toBe(expected);
   });
@@ -74,8 +84,8 @@ describe("stockModeOf / isStockMode", () => {
     expect(stockModeOf({ stockMode: "UNTRACKED", quantity: 0 })).toBe("UNTRACKED");
   });
 
-  it("accepts exactly the three modes", () => {
-    expect(["TRACKED", "UNTRACKED", "UNKNOWN"].every(isStockMode)).toBe(true);
+  it("accepts exactly the four modes", () => {
+    expect(["TRACKED", "UNTRACKED", "INFINITE", "UNKNOWN"].every(isStockMode)).toBe(true);
     expect(isStockMode("FOO")).toBe(false);
     expect(isStockMode("tracked")).toBe(false);
     expect(isStockMode(undefined)).toBe(false);
