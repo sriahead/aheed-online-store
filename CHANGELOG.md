@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Staff Onboarding Menu Coverage Expansion & Store Admin Readiness Checklist Access**
+  - **Store Admin Launch Readiness Checklist Access.** Updated `app/(admin)/staff/onboarding/page.tsx` and `OnboardingReadinessDashboard.tsx` to grant Store Administrators (`ADMIN` vendor role) access to the Launch Readiness Checklist, completion score, requirement breakdown, and the 8 category audit cards alongside Platform Admin, while keeping internal metrics hidden from standard store staff (`STAFF`).
+  - **Orders, Delivery & Fulfilment Operations (Step 7).** Integrated comprehensive operational onboarding procedures for `/staff/orders` (status lane transitions), `/staff/fulfilment` (delivery windows, capacity limits, collection cut-offs), and `/staff/payments` (transaction logs, reconciliation).
+  - **Offers, Loyalty & Promotions Configuration (Step 8).** Added operational walkthroughs for `/staff/discounts` (promo coupon creation, spend minimums), `/staff/promotions` (campaign banners), `/staff/bundles` (multi-buys and meal kits), and `/staff/loyalty` (points earn/burn ratios and membership tiers).
+  - **Customers, Reviews & Content Moderation (Step 9).** Added operational instructions for `/staff/feedback` (review moderation), `/staff/search-synonyms` (multilingual desi search mappings), `/staff/faqs` (customer help entries), `/staff/customers` (shopper lifetime values), and `/staff/assistant` (storefront chat assistant).
+  - **Documentation & Verification.** Updated `docs/client-help-centre/getting-started-onboarding.md`, rebuilt KMS indexes, and extended `tests/app-improvements-vat-quickview-onboarding.test.tsx` verifying dual Platform/Store Admin checklist visibility and non-admin staff restrictions.
+
 - **Application Improvements: Onboarding Visibility, Quick View, Product VAT & Infinite Stock (#1470)**
   - **Onboarding Page Visibility Restriction.** Restricted all completion percentages, counts, statistics, and responsibility breakdown metrics on `/staff/onboarding` to Platform Admin (`isPlatformAdmin = auth.via === "platform-admin"`). Other staff roles receive a clean, focused step-by-step onboarding walkthrough without internal operational percentages.
   - **Benchmark Reference Removal.** Completely eliminated the unwanted benchmark link and text reference (`Benchmarked against canonical operational profile: https://aheedfoodcentre.nocaped.com/`) from the codebase.

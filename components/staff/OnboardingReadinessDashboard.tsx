@@ -14,18 +14,21 @@ import type {
 interface OnboardingReadinessDashboardProps {
   report: VendorReadinessReport;
   isPlatformAdmin?: boolean;
+  canViewChecklist?: boolean;
 }
 
 export function OnboardingReadinessDashboard({
   report,
   isPlatformAdmin = false,
+  canViewChecklist = false,
 }: OnboardingReadinessDashboardProps) {
   const [dashboardTab, setDashboardTab] = useState<"guide" | "audit">("guide");
   const [filter, setFilter] = useState<"ALL" | "MISSING" | "CONFIGURED" | "PLANNED">("ALL");
   const [roleFilter, setRoleFilter] = useState<"ALL" | SettingOwner>("ALL");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  const isAuditView = Boolean(isPlatformAdmin && dashboardTab === "audit");
+  const hasAdminAccess = Boolean(isPlatformAdmin || canViewChecklist);
+  const isAuditView = Boolean(hasAdminAccess && dashboardTab === "audit");
 
   const getStatusBadge = (status: SettingStatus) => {
     switch (status) {
@@ -101,7 +104,7 @@ export function OnboardingReadinessDashboard({
               <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
                 {report.vendorName}
               </h1>
-              {isPlatformAdmin && getReadinessBadge()}
+              {hasAdminAccess && getReadinessBadge()}
             </div>
             <p className="text-sm text-slate-600">
               Host:{" "}
@@ -123,7 +126,7 @@ export function OnboardingReadinessDashboard({
             </div>
           </div>
 
-          {isPlatformAdmin ? (
+          {hasAdminAccess ? (
             <div className="flex flex-col items-start gap-4 lg:items-end">
               <div className="text-left lg:text-right">
                 <div className="text-3xl font-black text-slate-900">
@@ -154,8 +157,8 @@ export function OnboardingReadinessDashboard({
           )}
         </div>
 
-        {/* Overall Progress Bar (Platform Admin only; benchmark link removed) */}
-        {isPlatformAdmin && (
+        {/* Overall Progress Bar (Store Admin & Platform Admin; benchmark link removed) */}
+        {hasAdminAccess && (
           <div className="mt-6 space-y-2">
             <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
               <div
@@ -172,8 +175,8 @@ export function OnboardingReadinessDashboard({
           </div>
         )}
 
-        {/* Navigation Tabs: Staff Guide vs Launch Audit (Platform Admin only) */}
-        {isPlatformAdmin && (
+        {/* Navigation Tabs: Staff Guide vs Launch Audit */}
+        {hasAdminAccess && (
           <div className="mt-8 border-t border-slate-100 pt-6">
             <div className="flex flex-wrap gap-2 border-b border-black/10 pb-px">
               <button
@@ -295,7 +298,7 @@ export function OnboardingReadinessDashboard({
         ) : (
           <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
             <span>Operational onboarding guide for store staff and managers</span>
-            {isPlatformAdmin && (
+            {hasAdminAccess && (
               <button
                 onClick={() => setDashboardTab("audit")}
                 className="font-semibold text-action hover:underline"
@@ -656,6 +659,246 @@ export function OnboardingReadinessDashboard({
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+
+          {/* Step 7 */}
+          <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+                  7
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Orders, Delivery &amp; Fulfilment Operations
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Process daily incoming orders, configure slot schedules, and monitor payment
+                    health
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/staff/orders"
+                  className="inline-flex items-center gap-1 rounded-xl bg-action px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:opacity-95 transition"
+                >
+                  Orders Queue →
+                </Link>
+                <Link
+                  href="/staff/fulfilment"
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-200 transition"
+                >
+                  Fulfilment Settings →
+                </Link>
+              </div>
+            </div>
+            <div className="mt-4 space-y-2 text-sm text-slate-600">
+              <p>
+                • <strong>Orders Queue Workflow:</strong> Open{" "}
+                <Link href="/staff/orders" className="text-action underline">
+                  /staff/orders
+                </Link>{" "}
+                to monitor live incoming orders. Orders progress through sequential states:{" "}
+                <code>PLACED</code> → <code>CONFIRMED</code> → <code>PREPARING</code> →{" "}
+                <code>READY_FOR_COLLECTION</code> or <code>OUT_FOR_DELIVERY</code> →{" "}
+                <code>COMPLETED</code>. Inspect picking lists, customer address details, and
+                delivery instructions for each order.
+              </p>
+              <p>
+                • <strong>Slot Booking Schedules &amp; Capacity:</strong> In{" "}
+                <Link href="/staff/fulfilment" className="text-action underline">
+                  /staff/fulfilment
+                </Link>
+                , configure recurring delivery and collection slots, specify order capacity limits
+                per window to avoid bottlenecking, and define weekly schedules.
+              </p>
+              <p>
+                • <strong>Booking Cut-Off Buffers:</strong> Enforce lead-time cut-offs (e.g. 60
+                minutes) ensuring customers cannot book time slots that have already started or
+                start too soon for staff to pick and pack.
+              </p>
+              <p>
+                • <strong>Payment Issues &amp; Stranded Orders:</strong> In{" "}
+                <Link href="/staff/payments" className="text-action underline">
+                  /staff/payments
+                </Link>
+                , review payment gateway authorization logs, check for refused or pending charges,
+                and assist shoppers whose payments encountered banking errors.
+              </p>
+            </div>
+          </div>
+
+          {/* Step 8 */}
+          <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+                  8
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Offers, Loyalty &amp; Promotions Configuration
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Configure voucher promo codes, department campaigns, bundle deals, and loyalty
+                    tiers
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/staff/discounts"
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-200 transition"
+                >
+                  Discounts →
+                </Link>
+                <Link
+                  href="/staff/promotions"
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-200 transition"
+                >
+                  Promotions →
+                </Link>
+                <Link
+                  href="/staff/bundles"
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-200 transition"
+                >
+                  Bundles →
+                </Link>
+                <Link
+                  href="/staff/loyalty"
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-200 transition"
+                >
+                  Loyalty →
+                </Link>
+              </div>
+            </div>
+            <div className="mt-4 space-y-2 text-sm text-slate-600">
+              <p>
+                • <strong>Discount Voucher Codes:</strong> In{" "}
+                <Link href="/staff/discounts" className="text-action underline">
+                  /staff/discounts
+                </Link>
+                , create promotional codes customers enter at checkout. Specify percentage off or
+                fixed amount in pence, minimum basket spend, start and end dates, overall redemption
+                caps, and per-shopper usage limits.
+              </p>
+              <p>
+                • <strong>Department Campaigns &amp; Banners:</strong> In{" "}
+                <Link href="/staff/promotions" className="text-action underline">
+                  /staff/promotions
+                </Link>
+                , publish headline promotional banners across department pages highlighting seasonal
+                lines, holiday discounts, and bulk purchases.
+              </p>
+              <p>
+                • <strong>Multi-Product Meal Bundles:</strong> In{" "}
+                <Link href="/staff/bundles" className="text-action underline">
+                  /staff/bundles
+                </Link>
+                , create curated packages (e.g. dinner sets, fruit boxes, family bundles) with fixed
+                bundle pricing and linked catalogue components to boost basket sizes.
+              </p>
+              <p>
+                • <strong>Customer Loyalty Scheme:</strong> In{" "}
+                <Link href="/staff/loyalty" className="text-action underline">
+                  /staff/loyalty
+                </Link>
+                , configure the earn rate (points earned per £1 spent), redemption value (monetary
+                worth of points applied at checkout), customer tier thresholds (Bronze, Silver,
+                Gold), and point multipliers. Switching loyalty off cleanly hides rewards across the
+                storefront while keeping accumulated shopper balances safe.
+              </p>
+            </div>
+          </div>
+
+          {/* Step 9 */}
+          <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+                  9
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Customers, Reviews &amp; Content Moderation
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Moderate customer reviews, configure search synonyms, maintain help FAQs, and
+                    view customer histories
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/staff/feedback"
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-200 transition"
+                >
+                  Reviews Moderation →
+                </Link>
+                <Link
+                  href="/staff/search-synonyms"
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-200 transition"
+                >
+                  Search Synonyms →
+                </Link>
+                <Link
+                  href="/staff/faqs"
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-200 transition"
+                >
+                  Help FAQs →
+                </Link>
+                <Link
+                  href="/staff/customers"
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-200 transition"
+                >
+                  Customers →
+                </Link>
+              </div>
+            </div>
+            <div className="mt-4 space-y-2 text-sm text-slate-600">
+              <p>
+                • <strong>Customer Review Moderation:</strong> In{" "}
+                <Link href="/staff/feedback" className="text-action underline">
+                  /staff/feedback
+                </Link>
+                , review shopper product ratings and text feedback. All customer reviews remain in a
+                pending queue and are never visible on the public storefront until approved by store
+                staff.
+              </p>
+              <p>
+                • <strong>Shopper Search Dictionary:</strong> In{" "}
+                <Link href="/staff/search-synonyms" className="text-action underline">
+                  /staff/search-synonyms
+                </Link>
+                , add regional spellings, colloquial ingredient terms, and brand aliases to ensure
+                customer searches never return empty results.
+              </p>
+              <p>
+                • <strong>Help Centre &amp; FAQs:</strong> In{" "}
+                <Link href="/staff/faqs" className="text-action underline">
+                  /staff/faqs
+                </Link>
+                , maintain answers to customer questions regarding delivery policies, collection
+                points, return policies, and store operating hours.
+              </p>
+              <p>
+                • <strong>Customer Accounts &amp; Spend Profiles:</strong> In{" "}
+                <Link href="/staff/customers" className="text-action underline">
+                  /staff/customers
+                </Link>
+                , view registered shopper accounts, lifetime order values, order frequencies, and
+                loyalty standing.
+              </p>
+              <p>
+                • <strong>Storefront Help Assistant:</strong> In{" "}
+                <Link href="/staff/assistant" className="text-action underline">
+                  /staff/assistant
+                </Link>
+                , enable or disable the interactive storefront chat assistant and inspect common
+                queries to identify content gaps.
+              </p>
             </div>
           </div>
         </div>
