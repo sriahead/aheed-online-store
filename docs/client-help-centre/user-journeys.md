@@ -81,13 +81,13 @@ flowchart TD
 ```mermaid
 flowchart TD
     VA1["1. Sign In to Store Host<br/>(/login)"] --> VA2["2. Check Onboarding Readiness<br/>(/staff/onboarding)"]
-    VA2 --> VA3["3. Configure Storefront Profile & Themes<br/>(/staff/storefront)"]
-    VA3 --> VA4["4. Set Delivery Areas & Postcodes<br/>(/staff/delivery-areas)"]
-    VA4 --> VA5["5. Set Fulfilment Windows<br/>(/staff/fulfilment)"]
-    VA5 --> VA6["6. Populate Product Catalogue<br/>(/staff/products & /staff/products/import)"]
-    VA6 --> VA7["7. Configure Pricing, Discounts & Loyalty<br/>(/staff/discounts & /staff/loyalty)"]
-    VA7 --> VA8["8. Onboard Operational Staff<br/>(/staff/team)"]
-    VA8 --> VA9["9. Set Help Answers<br/>(/staff/faqs)"]
+    VA2 --> VA3["3. Configure Profile & Themes<br/>(/staff/storefront)"]
+    VA3 --> VA4["4. Set Delivery Areas & Fulfilment<br/>(/staff/delivery-areas & /staff/fulfilment)"]
+    VA4 --> VA5["5. Create & Manage Brands<br/>(/staff/brands)"]
+    VA5 --> VA6["6. Curate Category Icons & Assets<br/>(/staff/icons)"]
+    VA6 --> VA7["7. Populate Catalogue & Assign Brands<br/>(/staff/products & /staff/products/import)"]
+    VA7 --> VA8["8. Verify Publication Rules & Safeguards<br/>(Stock Safeguard, Active Categories)"]
+    VA8 --> VA9["9. Discounts, Loyalty & Staff Team<br/>(/staff/discounts, /staff/loyalty, /staff/team)"]
     VA9 --> VA10["10. Final Pre-Flight Launch Audit<br/>(Readiness Score = 100%)"]
 ```
 
@@ -100,14 +100,34 @@ flowchart TD
    - Adjust individual brand colors (green, orange, red, cream, and tints) and save custom themes.
    - **Delete Custom Themes:** Select any custom saved theme and click **Delete Theme** to remove unused palettes. Global presets remain permanently available and protected.
    - Configure weekly trading hours, collection lead times, and holiday overrides.
-4. **Delivery Areas & Postcodes (`/staff/delivery-areas`):** Define covered postcode prefixes (e.g. `E1`, `E2`), minimum basket thresholds, standard delivery fees, and free-delivery thresholds.
-5. **Fulfilment Windows (`/staff/fulfilment`):** Configure standard delivery windows, click-and-collect time slots, and express collection lead times.
-6. **Catalogue Management (`/staff/products` & `/staff/products/import`):** Add individual items or upload bulk inventory spreadsheets (`.xlsx`/`.xls`). Review barcode matches, VAT rates, and net-content suggestions (`/staff/net-content`).
-7. **Discounts & Loyalty (`/staff/discounts`, `/staff/loyalty`):** Set up promotional coupon codes, percentage/fixed discounts, customer referral codes, and optional loyalty tier point multipliers.
-8. **Invite Team (`/staff/team`):** Invite staff members, assign `STAFF` vs `ADMIN` roles, or revoke access.
-9. **Help & FAQs (`/staff/faqs`):** Author store-specific answers to common customer questions. Toggle Storefront Assistant (`/staff/assistant`) on/off.
-10. **Review Feature Catalogue (`/staff/feature-catalogue`):** Explore live and planned features, business benefits, and demonstration talking points across all user tiers.
-11. **Launch:** Verify `/staff/onboarding` displays "Ready for Storefront Launch" (100% completion).
+4. **Delivery Areas & Fulfilment (`/staff/delivery-areas` & `/staff/fulfilment`):**
+   - Define covered postcode prefixes (e.g. `MK1`, `MK2`), minimum basket thresholds, standard delivery fees, and free-delivery thresholds.
+   - Configure recurring delivery windows and Click & Collect preparation lead times.
+5. **Brand Management (`/staff/brands`):**
+   - Create brand entities with names and auto-generated slugs (e.g. *East End*, *TRS*, *Fudco*).
+   - Upload authentic brand logo files via `/api/admin/brands/upload-logo` or ingest direct image URLs.
+   - Inspect linked products in the interactive **Quick-View Drawer** and unassign misassigned products directly.
+6. **Visual Asset Gallery & Category Icons (`/staff/icons`):**
+   - Curate and generate visual assets across Departments, 3D System Slots, Flat Icons, and Brand Logos.
+   - Generate realistic commercial photos or isometric 3D icons via Workers AI.
+   - Click **Activate** to set the primary asset (`CategoryAsset.isSelected = true`), immediately updating `Category.imageKey` or `Brand.imageKey`.
+   - Click **Deactivate** to revert to static defaults without deleting candidate artwork.
+7. **Catalogue Management & Stock Tracking (`/staff/products` & `/staff/products/import`):**
+   - Add individual items or upload bulk inventory spreadsheets (`.xlsx`/`.xls`).
+   - Assign brands from the searchable dropdown selector.
+   - Enter net content (e.g. `500 g`, `1 L`) for automated UK unit price derivation.
+   - Assign VAT rate (`0%` zero-rated domestic human food vs `20%` standard-rated non-food/confectionery).
+   - Set stock tracking mode: `TRACKED` (with quantity and low-stock threshold), `UNTRACKED`, or `INFINITE`.
+8. **Verify Publication Rules & Safeguards:**
+   - Verify product satisfies all 5 publication criteria: `isActive: true`, active parent category, positive price, verified stock count, and purchasable availability.
+   - **Stock Safeguard (#1449):** The system strictly refuses to activate any product whose stock status is `UNKNOWN`. You must enter a verified stock count first.
+9. **Discounts, Loyalty & Team Management (`/staff/discounts`, `/staff/loyalty`, `/staff/team`):**
+   - Set up promotional coupon codes, percentage/fixed discounts, and customer referral codes.
+   - Configure loyalty points earn/redeem rules.
+   - Invite staff members, assign `STAFF` vs `ADMIN` roles, or revoke access.
+10. **Help & FAQs (`/staff/faqs`):** Author store-specific answers to common customer questions. Toggle Storefront Assistant (`/staff/assistant`) on/off.
+11. **Review Feature Catalogue (`/staff/feature-catalogue`):** Explore live and planned features, business benefits, and demonstration talking points across all user tiers.
+12. **Launch:** Verify `/staff/onboarding` displays "Ready for Storefront Launch" (100% completion).
 
 ### 2.4 Required Permissions & Prerequisites
 - `requireVendorRole("ADMIN")`.
@@ -116,6 +136,7 @@ flowchart TD
 ### 2.5 Decisions, Alternative Paths, & Common Errors
 - **Error: Theme deletion refused:** Only custom themes created by your store can be deleted. Platform global presets cannot be removed.
 - **Error: Excel import fails:** Ensure file contains mandatory columns (Name, Price, Category) and that prices are formatted as numeric values (parsed to integer pence). Download the template from `/staff/products/import`.
+- **Error: Product cannot be activated:** If the product's stock status is `UNKNOWN`, the system prevents activation until a verified stock count or tracking mode is entered.
 - **Customer unable to checkout due to postcode:** Ensure outcode prefix is registered in `/staff/delivery-areas`.
 
 ### 2.6 Onboarding & Completion Checklist
@@ -123,7 +144,10 @@ flowchart TD
 - [ ] Brand theme chosen or custom theme saved; unwanted custom themes pruned.
 - [ ] Weekly operating hours and delivery schedules saved.
 - [ ] Delivery area postcode prefixes, minimum order, and fees set.
-- [ ] At least 10 active products published across valid categories.
+- [ ] Brands created with authentic logos in `/staff/brands`.
+- [ ] Category icons curated and activated in `/staff/icons`.
+- [ ] At least 10 active products published across valid categories with verified stock.
+- [ ] Stock safeguards checked (no products left in UNKNOWN mode).
 - [ ] At least one staff member account invited.
 - [ ] Storefront FAQs authored and published.
 - [ ] `/staff/onboarding` displays "Ready for Storefront Launch".
