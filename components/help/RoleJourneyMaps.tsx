@@ -149,7 +149,7 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
     icon: "clipboard-list",
     icon3d: "view-staff",
     tint: "action",
-    goal: "Fulfill incoming customer orders, manage live stock availability, handle item substitutions, moderate feedback, and follow operational runbooks.",
+    goal: "Fulfill incoming customer orders, manage live stock availability and shelf counts, assign brands, handle item substitutions, moderate feedback, and follow operational runbooks.",
     startingPoint: "Staff Portal at /staff/orders.",
     features: [
       {
@@ -162,7 +162,13 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
         name: "Live Inventory & Quick Toggles",
         route: "/staff/inventory",
         description:
-          "Instantly toggle items out of stock or update shelf availability during rushes.",
+          "Instantly toggle items out of stock, adjust quantities (+1/-1), or verify stock tracking modes.",
+      },
+      {
+        name: "Product & Brand Lookup",
+        route: "/staff/products",
+        description:
+          "Filter products by brand, department, and stock status to answer customer queries accurately.",
       },
       {
         name: "Customer Feedback Moderation",
@@ -185,7 +191,7 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
         bluf: "Sign in with staff credentials and switch to Staff View in the top navigation.",
         actions: [
           "Authenticate via /login with store staff account.",
-          "Review overview metrics and pending order counts on /staff.",
+          "Review overview metrics, active stock alerts, and pending order counts on /staff.",
         ],
         keyOutcome: "Authenticated in the store staff environment.",
       },
@@ -208,6 +214,7 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
         bluf: "Adjust availability if an item is depleted from store shelves.",
         actions: [
           "Toggle product stock off with one click in /staff/inventory to hide or disable on storefront.",
+          "Use quick increment/decrement buttons (+1, -1, +10) to update shelf counts.",
           "Contact customer via WhatsApp if a substitution is required.",
         ],
         keyOutcome: "Inventory remains accurate and prevents unfillable orders.",
@@ -237,7 +244,7 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
     ],
     checklist: [
       "Pending orders checked every 15 minutes",
-      "Out-of-stock items toggled off immediately",
+      "Out-of-stock items toggled off immediately in /staff/inventory",
       "Orders marked Out for Delivery upon dispatch",
       "Customer reviews moderated daily",
       "Runbook SOPs consulted for non-standard situations",
@@ -250,7 +257,7 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
     icon: "store",
     icon3d: "view-admin",
     tint: "action",
-    goal: "Autonomously manage store branding, delivery postcodes, catalogue imports, pricing, discounts, loyalty programmes, team staff, and FAQs.",
+    goal: "Autonomously manage store branding, delivery postcodes, catalogue creation, brand management, visual asset curation, pricing, discounts, loyalty programmes, team staff, and publication controls.",
     startingPoint: "Admin Portal at /staff/storefront and /staff/onboarding.",
     features: [
       {
@@ -260,14 +267,27 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
           "Upload logos, set square marks, customize brand color palettes, and manage themes.",
       },
       {
+        name: "Brand Management",
+        route: "/staff/brands",
+        description:
+          "Create brands, upload authentic logos or URLs, inspect linked products in quick-view drawer, and unassign products.",
+      },
+      {
+        name: "Visual Asset Gallery",
+        route: "/staff/icons",
+        description:
+          "Curate and generate commercial 3D icons, realistic category photos, and brand logos with live activation and medallion previews.",
+      },
+      {
         name: "Delivery Areas & Postcodes",
         route: "/staff/delivery-areas",
         description: "Define delivery outcodes, minimum basket amounts, and delivery fees.",
       },
       {
-        name: "Fulfilment Schedules",
-        route: "/staff/fulfilment",
-        description: "Set daily delivery windows, collection slots, and order lead times.",
+        name: "Catalogue & Stock Management",
+        route: "/staff/products",
+        description:
+          "Create and edit listings, set pence pricing, configure stock modes (Tracked, Untracked, Infinite), and control storefront visibility.",
       },
       {
         name: "Product & Stock Import",
@@ -295,6 +315,7 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
         bluf: "Review launch readiness scores across Profile, Hours, Delivery, Slots, Products, and Team.",
         actions: [
           "Track completion percentage toward 100% launch readiness.",
+          "Consult the interactive Staff Onboarding Guide tab for step-by-step procedures.",
           "Address any missing configuration sections highlighted in red.",
         ],
         keyOutcome: "Store achieves full launch readiness.",
@@ -326,18 +347,63 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
       },
       {
         number: 4,
-        title: "Build Catalogue & Set Pricing",
-        route: "/staff/products",
-        bluf: "Populate inventory through manual entry or bulk spreadsheet upload.",
+        title: "Create & Manage Brands",
+        route: "/staff/brands",
+        bluf: "Organise manufacturer and producer brands to power storefront facet filters.",
         actions: [
-          "Import stock list spreadsheet at /staff/products/import.",
-          "Review AI net-content suggestions in /staff/net-content.",
-          "Set product pricing in pence and assign categories.",
+          "Click Add Brand to create new brand entities with name and auto-generated slug.",
+          "Upload authentic brand logo files via the upload button or enter image URLs.",
+          "Click Quick View on any brand row to open the side drawer inspecting all linked products.",
+          "Unassign individual products from a brand directly inside the quick-view drawer if needed.",
         ],
-        keyOutcome: "Comprehensive catalogue ready for shopper browsing.",
+        keyOutcome:
+          "Brand ledger populated with authentic logos and verified product associations.",
       },
       {
         number: 5,
+        title: "Curate Category Icons & Visual Asset Gallery",
+        route: "/staff/icons",
+        bluf: "Generate, review, and activate photorealistic category photos and commercial 3D icons.",
+        actions: [
+          "Navigate to /staff/icons to review visual assets across Departments, Navigation, Trust, and Brands.",
+          "Generate new candidate imagery for any category (commercial studio photo or 3D icon style).",
+          "Click Activate on a candidate to make it the live primary icon (updates Category.imageKey instantly).",
+          "Click Deactivate to revert to the default static icon without deleting the generated candidate.",
+          "Inspect any asset in the large modal with tint controls (action, accent, danger) and live surface mapping.",
+        ],
+        keyOutcome:
+          "Polished, brand-aligned visual assets active across all storefront navigation surfaces.",
+      },
+      {
+        number: 6,
+        title: "Build Catalogue, Assign Brands & Set Stock Modes",
+        route: "/staff/products",
+        bluf: "Create or edit product listings with mandatory fields, attributes, and inventory tracking.",
+        actions: [
+          "Create products on /staff/products/new or edit existing rows on /staff/products/[id].",
+          "Ensure required fields are complete: Product Name, Category, and Base Price in integer pence.",
+          "Assign Brand from the searchable brand selector and specify net content (e.g. 500 g, 1 L).",
+          "Configure Stock Tracking: select TRACKED (with numerical quantity and low-stock threshold), UNTRACKED (always in stock), or INFINITE.",
+          "Configure dietary badges (Halal, Fresh, Organic, Vegetarian, Gluten-Free, HMC Certification).",
+        ],
+        keyOutcome:
+          "Accurate product records with complete metadata, brand links, and stock rules.",
+      },
+      {
+        number: 7,
+        title: "Control Visibility & Storefront Publication Rules",
+        route: "/staff/products",
+        bluf: "Verify dependencies and publish items to the customer-facing store.",
+        actions: [
+          "Toggle the Active switch to ON (isActive: true) to make an item eligible for storefront publication.",
+          "Verify publication criteria: valid price > 0, parent category is active, and stock count is verified.",
+          "Stock Safeguard Check: The system strictly prevents activating a product while stock mode is UNKNOWN (enter verified count first).",
+          "In-Stock vs Out-of-Stock: In TRACKED mode, items with quantity > 0 show 'Add to Cart'; items with quantity = 0 remain browsable with an 'Out of Stock' badge.",
+        ],
+        keyOutcome: "Verified products published live and purchasable by shoppers.",
+      },
+      {
+        number: 8,
         title: "Promotions, Loyalty & Team Management",
         route: "/staff/loyalty",
         bluf: "Engage shoppers with loyalty rewards, discount codes, and invite staff members.",
@@ -354,7 +420,10 @@ const JOURNEYS: Record<UserJourneyRole, RoleJourneyData> = {
       "Store profile, logo, and square mark uploaded",
       "Operating hours and holiday exceptions saved",
       "Delivery postcode prefixes and minimums defined",
-      "Products imported with valid prices and categories",
+      "Brands created with authentic logos in /staff/brands",
+      "Category icons curated and activated in /staff/icons",
+      "Products created with verified stock counts and active parent categories",
+      "Stock safeguards checked (no products left in UNKNOWN stock mode)",
       "At least one staff member invited",
       "FAQs authored for customer self-service",
     ],

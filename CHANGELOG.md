@@ -8,6 +8,13 @@ every branch merges.
 
 ### Added
 
+- **Platform Documentation Review & Comprehensive Update (#1468)**
+  - **Storefront Help Centre Journey Alignment.** Updated `components/help/RoleJourneyMaps.tsx` with dedicated operational workflows for Store Staff and Store Administrators covering brand creation, logo uploads, visual asset studio curation, product creation, stock tracking modes, and storefront publication rules.
+  - **Interactive Staff Onboarding Workflow UI.** Enhanced `components/staff/OnboardingReadinessDashboard.tsx` with an interactive "Step-by-Step Staff Onboarding Guide" tab on `/staff/onboarding`, giving new team members sequential instructions and deep links across 6 operational phases.
+  - **Canonical Onboarding & Catalogue Documentation.** Updated `docs/client-help-centre/getting-started-onboarding.md` and `docs/client-help-centre/products-catalogue-guide.md` with brand management workflows, mandatory product attributes, integer pence pricing, VAT compliance, and the strict stock safeguard (#1449) preventing activation while stock status is UNKNOWN.
+  - **Visual Asset Gallery Standards.** Updated `docs/client-help-centre/icon-and-visual-asset-standards.md` detailing `/staff/icons`, candidate photo/3D generation, slot activation (`CategoryAsset.isSelected`), and medallion inspector features.
+  - **KMS Regeneration & Indexing.** Regenerated `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts` via `npm run kms:build-index` (319 registered artifacts) and verified ratchet coverage.
+
 - **Catalogue Batch Import Concurrency & Category/Brand Race Condition Protection**
   - **In-Flight Promise Deduplication.** Added in-flight promise caching to `getOrCreateCategory` and `getOrCreateBrand` in `scripts/import-catalogue-batch.ts` preventing race conditions during concurrent batch ingestion.
   - **Case-Insensitive DB Fallback.** Added fallback retrieval ensuring concurrent row processing gracefully recovers existing records if simultaneous creation occurs.

@@ -71,36 +71,51 @@ The table below documents the core 12 commercial 3D icons currently active acros
 
 ---
 
-## 4. Component Implementation (`<Icon3D>`)
+## 4. Component Implementation (`<Icon3D>` and `<IconMedallion>`)
 
-Storefront pages consume 3D icons via the standard `<Icon3D />` component (`components/icons/Icon3D.tsx`):
+Storefront pages consume 3D icons and category artwork via standard visual components (`components/icons/IconMedallion.tsx` and `components/icons/Icon3D.tsx`):
 
 ```tsx
+import { IconMedallion } from "@/components/icons/IconMedallion";
 import { Icon3D } from "@/components/icons/Icon3D";
 
-// 1. Standard navigation link (auto mode: serves high-res WebP/PNG with instant SVG fallback)
-<Icon3D name="storefront" size={24} />
+// 1. Standard circular medallion (auto-resolves active AI candidate, static 3D, or vector fallback)
+<IconMedallion icon3d="delivery-van" size={48} tint="action" />
 
-// 2. Animated Quick Shop button with accessible label
-<Icon3D name="quick-shop" size={20} animated dataIcon="quick-shop" decorative />
+// 2. Department category medallion with photo or 3D icon
+<IconMedallion imageUrl={category.imageUrl} size={80} tint="action" />
 
-// 3. Trust badge with custom label
-<Icon3D name="halal-certified" size={32} label="HMC Certified Halal Guarantee" />
+// 3. Brand logo medallion
+<IconMedallion slot={`brand:${brand.slug}`} size={40} tint="action" />
 
-// 4. Explicit SVG-only vector mode (used for minimal print or zero-image embeds)
-<Icon3D name="secure-checkout" size={24} renderAs="svg" />
+// 4. Standalone 3D icon with accessible label
+<Icon3D name="quick-shop" size={24} animated decorative />
 ```
-
-### Component Props:
-- `name`: Semantic icon identifier (e.g. `'storefront'`, `'cart-add'`).
-- `size`: Display width/height in CSS pixels (default: `48`).
-- `renderAs`: `'auto'` (default), `'image'`, or `'svg'`.
-- `decorative`: When `true`, sets `aria-hidden="true"` and suppresses inner title tags for screen-reader compliance beside visible button copy.
-- `animated`: Enables subtle floating or popping CSS keyframe animations.
 
 ---
 
-## 5. Guidelines for Future Icons & New Client Onboarding
+## 5. Visual Asset Studio & Gallery (`/staff/icons`)
+
+The centralized Visual Asset Gallery allows store administrators to curate, generate, preview, and activate visual assets across the entire store from one unified dashboard:
+
+1. **Multi-Target Quick Asset Generator:**
+   - **Target Types:** Select *System Slot* (3D or Flat UI icons), *Category* (Departments & aisles), or *Brand* (Producer logos).
+   - **Visual Styles:** Choose **Realistic Commercial Photo** (studio grocery photography on pure `#ffffff`) or **3D Tactile Icon** (isometric clay-smooth 3D medallion).
+   - **Generate:** Renders a high-resolution candidate in ~3–4 seconds via Cloudflare Workers AI.
+
+2. **Asset Lifecycle Actions:**
+   - **Activate (`isSelected: true`):** Immediately sets the candidate as the live primary asset. Updates `Category.imageKey` or `Brand.imageKey` and dynamically updates the customer storefront.
+   - **Deactivate:** Reverts the slot, category, or brand to its static built-in artwork without deleting the asset from the gallery.
+   - **Delete:** Permanently deletes the image from Cloudflare R2 storage and removes the relational record from PostgreSQL.
+
+3. **High-Resolution Modal Inspector:**
+   - Click any asset card in the gallery to open the 320px circular medallion inspector.
+   - Preview how the asset renders across different theme tints (*Action*, *Accent*, *Danger*).
+   - View exact metadata: Storage key, aspect ratio, creation date, and list of live storefront surfaces where it is rendered.
+
+---
+
+## 6. Guidelines for Future Icons & New Client Onboarding
 
 When creating new icons for future platform features, seasonal campaigns, or onboarding a new multi-tenant merchant:
 
