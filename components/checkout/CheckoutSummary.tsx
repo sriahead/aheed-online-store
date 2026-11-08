@@ -2,6 +2,7 @@
 
 import { formatPrice } from "@/components/product/format-price";
 import type { FulfilmentMethodChoice } from "@/lib/fulfilment-cookie";
+import { computeVatBreakdown } from "@/lib/order-totals";
 import { useCheckoutPricing } from "./CheckoutPricing";
 
 /**
@@ -30,7 +31,13 @@ export function CheckoutSummary({
   lines,
   method,
 }: {
-  lines: { productId: string; name: string; quantity: number; lineTotalPence: number }[];
+  lines: {
+    productId: string;
+    name: string;
+    quantity: number;
+    lineTotalPence: number;
+    vatRate?: number;
+  }[];
   method: FulfilmentMethodChoice;
 }) {
   const pricing = useCheckoutPricing();
@@ -40,6 +47,19 @@ export function CheckoutSummary({
     totalPence: pricing.totalPence,
   };
   const isCollection = method === "COLLECTION";
+
+  const totalDiscountPence =
+    (pricing.currentCode?.ok ? pricing.codeDiscountPence : 0) + pricing.points.discountPence;
+  const vatBreakdown = computeVatBreakdown(
+    lines.map((l) => ({
+      unitPricePence: l.lineTotalPence,
+      quantity: 1,
+      lineTotalPence: l.lineTotalPence,
+      vatRate: l.vatRate ?? 0,
+      available: true,
+    })),
+    totalDiscountPence,
+  );
 
   return (
     <aside
@@ -103,6 +123,24 @@ export function CheckoutSummary({
           <dd data-checkout-summary-total className="text-primary">
             {formatPrice(totals.totalPence)}
           </dd>
+        </div>
+
+        {/* UK VAT Breakdown */}
+        <div className="border-t border-black/10 pt-2 space-y-1 text-[11px] text-primary-muted">
+          <div className="flex justify-between font-medium">
+            <span>Includes UK VAT</span>
+            <span className="text-primary">{formatPrice(vatBreakdown.vatTotalPence)}</span>
+          </div>
+          {vatBreakdown.vatStandardPence > 0 && (
+            <div className="flex justify-between pl-2 text-[10px]">
+              <span>Standard-rated (20%):</span>
+              <span>{formatPrice(vatBreakdown.vatStandardPence)}</span>
+            </div>
+          )}
+          <div className="flex justify-between pl-2 text-[10px]">
+            <span>Zero-rated food (0%):</span>
+            <span>£0.00</span>
+          </div>
         </div>
       </dl>
     </aside>

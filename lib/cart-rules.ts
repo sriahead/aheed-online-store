@@ -32,11 +32,11 @@ export const MAX_ADD_QUANTITY = 99;
  * this module stays free of any Prisma import. Prisma's generated enum types are these same string
  * literals, so a selected row passes straight in.
  */
-export type StockMode = "UNKNOWN" | "TRACKED" | "UNTRACKED";
+export type StockMode = "UNKNOWN" | "TRACKED" | "UNTRACKED" | "INFINITE";
 export type ProductRestriction =
   "PROHIBITED" | "AGE_RESTRICTED" | "NOT_DELIVERABLE" | "NEEDS_REVIEW";
 
-export const STOCK_MODES: readonly StockMode[] = ["TRACKED", "UNTRACKED", "UNKNOWN"];
+export const STOCK_MODES: readonly StockMode[] = ["TRACKED", "UNTRACKED", "INFINITE", "UNKNOWN"];
 
 export function isStockMode(value: unknown): value is StockMode {
   return typeof value === "string" && (STOCK_MODES as readonly string[]).includes(value);
@@ -85,7 +85,7 @@ export function purchasableQuantity(input: {
 }): number {
   if (input.restriction !== null || !input.isActive) return 0;
   const mode = stockModeOf(input.inventory);
-  if (mode === "UNTRACKED") return MAX_ADD_QUANTITY;
+  if (mode === "UNTRACKED" || mode === "INFINITE") return MAX_ADD_QUANTITY;
   if (mode === "TRACKED") return Math.max(input.inventory?.quantity ?? 0, 0);
   return 0;
 }

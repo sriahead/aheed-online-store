@@ -108,10 +108,10 @@ The centralized Visual Asset Gallery allows store administrators to curate, gene
    - **Deactivate:** Reverts the slot, category, or brand to its static built-in artwork without deleting the asset from the gallery.
    - **Delete:** Permanently deletes the image from Cloudflare R2 storage and removes the relational record from PostgreSQL.
 
-3. **High-Resolution Modal Inspector:**
-   - Click any asset card in the gallery to open the 320px circular medallion inspector.
+3. **High-Resolution Quick View:**
+   - Click any asset card in the gallery to open the 320px circular medallion Quick View.
    - Preview how the asset renders across different theme tints (*Action*, *Accent*, *Danger*).
-   - View exact metadata: Storage key, aspect ratio, creation date, and list of live storefront surfaces where it is rendered.
+   - View exact metadata: Storage key, creation date, and list of live storefront surfaces affected.
 
 ---
 
