@@ -1734,7 +1734,7 @@ A dedicated client cell provides complete physical database and edge isolation f
 | Store | Scope / Command | Variables | Purpose |
 | :--- | :--- | :--- | :--- |
 | **GitHub environment secrets** | `gh secret set <NAME> --env staging\|production` | `AFC_DIRECT_URL` | Non-pooled Neon direct connection string for CI migrations (`Aheed Food Centre Staging` and `Aheed Food Centre`) |
-| **Cloudflare Worker secrets** | `wrangler secret put <NAME> --env afc-staging\|afc-production` | `DATABASE_URL` (pooled), `BETTER_AUTH_SECRET`, `S3_*`, `STRIPE_*`, `JOB_INVOCATION_TOKEN`, `INBOUND_EMAIL_TOKEN` | Dedicated cell runtime environment variables and storage/payment credentials |
+| **Cloudflare Worker secrets** | `wrangler secret put <NAME> --env afc-staging\|afc-production` | `DATABASE_URL` (pooled; `AFC_DATABASE_URL`), `BETTER_AUTH_SECRET`, `S3_*`, `STRIPE_*`, `JOB_INVOCATION_TOKEN`, `INBOUND_EMAIL_TOKEN` | Dedicated cell runtime environment variables and storage/payment credentials |
 
 ### 2. Lockstep CI Deployment
 CI deploys the platform cell and the dedicated cell sequentially within the same run.
