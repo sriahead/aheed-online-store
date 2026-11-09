@@ -35,13 +35,13 @@ Per `specs/architecture.md` ("Cells") and ADR-004:
 
 ### 2.1 Topology Mapping
 
-| Component | Platform Cell (Staging / Production) | Aheed Dedicated Cell (Staging / Production) |
+| Component | Platform Cell (Staging / Production) | AFC Dedicated Cell (Staging / Production) |
 | :--- | :--- | :--- |
-| **App Worker** | `aheed-store-staging` / `aheed-store-production` | `aheed-dedicated-staging` / `aheed-dedicated-production` |
-| **Scheduler Worker** | `aheed-scheduler-staging` / `aheed-scheduler-production` | `aheed-scheduler-staging` / `aheed-scheduler-production` (or unified / cell-configured) |
-| **Inbound Email Worker** | `aheed-inbound-email-staging` / `aheed-inbound-email` | `aheed-dedicated-inbound-staging` / `aheed-dedicated-inbound` |
+| **App Worker** | `aheed-store-staging` / `aheed-store-production` | `afc-store-staging` / `afc-store-production` |
+| **Scheduler Worker** | `aheed-scheduler-staging` / `aheed-scheduler-production` | `afc-scheduler-staging` / `afc-scheduler-production` |
+| **Inbound Email Worker** | `aheed-inbound-email-staging` / `aheed-inbound-email` | `afc-inbound-email-staging` / `afc-inbound-email` |
 | **Neon Database** | `Shoplocal Staging` / `Shoplocal` | `Aheed Food Centre Staging` / `Aheed Food Centre` |
-| **R2 Asset Bucket** | `shoplocal-images-staging` / `shoplocal-images-production` | `aheed-images-staging` / `aheed-images-production` |
+| **R2 Asset Bucket** | `shoplocal-images-staging` / `shoplocal-images-production` | `afc-images-staging` / `afc-images-production` |
 | **KV Signals** | `aheed-jobs-staging` / `aheed-jobs-production` | Dedicated or partitioned KV namespaces for scheduler gating |
 | **Primary Ingress** | `*.merqify.com` | `staging.aheedfoodcentre.co.uk` (staging via SaaS) / `www.aheedfoodcentre.co.uk` (prod via SaaS) |
 
@@ -51,12 +51,12 @@ Per `specs/architecture.md` ("Cells") and ADR-004:
 
 ### Phase 1: Wrangler Environment Configuration
 1. In `wrangler.toml`:
-   - Define dedicated cell environments: `[env.aheed-staging]` and `[env.aheed-production]`.
+   - Define dedicated cell environments: `[env.afc-staging]` and `[env.afc-production]`.
    - Configure custom domain routes for the dedicated hostnames (`staging.aheedfoodcentre.co.uk`, `www.aheedfoodcentre.co.uk`).
-   - Configure separate R2 bucket bindings (`aheed-images-staging`, `aheed-images-production`).
+   - Configure separate R2 bucket bindings (`afc-images-staging`, `afc-images-production`).
    - Configure dedicated `[vars]` (e.g. `PLATFORM_NAME = "Aheed Food Centre"`, dedicated default sender / forward addresses).
 2. In `workers/scheduler/wrangler.toml`:
-   - Add matching scheduler environments `[env.aheed-staging]` and `[env.aheed-production]` targeting `APP_BASE_URL = "https://staging.aheedfoodcentre.co.uk"` and `https://www.aheedfoodcentre.co.uk`.
+   - Add matching scheduler environments `[env.afc-staging]` and `[env.afc-production]` targeting `APP_BASE_URL = "https://staging.aheedfoodcentre.co.uk"` and `https://www.aheedfoodcentre.co.uk`.
 3. In `workers/inbound-email/wrangler.toml`:
    - Add matching inbound email environments.
 
@@ -65,9 +65,9 @@ Per `specs/architecture.md` ("Cells") and ADR-004:
    - Maintain the single build step (`opennextjs-cloudflare build`) so identical build artifacts serve all cells.
    - Execute database migrations sequentially:
      1. Migrate platform database (`DIRECT_URL`).
-     2. Migrate dedicated cell database (`AHEED_DIRECT_URL`).
+     2. Migrate dedicated cell database (`AFC_DIRECT_URL`).
    - Route verification (`scripts/verify-worker-routes.ts`) verified per cell target.
-   - Deploy platform workers, then deploy dedicated cell workers.
+   - Deploy platform workers, then deploy dedicated cell workers (`--env afc-staging` / `--env afc-production`).
    - **Zero Drift Guarantee:** If migration or deployment fails on any cell, CI fails and halts.
 
 ### Phase 3: Database Bootstrap & Provisioning Tooling
@@ -89,9 +89,9 @@ Per `specs/architecture.md` ("Cells") and ADR-004:
 ## 4. Key Decisions & Forks for Review
 
 1. **Wrangler Environment Naming:**
-   - *Proposal:* `aheed-staging` and `aheed-production` within the existing root `wrangler.toml`.
+   - *Proposal:* `afc-staging` and `afc-production` within the existing root `wrangler.toml`.
    - *Rationale:* Avoids duplicating config boilerplate and keeps build artifact bindings unified.
 2. **Secrets Storage in GitHub Actions:**
-   - *Proposal:* Use GitHub environment secrets with cell-specific variables (e.g., `AHEED_DIRECT_URL`, `AHEED_DATABASE_URL`, `AHEED_BETTER_AUTH_SECRET`) or dedicated GitHub environments (`staging-aheed`, `production-aheed`).
+   - *Proposal:* Use GitHub environment secrets with cell-specific prefix: `AFC_DIRECT_URL`, `AFC_DATABASE_URL`, `AFC_BETTER_AUTH_SECRET`, etc. within `staging` and `production` environments.
 3. **Catalogue Migration:**
    - *Decision:* Clean schema bootstrap without demo catalogue data. Real catalogue data injection is scoped separately in #1330.
