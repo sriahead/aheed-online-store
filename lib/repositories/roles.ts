@@ -29,7 +29,7 @@ import type { VendorRole } from "@/lib/auth-rbac";
 type Db = ReturnType<typeof getPrisma>;
 type DbWs = ReturnType<typeof getPrismaWs>;
 
-export type VendorRoleAction = "STAFF" | "ADMIN" | null; // null means demote to USER
+export type VendorRoleAction = "STAFF" | "ADMIN" | "PLATFORM_ADMIN" | null; // null means demote to USER
 
 /**
  * The caller, reduced to the two facts the hierarchy rules actually depend on.
@@ -79,8 +79,12 @@ export async function applyVendorRole(
   newRole: VendorRoleAction,
 ): Promise<void> {
   // Validate hierarchy rules
-  if (newRole === "ADMIN" && actor.via !== "platform-admin") {
-    throw new Error("Forbidden: Only a platform-admin can grant the Store Admin role.");
+  if ((newRole === "ADMIN" || newRole === "PLATFORM_ADMIN") && actor.via !== "platform-admin") {
+    throw new Error(
+      newRole === "PLATFORM_ADMIN"
+        ? "Forbidden: Only a platform-admin can grant the Platform Admin role."
+        : "Forbidden: Only a platform-admin can grant the Store Admin role.",
+    );
   }
 
   const targetUser = await prisma.user.findUnique({ where: { email: targetEmail } });
@@ -92,9 +96,11 @@ export async function applyVendorRole(
   const existingMembership = await prisma.vendorMembership.findUnique({
     where: { userId_vendorId: { userId: targetUser.id, vendorId } },
   });
-  const oldRole = existingMembership?.role ?? null;
+  const oldVendorRole = existingMembership?.role ?? null;
+  const oldEffectiveRole: VendorRoleAction =
+    targetUser.role === "ADMIN" ? "PLATFORM_ADMIN" : oldVendorRole;
 
-  if (oldRole === newRole) {
+  if (oldEffectiveRole === newRole) {
     throw new Error(`User is already assigned the role: ${newRole ?? "USER"}`);
   }
 
@@ -103,7 +109,13 @@ export async function applyVendorRole(
     throw new Error("Forbidden: Cannot modify a platform-admin's privileges.");
   }
 
-  const isSelfDemotion = targetUser.id === actor.id && newRole !== "ADMIN" && actor.via === "ADMIN";
+  const isSelfPlatformDemotion =
+    targetUser.id === actor.id && targetUser.role === "ADMIN" && newRole !== "PLATFORM_ADMIN";
+  const isSelfVendorDemotion =
+    targetUser.id === actor.id &&
+    newRole !== "ADMIN" &&
+    newRole !== "PLATFORM_ADMIN" &&
+    actor.via === "ADMIN";
 
   // Serializable so the last-admin count check and the write it guards are read+acted-on
   // as one unit — two concurrent self-demotions both reading "2 admins left" and both
@@ -114,7 +126,16 @@ export async function applyVendorRole(
   // an aggregate over other rows, not a counter column on the row being written.
   await prismaWs.$transaction(
     async (tx) => {
-      if (isSelfDemotion) {
+      if (isSelfPlatformDemotion) {
+        const platformAdminCount = await tx.user.count({
+          where: { role: "ADMIN" },
+        });
+        if (platformAdminCount <= 1) {
+          throw new Error("Forbidden: Cannot demote the last remaining Platform Admin.");
+        }
+      }
+
+      if (isSelfVendorDemotion) {
         const adminCount = await tx.vendorMembership.count({
           where: { vendorId, role: "ADMIN" },
         });
@@ -123,13 +144,35 @@ export async function applyVendorRole(
         }
       }
 
-      if (newRole) {
+      if (newRole === "PLATFORM_ADMIN") {
+        await tx.user.update({
+          where: { id: targetUser.id },
+          data: { role: "ADMIN" },
+        });
+        await tx.vendorMembership.upsert({
+          where: { userId_vendorId: { userId: targetUser.id, vendorId } },
+          create: { userId: targetUser.id, vendorId, role: "ADMIN" },
+          update: { role: "ADMIN" },
+        });
+      } else if (newRole) {
+        if (targetUser.role === "ADMIN") {
+          await tx.user.update({
+            where: { id: targetUser.id },
+            data: { role: "CUSTOMER" },
+          });
+        }
         await tx.vendorMembership.upsert({
           where: { userId_vendorId: { userId: targetUser.id, vendorId } },
           create: { userId: targetUser.id, vendorId, role: newRole },
           update: { role: newRole },
         });
       } else {
+        if (targetUser.role === "ADMIN") {
+          await tx.user.update({
+            where: { id: targetUser.id },
+            data: { role: "CUSTOMER" },
+          });
+        }
         // Demote completely
         await tx.vendorMembership.deleteMany({
           where: { userId: targetUser.id, vendorId },
@@ -142,7 +185,7 @@ export async function applyVendorRole(
           vendorId,
           userId: targetUser.id,
           actorId: actor.id,
-          oldRole,
+          oldRole: oldEffectiveRole,
           newRole,
         },
       });

@@ -56,6 +56,7 @@ export function AssignRoleForm({
           >
             <option value="STAFF">Staff</option>
             {canGrantAdmin && <option value="ADMIN">Store Admin</option>}
+            {canGrantAdmin && <option value="PLATFORM_ADMIN">Platform Admin</option>}
             <option value="NONE">Revoke Access (Demote)</option>
           </select>
         </div>
