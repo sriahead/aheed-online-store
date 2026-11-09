@@ -8,6 +8,10 @@ every branch merges.
 
 ### Added
 
+- **Post-Merge Documentation, Model Handoff & Roadmap Alignment (#1331, #1476)**
+  - **Roadmap & Handoff Tracking.** Updated `specs/roadmap.md` with change log entries for #1331 and #1476 and updated `docs/model-handoff.md` to v1.168.0 documenting dedicated cell isolation and next target sequencing.
+  - **KMS Regeneration.** Rebuilt KMS index bundle with `npm run kms:build-index` (325 registered artifacts).
+
 - **Aheed Food Centre Dedicated Cell Isolation (#1331)**
   - **Wrangler Environment Topology.** Added dedicated `afc-staging` and `afc-production` environments to root `wrangler.toml`, `workers/scheduler/wrangler.toml`, and `workers/inbound-email/wrangler.toml` targeting `staging.aheedfoodcentre.co.uk` and `www.aheedfoodcentre.co.uk` with dedicated R2 image buckets (`afc-images-*`) and scheduler gating.
   - **Lockstep CI Deployment.** Updated `.github/workflows/deploy-staging.yml` and `.github/workflows/deploy-production.yml` to execute sequential database migrations, route verification, and worker deployments for both the platform cell and the dedicated cell in a single workflow run, guaranteeing zero cross-cell schema or code drift.
