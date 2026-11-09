@@ -87,32 +87,38 @@ export async function applyVendorRole(
     );
   }
 
-  const targetUser = await prisma.user.findUnique({ where: { email: targetEmail } });
-  if (!targetUser) {
+  const normalizedEmail = targetEmail.trim().toLowerCase();
+  const targetUser = await prisma.user.findFirst({
+    where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+  });
+
+  if (!targetUser && newRole === null) {
     throw new Error("User not found with that email address.");
   }
 
-  // Look up old role
-  const existingMembership = await prisma.vendorMembership.findUnique({
-    where: { userId_vendorId: { userId: targetUser.id, vendorId } },
-  });
+  // Look up old role when user already exists
+  const existingMembership = targetUser
+    ? await prisma.vendorMembership.findUnique({
+        where: { userId_vendorId: { userId: targetUser.id, vendorId } },
+      })
+    : null;
   const oldVendorRole = existingMembership?.role ?? null;
   const oldEffectiveRole: VendorRoleAction =
-    targetUser.role === "ADMIN" ? "PLATFORM_ADMIN" : oldVendorRole;
+    targetUser?.role === "ADMIN" ? "PLATFORM_ADMIN" : oldVendorRole;
 
-  if (oldEffectiveRole === newRole) {
+  if (targetUser && oldEffectiveRole === newRole) {
     throw new Error(`User is already assigned the role: ${newRole ?? "USER"}`);
   }
 
   // Prevent Store Admin from modifying a platform-admin's privileges
-  if (targetUser.role === "ADMIN" && actor.via !== "platform-admin") {
+  if (targetUser?.role === "ADMIN" && actor.via !== "platform-admin") {
     throw new Error("Forbidden: Cannot modify a platform-admin's privileges.");
   }
 
   const isSelfPlatformDemotion =
-    targetUser.id === actor.id && targetUser.role === "ADMIN" && newRole !== "PLATFORM_ADMIN";
+    targetUser?.id === actor.id && targetUser?.role === "ADMIN" && newRole !== "PLATFORM_ADMIN";
   const isSelfVendorDemotion =
-    targetUser.id === actor.id &&
+    targetUser?.id === actor.id &&
     newRole !== "ADMIN" &&
     newRole !== "PLATFORM_ADMIN" &&
     actor.via === "ADMIN";
@@ -144,38 +150,59 @@ export async function applyVendorRole(
         }
       }
 
-      if (newRole === "PLATFORM_ADMIN") {
-        await tx.user.update({
-          where: { id: targetUser.id },
-          data: { role: "ADMIN" },
+      let userId = targetUser?.id;
+      if (!userId) {
+        const defaultName =
+          normalizedEmail
+            .split("@")[0]
+            .replace(/[._-]+/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase()) || normalizedEmail;
+        const createdUser = await tx.user.create({
+          data: {
+            id: crypto.randomUUID(),
+            email: normalizedEmail,
+            name: defaultName,
+            emailVerified: true,
+            role: newRole === "PLATFORM_ADMIN" ? "ADMIN" : "CUSTOMER",
+          },
         });
+        userId = createdUser.id;
+      }
+
+      if (newRole === "PLATFORM_ADMIN") {
+        if (targetUser) {
+          await tx.user.update({
+            where: { id: userId },
+            data: { role: "ADMIN" },
+          });
+        }
         await tx.vendorMembership.upsert({
-          where: { userId_vendorId: { userId: targetUser.id, vendorId } },
-          create: { userId: targetUser.id, vendorId, role: "ADMIN" },
+          where: { userId_vendorId: { userId, vendorId } },
+          create: { userId, vendorId, role: "ADMIN" },
           update: { role: "ADMIN" },
         });
       } else if (newRole) {
-        if (targetUser.role === "ADMIN") {
+        if (targetUser?.role === "ADMIN") {
           await tx.user.update({
-            where: { id: targetUser.id },
+            where: { id: userId },
             data: { role: "CUSTOMER" },
           });
         }
         await tx.vendorMembership.upsert({
-          where: { userId_vendorId: { userId: targetUser.id, vendorId } },
-          create: { userId: targetUser.id, vendorId, role: newRole },
+          where: { userId_vendorId: { userId, vendorId } },
+          create: { userId, vendorId, role: newRole },
           update: { role: newRole },
         });
       } else {
-        if (targetUser.role === "ADMIN") {
+        if (targetUser?.role === "ADMIN") {
           await tx.user.update({
-            where: { id: targetUser.id },
+            where: { id: userId },
             data: { role: "CUSTOMER" },
           });
         }
         // Demote completely
         await tx.vendorMembership.deleteMany({
-          where: { userId: targetUser.id, vendorId },
+          where: { userId, vendorId },
         });
       }
 
@@ -183,7 +210,7 @@ export async function applyVendorRole(
       await tx.vendorRoleAuditLog.create({
         data: {
           vendorId,
-          userId: targetUser.id,
+          userId,
           actorId: actor.id,
           oldRole: oldEffectiveRole,
           newRole,
