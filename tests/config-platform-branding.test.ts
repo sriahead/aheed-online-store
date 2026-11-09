@@ -38,15 +38,19 @@ describe("getPlatformBrandingEnv", () => {
     });
   });
 
-  it("wrangler.toml sets the same values for staging and production", () => {
+  it("wrangler.toml sets the expected values for multi-tenant and dedicated cells", () => {
     const toml = readFileSync("wrangler.toml", "utf8");
     expect(toml.match(/^PLATFORM_NAME = "(.*)"$/gm)).toEqual([
       `PLATFORM_NAME = "${DEFAULT_PLATFORM_NAME}"`,
       `PLATFORM_NAME = "${DEFAULT_PLATFORM_NAME}"`,
+      'PLATFORM_NAME = "Aheed Food Centre"',
+      'PLATFORM_NAME = "Aheed Food Centre"',
     ]);
     expect(toml.match(/^PLATFORM_TAGLINE = "(.*)"$/gm)).toEqual([
       `PLATFORM_TAGLINE = "${DEFAULT_PLATFORM_TAGLINE}"`,
       `PLATFORM_TAGLINE = "${DEFAULT_PLATFORM_TAGLINE}"`,
+      'PLATFORM_TAGLINE = "Independent Quality Groceries"',
+      'PLATFORM_TAGLINE = "Independent Quality Groceries"',
     ]);
   });
 });
