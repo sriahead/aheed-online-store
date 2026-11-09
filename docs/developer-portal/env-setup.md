@@ -1725,3 +1725,33 @@ failures that section does not prevent, moved here from `CLAUDE.md` in #786.
   error fires alongside either. `GET .../cdn-cgi/local/explorer/api/local/workers` lists the other
   endpoints the same Explorer API exposes (KV, D1, R2, Durable Objects, Workflows).
 
+## Dedicated Client Cells: Aheed Food Centre (AFC) Secrets & Onboarding (#1331, ADR-009)
+
+A dedicated client cell provides complete physical database and edge isolation for an independent business while running the shared codebase.
+
+### 1. Two-Tier Secrets Configuration
+
+| Store | Scope / Command | Variables | Purpose |
+| :--- | :--- | :--- | :--- |
+| **GitHub environment secrets** | `gh secret set <NAME> --env staging\|production` | `AFC_DIRECT_URL` | Non-pooled Neon direct connection string for CI migrations (`Aheed Food Centre Staging` and `Aheed Food Centre`) |
+| **Cloudflare Worker secrets** | `wrangler secret put <NAME> --env afc-staging\|afc-production` | `DATABASE_URL` (pooled), `BETTER_AUTH_SECRET`, `S3_*`, `STRIPE_*`, `JOB_INVOCATION_TOKEN`, `INBOUND_EMAIL_TOKEN` | Dedicated cell runtime environment variables and storage/payment credentials |
+
+### 2. Lockstep CI Deployment
+CI deploys the platform cell and the dedicated cell sequentially within the same run.
+When `AFC_DIRECT_URL` is set in GitHub environment secrets:
+1. `npx prisma migrate deploy` applies schema migrations to `AFC_DIRECT_URL`.
+2. `scripts/verify-worker-routes.ts --env afc-staging` (or `afc-production`) verifies that routes in `wrangler.toml` match the cell's `VendorDomain` table.
+3. `wrangler deploy --env afc-staging` (or `afc-production`) deploys the application worker, job scheduler, and inbound email worker.
+
+### 3. Dedicated Cell Database Bootstrap
+To initialize a freshly migrated AFC Neon project:
+```bash
+# Staging
+env DIRECT_URL="<afc-staging-direct-url>" npx tsx scripts/bootstrap-dedicated-cell.ts --env afc-staging
+
+# Production (strictly refuses demo users)
+env DIRECT_URL="<afc-production-direct-url>" npx tsx scripts/bootstrap-dedicated-cell.ts --env afc-production
+```
+Admin privileges are granted via `scripts/grant-role.ts`. Demo accounts are never created in production (#1332).
+
+

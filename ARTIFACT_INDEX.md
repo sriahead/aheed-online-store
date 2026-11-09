@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-09T00:00:02.824Z` · commit `a982bcf6` · `324` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-09T00:12:28.108Z` · commit `7d9b30f3` · `325` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -350,6 +350,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.16.0 | 2026-11-05 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item. |
 | [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.21.0 | 2026-11-06 | approved | internal | How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access. |
 | [Merqify KMS — Knowledge Architecture, Governance and Validation (plan)](specs/2026-11-02-merqify-kms-architecture-governance/plan.md) | spec | 1.0.0 | 2026-11-02 | draft | internal | Review, redesign, and reorganise Merqify KMS into an authoritative single source of truth across 13 canonical domains, with C4 alignment, automated link integrity testing, and Nextra portal restructuring. |
+| [ADR-009 — Platform Cell and Dedicated Client Cells: Runtime Isolation, Lockstep CI & Data Autonomy](specs/decisions/ADR-009-dedicated-client-cells.md) | adr | 1.0.0 | 2026-11-09 | approved | internal | Architecture decision codifying dual topology: multi-tenant platform cell for marketplace stores alongside dedicated client cells (starting with Aheed Food Centre) with separate Workers, Neon databases, and R2 buckets, deployed in lockstep by CI. |
 
 ## Track 3 — Customer / Help Centre (`customer-help`)  ·  audience: customer
 

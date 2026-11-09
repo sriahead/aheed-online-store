@@ -120,7 +120,7 @@ async function main() {
 
   if (!envName || envName.startsWith("--")) {
     console.error(
-      "usage: npx tsx scripts/verify-worker-routes.ts --env <staging|production> [--write]\n" +
+      "usage: npx tsx scripts/verify-worker-routes.ts --env <staging|production|afc-staging|afc-production> [--write]\n" +
         "  --write  print the wrangler.toml route block for this environment instead of comparing",
     );
     process.exit(1);

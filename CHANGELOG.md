@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Aheed Food Centre Dedicated Cell Isolation (#1331)**
+  - **Wrangler Environment Topology.** Added dedicated `afc-staging` and `afc-production` environments to root `wrangler.toml`, `workers/scheduler/wrangler.toml`, and `workers/inbound-email/wrangler.toml` targeting `staging.aheedfoodcentre.co.uk` and `www.aheedfoodcentre.co.uk` with dedicated R2 image buckets (`afc-images-*`) and scheduler gating.
+  - **Lockstep CI Deployment.** Updated `.github/workflows/deploy-staging.yml` and `.github/workflows/deploy-production.yml` to execute sequential database migrations, route verification, and worker deployments for both the platform cell and the dedicated cell in a single workflow run, guaranteeing zero cross-cell schema or code drift.
+  - **Dedicated Cell Database Provisioning.** Added `scripts/bootstrap-dedicated-cell.ts` to safely bootstrap fresh AFC databases with the canonical vendor entity (`a4ed0000-0000-4000-a000-000000000001`), domain mappings, theme catalog, and initial store configuration, while strictly refusing demo users in production (#1332).
+  - **Architecture & Standing Decision.** Codified dual-topology cell architecture in ADR-009 (`specs/decisions/ADR-009-dedicated-client-cells.md`) and updated `specs/architecture.md` and `docs/developer-portal/env-setup.md`.
+
 - **Cloudflare for SaaS Client Onboarding Runbook (#1476)**
   - **Comprehensive Operational Runbook.** Added `docs/platform-admin-guide/cloudflare-saas-onboarding-runbook.md` establishing the canonical end-to-end standard operating procedure (SOP) for SaaS client onboarding from Cloudflare account creation, Free website container setup, zone delegation, fallback origin worker routing, custom hostnames, Neon database tenant mapping (`VendorDomain`), CDN asset WAF cross-domain permissions, and multi-tier verification probes.
   - **KMS Regeneration & Indexing.** Updated `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts` via `npm run kms:build-index` (323 registered artifacts) and verified clean static site compilation in `kms/site-internal`.

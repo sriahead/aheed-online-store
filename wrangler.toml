@@ -148,5 +148,64 @@ APP_ENV = "production"
 [[env.production.send_email]]
 name = "EMAIL"
 
+# ---- Aheed Food Centre Dedicated Cell (Staging) -------------------------
+# #1331 — Dedicated cell for Aheed Food Centre at staging.aheedfoodcentre.co.uk
+[env.afc-staging]
+name = "afc-store-staging"
+
+[[env.afc-staging.routes]]
+pattern = "staging.aheedfoodcentre.co.uk"
+custom_domain = true
+
+[[env.afc-staging.r2_buckets]]
+binding = "IMAGES"
+bucket_name = "afc-images-staging"
+
+[[env.afc-staging.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "20aab8dee7f342809679d36f1d96fc6c"
+
+[env.afc-staging.vars]
+UK_LOCATION_REF_POSTCODE_AREAS = "MK,RG"
+PLATFORM_NAME = "Aheed Food Centre"
+PLATFORM_TAGLINE = "Independent Quality Groceries"
+EMAIL_FROM = "no-reply@aheedfoodcentre.co.uk"
+EMAIL_RECIPIENT_MODE = "open"
+INBOUND_DEFAULT_FORWARD = "info-afc@googlegroups.com"
+APP_ENV = "staging"
+
+[[env.afc-staging.send_email]]
+name = "EMAIL"
+
+# ---- Aheed Food Centre Dedicated Cell (Production) ----------------------
+# #1331 — Dedicated cell for Aheed Food Centre at www.aheedfoodcentre.co.uk
+[env.afc-production]
+name = "afc-store-production"
+
+[[env.afc-production.routes]]
+pattern = "www.aheedfoodcentre.co.uk"
+custom_domain = true
+
+[[env.afc-production.r2_buckets]]
+binding = "IMAGES"
+bucket_name = "afc-images-production"
+
+[[env.afc-production.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "ba3dd6efb50445bc9cf856664fe6c1c5"
+
+[env.afc-production.vars]
+UK_LOCATION_REF_POSTCODE_AREAS = "MK,RG"
+SEO_INDEXABLE = "true"
+PLATFORM_NAME = "Aheed Food Centre"
+PLATFORM_TAGLINE = "Independent Quality Groceries"
+EMAIL_FROM = "no-reply@aheedfoodcentre.co.uk"
+EMAIL_RECIPIENT_MODE = "open"
+INBOUND_DEFAULT_FORWARD = "info-afc@googlegroups.com"
+APP_ENV = "production"
+
+[[env.afc-production.send_email]]
+name = "EMAIL"
+
 # NOTE: secrets (DATABASE_URL, UK_LOCATION_REF_DATABASE_URL, S3_*, STRIPE_*, BETTER_AUTH_SECRET)
-# are NOT set here. Add them per environment with:  wrangler secret put NAME --env staging|production
+# are NOT set here. Add them per environment with:  wrangler secret put NAME --env <env>

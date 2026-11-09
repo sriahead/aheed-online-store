@@ -64,6 +64,36 @@ id = "ba3dd6efb50445bc9cf856664fe6c1c5"
 [env.production.vars]
 APP_BASE_URL = "https://aheed.merqify.com"
 
+# ---- Aheed Food Centre Dedicated Cell (Staging) -------------------------
+# #1331 — Dedicated scheduler for Aheed Food Centre
+[env.afc-staging]
+name = "afc-scheduler-staging"
+
+[env.afc-staging.triggers]
+crons = ["*/15 * * * *", "0 3 * * *"]
+
+[[env.afc-staging.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "20aab8dee7f342809679d36f1d96fc6c"
+
+[env.afc-staging.vars]
+APP_BASE_URL = "https://staging.aheedfoodcentre.co.uk"
+
+# ---- Aheed Food Centre Dedicated Cell (Production) ----------------------
+# #1331 — Dedicated scheduler for Aheed Food Centre
+[env.afc-production]
+name = "afc-scheduler-production"
+
+[env.afc-production.triggers]
+crons = ["*/15 * * * *", "0 3 * * *"]
+
+[[env.afc-production.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "ba3dd6efb50445bc9cf856664fe6c1c5"
+
+[env.afc-production.vars]
+APP_BASE_URL = "https://www.aheedfoodcentre.co.uk"
+
 # NOTE: JOB_INVOCATION_TOKEN is NOT set here. It is a runtime secret and must be
 # set per environment, on BOTH this Worker and the application Worker, with the
 # SAME value:
