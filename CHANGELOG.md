@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **SaaS Scaling Architecture KMS Documentation & Delegated Email Option 2 (#104, #1342, #1343)**
+  - **KMS Architecture Guide.** Added `docs/platform-admin-guide/saas-scaling-cost-and-isolation-architecture.md` detailing multi-client unit economics, V8 compute isolation, dedicated database cells (ADR-009), R2 image bucket segregation, and transactional email routing.
+  - **Email Option 2 Configuration.** Configured `afc-staging` and `afc-production` environments in `wrangler.toml` with `EMAIL_FROM = "no-reply@merqify.com"`, routing authenticated outbound transactional emails via the platform's verified domain while directing customer replies to `orders@aheedfoodcentre.co.uk`.
+  - **Dedicated R2 Media Segregation.** Provisioned `afc-images-staging` and `afc-images-production` buckets in Cloudflare R2, ensuring complete image asset partitioning and zero cross-tenant namespace collisions.
+  - **KMS Index Regeneration.** Rebuilt artifact indexes via `npm run kms:build-index` (326 registered artifacts).
+
 - **Post-Merge Documentation, Model Handoff & Roadmap Alignment (#1331, #1476)**
   - **Roadmap & Handoff Tracking.** Updated `specs/roadmap.md` with change log entries for #1331 and #1476 and updated `docs/model-handoff.md` to v1.168.0 documenting dedicated cell isolation and next target sequencing.
   - **KMS Regeneration.** Rebuilt KMS index bundle with `npm run kms:build-index` (325 registered artifacts).
