@@ -55,15 +55,18 @@ environment-configured seam so the platform can move clouds without a rewrite.
   unless an Access application guards that host (`#1328`).
 - **Neon:** the staging and production databases are **new projects in a new Neon account** (London,
   `eu-west-2`), filled from the old staging database by `scripts/migrate-to-new-neon.ts`.
-- **Cells (owner, 2026-10-29).** The app holds **one database connection per Worker**, so isolation
+- **Cells (owner, 2026-10-29; codified in ADR-009).** The app holds **one database connection per Worker**, so isolation
   between businesses comes in two forms:
   - **Within a cell, by store ID.** The ShopLocal platform cell (`Shoplocal` and
     `Shoplocal Staging`, at `shoplocal.merqify.com`) holds many stores in one database: SriMart and
     the Aheed Food Centre demo. ADR-004 separates them by store ID.
   - **Between cells, by deployment.** A business that operates independently with its own data gets
-    a **dedicated cell**: the same code deployed as its own Workers, with its own Neon projects,
-    bucket and secrets, whose database holds that one business. The first is Aheed Food Centre
+    a **dedicated cell** (ADR-009): the same code deployed as its own Workers (`afc-store-*`), with its own Neon projects,
+    bucket (`afc-images-*`) and secrets (`AFC_*`), whose database holds that one business. The first is Aheed Food Centre
     (`aheedfoodcentre.co.uk`; Neon `Aheed Food Centre` and `Aheed Food Centre Staging`).
+  - **Lockstep CI deployment (ADR-009):** OpenNext compiles the application bundle once per run,
+    migrations execute sequentially across all cells, routes are verified per cell, and all workers deploy
+    in a single GitHub Actions workflow run to eliminate schema or version drift.
   - A cell can later move into the client's own Cloudflare and Neon accounts as a unit.
   - **Shared by every cell:** the codebase, the Merqify Workers Paid plan, and the read-only
     `uk-location-reference` database (public data, no client data).
@@ -72,7 +75,7 @@ environment-configured seam so the platform can move clouds without a rewrite.
 - **The old setup:** the Nocaped account and the old Neon projects are no longer deploy targets.
   Runbook: `docs/developer-portal/env-setup.md`, "Merqify account".
 - **Clients' domains:** a client's own domain reaches these Workers through Cloudflare for SaaS
-  custom hostnames, while the client keeps its own zone. That is a later slice, not yet built.
+  custom hostnames (`staging.aheedfoodcentre.co.uk`, `www.aheedfoodcentre.co.uk`), while the client keeps its own zone. Runbook: `docs/platform-admin-guide/cloudflare-saas-onboarding-runbook.md`.
 
 **Cost posture:** Neon and R2 both scale to (near) zero when idle; Workers bill per request; R2 has
 **zero egress**. At the MVP's scale this is a low fixed-cost footprint with no idle compute bill.

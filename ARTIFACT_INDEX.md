@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-08T19:17:25.072Z` · commit `c3ca6bb5` · `323` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-09T01:34:29.202Z` · commit `76f4561f` · `325` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -310,6 +310,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Application Improvements: Onboarding Visibility, Quick View, Product VAT, INFINITE Stock Mode & Checkout VAT Breakdown (plan)](specs/2026-11-08-app-improvements-vat-quickview-onboarding/plan.md) | spec | 1.0.0 | 2026-11-08 | draft | internal | Restrict onboarding statistics to Platform Admin, remove nocaped reference, standardize Quick View across icon gallery with 320px medallion and tint selectors, support configurable 0% and 20% VAT rates, support INFINITE stock mode, and compute/persist VAT breakdown at checkout. |
 | [Staff Onboarding Menu Expansion & Store Admin Readiness Checklist Access (Plan)](specs/2026-11-08-onboarding-menus-and-store-admin-readiness/plan.md) | spec | 1.0.0 | 2026-11-08 | draft | internal | Expand staff onboarding guide with Steps 7, 8, and 9 covering fulfilment, offers, and content moderation; restore launch readiness checklist and audit cards for Store Admin while maintaining clean guide view for store staff. |
 | [Platform documentation review and comprehensive update (plan)](specs/2026-11-08-platform-documentation-update/plan.md) | spec | 1.0.0 | 2026-11-08 | approved | internal | Platform documentation review and comprehensive update across storefront help, staff onboarding, runbooks, and KMS documentation. |
+| [Aheed Food Centre Dedicated Cell Isolation: Deployment Topology, Multi-Cell CI & Neon Isolation (plan)](specs/2026-11-09-dedicated-cell-isolation/plan.md) | spec | 1.0.0 | 2026-11-09 | draft | internal | Dedicated cell deployment topology for Aheed Food Centre: separate Workers, dedicated Neon databases, separate R2 buckets, lockstep CI deployment across platform and client cells, and store isolation. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.48.0 | 2026-11-05 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
@@ -349,6 +350,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.16.0 | 2026-11-05 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item. |
 | [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.21.0 | 2026-11-06 | approved | internal | How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access. |
 | [Merqify KMS — Knowledge Architecture, Governance and Validation (plan)](specs/2026-11-02-merqify-kms-architecture-governance/plan.md) | spec | 1.0.0 | 2026-11-02 | draft | internal | Review, redesign, and reorganise Merqify KMS into an authoritative single source of truth across 13 canonical domains, with C4 alignment, automated link integrity testing, and Nextra portal restructuring. |
+| [ADR-009 — Platform Cell and Dedicated Client Cells: Runtime Isolation, Lockstep CI & Data Autonomy](specs/decisions/ADR-009-dedicated-client-cells.md) | adr | 1.0.0 | 2026-11-09 | approved | internal | Architecture decision codifying dual topology: multi-tenant platform cell for marketplace stores alongside dedicated client cells (starting with Aheed Food Centre) with separate Workers, Neon databases, and R2 buckets, deployed in lockstep by CI. |
 
 ## Track 3 — Customer / Help Centre (`customer-help`)  ·  audience: customer
 

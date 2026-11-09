@@ -154,13 +154,30 @@ describe("repository Worker config (#1323)", () => {
   });
 
   it("R1/R2: every app Worker route is a custom domain", () => {
-    expect(customDomainCount(read("wrangler.toml"))).toBe(4);
+    expect(customDomainCount(read("wrangler.toml"))).toBe(6);
+  });
+
+  it("AFC cell staging routes are exactly staging.aheedfoodcentre.co.uk (#1331)", () => {
+    expect(parseRoutePatterns(read("wrangler.toml"), "afc-staging")).toEqual([
+      "staging.aheedfoodcentre.co.uk",
+    ]);
+  });
+
+  it("AFC cell production routes are exactly www.aheedfoodcentre.co.uk (#1331)", () => {
+    expect(parseRoutePatterns(read("wrangler.toml"), "afc-production")).toEqual([
+      "www.aheedfoodcentre.co.uk",
+    ]);
   });
 
   it("R3: the scheduler calls the Aheed host of its own environment", () => {
     const toml = read("workers/scheduler/wrangler.toml");
     const urls = [...toml.matchAll(/^APP_BASE_URL\s*=\s*"([^"]+)"/gm)].map((m) => m[1]);
-    expect(urls).toEqual(["https://aheed-staging.merqify.com", "https://aheed.merqify.com"]);
+    expect(urls).toEqual([
+      "https://aheed-staging.merqify.com",
+      "https://aheed.merqify.com",
+      "https://staging.aheedfoodcentre.co.uk",
+      "https://www.aheedfoodcentre.co.uk",
+    ]);
   });
 
   // #1328 moved the host (owner, 2026-10-30); this amends #1323's R4.
