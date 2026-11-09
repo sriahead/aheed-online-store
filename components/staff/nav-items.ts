@@ -219,6 +219,15 @@ export const STAFF_NAV_GROUPS: readonly StaffNavGroup[] = [
         tone: "accent",
       },
       {
+        href: "/staff/enquiries",
+        label: "Enquiries & Inbox",
+        description:
+          "Read and reply to customer messages from the Contact Us form and store email addresses.",
+        icon: "mail",
+        tier: "staff",
+        tone: "action",
+      },
+      {
         href: "/staff/feedback",
         label: "Customer Feedback",
         description:

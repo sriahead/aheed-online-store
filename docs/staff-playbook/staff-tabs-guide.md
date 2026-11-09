@@ -561,3 +561,32 @@ section misleading, which is worse for trust than a low rating.
 un-approving removes it, both straight away. If a customer edits feedback you already approved, it
 comes back to you as **PENDING** and disappears from the home page until you check it again — so
 what is published is always something a person has read.
+
+
+## Enquiries & Inbox — `/staff/enquiries`
+
+**Purpose:** Read and reply to customer messages submitted through the storefront Contact Us form or
+emailed directly to the store's receiving addresses.
+
+**Who can access:** Staff and store admins
+
+**What you can do:** View incoming customer enquiries and complaints, filter by status (Open,
+Replied, Resolved), search by customer email, order number or subject, send an email reply from the
+store's sender address, and mark enquiries as resolved or reopened.
+
+**Typical workflow:** Open **Enquiries & Inbox** to see new messages marked **OPEN**. Click **Reply to
+Customer**, write your response, and press **Send Email Reply**. Once the issue is handled, click
+**Mark Resolved** to clear it from the open queue.
+
+**Important fields and filters:** Each message displays its source (**Contact Form** or **Inbound
+Email**), type (**ENQUIRY**, **COMPLAINT**, **SUPPORT**, or **ORDERS**), the customer's name, email
+and phone number, any linked order number, and the message body. Status tabs filter between **All
+Messages**, **OPEN**, **REPLIED** and **RESOLVED**.
+
+**Common mistakes and limitations:** Outgoing replies are sent to the customer's email address using
+the store's configured sender identity. Always verify the customer's order number and details before
+sending a reply, as sent emails cannot be recalled.
+
+**What happens after changes are saved:** Sending a reply dispatches the email immediately, saves a
+copy of your reply with your staff email and timestamp on the enquiry card, and updates the status to
+**REPLIED**.

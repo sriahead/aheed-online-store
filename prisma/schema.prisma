@@ -157,6 +157,7 @@ model Vendor {
   orderAlertRecipients      VendorOrderAlertRecipient[]
   contactAttempts           ContactAttempt[]
   contactOutbox             ContactOutbox[]
+  enquiries                 VendorEnquiry[]
   notificationOutbox        NotificationOutbox[]
   carts                     Cart[]
   cartItems                 CartItem[]
@@ -405,6 +406,30 @@ model ContactOutbox {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+model VendorEnquiry {
+  id          String    @id @default(uuid())
+  vendorId    String
+  vendor      Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  source      String
+  type        String
+  senderName  String?
+  senderEmail String
+  senderPhone String?
+  toAddress   String?
+  orderNumber String?
+  subject     String
+  message     String
+  status      String    @default("OPEN")
+  replyBody   String?
+  repliedAt   DateTime?
+  repliedBy   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([vendorId, createdAt])
+  @@index([vendorId, status])
 }
 
 // #1435 - an order-event message (customer or owner, email or Telegram) whose send FAILED, kept
