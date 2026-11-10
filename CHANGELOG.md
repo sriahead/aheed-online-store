@@ -8,6 +8,12 @@ every branch merges.
 
 ### Fixed
 
+- **Aheed dedicated cell deploys: Cloudflare for SaaS routes (#1331 follow-up, split from PR #1485)**
+  - **What was broken.** `deploy-staging` run 42804393058 failed at "Deploy AFC Dedicated Worker" with `Could not find zone for staging.aheedfoodcentre.co.uk`. The `aheedfoodcentre.co.uk` zone lives in the client's Cloudflare account, so a `custom_domain` route cannot be created from the Merqify account. The script still published, leaving the AFC staging Worker on new code while its scheduler and inbound Worker were skipped.
+  - **Fix.** `afc-staging`/`afc-production` use `zone_name = "merqify.com"` routes (`host/*`), plus `fallback.merqify.com/*` on production: the Cloudflare for SaaS fallback origin. `scripts/verify-worker-routes.ts` compares `host/*` as the bare host and ignores the fallback host. `tests/worker-routes.test.ts` now expects 4 custom domains.
+  - **CSP.** `img-src` adds `https://*.aheedfoodcentre.co.uk`.
+  - **Not included.** `scripts/migrate-aheed-to-dedicated-cell.ts` stays on PR #1485 pending the owner's decision on copying AFC production data into staging.
+
 - **`deploy-staging` unblocked: the route guard knows about dedicated cells (#1482 R34a, #1331)**
   - **What was broken.** Every `deploy-staging` run since `e94ebbb5` (#1477, 2026-11-08) failed at "Verify Worker routes", so #1478, #1480 and #1481 never reached the staging Workers. The platform staging database still holds a `VendorDomain` row for `staging.aheedfoodcentre.co.uk`, which the dedicated `afc-staging` Worker now routes. The script's own advice (`--write`) would have moved that custom domain off the dedicated Worker.
   - **Fix.** `scripts/verify-worker-routes.ts` treats a host routed by another environment in the same `wrangler.toml` as covered, and prints an INFO line naming that environment. A host routed by no environment still fails the deploy. This is covered by `tests/worker-routes.test.ts`, including the real `wrangler.toml` for the staging and production Aheed hosts.

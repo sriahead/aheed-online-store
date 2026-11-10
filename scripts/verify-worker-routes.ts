@@ -62,7 +62,13 @@ export function parseRoutePatterns(toml: string, envName: string): string[] {
     }
     if (!inRoutesTable) continue;
     const match = /^pattern\s*=\s*["']([^"']+)["']/.exec(line);
-    if (match) patterns.push(match[1].toLowerCase());
+    if (match) {
+      // #1331: a dedicated cell reached through Cloudflare for SaaS uses `zone_name` routes
+      // (`host/*`), not custom domains — compare them as the bare host. `fallback.merqify.com` is
+      // the SaaS fallback origin, not a vendor host, so it never has a VendorDomain row.
+      const normalized = match[1].toLowerCase().replace(/\/\*$/, "");
+      if (normalized !== "fallback.merqify.com") patterns.push(normalized);
+    }
   }
 
   return patterns;
