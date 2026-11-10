@@ -135,6 +135,14 @@ R30. `prisma/migrations/20261109225000_vendor_enquiries/migration.sql` is edited
      `CREATE TABLE`, `CREATE INDEX` and `ADD CONSTRAINT` statements, and no `DROP` or `ALTER ...
      DROP`. Its statements equal `prisma migrate diff` from `origin/staging`'s `schema.prisma` to
      this branch's, excluding any proposed drop of the hand-authored `pg_trgm` indexes.
+R30a. (Found 2026-11-10 after R30's in-place edit, owner-approved.) The ORIGINAL text of
+     `20261109225000_vendor_enquiries` was applied by hand on 2026-11-09 22:48 UTC to AFC staging, AFC
+     production and Merqify production (old shape, 0 rows each). `20261110120000_vendor_enquiries_reshape`
+     brings any database to R29's shape without losing rows: guarded on the `replyBody` column, it
+     creates the enums if missing, converts `source`/`status`, creates `VendorEnquiryReply`, copies
+     each recorded reply into it, and drops the three reply columns. On the new shape it changes
+     nothing. `scripts/verify-enquiry-reshape.ts` proves both shapes and idempotency against dev in
+     throwaway schemas; `tests/migration-enquiry-reshape.test.ts` guards the file's structure.
 R31. Tests exist and pass for:
      - `tests/roles.test.ts`: the existing ten cases, with test doubles updated to `findFirst` and
        no assertion removed or loosened, plus cases for R17, R18 (`PLATFORM_ADMIN` by a store

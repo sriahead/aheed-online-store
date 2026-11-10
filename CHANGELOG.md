@@ -14,6 +14,11 @@ every branch merges.
   - **CSP.** `img-src` adds `https://*.aheedfoodcentre.co.uk`.
   - **Not included.** `scripts/migrate-aheed-to-dedicated-cell.ts` stays on PR #1485 pending the owner's decision on copying AFC production data into staging.
 
+- **Enquiry tables reach the same shape on every database (#1482 R30a)**
+  - **What was broken.** The original text of `20261109225000_vendor_enquiries` had been applied by hand on 2026-11-09 to AFC staging, AFC production and Merqify production, before that migration was edited in place on 2026-11-10. `prisma migrate deploy` never re-checks an applied migration's checksum, so those three kept the old shape: text `source`/`status`, the reply columns, and no `VendorEnquiryReply`. The new code fails against that shape; all three held 0 rows when checked.
+  - **Fix.** The new hand-authored migration `20261110120000_vendor_enquiries_reshape` is one guarded `DO` block. On the old shape it creates the enums if missing, converts `source`/`status`, creates `VendorEnquiryReply`, copies any recorded reply into it, and drops the three reply columns. On the new shape (dev, Merqify staging) it does nothing.
+  - **Proven.** `scripts/verify-enquiry-reshape.ts` tests it against dev in throwaway schemas: the old shape converts with replies kept, the FK cascades, the status default holds, a second run is a no-op, and the new shape is untouched. `tests/migration-enquiry-reshape.test.ts` guards the file's structure.
+
 - **`deploy-staging` unblocked: the route guard knows about dedicated cells (#1482 R34a, #1331)**
   - **What was broken.** Every `deploy-staging` run since `e94ebbb5` (#1477, 2026-11-08) failed at "Verify Worker routes", so #1478, #1480 and #1481 never reached the staging Workers. The platform staging database still holds a `VendorDomain` row for `staging.aheedfoodcentre.co.uk`, which the dedicated `afc-staging` Worker now routes. The script's own advice (`--write`) would have moved that custom domain off the dedicated Worker.
   - **Fix.** `scripts/verify-worker-routes.ts` treats a host routed by another environment in the same `wrangler.toml` as covered, and prints an INFO line naming that environment. A host routed by no environment still fails the deploy. This is covered by `tests/worker-routes.test.ts`, including the real `wrangler.toml` for the staging and production Aheed hosts.
