@@ -67,7 +67,20 @@ export async function saveDbWarmupConfig(
   input: DbWarmupConfigInput,
   actorEmail: string,
 ): Promise<DbWarmupConfigRow> {
-  const data = { ...input, updatedBy: actorEmail };
+  // Copy only the writable fields: a caller's object may carry more (e.g. a spread of a row with
+  // `updatedAt`), and nothing but these nine plus `updatedBy` may ever reach the database.
+  const data = {
+    enabled: input.enabled,
+    mode: input.mode,
+    activityEnabled: input.activityEnabled,
+    activityMinutes: input.activityMinutes,
+    leadMinutes: input.leadMinutes,
+    customStart: input.customStart,
+    customEnd: input.customEnd,
+    computeMilliUnits: input.computeMilliUnits,
+    priceMicroUsdPerCuHour: input.priceMicroUsdPerCuHour,
+    updatedBy: actorEmail,
+  };
   return prisma.dbWarmupConfig.upsert({
     where: { id: CONFIG_ID },
     create: { id: CONFIG_ID, ...data },

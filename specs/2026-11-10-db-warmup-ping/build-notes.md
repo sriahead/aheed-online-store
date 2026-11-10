@@ -84,3 +84,13 @@ The spec commit is `c0e73cc0`. Issue #1491.
 - **`ctx.waitUntil` via `getCloudflareContext()`** falls back to an un-awaited promise outside a
   Worker request (scripts, tests). That is harmless there, but it means the activity write is only
   guaranteed on the Worker.
+
+## Pre-merge verification (2026-11-10, in-session, not independent)
+
+- **R3 passed on dev** (`ep-dry-morning`, migrations applied by the owner with `prisma migrate deploy`):
+  `PASS defaults when no row`, `PASS upsert round-trip`, `cleanup: 0 rows left / restored`.
+- **What R3 found.** The first run failed. `saveDbWarmupConfig` spread its input straight into
+  Prisma, so an object carrying extra fields (the script spread `DB_WARMUP_DEFAULTS`, including
+  `updatedAt: null`) reached the database and was rejected. The app's only caller passes exactly the
+  right fields, so no shipped path was affected, but the repository now copies the nine writable
+  fields explicitly.
