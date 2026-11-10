@@ -94,3 +94,22 @@ The spec commit is `c0e73cc0`. Issue #1491.
   `updatedAt: null`) reached the database and was rejected. The app's only caller passes exactly the
   right fields, so no shipped path was affected, but the repository now copies the nine writable
   fields explicitly.
+
+## R16 staging run started (2026-11-10)
+
+- #1492 merged as `71825f7`. Deploy run 42850438162 succeeded with **12 Cron Triggers accepted**
+  (each scheduler: `*/15`, `0 3`, `*/4`).
+- #1493 (`80be3c8`) gave the AFC cells their own `JOB_SIGNALS` namespaces. Before it, AFC staging
+  shared the platform staging namespace, so the warm-up keys would have collided.
+- **Enabled on Aheed staging by the owner, about 16:59 UTC.** The published schedule (AFC namespace
+  `9b5c84f2…`) is enabled with activity on at 30 min, 8 windows; the first is 08:30–20:00 London,
+  valid until 2026-11-18. The first ping was at 17:00:39 UTC.
+- **Remaining R16 checks:**
+  - pings about every 4 min in-window and none outside (after 20:00 London);
+  - signing in outside a window gives `reason=recent-activity`;
+  - a first in-window request after ≥ 10 quiet minutes takes < 1.5 s;
+  - switching off gives `disabled`.
+- **One-week comparison due on or after 2026-11-17.** Compare the Neon console compute-hours for the
+  AFC staging project (`ep-shiny-thunder`) with the page's estimate (±30 %). Promotion waits for it.
+- The KV keys can be read with the Cloudflare API using the token in `secrets/afc-staging.vars`.
+  Node `fetch` and `wrangler` are blocked from the Bash tool's network here; PowerShell works.
