@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-10T13:43:26.677Z` · commit `aceba801` · `327` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-10T15:48:04.643Z` · commit `c0e73cc0` · `328` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -311,6 +311,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Staff Onboarding Menu Expansion & Store Admin Readiness Checklist Access (Plan)](specs/2026-11-08-onboarding-menus-and-store-admin-readiness/plan.md) | spec | 1.0.0 | 2026-11-08 | draft | internal | Expand staff onboarding guide with Steps 7, 8, and 9 covering fulfilment, offers, and content moderation; restore launch readiness checklist and audit cards for Store Admin while maintaining clean guide view for store staff. |
 | [Platform documentation review and comprehensive update (plan)](specs/2026-11-08-platform-documentation-update/plan.md) | spec | 1.0.0 | 2026-11-08 | approved | internal | Platform documentation review and comprehensive update across storefront help, staff onboarding, runbooks, and KMS documentation. |
 | [Aheed Food Centre Dedicated Cell Isolation: Deployment Topology, Multi-Cell CI & Neon Isolation (plan)](specs/2026-11-09-dedicated-cell-isolation/plan.md) | spec | 1.0.0 | 2026-11-09 | draft | internal | Dedicated cell deployment topology for Aheed Food Centre: separate Workers, dedicated Neon databases, separate R2 buckets, lockstep CI deployment across platform and client cells, and store isolation. |
+| [Database warm-up ping during store opening hours (plan)](specs/2026-11-10-db-warmup-ping/plan.md) | spec | 1.0.0 | 2026-11-10 | approved | internal | A scheduler ping that keeps each cell's Neon database awake during store opening hours, so shoppers do not pay a multi-second cold start. Off by default, configured by platform admins, with a compute-hour and cost estimate. Staging first, then production. |
 | [PR #1481 retro-spec: enquiries inbox, Team & Access provisioning, inbound-email recording and operator guides (plan)](specs/2026-11-10-pr1481-enquiries-team-access-retro/plan.md) | spec | 1.0.0 | 2026-11-10 | approved | internal | Retrospective Gate 1/2 spec for code already on PR #1481: the /staff/enquiries inbox and its migration, Team & Access Platform Admin grants and pre-provisioning, inbound-email recording, and the Telegram/operator guides. Includes a review of the implementation against it. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.48.0 | 2026-11-05 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |

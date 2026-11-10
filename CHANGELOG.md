@@ -6,7 +6,16 @@ every branch merges.
 
 ## [Unreleased]
 
-### Fixed
+### Added
+
+- **Database warm-up ping during opening hours and after signed-in activity (#1491)**, spec `specs/2026-11-10-db-warmup-ping/`
+  - **Why.** Neon suspends compute after 5 minutes with no query. On 2026-11-10 the first request after idle took 7.1 s on Aheed staging, against ~0.2 s warm.
+  - **What.** A new `*/4 * * * *` Cron Trigger on every scheduler environment pings `POST /api/jobs/warm-db` (token-guarded, one trivial query on the main database only, never the postcode reference DB). It pings only inside published windows, or within N minutes of signed-in activity. The scheduler decides from KV alone (`db-warmup:schedule`, `db-warmup:last-activity`), so deciding never wakes the database, and **every doubt skips**: the opposite of the other jobs, because a missed ping costs one cold start while a stuck one costs compute all night. Each tick logs `warmup tick ran=… reason=…`.
+  - **Schedule.** `lib/db-warmup/schedule.ts` computes 8 days of Europe/London, DST-correct windows from `DbWarmupConfig` and every vendor's `VendorWeeklyHours` and `VendorHoursOverride` (union across the cell, closed days skipped). It is republished on settings saves, on every opening-hours or override change, and by a new daily job `/api/jobs/refresh-warmup-schedule`.
+  - **Activity.** Every server-side session read goes through `getAuth().api.getSession`, now wrapped (`withWarmupActivity`). A signed-in result records `db-warmup:last-activity` in KV, throttled to one write per 3 minutes and handed to `waitUntil`, with no database write. A ping never counts as activity.
+  - **Admin page** `/staff/platform/db-warmup` (platform admins only). It has an on/off switch (default **off**), mode (opening hours, the default / always / custom window / activity only), lead minutes, the activity toggle and minutes, and compute size and price. It shows the next 7 days of windows, last ping, last activity, "expected to go cold at", and a monthly CU-hour and cost estimate beside always-on. The save is allow-listed and audited (`updatedBy`).
+  - **Migration** `20261110130000_db_warmup_config` (hand-authored per #895, additive): enum `DbWarmupMode` and table `DbWarmupConfig`, a single row per cell with integers for compute (milli-CU) and price (micro-USD).
+  - **Docs.** Platform admin guide section, and `env-setup.md`'s Cron Trigger budget corrected (8 live before, 12 after).
 
 - **Staging only mails the allow-list again; production stays open (#1482, owner decision 2026-11-10)**
   - **What was wrong.** `EMAIL_RECIPIENT_MODE = "open"` had been set on `[env.staging.vars]` (#1459) and copied to `[env.afc-staging.vars]` (#1478), so both staging Workers could email any address, including real customers copied into staging. `docs/developer-portal/env-setup.md` already said staging should only mail `EMAIL_ALLOWED_RECIPIENTS`.

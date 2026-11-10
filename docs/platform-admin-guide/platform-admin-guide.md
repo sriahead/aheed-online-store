@@ -326,6 +326,63 @@ and subject. Reuse one bot's chat ID on another cell.
 **What happens after changes are saved:** Environment changes deployed to Cloudflare Workers or GitHub environment secrets are reflected upon worker restart.
 
 
+## Database Warm-up — `/staff/platform/db-warmup`
+
+**Purpose:** Keep this cell's database awake so shoppers don't wait for it to start. Neon stops the
+database after 5 minutes with no query; the next visitor then waits several seconds (7.1 s measured
+on Aheed staging, 2026-11-10). While warm-up is on, the scheduler sends one tiny query every 4
+minutes during the chosen windows, which keeps the database awake.
+
+**Who can access:** Platform admins only
+
+**What you can do:**
+
+- **Warm-up on:** switch it on or off for this cell. It starts **off**.
+- **When to keep the database warm:**
+  - **During store opening hours** (the default) uses every store's weekly hours in this cell, plus
+    holiday closures. A closed day has no pings.
+  - **Always** pings around the clock.
+  - **A fixed daily window** uses the From and Until times you set, in London time.
+  - **Only after signed-in activity** has no scheduled windows at all.
+- **Start this many minutes before opening** (opening-hours mode, default 30): so the first shopper
+  of the day finds it warm.
+- **Also keep warm after signed-in activity** (on by default) and **for this many minutes** (default
+  30): after any signed-in request, pings continue for that long. This helps someone who pauses on a
+  page for more than 5 minutes, and staff working outside opening hours. It cannot help the first
+  visitor after a quiet spell.
+- **Minimum compute size (CU)** and **Price per CU-hour (USD)**: inputs for the estimate only. Copy
+  the compute size from the Neon console. The price defaults to Neon Launch ($0.106).
+
+**Typical workflow:** Switch it on in opening-hours mode and save. The scheduler picks the change up
+within 4 minutes. Check **Last ping** during opening hours. After a week, compare the estimate with
+the compute hours shown in the Neon console.
+
+**Important fields and filters:**
+
+- **Status** shows whether warm-up is on, the **last ping**, the **last signed-in activity**, and
+  **Database expected to go cold at**. That is the later of those two times plus Neon's 5 minutes,
+  and it is approximate because shoppers who are not signed in are not recorded.
+- **Next 7 days (London time)** lists the ping windows per day, or "None".
+- **Estimated cost (per month)** gives the CU-hours and dollars for the scheduled windows, and the
+  always-on figure for comparison.
+
+**Common mistakes and limitations:**
+
+- **This applies to every store in this cell**, because they share one database.
+- **In opening-hours mode with no opening hours set** for any store, no pings run, and the page says
+  so. Set the hours under **Storefront**.
+- **The estimate is arithmetic, not a bill:** window hours × 30.4/7 days × compute size × price,
+  plus a 5-minute tail per window. It covers scheduled windows only; activity time adds on top.
+- **Neon's 5 minutes is fixed** on the Launch plan. The other option is turning scale-to-zero off in
+  the Neon console (always on, roughly double the cost of opening hours).
+- **If anything is in doubt**, the scheduler skips the ping rather than risk running all night. A
+  missing or out-of-date schedule means no pings until the next save or the daily refresh at 03:00.
+
+**What happens after changes are saved:** The settings are saved with your email and the time
+("Last changed by"), the next 8 days of windows are recalculated and published for the scheduler,
+and the change takes effect on the next 4-minute tick. Editing any store's opening hours or holiday
+closures also recalculates the windows automatically.
+
 ## Platform System Health — `/staff/platform/health`
 
 **Purpose:** Real-time health monitoring and latency diagnostics for the platform's database connection, health checks, and error logging infrastructure.
