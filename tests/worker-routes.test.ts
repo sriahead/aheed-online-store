@@ -154,8 +154,8 @@ describe("repository Worker config (#1323)", () => {
     ]);
   });
 
-  it("R1/R2: every app Worker route is a custom domain", () => {
-    expect(customDomainCount(read("wrangler.toml"))).toBe(6);
+  it("R1/R2: every Merqify-hosted app Worker route is a custom domain, while external SaaS domains use zone_name routes", () => {
+    expect(customDomainCount(read("wrangler.toml"))).toBe(4);
   });
 
   it("AFC cell staging routes are exactly staging.aheedfoodcentre.co.uk (#1331)", () => {

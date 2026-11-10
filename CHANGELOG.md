@@ -8,6 +8,12 @@ every branch merges.
 
 ### Fixed
 
+- **Aheed dedicated cell deploys: Cloudflare for SaaS routes (#1331 follow-up, split from PR #1485)**
+  - **What was broken.** `deploy-staging` run 42804393058 failed at "Deploy AFC Dedicated Worker" with `Could not find zone for staging.aheedfoodcentre.co.uk`. The `aheedfoodcentre.co.uk` zone lives in the client's Cloudflare account, so a `custom_domain` route cannot be created from the Merqify account. The script still published, leaving the AFC staging Worker on new code while its scheduler and inbound Worker were skipped.
+  - **Fix.** `afc-staging`/`afc-production` use `zone_name = "merqify.com"` routes (`host/*`), plus `fallback.merqify.com/*` on production: the Cloudflare for SaaS fallback origin. `scripts/verify-worker-routes.ts` compares `host/*` as the bare host and ignores the fallback host. `tests/worker-routes.test.ts` now expects 4 custom domains.
+  - **CSP.** `img-src` adds `https://*.aheedfoodcentre.co.uk`.
+  - **Not included.** `scripts/migrate-aheed-to-dedicated-cell.ts` stays on PR #1485 pending the owner's decision on copying AFC production data into staging.
+
 - **Enquiry tables reach the same shape on every database (#1482 R30a)**
   - **What was broken.** The original text of `20261109225000_vendor_enquiries` had been applied by hand on 2026-11-09 to AFC staging, AFC production and Merqify production, before that migration was edited in place on 2026-11-10. `prisma migrate deploy` never re-checks an applied migration's checksum, so those three kept the old shape: text `source`/`status`, the reply columns, and no `VendorEnquiryReply`. The new code fails against that shape; all three held 0 rows when checked.
   - **Fix.** The new hand-authored migration `20261110120000_vendor_enquiries_reshape` is one guarded `DO` block. On the old shape it creates the enums if missing, converts `source`/`status`, creates `VendorEnquiryReply`, copies any recorded reply into it, and drops the three reply columns. On the new shape (dev, Merqify staging) it does nothing.
