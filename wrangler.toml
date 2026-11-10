@@ -157,6 +157,17 @@ name = "afc-store-staging"
 pattern = "staging.aheedfoodcentre.co.uk/*"
 zone_name = "merqify.com"
 
+# #1482 — this Worker's own ORIGIN for Cloudflare for SaaS. The custom hostname
+# staging.aheedfoodcentre.co.uk (merqify.com zone → SSL/TLS → Custom Hostnames) must name this as its
+# Origin server and Origin SNI. Its origin had been aheed-staging.merqify.com — the PLATFORM staging
+# Worker's custom domain — so staging traffic reached the platform Worker (platform DB, platform
+# Google client) whenever no route above intercepted it, as on 2026-11-10. A custom domain cannot be
+# taken by another Worker, so this pins the hostname to the AFC Worker. Not a vendor host: no
+# VendorDomain row; scripts/verify-worker-routes.ts skips it (SAAS_ORIGIN_HOSTS).
+[[env.afc-staging.routes]]
+pattern = "afc-staging-origin.merqify.com"
+custom_domain = true
+
 [[env.afc-staging.r2_buckets]]
 binding = "IMAGES"
 bucket_name = "afc-images-staging"

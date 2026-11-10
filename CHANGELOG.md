@@ -8,6 +8,12 @@ every branch merges.
 
 ### Fixed
 
+- **Aheed staging is served by its own Worker again: a dedicated SaaS origin (#1482, #1331)**
+  - **What was broken.** The Cloudflare for SaaS custom hostname `staging.aheedfoodcentre.co.uk` had `aheed-staging.merqify.com` as its origin: the **platform** staging Worker's custom domain. Since 2026-11-10 the platform Worker answered for the Aheed staging host, with the Merqify footer, the platform database and the platform Google client, so Google sign-in failed with `redirect_uri_mismatch`, even though the AFC Worker's route `staging.aheedfoodcentre.co.uk/*` exists. The onboarding runbook told operators to set exactly that origin.
+  - **Fix (code).** `afc-store-staging` owns `afc-staging-origin.merqify.com` as a custom domain. `scripts/verify-worker-routes.ts` gains `SAAS_ORIGIN_HOSTS` (`fallback.merqify.com`, `afc-staging-origin.merqify.com`, `afc-origin.merqify.com`), which the vendor comparison skips. `tests/worker-routes.test.ts` checks that the route exists, is a custom domain, and is claimed by no other environment.
+  - **Fix (owner, after deploy).** Set the custom hostname's Origin server and SNI to `afc-staging-origin.merqify.com`. The runbook (`docs/platform-admin-guide/cloudflare-saas-onboarding-runbook.md` v1.1.0) now carries a dedicated-cell warning, the order of steps, the per-cell Google client, and a troubleshooting row.
+  - **Also done (2026-11-10, not code).** The `afc-staging` Worker's `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` held the platform client. They were replaced with the Aheed client from `secrets/afc-staging.vars`.
+
 - **Aheed dedicated cell deploys: Cloudflare for SaaS routes (#1331 follow-up, split from PR #1485)**
   - **What was broken.** `deploy-staging` run 42804393058 failed at "Deploy AFC Dedicated Worker" with `Could not find zone for staging.aheedfoodcentre.co.uk`. The `aheedfoodcentre.co.uk` zone lives in the client's Cloudflare account, so a `custom_domain` route cannot be created from the Merqify account. The script still published, leaving the AFC staging Worker on new code while its scheduler and inbound Worker were skipped.
   - **Fix.** `afc-staging`/`afc-production` use `zone_name = "merqify.com"` routes (`host/*`), plus `fallback.merqify.com/*` on production: the Cloudflare for SaaS fallback origin. `scripts/verify-worker-routes.ts` compares `host/*` as the bare host and ignores the fallback host. `tests/worker-routes.test.ts` now expects 4 custom domains.

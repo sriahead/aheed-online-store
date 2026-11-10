@@ -43,6 +43,17 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 const WRANGLER_CONFIG = "wrangler.toml";
 
 /**
+ * Cloudflare for SaaS ORIGIN hosts (#1331, #1482): routes that exist so a custom hostname's traffic
+ * reaches the right Worker, not vendor storefronts. They never have a VendorDomain row, so they are
+ * excluded from the vendor comparison instead of warning as "stale" on every deploy.
+ */
+export const SAAS_ORIGIN_HOSTS: ReadonlySet<string> = new Set([
+  "fallback.merqify.com",
+  "afc-staging-origin.merqify.com",
+  "afc-origin.merqify.com",
+]);
+
+/**
  * Every `pattern` declared by a `[[env.<envName>.routes]]` table.
  *
  * Deliberately narrow: it keys on the exact table header, so `[env.staging.vars]` and
@@ -64,10 +75,10 @@ export function parseRoutePatterns(toml: string, envName: string): string[] {
     const match = /^pattern\s*=\s*["']([^"']+)["']/.exec(line);
     if (match) {
       // #1331: a dedicated cell reached through Cloudflare for SaaS uses `zone_name` routes
-      // (`host/*`), not custom domains — compare them as the bare host. `fallback.merqify.com` is
-      // the SaaS fallback origin, not a vendor host, so it never has a VendorDomain row.
+      // (`host/*`), not custom domains — compare them as the bare host. SaaS origin hosts are not
+      // vendor hosts (see SAAS_ORIGIN_HOSTS).
       const normalized = match[1].toLowerCase().replace(/\/\*$/, "");
-      if (normalized !== "fallback.merqify.com") patterns.push(normalized);
+      if (!SAAS_ORIGIN_HOSTS.has(normalized)) patterns.push(normalized);
     }
   }
 
