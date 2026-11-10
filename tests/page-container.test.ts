@@ -56,6 +56,7 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(admin)/staff/search-synonyms/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/bundles/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/feedback/page.tsx": { width: "wide", padY: "default" },
+  "app/(admin)/staff/enquiries/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/team/page.tsx": { width: "wide", padY: "default" },
   // #1319 — the platform admin's home: a metrics strip and a card grid, like the hub.
   "app/(admin)/staff/platform/page.tsx": { width: "wide", padY: "default" },

@@ -20,6 +20,7 @@ import {
 } from "@/lib/client-setup/sections";
 import { groupAddressesByForwardTo } from "@/lib/client-setup/inbound-groups";
 import { DESTINATIONS_UNAVAILABLE_SHORT } from "@/lib/client-setup/destination-copy";
+import { TELEGRAM_QUICK_LINKS } from "@/lib/client-setup/telegram-links";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Icon } from "@/components/icons/Icon";
@@ -396,6 +397,40 @@ async function ClientSetupSections({
                   </ul>
                 )}
                 <AddOrderAlertRecipientForm vendorId={vendorId} />
+
+                {/* Quick links for setting up Telegram alerts; "Shareable" ones can go to the client. */}
+                <div className="mt-5 border-t border-slate-100 pt-4" data-telegram-quick-links>
+                  <p className="mb-2 text-xs font-semibold uppercase text-primary-muted">
+                    Telegram quick links
+                  </p>
+                  <ul className="space-y-2 text-sm">
+                    {TELEGRAM_QUICK_LINKS.map((link) => {
+                      const external = link.href.startsWith("https://");
+                      return (
+                        <li key={link.href}>
+                          <a
+                            href={link.href}
+                            {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                            className="inline-flex items-center gap-1 font-semibold text-action underline"
+                          >
+                            {link.label}
+                            {external ? <Icon name="external-link" className="h-3 w-3" /> : null}
+                          </a>
+                          {link.shareable ? (
+                            <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-primary-muted">
+                              Shareable
+                            </span>
+                          ) : null}
+                          <span className="block text-xs text-primary-muted">{link.hint}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <p className="mt-3 text-xs text-primary-muted">
+                    Never share the bot token or a getUpdates address: it contains the token, and
+                    anyone holding it can post as the bot.
+                  </p>
+                </div>
               </Card>
 
               <div className="lg:col-span-2">

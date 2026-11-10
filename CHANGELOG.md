@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Operator guides: Enquiries & Inbox, Team & Access, Telegram order alerts (#1390, #1217)**
+  - **Staff playbook.** Rewrote `/staff/enquiries` with SCQA framing, MECE channel/type/status tables and reply paths; corrected the stored inbound body limit to 4,000 characters.
+  - **Store admin guide.** Rewrote `/staff/team` for Platform Admin grants, case-insensitive lookup and pre-provisioning of unregistered emails.
+  - **Platform admin guide.** Added an end-to-end Telegram order-alert setup under Client Setup: one bot per cell, steps, chat-ID formats, boundary scenarios and where to get help.
+  - **Client Setup quick links.** The Order alerts card now lists Telegram quick links (`lib/client-setup/telegram-links.ts`), marking which are safe to share with a client; guarded by `tests/client-setup-telegram-links.test.ts` (official Telegram domains only, never a token URL).
+
 - **SaaS Scaling Architecture KMS Documentation & Delegated Email Option 2 (#104, #1342, #1343)**
   - **KMS Architecture Guide.** Added `docs/platform-admin-guide/saas-scaling-cost-and-isolation-architecture.md` detailing multi-client unit economics, V8 compute isolation, dedicated database cells (ADR-009), R2 image bucket segregation, and transactional email routing.
   - **Email Option 2 Configuration.** Configured `afc-staging` and `afc-production` environments in `wrangler.toml` with `EMAIL_FROM = "no-reply@merqify.com"`, routing authenticated outbound transactional emails via the platform's verified domain while directing customer replies to `orders@aheedfoodcentre.co.uk`.
