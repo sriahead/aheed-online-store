@@ -69,6 +69,40 @@ export function parseRoutePatterns(toml: string, envName: string): string[] {
 }
 
 /**
+ * Every route host declared by an environment OTHER than `envName`, mapped to that environment
+ * (#1482 R34a). A trailing `/*` is dropped so a zone route compares equal to its host.
+ *
+ * WHY. A dedicated cell (ADR-009, #1331) moves a vendor's host to its own Worker, but the platform
+ * database can still hold that vendor's `VendorDomain` row. The host is then correctly ABSENT from
+ * the platform env's routes and present under `afc-<env>`. Without this, the platform deploy failed
+ * on `staging.aheedfoodcentre.co.uk` from #1477 onwards, and the script's own advice (`--write`)
+ * would have moved the custom domain off the dedicated Worker. A custom domain belongs to the
+ * Worker that declares it, so deploying `envName` without a host another env declares cannot tear
+ * that domain down. A host declared NOWHERE is still a failure.
+ */
+export function parseOtherEnvRoutes(toml: string, envName: string): Map<string, string> {
+  const routed = new Map<string, string>();
+  let currentEnv: string | null = null;
+
+  for (const raw of toml.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (line.startsWith("[")) {
+      const header = /^\[\[env\.([A-Za-z0-9_-]+)\.routes\]\]$/.exec(line);
+      currentEnv = header && header[1] !== envName ? header[1] : null;
+      continue;
+    }
+    if (!currentEnv) continue;
+    const match = /^pattern\s*=\s*["']([^"']+)["']/.exec(line);
+    if (match) {
+      const host = match[1].toLowerCase().replace(/\/\*$/, "");
+      if (!routed.has(host)) routed.set(host, currentEnv);
+    }
+  }
+
+  return routed;
+}
+
+/**
  * Whether a `VendorDomain.host` is one the Worker can actually be routed for.
  *
  * Excludes two shapes, and both are real rows rather than hypotheses: the dev seed writes
@@ -93,14 +127,19 @@ export function isRoutableHost(host: string): boolean {
 export function compareRoutes(
   hosts: string[],
   patterns: string[],
-): { missing: string[]; stale: string[] } {
+  routedElsewhere: ReadonlyMap<string, string> = new Map(),
+): { missing: string[]; stale: string[]; elsewhere: { host: string; env: string }[] } {
   const routable = hosts.filter(isRoutableHost).map((h) => h.toLowerCase());
   const declared = new Set(patterns.map((p) => p.toLowerCase()));
   const live = new Set(routable);
+  const unrouted = [...new Set(routable.filter((h) => !declared.has(h)))].sort();
 
   return {
-    missing: [...new Set(routable.filter((h) => !declared.has(h)))].sort(),
+    missing: unrouted.filter((h) => !routedElsewhere.has(h)),
     stale: [...declared].filter((p) => !live.has(p)).sort(),
+    elsewhere: unrouted
+      .filter((h) => routedElsewhere.has(h))
+      .map((host) => ({ host, env: routedElsewhere.get(host) as string })),
   };
 }
 
@@ -147,8 +186,13 @@ async function main() {
     return;
   }
 
-  const patterns = parseRoutePatterns(readFileSync(WRANGLER_CONFIG, "utf8"), envName);
-  const { missing, stale } = compareRoutes(hosts, patterns);
+  const toml = readFileSync(WRANGLER_CONFIG, "utf8");
+  const patterns = parseRoutePatterns(toml, envName);
+  const { missing, stale, elsewhere } = compareRoutes(
+    hosts,
+    patterns,
+    parseOtherEnvRoutes(toml, envName),
+  );
   const routableCount = hosts.filter(isRoutableHost).length;
 
   console.log(
@@ -160,6 +204,13 @@ async function main() {
     console.log(
       `  WARNING  ${pattern} is routed but has no VendorDomain row — fine if the vendor is not ` +
         "created yet, otherwise stale",
+    );
+  }
+
+  for (const { host, env } of elsewhere) {
+    console.log(
+      `  INFO  ${host} has a VendorDomain row here but is routed by env ${env} (another cell's ` +
+        "Worker); not this deploy's to declare",
     );
   }
 

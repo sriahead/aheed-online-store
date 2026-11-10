@@ -164,6 +164,14 @@ R34. Staging validation (D6) passes:
 
      If no Worker routing rule exists, inbound-email recording is reported as **not exercised**,
      not as passed.
+R34a. (Prerequisite for R34, found 2026-11-10, owner-approved option 1.) `deploy-staging` failed at
+     "Verify Worker routes" on every merge from `e94ebbb5` onward: the platform staging database holds
+     a `VendorDomain` row for `staging.aheedfoodcentre.co.uk`, which `afc-staging` routes.
+     `scripts/verify-worker-routes.ts` treats a host routed by another environment in the same
+     `wrangler.toml` as covered: it prints an INFO line naming that env and does not fail. A host
+     routed by no environment still fails. `tests/worker-routes.test.ts` proves both cases, plus
+     the real `wrangler.toml` passing the failing deploy's three staging hosts and production's
+     `www.aheedfoodcentre.co.uk`.
 R35. `CHANGELOG.md` describes the feature code in this slice (not only the docs). The PR #1481
      title and body describe all five areas and reference this spec folder and the slice's
      umbrella issue with `Closes #NN` (Gate 4).
