@@ -613,6 +613,14 @@ export const STAFF: RoleCatalogue = {
           status: "live",
         },
         {
+          name: "Enquiries & Inbox",
+          what: "Lists customer messages from the Contact us form and the store's email addresses, and sends email replies as the store.",
+          value: "Every customer message answered once, from the store's own address.",
+          demo: "Submit the Contact us form, then reply to it from the inbox.",
+          route: "/staff/enquiries",
+          status: "live",
+        },
+        {
           name: "Search dictionary",
           what: "Maps the words shoppers use to the store's product names.",
           value: "Searches that used to find nothing now sell.",

@@ -100,7 +100,7 @@ export async function handleInboundEmail(message: InboundMessage, env: Env): Pro
   if (resolution.orderRelated) await requestOrderAlert(message, env);
 }
 
-function parseFromEmailAddress(header: string | null, envelopeFrom?: string): string {
+export function parseFromEmailAddress(header: string | null, envelopeFrom?: string): string {
   if (header) {
     const match = /<([^>]+@[^>]+)>/.exec(header);
     if (match) return match[1].trim();
@@ -109,7 +109,7 @@ function parseFromEmailAddress(header: string | null, envelopeFrom?: string): st
   return envelopeFrom?.trim() || "unknown@sender";
 }
 
-function extractBodyFromRawEmail(rawText: string): string {
+export function extractBodyFromRawEmail(rawText: string): string {
   const splitIdx = rawText.search(/\r?\n\r?\n/);
   if (splitIdx === -1) return "";
   const bodyPart = rawText.slice(splitIdx).replace(/^\r?\n\r?\n/, "");
@@ -136,7 +136,7 @@ async function recordInboundEnquiry(message: InboundMessage, env: Env): Promise<
     const fromEmail = parseFromEmailAddress(fromHeader, message.from);
     const fromName = parseFromDisplayName(fromHeader);
     const bodyText = extractBodyFromRawEmail(rawText) || "(No message body)";
-    await fetch(new URL(RECORD_PATH, env.APP_BASE_URL), {
+    const response = await fetch(new URL(RECORD_PATH, env.APP_BASE_URL), {
       method: "POST",
       headers: { "content-type": "application/json", "x-inbound-token": env.INBOUND_EMAIL_TOKEN },
       body: JSON.stringify({
@@ -147,8 +147,10 @@ async function recordInboundEnquiry(message: InboundMessage, env: Env): Promise<
         message: bodyText,
       }),
     });
+    // #1482 R26: fetch resolves on a 4xx/5xx, so a refused record is only visible if logged here.
+    if (!response.ok) console.error(`inbound-email record call failed (status ${response.status})`);
   } catch {
-    console.error("inbound-email record call failed");
+    console.error("inbound-email record call failed (network error)");
   }
 }
 

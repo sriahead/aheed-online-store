@@ -25,7 +25,8 @@ export async function replyToEnquiryAction(
 
 export async function updateEnquiryStatusAction(formData: FormData): Promise<void> {
   const id = formData.get("id")?.toString() ?? "";
-  const status = formData.get("status")?.toString() as "OPEN" | "REPLIED" | "RESOLVED" | undefined;
+  // Not cast: changeVendorEnquiryStatus allow-lists the value (R11).
+  const status = formData.get("status")?.toString() ?? "";
   if (!id || !status) return;
 
   await changeVendorEnquiryStatus(id, status);

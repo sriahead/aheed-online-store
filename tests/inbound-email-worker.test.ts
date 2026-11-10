@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import worker, {
   ALERT_PATH,
+  RECORD_PATH,
   RESOLVE_PATH,
+  extractBodyFromRawEmail,
   handleInboundEmail,
   parseFromDisplayName,
+  parseFromEmailAddress,
   type Env,
   type InboundMessage,
 } from "../workers/inbound-email/src/index";
@@ -228,5 +231,153 @@ describe("parseFromDisplayName (#1390 R10)", () => {
 
   it("null gives null", () => {
     expect(parseFromDisplayName(null)).toBeNull();
+  });
+});
+
+/**
+ * #1482 — recording the message for /staff/enquiries (R26) and the parsers that feed it (R28).
+ * `specs/2026-11-10-pr1481-enquiries-team-access-retro/`.
+ */
+function rawMessage(raw: string) {
+  return {
+    ...message(),
+    from: "envelope@customer.test",
+    raw: new Response(raw).body as ReadableStream<Uint8Array>,
+  } satisfies InboundMessage;
+}
+
+/** Routes each app call by path, so resolve, record and alert can answer differently. */
+function routeFetch(record: number | Error, onRecord?: () => void) {
+  const calls: string[] = [];
+  const spy = vi.fn(async (url: URL | string, _init?: RequestInit) => {
+    const path = new URL(String(url)).pathname;
+    calls.push(path);
+    if (path === RESOLVE_PATH) return Response.json(RESOLUTION);
+    if (path === RECORD_PATH) {
+      onRecord?.();
+      if (record instanceof Error) throw record;
+      return Response.json({}, { status: record });
+    }
+    return Response.json({ ok: true });
+  });
+  vi.stubGlobal("fetch", spy);
+  return { spy, calls };
+}
+
+function recordBody(spy: ReturnType<typeof routeFetch>["spy"]) {
+  const call = spy.mock.calls.find(([u]) => new URL(String(u)).pathname === RECORD_PATH);
+  if (!call) throw new Error("no /record call");
+  const init = call[1] as RequestInit & { headers: Record<string, string> };
+  return { headers: init.headers, body: JSON.parse(String(init.body)) as Record<string, string> };
+}
+
+const CRLF = "\r\n";
+
+describe("recording the enquiry (R26)", () => {
+  it("records only after forward() resolved, with the token, then still requests the alert", async () => {
+    let forwarded = false;
+    let forwardedBeforeRecord: boolean | undefined;
+    const { spy, calls } = routeFetch(200, () => {
+      forwardedBeforeRecord = forwarded;
+    });
+    const m = rawMessage(`Subject: hi${CRLF}${CRLF}Hello shop`);
+    m.forward.mockImplementation(async () => {
+      forwarded = true;
+    });
+
+    await handleInboundEmail(m, env);
+    expect(forwardedBeforeRecord).toBe(true);
+    const { headers, body } = recordBody(spy);
+    expect(headers["x-inbound-token"]).toBe("tok");
+    expect(body).toMatchObject({
+      to: "orders@shop.test",
+      fromEmail: SECRET_FROM,
+      subject: SECRET_SUBJECT,
+      message: "Hello shop",
+    });
+    expect(calls.indexOf(RECORD_PATH)).toBeLessThan(calls.indexOf(ALERT_PATH));
+  });
+
+  it("a 500 from /record is logged with its status, and the alert is still requested", async () => {
+    const { calls } = routeFetch(500);
+    await handleInboundEmail(rawMessage(`${CRLF}${CRLF}body`), env);
+    expect(logs.some((l) => l.includes("record call failed (status 500)"))).toBe(true);
+    expect(calls).toContain(ALERT_PATH);
+  });
+
+  it("a thrown /record call does not reject the handler or block the alert", async () => {
+    const { calls } = routeFetch(new Error("down"));
+    const m = rawMessage(`${CRLF}${CRLF}body`);
+    await expect(handleInboundEmail(m, env)).resolves.toBeUndefined();
+    expect(m.forward).toHaveBeenCalledOnce();
+    expect(calls).toContain(ALERT_PATH);
+  });
+
+  it("never logs the sender or subject on the record paths", async () => {
+    routeFetch(500);
+    await handleInboundEmail(rawMessage(`${CRLF}${CRLF}body`), env);
+    routeFetch(new Error("down"));
+    await handleInboundEmail(rawMessage(`${CRLF}${CRLF}body`), env);
+    expect(logs.length).toBeGreaterThan(0);
+    for (const line of logs) {
+      expect(line).not.toContain(SECRET_FROM);
+      expect(line).not.toContain(SECRET_SUBJECT);
+    }
+  });
+});
+
+describe("parseFromEmailAddress (R28)", () => {
+  it.each([
+    ["Jane Doe <jane@x.com>", undefined, "jane@x.com"],
+    ["jane@x.com", undefined, "jane@x.com"],
+    [null, "envelope@x.com", "envelope@x.com"],
+    ["Jane Doe", "envelope@x.com", "envelope@x.com"],
+    [null, undefined, "unknown@sender"],
+  ])("%s / envelope %s gives %s", (header, envelope, expected) => {
+    expect(parseFromEmailAddress(header, envelope)).toBe(expected);
+  });
+});
+
+describe("extractBodyFromRawEmail (R28)", () => {
+  it("prefers the text/plain part of a multipart message", () => {
+    const raw = [
+      "Content-Type: multipart/alternative; boundary=b",
+      "",
+      "--b",
+      "Content-Type: text/plain; charset=utf-8",
+      "",
+      "Plain words",
+      "--b",
+      "Content-Type: text/html",
+      "",
+      "<p>HTML words</p>",
+      "--b--",
+    ].join(CRLF);
+    expect(extractBodyFromRawEmail(raw)).toBe("Plain words");
+  });
+
+  it("decodes quoted-printable escapes and soft line breaks", () => {
+    expect(extractBodyFromRawEmail(`Subject: x${CRLF}${CRLF}a=3Db and a long=${CRLF} line`)).toBe(
+      "a=b and a long line",
+    );
+  });
+
+  it("strips tags", () => {
+    expect(extractBodyFromRawEmail(`Subject: x${CRLF}${CRLF}<p>Hello <b>there</b></p>`)).toBe(
+      "Hello  there",
+    );
+  });
+
+  it("cuts a 5,000-character body to 4,000", () => {
+    expect(extractBodyFromRawEmail(`Subject: x${CRLF}${CRLF}${"y".repeat(5000)}`)).toHaveLength(
+      4000,
+    );
+  });
+
+  it("an empty body is sent as (No message body)", async () => {
+    expect(extractBodyFromRawEmail("Subject: only headers")).toBe("");
+    const { spy } = routeFetch(200);
+    await handleInboundEmail(rawMessage("Subject: only headers"), env);
+    expect(recordBody(spy).body.message).toBe("(No message body)");
   });
 });

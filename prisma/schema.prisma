@@ -408,11 +408,26 @@ model ContactOutbox {
   @@index([createdAt])
 }
 
+// #1482 - a customer message shown in /staff/enquiries: a storefront contact-form submission or an
+// email received on one of the store's inbound addresses (recorded by the inbound-email Worker).
+enum EnquirySource {
+  CONTACT_FORM
+  INBOUND_EMAIL
+}
+
+enum EnquiryStatus {
+  OPEN
+  REPLIED
+  RESOLVED
+}
+
 model VendorEnquiry {
-  id          String    @id @default(uuid())
+  id          String               @id @default(uuid())
   vendorId    String
-  vendor      Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  source      String
+  vendor      Vendor               @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  source      EnquirySource
+  // ContactType (COMPLAINT, ENQUIRY) for a contact form, InboundAddressPurpose (ORDERS, SUPPORT)
+  // for an inbound email - a label copied from whichever source, not a third enum.
   type        String
   senderName  String?
   senderEmail String
@@ -421,15 +436,26 @@ model VendorEnquiry {
   orderNumber String?
   subject     String
   message     String
-  status      String    @default("OPEN")
-  replyBody   String?
-  repliedAt   DateTime?
-  repliedBy   String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  status      EnquiryStatus        @default(OPEN)
+  replies     VendorEnquiryReply[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 
   @@index([vendorId, createdAt])
   @@index([vendorId, status])
+}
+
+// #1482 - one email reply sent from /staff/enquiries. Append-only: a second reply never
+// overwrites the record of the first.
+model VendorEnquiryReply {
+  id        String        @id @default(uuid())
+  enquiryId String
+  enquiry   VendorEnquiry @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  body      String
+  sentBy    String
+  sentAt    DateTime      @default(now())
+
+  @@index([enquiryId, sentAt])
 }
 
 // #1435 - an order-event message (customer or owner, email or Telegram) whose send FAILED, kept

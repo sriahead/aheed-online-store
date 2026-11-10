@@ -63,6 +63,14 @@ export function AssignRoleForm({
         <SubmitButton />
       </div>
 
+      {canGrantAdmin && (
+        <p className="text-xs text-primary-muted" data-platform-admin-warning>
+          <strong className="text-primary">Platform Admin applies to every store</strong>, not just
+          this one. Granting it here, or changing the role of an existing Platform Admin, changes
+          their access everywhere. It can only be granted to someone who already has an account.
+        </p>
+      )}
+
       {state?.error && <p className="text-sm font-medium text-danger">{state.error}</p>}
       {state?.success && (
         <p className="text-sm font-medium text-action">Role updated successfully.</p>

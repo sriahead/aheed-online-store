@@ -96,6 +96,15 @@ export async function applyVendorRole(
     throw new Error("User not found with that email address.");
   }
 
+  // #1482 R24: an account created here is pre-verified, so a mistyped address would hand a stranger
+  // whatever was granted. That is tolerable for one store's Staff/Store Admin, not for a role that
+  // reaches every store: Platform Admin needs an account its owner has already signed up for.
+  if (!targetUser && newRole === "PLATFORM_ADMIN") {
+    throw new Error(
+      "No account exists for that email. Ask them to sign up first, then grant Platform Admin.",
+    );
+  }
+
   // Look up old role when user already exists
   const existingMembership = targetUser
     ? await prisma.vendorMembership.findUnique({
@@ -115,8 +124,9 @@ export async function applyVendorRole(
     throw new Error("Forbidden: Cannot modify a platform-admin's privileges.");
   }
 
-  const isSelfPlatformDemotion =
-    targetUser?.id === actor.id && targetUser?.role === "ADMIN" && newRole !== "PLATFORM_ADMIN";
+  // #1482 R22: any change that takes `User.role = ADMIN` away — from oneself or from another
+  // platform admin — must leave at least one platform admin behind.
+  const isPlatformDemotion = targetUser?.role === "ADMIN" && newRole !== "PLATFORM_ADMIN";
   const isSelfVendorDemotion =
     targetUser?.id === actor.id &&
     newRole !== "ADMIN" &&
@@ -132,7 +142,7 @@ export async function applyVendorRole(
   // an aggregate over other rows, not a counter column on the row being written.
   await prismaWs.$transaction(
     async (tx) => {
-      if (isSelfPlatformDemotion) {
+      if (isPlatformDemotion) {
         const platformAdminCount = await tx.user.count({
           where: { role: "ADMIN" },
         });

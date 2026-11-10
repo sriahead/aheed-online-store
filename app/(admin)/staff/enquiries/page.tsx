@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
-import { getVendorEnquiries } from "@/lib/enquiries-service";
-import { getCurrentVendorProfile, getCurrentVendorSender } from "@/lib/vendor-service";
+import { getEnquirySenderLabel, getVendorEnquiries } from "@/lib/enquiries-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { EnquiryList } from "./EnquiryList";
@@ -23,15 +22,10 @@ export default async function EnquiriesPage() {
     );
   }
 
-  const [enquiries, profile, sender] = await Promise.all([
+  const [enquiries, senderLabel] = await Promise.all([
     getVendorEnquiries(),
-    getCurrentVendorProfile(),
-    getCurrentVendorSender(),
+    getEnquirySenderLabel(),
   ]);
-
-  const senderLabel = sender?.email
-    ? `${sender.name || profile?.name || "Store"} <${sender.email}>`
-    : `${profile?.name || "Store"} <no-reply@merqify.com>`;
 
   const serialized = enquiries.map((e) => ({
     id: e.id,
@@ -45,9 +39,12 @@ export default async function EnquiriesPage() {
     subject: e.subject,
     message: e.message,
     status: e.status,
-    replyBody: e.replyBody,
-    repliedAt: e.repliedAt ? e.repliedAt.toISOString() : null,
-    repliedBy: e.repliedBy,
+    replies: e.replies.map((r) => ({
+      id: r.id,
+      body: r.body,
+      sentBy: r.sentBy,
+      sentAt: r.sentAt.toISOString(),
+    })),
     createdAt: e.createdAt.toISOString(),
   }));
 

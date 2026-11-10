@@ -15,9 +15,7 @@ export interface EnquiryItem {
   subject: string;
   message: string;
   status: string;
-  replyBody: string | null;
-  repliedAt: string | null;
-  repliedBy: string | null;
+  replies: { id: string; body: string; sentBy: string; sentAt: string }[];
   createdAt: string;
 }
 
@@ -32,7 +30,7 @@ function ReplyBox({ enquiry, senderLabel }: { enquiry: EnquiryItem; senderLabel:
         onClick={() => setOpen(true)}
         className="rounded-xl bg-action px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90"
       >
-        {enquiry.replyBody ? "Send Another Reply" : "Reply to Customer"}
+        {enquiry.replies.length > 0 ? "Send Another Reply" : "Reply to Customer"}
       </button>
     );
   }
@@ -198,15 +196,17 @@ export function EnquiryList({ items, senderLabel }: { items: EnquiryItem[]; send
                 {item.message}
               </div>
 
-              {item.replyBody && (
-                <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-3.5 text-xs text-primary">
+              {item.replies.map((reply) => (
+                <div
+                  key={reply.id}
+                  className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-3.5 text-xs text-primary"
+                >
                   <div className="mb-1 font-semibold text-blue-900">
-                    Replied {item.repliedAt ? new Date(item.repliedAt).toLocaleString("en-GB") : ""}
-                    {item.repliedBy ? ` by ${item.repliedBy}` : ""}:
+                    Replied {new Date(reply.sentAt).toLocaleString("en-GB")} by {reply.sentBy}:
                   </div>
-                  <div className="whitespace-pre-wrap text-sm">{item.replyBody}</div>
+                  <div className="whitespace-pre-wrap text-sm">{reply.body}</div>
                 </div>
-              )}
+              ))}
 
               <div className="mt-3">
                 <ReplyBox enquiry={item} senderLabel={senderLabel} />
