@@ -4,7 +4,7 @@ title: "Cloudflare for SaaS Client Onboarding Runbook"
 audience: [platform-admin]
 type: runbook
 status: approved
-version: "1.1.0"
+version: "1.2.0"
 updated: 2026-11-10
 visibility: internal
 summary: "Standard operating procedure for SaaS client onboarding from Cloudflare account creation, zone configuration, custom hostnames, Neon database mapping, to edge validation."
@@ -125,6 +125,13 @@ Before beginning, gather the following parameters:
    >   it in `SAAS_ORIGIN_HOSTS` (`scripts/verify-worker-routes.ts`). Deploy first.
    > - Then set the custom hostname's **Origin server** and **Origin SNI** to that host. Do it in this
    >   order: the new origin must answer before the custom hostname points at it.
+   > - **Also change the client zone's DNS record. This is the step that actually moved the traffic.**
+   >   In the **client's** Cloudflare account (`aheedfoodcentre.co.uk` → DNS → Records), the proxied
+   >   `staging` CNAME must target the cell's origin (`afc-staging-origin.merqify.com`), not
+   >   `aheed-staging.merqify.com`. Both zones are proxied (Orange-to-Orange), and the platform
+   >   Worker's custom domain on the old CNAME target answered first. On 2026-11-10, changing only the
+   >   custom hostname's origin had no effect for 6+ minutes; changing the CNAME switched traffic
+   >   within a minute.
    > - Check that the storefront footer shows the client's own `PLATFORM_TAGLINE`, and that
    >   `POST /api/auth/sign-in/social` returns the cell's own Google `client_id`.
    > - Each cell's Worker also needs **its own** `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (`wrangler
@@ -275,7 +282,7 @@ access-control-allow-origin: *
 | **HTTP 522 Connection Timed Out** | No Worker Route listening on `fallback.merqify.com/*`. | In Cloudflare Workers, add Route `fallback.merqify.com/*` bound to the production Worker. |
 | **HTTP 307 Temporary Redirect to `/coming-soon`** | Hostname missing from Neon `VendorDomain` table. | Insert row into `VendorDomain` matching `www.<client-domain>` with `isCanonical: true`. |
 | **Staging loads Production content** | Custom hostname CNAME points to `fallback.merqify.com` instead of staging origin, or wildcard `*/*` route exists on prod Worker. | 1. Remove `*/*` route from prod Worker.<br/>2. Point `staging` custom hostname to `aheed-staging.merqify.com`. |
-| **Dedicated-cell staging shows the platform (footer says Merqify, Google `redirect_uri_mismatch`)** | The custom hostname's origin is a **platform** Worker (`aheed-staging.merqify.com`), and the cell Worker's routes are not intercepting. | Point the custom hostname's Origin server and SNI at the cell's own origin custom domain (`afc-staging-origin.merqify.com`). See the Stage 2 warning for dedicated cells (#1482). |
+| **Dedicated-cell staging shows the platform (footer says Merqify, Google `redirect_uri_mismatch`)** | The client zone's proxied `staging` CNAME targets a **platform** Worker host (`aheed-staging.merqify.com`), and/or the custom hostname's origin does. | 1. In the client account's DNS, set the `staging` CNAME target to the cell's origin (`afc-staging-origin.merqify.com`), proxied. This is the fix that moved traffic on 2026-11-10.<br/>2. Point the custom hostname's Origin server and SNI at the same host. See the Stage 2 warning for dedicated cells (#1482). |
 | **Store loads but Logo/Icons show broken image (HTTP 403)** | Cloudflare WAF Custom Rule on `merqify.com` blocking cross-domain referrers. | In `merqify.com` Security > Custom Rules, disable referrer block or whitelist `<client-domain>`. |
 | **`DNS_PROBE_FINISHED_NXDOMAIN` in browser** | Local ISP / Wi-Fi router cached stale DNS records before nameserver update completed. | Enable Chrome Secure DNS (DoH using Cloudflare 1.1.1.1) or flush local DNS (`ipconfig /flushdns`). |
 

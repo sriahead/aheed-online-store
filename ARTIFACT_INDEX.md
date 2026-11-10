@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-10T12:51:37.319Z` · commit `e134ce4a` · `327` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-10T13:43:26.677Z` · commit `aceba801` · `327` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -346,7 +346,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Merqify Platform Terms of Service — Merchant Schedule & Tax Disclaimer](docs/legal/merchant-platform-terms.md) | doc | 1.0.0 | 2026-11-06 | review | internal | Contractual terms governing Merqify Ltd (Platform Provider) and merchants (Vendors), defining responsibilities for catalogue, pricing, and HMRC VAT compliance. |
 | [Operations & Fulfillment Procedures](docs/operations-research/operations-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for operations teams detailing the fulfillment lifecycle, stock management, and exception handling. |
 | [Order & Fulfilment Operations](docs/operations-research/order-fulfilment-core.md) | runbook | 1.1.0 | 2026-11-06 | approved | internal | Canonical rules for order status transitions, fulfilment slots, cancellations, and payment exceptions. |
-| [Cloudflare for SaaS Client Onboarding Runbook](docs/platform-admin-guide/cloudflare-saas-onboarding-runbook.md) | runbook | 1.1.0 | 2026-11-10 | approved | internal | Standard operating procedure for SaaS client onboarding from Cloudflare account creation, zone configuration, custom hostnames, Neon database mapping, to edge validation. |
+| [Cloudflare for SaaS Client Onboarding Runbook](docs/platform-admin-guide/cloudflare-saas-onboarding-runbook.md) | runbook | 1.2.0 | 2026-11-10 | approved | internal | Standard operating procedure for SaaS client onboarding from Cloudflare account creation, zone configuration, custom hostnames, Neon database mapping, to edge validation. |
 | [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.12.0 | 2026-11-10 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
 | [SaaS Scaling, Cost Analysis & Resource Isolation Architecture](docs/platform-admin-guide/saas-scaling-cost-and-isolation-architecture.md) | doc | 1.0.0 | 2026-11-09 | approved | internal | Comprehensive technical and economic analysis of the multi-client SaaS platform: Cloudflare for SaaS custom hostnames, Workers compute scaling costs, noisy-neighbor isolation, R2 dedicated image storage segregation, and transactional email routing. |
 | [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.18.0 | 2026-11-10 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, filters, bundles, promotions, inventory, search dictionary, customer feedback, enquiries & inbox, and runbooks. One section per menu item. |
