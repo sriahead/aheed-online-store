@@ -6,6 +6,12 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`deploy-staging` unblocked: the route guard knows about dedicated cells (#1482 R34a, #1331)**
+  - **What was broken.** Every `deploy-staging` run since `e94ebbb5` (#1477, 2026-11-08) failed at "Verify Worker routes", so #1478, #1480 and #1481 never reached the staging Workers. The platform staging database still holds a `VendorDomain` row for `staging.aheedfoodcentre.co.uk`, which the dedicated `afc-staging` Worker now routes. The script's own advice (`--write`) would have moved that custom domain off the dedicated Worker.
+  - **Fix.** `scripts/verify-worker-routes.ts` treats a host routed by another environment in the same `wrangler.toml` as covered, and prints an INFO line naming that environment. A host routed by no environment still fails the deploy. This is covered by `tests/worker-routes.test.ts`, including the real `wrangler.toml` for the staging and production Aheed hosts.
+
 ### Added
 
 - **Enquiries inbox, Team & Access provisioning and inbound-email recording (#1482)**, retro-specced at `specs/2026-11-10-pr1481-enquiries-team-access-retro/`
