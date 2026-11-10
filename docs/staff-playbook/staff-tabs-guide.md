@@ -4,11 +4,11 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.16.0"
-updated: "2026-11-05"
+version: "2.17.0"
+updated: "2026-11-10"
 visibility: internal
-summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
-tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback"]
+summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, filters, bundles, promotions, inventory, search dictionary, customer feedback, enquiries & inbox, and runbooks. One section per menu item."
+tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback", "enquiries", "inbox"]
 ---
 
 # Staff Daily Operations Playbook
@@ -23,7 +23,7 @@ The panel's menu is grouped, and you see five groups beside **Overview**:
 - **Catalogue** — Products, Live Inventory & Availability, Categories, Brands, Product filters,
   Net content review.
 - **Offers & Loyalty** — Promotions, Bundles. (Loyalty and Discount codes belong to a store admin.)
-- **Customers & Content** — Customer Feedback, Search dictionary. (Customers, Help Centre Answers
+- **Customers & Content** — Customer Feedback, Enquiries & Inbox, Search dictionary. (Customers, Help Centre Answers
   and Help Assistant belong to a store admin.)
 - **Insights & Help** — this **Runbook**. (Reports belong to a store admin.)
 
@@ -565,28 +565,74 @@ what is published is always something a person has read.
 
 ## Enquiries & Inbox — `/staff/enquiries`
 
-**Purpose:** Read and reply to customer messages submitted through the storefront Contact Us form or
-emailed directly to the store's receiving addresses.
+**Purpose:** Centralise, triage, reply to, and resolve every customer message sent to the store — whether submitted through the storefront **Contact Us** form (`/contact`) or emailed directly to the store's domain addresses (`info@` and `orders@`).
+
+- **Situation:** Customers contact the store across two distinct channels: the structured storefront **Contact Us** form and direct emails sent to the store's published addresses (`info@aheedfoodcentre.co.uk` and `orders@aheedfoodcentre.co.uk`).
+- **Complication:** Relying solely on external email forwarding creates operational blind spots — external mail providers (such as Gmail) silently drop loopbacks when a sender emails an alias that forwards back to their own mailbox, staff cannot see whether a colleague has already answered a customer, and replying from a personal email address exposes private staff accounts instead of the store's brand identity.
+- **Question:** How can staff and store admins capture every incoming customer message reliably, coordinate triage without duplicating work, and reply from the store's official email address?
+- **Answer:** **Enquiries & Inbox (`/staff/enquiries`)** acts as the single system of record. Every web form submission and every inbound email processed by the store's Cloudflare Email Worker (`afc-inbound-email`) is recorded in the database *before* external group forwarding takes place, and staff can dispatch replies directly from the store's verified sender identity (`info@aheedfoodcentre.co.uk`) with an immutable audit trail.
 
 **Who can access:** Staff and store admins
 
-**What you can do:** View incoming customer enquiries and complaints, filter by status (Open,
-Replied, Resolved), search by customer email, order number or subject, send an email reply from the
-store's sender address, and mark enquiries as resolved or reopened.
+**What you can do:** Operate across four mutually exclusive, collectively exhaustive (MECE) functional pillars:
 
-**Typical workflow:** Open **Enquiries & Inbox** to see new messages marked **OPEN**. Click **Reply to
-Customer**, write your response, and press **Send Email Reply**. Once the issue is handled, click
-**Mark Resolved** to clear it from the open queue.
+1. **Monitor & Filter the Queue:** View status summary counters (**Total**, **Open**, **Replied**, **Resolved**), switch between status tabs, and search across customer email, name, order number, or subject line.
+2. **Inspect Message Context:** Read the full message body alongside its channel badge (**Contact Form** vs **Inbound Email**), category badge (**ENQUIRY**, **ORDERS**, **COMPLAINT**, **SUPPORT**), sender contact details (name, email, clickable phone number), and any referenced order number.
+3. **Dispatch Branded Replies:** Compose and send an email reply directly from `/staff/enquiries` using the store's official sender identity (`info@aheedfoodcentre.co.uk`), or reply from a configured Gmail `"Send mail as"` alias when file attachments are required.
+4. **Manage Lifecycle State:** Transition enquiries between **OPEN**, **REPLIED**, and **RESOLVED** (or **Reopen** a resolved thread if the customer follows up).
 
-**Important fields and filters:** Each message displays its source (**Contact Form** or **Inbound
-Email**), type (**ENQUIRY**, **COMPLAINT**, **SUPPORT**, or **ORDERS**), the customer's name, email
-and phone number, any linked order number, and the message body. Status tabs filter between **All
-Messages**, **OPEN**, **REPLIED** and **RESOLVED**.
+**Typical workflow:** Follow this four-stage operational hierarchy during daily shifts:
 
-**Common mistakes and limitations:** Outgoing replies are sent to the customer's email address using
-the store's configured sender identity. Always verify the customer's order number and details before
-sending a reply, as sent emails cannot be recalled.
+1. **Stage 1 — Triage by Priority (Urgency Hierarchy):**
+   - Open **Enquiries & Inbox** and select the **OPEN** tab.
+   - Address **COMPLAINT** and **ORDERS** messages first (especially active delivery queries or missing-item reports), followed by **SUPPORT** and general **ENQUIRY** items.
+2. **Stage 2 — Verify Order & Customer Context:**
+   - If the enquiry card displays an **Order #** badge (or mentions an order in the text), cross-check the order in **Fulfillment & Orders (`/staff/orders`)** before composing your response.
+3. **Stage 3 — Choose the Reply Path (MECE Response Decision):**
+   - **Path A — Standard Text Reply (95% of cases):** Click **Reply to Customer** on the enquiry card, write a clear response, and click **Send Email Reply**. The platform sends the email from the store's official address, records your reply text, staff email, and timestamp on the card, and moves the enquiry to **REPLIED**.
+   - **Path B — Reply Requiring Attachments or CC (5% of cases):** Reply from the store's shared Gmail inbox using the configured **"Send mail as"** alias (`info@aheedfoodcentre.co.uk`), then return to `/staff/enquiries` and click **Mark Resolved** so the queue stays accurate.
+4. **Stage 4 — Close the Loop:**
+   - Once an enquiry requires no further action, click **Mark Resolved** to move it out of the active queue. If new information arrives later, click **Reopen** to return it to **OPEN**.
 
-**What happens after changes are saved:** Sending a reply dispatches the email immediately, saves a
-copy of your reply with your staff email and timestamp on the enquiry card, and updates the status to
-**REPLIED**.
+**Important fields and filters:** The inbox organises every record across four MECE dimensions:
+
+##### 1. Inbound Channel Taxonomy (Where the message originated)
+
+| Channel Badge | Technical Source | How It Enters `/staff/enquiries` | Simultaneous External Copy |
+| --- | --- | --- | --- |
+| **Contact Form** | `WEB_FORM` | Customer submits the storefront `/contact` page; saved directly to the database. | Notification email sent via Resend to the store's contact address. |
+| **Inbound Email** | `INBOUND_EMAIL` | Customer emails `info@` or `orders@`; intercepted at the Cloudflare edge (`afc-inbound-email`), parsed (MIME/plain-text/HTML), and posted to `/api/inbound-email/record`. | Forwarded to the store's Google Group (`info-afc@googlegroups.com`) for external inbox backup. |
+
+##### 2. Message Type Taxonomy (What the message is about)
+
+| Type Badge | Assigned When | Operational Priority & Handling |
+| --- | --- | --- |
+| **COMPLAINT** | Customer selects *Complaint* on `/contact`. | **P1 — Immediate:** Investigate order/product quality and respond first. |
+| **ORDERS** | Email is sent to `orders@` or customer selects *Order Query*. | **P1 — High:** Cross-reference `/staff/orders` for live picking/delivery status. |
+| **SUPPORT** | Customer selects *Technical / Account Support*. | **P2 — Normal:** Assist with sign-in, postcode check, or checkout questions. |
+| **ENQUIRY** | Email is sent to `info@` or customer selects *General Enquiry*. | **P3 — Routine:** Answer product availability, halal certification, or store hours questions. |
+
+##### 3. Lifecycle State Machine (Mutually Exclusive Statuses)
+
+| Status | Meaning | Next Permitted Actions |
+| --- | --- | --- |
+| **OPEN** | New message awaiting staff attention. | **Reply to Customer** (moves to `REPLIED`) or **Mark Resolved** (moves to `RESOLVED`). |
+| **REPLIED** | An official reply has been sent from `/staff/enquiries`. Displays the full reply body, the replying staff member's email, and timestamp. | **Send Follow-up Reply** (updates reply record) or **Mark Resolved** (moves to `RESOLVED`). |
+| **RESOLVED** | Issue is closed and archived out of the active triage view. | **Reopen** (returns status to `OPEN`) or **Send Follow-up Reply**. |
+
+##### 4. Outbound Reply & Alias Architecture (How replies reach customers)
+
+- **In-Portal Reply (`/staff/enquiries`):** Uses the store's transactional email binding (Resend) with `From: Aheed Food Centre <info@aheedfoodcentre.co.uk>` and `Reply-To: info@aheedfoodcentre.co.uk`. When the customer replies to your email, their reply routes back into `/staff/enquiries` as a new **Inbound Email** entry.
+- **Gmail `"Send mail as"` Alias (External Client):** Store admins can also send outbound mail directly from Gmail as `info@aheedfoodcentre.co.uk` by configuring **Settings → Accounts and Import → Send mail as** with `smtp.gmail.com` (Port `587`, TLS), the Gmail account's 16-character **Google App Password** (requires 2-Step Verification), and the domain's SPF record including `include:_spf.google.com`.
+
+**Common mistakes and limitations:**
+
+- **Emails sent cannot be recalled:** Clicking **Send Email Reply** dispatches a live email to the customer's address immediately. Always verify the customer's order number, name, and message details before pressing send.
+- **Testing inbound email from your own Gmail address:** If your personal Gmail is a member of the destination forwarding group (`info-afc@googlegroups.com`) and you send a test email from that same Gmail account to `info@aheedfoodcentre.co.uk`, **Gmail silently deduplicates/drops the incoming copy in your personal Gmail inbox** because the Message-ID matches your own `Sent` folder. Always check **`/staff/enquiries`** first — `/staff/enquiries` records the message before Gmail sees it, so it is immune to Gmail self-send suppression.
+- **Attachments in inbound emails:** `/staff/enquiries` extracts and displays the plain-text or stripped-HTML body of inbound emails (up to 10,000 characters). If a customer sends a photo or PDF attachment to `info@` or `orders@`, view the attachment in the `info-afc@googlegroups.com` group inbox while managing the status in `/staff/enquiries`.
+- **Resolving without replying:** Only click **Mark Resolved** without sending a reply if the message was handled via another channel (such as a phone call, WhatsApp, or Gmail) or is spam/automated mail (such as a verification code).
+
+**What happens after changes are saved:**
+
+- **When you click Send Email Reply:** The platform dispatches the formatted reply email to the customer via Resend, stores the reply text, your staff email address (`repliedBy`), and the exact timestamp (`repliedAt`) on the enquiry record, and transitions the enquiry status to **REPLIED** immediately.
+- **When you click Mark Resolved or Reopen:** The enquiry's status updates immediately (`RESOLVED` with `resolvedAt` timestamp, or `OPEN` with `resolvedAt` cleared), and the summary counters at the top of `/staff/enquiries` recalculate on the spot.

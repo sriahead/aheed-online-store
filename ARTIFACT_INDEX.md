@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-09T06:48:10.206Z` · commit `bbeb4ec0` · `326` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-10T06:35:52.482Z` · commit `4eba5b47` · `326` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -348,8 +348,8 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Cloudflare for SaaS Client Onboarding Runbook](docs/platform-admin-guide/cloudflare-saas-onboarding-runbook.md) | runbook | 1.0.0 | 2026-11-08 | approved | internal | Standard operating procedure for SaaS client onboarding from Cloudflare account creation, zone configuration, custom hostnames, Neon database mapping, to edge validation. |
 | [Platform & Technical Admin Guide](docs/platform-admin-guide/platform-admin-guide.md) | guide | 1.11.0 | 2026-11-05 | approved | internal | A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings. |
 | [SaaS Scaling, Cost Analysis & Resource Isolation Architecture](docs/platform-admin-guide/saas-scaling-cost-and-isolation-architecture.md) | doc | 1.0.0 | 2026-11-09 | approved | internal | Comprehensive technical and economic analysis of the multi-client SaaS platform: Cloudflare for SaaS custom hostnames, Workers compute scaling costs, noisy-neighbor isolation, R2 dedicated image storage segregation, and transactional email routing. |
-| [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.16.0 | 2026-11-05 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item. |
-| [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.21.0 | 2026-11-06 | approved | internal | How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access. |
+| [Staff Daily Operations Playbook](docs/staff-playbook/staff-tabs-guide.md) | runbook | 2.17.0 | 2026-11-10 | approved | internal | How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, filters, bundles, promotions, inventory, search dictionary, customer feedback, enquiries & inbox, and runbooks. One section per menu item. |
+| [Store Admin Management Guide](docs/store-admin-guide/admin-tabs-guide.md) | runbook | 2.22.0 | 2026-11-10 | approved | internal | How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access. |
 | [Merqify KMS — Knowledge Architecture, Governance and Validation (plan)](specs/2026-11-02-merqify-kms-architecture-governance/plan.md) | spec | 1.0.0 | 2026-11-02 | draft | internal | Review, redesign, and reorganise Merqify KMS into an authoritative single source of truth across 13 canonical domains, with C4 alignment, automated link integrity testing, and Nextra portal restructuring. |
 | [ADR-009 — Platform Cell and Dedicated Client Cells: Runtime Isolation, Lockstep CI & Data Autonomy](specs/decisions/ADR-009-dedicated-client-cells.md) | adr | 1.0.0 | 2026-11-09 | approved | internal | Architecture decision codifying dual topology: multi-tenant platform cell for marketplace stores alongside dedicated client cells (starting with Aheed Food Centre) with separate Workers, Neon databases, and R2 buckets, deployed in lockstep by CI. |
 

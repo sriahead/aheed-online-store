@@ -4,21 +4,21 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.21.0"
-updated: 2026-11-06
+version: "2.22.0"
+updated: 2026-11-10
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
-tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
+tags: ["admin", "guide", "ui", "configuration", "vendor", "payments", "team"]
 ---
 
 # Store Admin Management Guide
 
 This guide covers every page reserved strictly for a **store admin**, one section per menu item.
 Pages accessible to both staff and admins — such as Products, Categories, Brands, Bundles,
-Promotions, Live Inventory & Availability, Orders, Search dictionary moderation, and the Runbook —
-are described in the Staff Daily Operations Playbook rather than repeated here. You can open all of
-those as well (generating new AI proposals within Search dictionary remains an admin-only
-capability).
+Promotions, Live Inventory & Availability, Orders, Enquiries & Inbox, Search dictionary moderation,
+and the Runbook — are described in the Staff Daily Operations Playbook rather than repeated here.
+You can open all of those as well (generating new AI proposals within Search dictionary remains an
+admin-only capability).
 
 The menu is grouped. You see six groups beside **Overview**: **Orders & Fulfilment**,
 **Catalogue**, **Offers & Loyalty**, **Customers & Content**, **Store setup** and
@@ -29,9 +29,10 @@ The menu is grouped. You see six groups beside **Overview**: **Orders & Fulfilme
 - **There is no refund control anywhere in this panel.** Refunding a customer is done directly in
   your payment provider's own dashboard, outside this application. Nothing here will move money back
   to a customer, and nothing here records that you did.
-- **There is no way to invite someone to join your team.** A colleague must register their own
-  account on the shop first, exactly as a customer would. Once they have, you can give that account
-  a role from the Team & Access page.
+- **Role grants do not send an invitation email.** You can pre-provision a colleague by entering their
+  email address on the Team & Access page even before they have signed in, and their role takes effect
+  immediately when they sign in with Google or email — but the system does not send them an automatic
+  onboarding email, so let them know directly once you have granted access.
 
 
 ## Discount codes — `/staff/discounts`
@@ -545,29 +546,57 @@ or adjust their points.
 
 ## Team & Access — `/staff/team`
 
-**Purpose:** Give a colleague access to the panel, change their level of access, or take it away.
+**Purpose:** Grant, adjust, or revoke staff and administrative access to the store panel, with automatic account pre-provisioning and a complete role-change audit trail.
+
+- **Situation:** Running a store requires delegating daily picking, catalogue updates, and customer service to staff members while reserving store configuration and commercial controls for store and platform administrators.
+- **Complication:** Waiting for a new colleague to register an account before you can assign their role slows down onboarding, while unchecked role changes risk leaving a store without an active administrator or granting broader permissions than intended.
+- **Question:** How can administrators onboard colleagues immediately by email, enforce least-privilege access across tiers, and maintain an auditable record of every permission change?
+- **Answer:** **Team & Access (`/staff/team`)** enforces a strict, role-scoped permission hierarchy with case-insensitive email lookup, automatic user pre-provisioning for unregistered emails, last-admin lockout guards, and an immutable audit log.
 
 **Who can access:** Store admins only
 
-**What you can do:** Grant the Staff role to a registered account by email address, and revoke access
-from someone who has it.
+**What you can do:** Manage team access across three mutually exclusive, collectively exhaustive (MECE) operations:
 
-**Typical workflow:** A new colleague starts. **Ask them to register an account on the shop
-themselves first**, using the email address you will grant access to. Once they have registered, come
-here, enter that email address, choose Staff, and save.
+1. **Grant or Upgrade Access:** Enter a colleague's email address (whether they have already registered or not) and assign a role (**Staff**, or — when signed in as a Platform Admin — **Store Admin** or **Platform Admin**).
+2. **Demote or Revoke Access:** Select **Revoke access** (or use the inline action on the team table) to remove a user's access to the panel.
+3. **Audit Permission History:** Review the current **Team Members** table and the chronological **Role Audit Log** showing who changed which role and when.
 
-**Important fields and filters:** People are identified by the email address on their account, and
-that account must already exist. The role options are Staff and Revoke access.
+**Typical workflow:** Follow this three-step onboarding and offboarding sequence:
 
-**Common mistakes and limitations:** **Entering the email of someone who has not registered fails
-with "User not found"** — that is not a fault, it means they have not created their account yet.
-**As a store admin you can grant the Staff role only.** Making someone a store admin requires a
-platform administrator, so the Store Admin option does not appear for you. You also cannot change the
-privileges of a platform administrator, and the system will not let the shop be left with no store
-admin at all, so you cannot remove your own admin access if you are the last one.
+1. **Pre-provision or Assign by Email:** Enter the colleague's email address in the **Grant or change role** form, select their role (**Staff**, **Store Admin**, or **Platform Admin** depending on your authority), and click **Save**.
+2. **Colleague Signs In:** If the colleague had not created an account yet, the system automatically creates a verified user record for that email address. When they sign in at `/login` using **Continue with Google** (or email/password) with that exact email address, their login links automatically and routes them straight to `/staff`.
+3. **Revoke When Needed:** When a colleague leaves or changes duties, select their email with **Revoke access** and save to remove their panel permissions immediately.
 
-**What happens after changes are saved:** Access changes immediately — the person sees the panel on
-their next page load, or loses it. Every change is recorded in an audit log with who made it.
+**Important fields and filters:** Roles and authority boundaries are structured into two MECE matrices:
+
+##### 1. Role Tier Taxonomy (What each role can access)
+
+| Role Option | Scope | Pages Accessible | Landing Page on Sign-In |
+| --- | --- | --- | --- |
+| **Staff** (`STAFF`) | Single store (`VendorMembership`) | Daily operational tabs: Orders, Products, Inventory, Categories, Brands, Product Filters, Net Content, Promotions, Bundles, Customer Feedback, Enquiries & Inbox, Search Dictionary, Runbook. | `/staff` |
+| **Store Admin** (`ADMIN`) | Single store (`VendorMembership`) | All **Staff** pages *plus* owner-only configuration: Discounts, Loyalty, Storefront, Help Centre Answers, Help Assistant, AI Allowance, Delivery Areas, Fulfilment, Reports, Customers, Team & Access, Payment Issues, Stock Import, Onboarding Readiness. | `/staff` |
+| **Platform Admin** (`PLATFORM_ADMIN`) | Global (`User.role = ADMIN` + store `ADMIN`) | All **Store Admin** pages across every store *plus* platform infrastructure tabs (`/staff/platform`, `/staff/vendors`, `/staff/domains`, `/staff/settings`, `/staff/health`, `/staff/costs`, `/staff/errors`). | `/staff/platform` |
+| **Revoke access** (`NONE`) | Single store (or global demotion if Platform Admin) | Storefront customer account only (`/account`); no `/staff` access. | `/account` |
+
+##### 2. Grantor Authority Matrix (Who can assign which role)
+
+| Signed-In Operator | Can Grant `Staff` | Can Grant `Store Admin` | Can Grant `Platform Admin` | Can Modify a Platform Admin |
+| --- | --- | --- | --- | --- |
+| **Store Admin** | Yes | No (requires Platform Admin) | No | No |
+| **Platform Admin** | Yes | Yes | Yes | Yes (except removing the last Platform Admin) |
+
+**Common mistakes and limitations:**
+
+- **Case-insensitive email matching & pre-provisioning:** Email lookup is case-insensitive (`Rav.amanulla@gmail.com` and `rav.amanulla@gmail.com` resolve to the same account). If no user exists for that email yet, the system pre-provisions the account automatically rather than failing with "User not found" — so double-check the spelling of the email address before saving.
+- **No automatic invitation email is sent:** Granting a role updates the database immediately, but does not send an email notification to the colleague. Tell them which email address you authorised so they sign in with the matching account.
+- **Store Admin vs Platform Admin boundaries:** As a **Store Admin**, you can grant and revoke the **Staff** role only; the **Store Admin** and **Platform Admin** options appear only when signed in as a **Platform Admin**.
+- **Last-admin protection guards:** The system refuses any change that would leave the store with zero Store Admins, and refuses any change that would leave the platform with zero Platform Admins — so you cannot accidentally lock the shop or platform out of its own administration.
+
+**What happens after changes are saved:**
+
+- **Immediate enforcement:** Every `/staff/*` page checks roles on the server on every request, so granted or revoked access takes effect on the colleague's very next page load.
+- **Automatic OAuth account linking:** If the email was pre-provisioned before the user ever signed in, Better Auth links their Google OAuth or email session to the pre-provisioned user row automatically on first sign-in.
+- **Immutable audit entry:** Every grant, upgrade, demotion, or revocation appends a permanent row to the **Role Audit Log** recording the actor, target user, previous role, new role, and timestamp.
 
 
 
