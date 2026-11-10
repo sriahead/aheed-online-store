@@ -1,4 +1,5 @@
 import { ERROR_SIGNAL_WINDOW_MS } from "../../../lib/job-signal-keys";
+import { decideWarmup, type WarmupReason } from "../../../lib/db-warmup/payload";
 
 /**
  * Which jobs a scheduler invocation calls (#1324).
@@ -23,6 +24,15 @@ export const NOTIFICATION_OUTBOX_PATH = "/api/jobs/retry-notification-outbox";
 
 /** The once-a-day ungated run: the backstop for every race in the markers. */
 export const DAILY_CRON = "0 3 * * *";
+
+/**
+ * #1491 — the database warm-up tick. Every 4 minutes because Neon suspends after 5 with no query; the
+ * 15-minute tick is too slow and is left untouched. This cron runs NOTHING but the warm-up ping.
+ */
+export const WARMUP_CRON = "*/4 * * * *";
+export const WARM_DB_PATH = "/api/jobs/warm-db";
+/** Republishes the warm-up windows on the daily run, so the 8-day schedule never goes stale. */
+export const REFRESH_WARMUP_PATH = "/api/jobs/refresh-warmup-schedule";
 
 /** One KV read: its value (absent is `null`), or that the read itself failed. */
 export type SignalRead = { ok: true; value: string | null } | { ok: false };
@@ -70,8 +80,12 @@ export function selectJobs(input: {
       ERROR_RATE_PATH,
       CONTACT_OUTBOX_PATH,
       NOTIFICATION_OUTBOX_PATH,
+      REFRESH_WARMUP_PATH,
     ];
   }
+
+  // The warm-up tick is decided by selectWarmupJobs below, never here.
+  if (input.cron === WARMUP_CRON) return [];
 
   // The guest-cart reaper is housekeeping nobody waits on, so it never runs on
   // the tick — only in the daily run above.
@@ -90,4 +104,20 @@ export const ALL_JOB_PATHS: readonly string[] = [
   ERROR_RATE_PATH,
   CONTACT_OUTBOX_PATH,
   NOTIFICATION_OUTBOX_PATH,
+  REFRESH_WARMUP_PATH,
 ];
+
+/**
+ * #1491 R11 — the warm-up tick's decision. THE RULE IS INVERTED HERE: every doubt SKIPS. The other
+ * jobs run when a marker cannot be read because missing a payment sweep is harmful; a missed ping
+ * costs one cold start, while a ping stuck "on" costs compute all night. So an unreadable, absent,
+ * stale or malformed schedule, or an unreadable activity marker, means no ping.
+ */
+export function selectWarmupJobs(input: {
+  now: Date;
+  schedule: SignalRead;
+  lastActivity: SignalRead;
+}): { jobs: string[]; reason: WarmupReason } {
+  const { ping, reason } = decideWarmup(input);
+  return { jobs: ping ? [WARM_DB_PATH] : [], reason };
+}

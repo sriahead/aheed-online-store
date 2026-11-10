@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { readFileSync } from "node:fs";
 import scheduler from "../workers/scheduler/src/index";
 import {
   ALL_JOB_PATHS,
@@ -7,8 +8,12 @@ import {
   DAILY_CRON,
   ERROR_RATE_PATH,
   REAPER_PATH,
+  REFRESH_WARMUP_PATH,
   SWEEP_PATH,
+  WARMUP_CRON,
+  WARM_DB_PATH,
   selectJobs,
+  selectWarmupJobs,
   type SignalRead,
 } from "../workers/scheduler/src/select-jobs";
 
@@ -93,6 +98,8 @@ describe("job scheduler", () => {
       "/api/jobs/check-error-rate",
       "/api/jobs/retry-contact-outbox",
       "/api/jobs/retry-notification-outbox",
+      // #1491 — the daily run republishes the database warm-up schedule.
+      "/api/jobs/refresh-warmup-schedule",
     ]);
   });
 
@@ -179,6 +186,7 @@ describe("selectJobs (#1324)", () => {
         ERROR_RATE_PATH,
         CONTACT_OUTBOX_PATH,
         NOTIFICATION_OUTBOX_PATH,
+        REFRESH_WARMUP_PATH,
       ]);
     }
   });
@@ -313,7 +321,7 @@ describe("scheduled handler gating (#1324 R7)", () => {
     await scheduler.scheduled(TICK, { ...ENV, JOB_SIGNALS: kv({}) }, CTX);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(tickLines()).toEqual([
-      `scheduler tick cron=*/15 * * * * ran=none skipped=${SWEEP_PATH},${REAPER_PATH},${ERROR_RATE_PATH},${CONTACT_OUTBOX_PATH},${NOTIFICATION_OUTBOX_PATH}`,
+      `scheduler tick cron=*/15 * * * * ran=none skipped=${SWEEP_PATH},${REAPER_PATH},${ERROR_RATE_PATH},${CONTACT_OUTBOX_PATH},${NOTIFICATION_OUTBOX_PATH},${REFRESH_WARMUP_PATH}`,
     ]);
   });
 
@@ -340,5 +348,168 @@ describe("scheduled handler gating (#1324 R7)", () => {
       expect(line).toMatch(/^scheduler tick cron=.+ ran=\S+ skipped=\S+$/);
     }
     expect(lines[1]).toContain("skipped=none");
+  });
+});
+
+/**
+ * #1491 — the database warm-up tick. Every doubt SKIPS (the opposite of the jobs above).
+ * `specs/2026-11-10-db-warmup-ping/` R10–R12.
+ */
+describe("selectWarmupJobs (#1491 R11, R12)", () => {
+  const payload = (over: Record<string, unknown> = {}) =>
+    JSON.stringify({
+      v: 1,
+      enabled: true,
+      activityEnabled: true,
+      activityMinutes: 30,
+      windows: [[minutesFromNow(-60), minutesFromNow(60)]],
+      validUntil: minutesFromNow(60 * 24),
+      generatedAt: NOW.toISOString(),
+      ...over,
+    });
+  const decide = (schedule: SignalRead, lastActivity: SignalRead = NONE) =>
+    selectWarmupJobs({ now: NOW, schedule, lastActivity });
+
+  it("in a window -> pings (in-window)", () => {
+    expect(decide(at(payload()))).toEqual({ jobs: [WARM_DB_PATH], reason: "in-window" });
+  });
+
+  it("outside every window with no activity -> skips (outside-window)", () => {
+    const s = at(payload({ windows: [[minutesFromNow(60), minutesFromNow(120)]] }));
+    expect(decide(s)).toEqual({ jobs: [], reason: "outside-window" });
+  });
+
+  it("disabled -> skips (disabled)", () => {
+    expect(decide(at(payload({ enabled: false })))).toEqual({ jobs: [], reason: "disabled" });
+  });
+
+  it("no schedule published -> skips (no-schedule)", () => {
+    expect(decide(NONE)).toEqual({ jobs: [], reason: "no-schedule" });
+  });
+
+  it("a failed read, malformed JSON or the wrong version -> skips (unreadable)", () => {
+    expect(decide(FAILED).reason).toBe("unreadable");
+    expect(decide(at("not json")).reason).toBe("unreadable");
+    expect(decide(at(payload({ v: 2 }))).reason).toBe("unreadable");
+    expect(decide(at(payload({ windows: [["x", "y"]] }))).reason).toBe("unreadable");
+    for (const s of [FAILED, at("not json"), at(payload({ v: 2 }))])
+      expect(decide(s).jobs).toEqual([]);
+  });
+
+  it("past validUntil -> skips (stale), even inside a window", () => {
+    expect(decide(at(payload({ validUntil: minutesFromNow(-1) })))).toEqual({
+      jobs: [],
+      reason: "stale",
+    });
+  });
+
+  it("outside a window, activity 10 min ago within 30 -> pings (recent-activity)", () => {
+    const s = at(payload({ windows: [] }));
+    expect(decide(s, at(minutesFromNow(-10)))).toEqual({
+      jobs: [WARM_DB_PATH],
+      reason: "recent-activity",
+    });
+  });
+
+  it("activity 31 min ago -> skips; activityEnabled false -> skips", () => {
+    const s = at(payload({ windows: [] }));
+    expect(decide(s, at(minutesFromNow(-31))).jobs).toEqual([]);
+    expect(
+      decide(at(payload({ windows: [], activityEnabled: false })), at(minutesFromNow(-1))).jobs,
+    ).toEqual([]);
+  });
+
+  it("an unreadable or unparseable activity marker counts as no activity", () => {
+    const s = at(payload({ windows: [] }));
+    expect(decide(s, FAILED)).toEqual({ jobs: [], reason: "outside-window" });
+    expect(decide(s, at("garbage"))).toEqual({ jobs: [], reason: "outside-window" });
+  });
+
+  it("ACTIVITY_ONLY (published with no windows) still pings on recent activity", () => {
+    expect(decide(at(payload({ windows: [] })), at(minutesFromNow(-2))).jobs).toEqual([
+      WARM_DB_PATH,
+    ]);
+  });
+
+  it("the warm-up cron never selects any other job via selectJobs", () => {
+    expect(
+      selectJobs({
+        cron: WARMUP_CRON,
+        now: NOW,
+        paymentDueAt: at(minutesFromNow(-60)),
+        errorLastAt: at(minutesFromNow(-1)),
+        contactOutboxPending: at(NOW.toISOString()),
+        notificationOutboxPending: at(NOW.toISOString()),
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe("scheduled handler: warm-up tick (#1491 R11, R12)", () => {
+  let fetchSpy: ReturnType<typeof vi.fn>;
+  let logSpy: ReturnType<typeof vi.spyOn>;
+  const WARM = { cron: WARMUP_CRON } as Parameters<typeof scheduler.scheduled>[0];
+
+  beforeEach(() => {
+    fetchSpy = vi.fn(async () => okResponse('{"ok":true,"ms":3}'));
+    vi.stubGlobal("fetch", fetchSpy);
+    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    logSpy.mockRestore();
+  });
+
+  const warmupLines = () =>
+    logSpy.mock.calls
+      .map((c: unknown[]) => String(c[0]))
+      .filter((l: string) => l.startsWith("warmup tick"));
+
+  it("in a window: POSTs only the ping, with the token, and logs ran=…/reason=in-window", async () => {
+    const now = Date.now();
+    const schedule = JSON.stringify({
+      v: 1,
+      enabled: true,
+      activityEnabled: false,
+      activityMinutes: 30,
+      windows: [[new Date(now - 60_000).toISOString(), new Date(now + 3_600_000).toISOString()]],
+      validUntil: new Date(now + 86_400_000).toISOString(),
+      generatedAt: new Date(now).toISOString(),
+    });
+    await scheduler.scheduled(
+      WARM,
+      { ...ENV, JOB_SIGNALS: kv({ "db-warmup:schedule": schedule }) },
+      CTX,
+    );
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(String(fetchSpy.mock.calls[0][0])).toBe(`${ENV.APP_BASE_URL}${WARM_DB_PATH}`);
+    expect(warmupLines()).toEqual([`warmup tick ran=${WARM_DB_PATH} reason=in-window`]);
+    // It reads only its own two keys, never the 15-minute markers.
+    expect(
+      logSpy.mock.calls.some((c: unknown[]) => String(c[0]).startsWith("scheduler tick")),
+    ).toBe(false);
+  });
+
+  it("no JOB_SIGNALS binding: skips (unreadable), calls nothing", async () => {
+    await scheduler.scheduled(WARM, ENV, CTX);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(warmupLines()).toEqual(["warmup tick ran=none reason=unreadable"]);
+  });
+
+  it("nothing published: skips (no-schedule)", async () => {
+    await scheduler.scheduled(WARM, { ...ENV, JOB_SIGNALS: kv({}) }, CTX);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(warmupLines()).toEqual(["warmup tick ran=none reason=no-schedule"]);
+  });
+});
+
+describe("scheduler cron triggers (#1491 R10)", () => {
+  it("every environment has exactly the 15-minute, daily and 4-minute crons", () => {
+    const toml = readFileSync("workers/scheduler/wrangler.toml", "utf8");
+    const crons = [...toml.matchAll(/^crons = (\[.*\])$/gm)].map(
+      (m) => JSON.parse(m[1]) as string[],
+    );
+    expect(crons).toHaveLength(5); // top level + staging, production, afc-staging, afc-production
+    for (const c of crons) expect(c).toEqual(["*/15 * * * *", "0 3 * * *", "*/4 * * * *"]);
   });
 });

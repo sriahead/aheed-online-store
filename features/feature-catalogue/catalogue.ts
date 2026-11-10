@@ -710,6 +710,14 @@ export const PLATFORM: RoleCatalogue = {
           status: "live",
         },
         {
+          name: "Database warm-up",
+          what: "Keeps the cell's database awake during opening hours and after signed-in activity, with a monthly cost estimate.",
+          value: "Shoppers don't wait several seconds for a sleeping database on their first page.",
+          demo: "Switch it on and watch Last ping update during opening hours.",
+          route: "/staff/platform/db-warmup",
+          status: "live",
+        },
+        {
           name: "Error events",
           what: "Lists recent server-side errors across all stores.",
           value: "Problems are seen before customers report them.",

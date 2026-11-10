@@ -56,3 +56,26 @@ export const ERROR_SIGNAL_THROTTLE_MS = 5 * 60 * 1000;
  * first sweep to see the order gets a definitive paid-or-expired answer.
  */
 export const CHECKOUT_SWEEP_DELAY_MS = 40 * 60 * 1000;
+
+/**
+ * #1491 — the database warm-up. The scheduler's every-4-minutes tick reads these and pings the database only
+ * while the published schedule (or recent signed-in activity) says so; it never reads the database to
+ * decide. Written only by `lib/job-signals.ts`.
+ *
+ * `db-warmup:schedule`: the JSON payload of `lib/db-warmup/payload.ts`, republished on every config
+ * or opening-hours save and daily. `db-warmup:last-ping`: ISO instant of the last ping.
+ * `db-warmup:last-activity`: ISO instant of the last signed-in request (a ping never writes it).
+ */
+export const DB_WARMUP_SCHEDULE_KEY = "db-warmup:schedule";
+export const DB_WARMUP_LAST_PING_KEY = "db-warmup:last-ping";
+export const DB_WARMUP_LAST_ACTIVITY_KEY = "db-warmup:last-activity";
+
+/**
+ * The activity marker is rewritten at most this often. Against a 30-minute activity window and a
+ * 4-minute tick, 3 minutes loses no accuracy and caps a continuously busy cell at 480 writes a day
+ * (KV's free tier allows 1,000 a day per account).
+ */
+export const WARMUP_ACTIVITY_THROTTLE_MS = 3 * 60 * 1000;
+
+/** Neon suspends a compute after this long with no active query (Launch plan, fixed). */
+export const NEON_SUSPEND_AFTER_MS = 5 * 60 * 1000;

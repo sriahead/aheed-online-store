@@ -26,6 +26,33 @@ model HealthCheck {
   @@index([checkedAt])
 }
 
+// #1491 - how the scheduler keeps THIS cell's database warm. Platform-wide (one database serves every
+// vendor in a cell), so there is no vendorId and exactly one row, id "default". Compute size and price
+// are integers (milli-CU, micro-USD per CU-hour), never floats. The scheduler never reads this table:
+// the app publishes the computed windows to KV (lib/db-warmup-service.ts) so deciding to ping cannot
+// itself wake the database.
+enum DbWarmupMode {
+  OPENING_HOURS
+  ALWAYS
+  CUSTOM
+  ACTIVITY_ONLY
+}
+
+model DbWarmupConfig {
+  id                     String       @id @default("default")
+  enabled                Boolean      @default(false)
+  mode                   DbWarmupMode @default(OPENING_HOURS)
+  activityEnabled        Boolean      @default(true)
+  activityMinutes        Int          @default(30)
+  leadMinutes            Int          @default(30)
+  customStart            String? // HH:mm, Europe/London
+  customEnd              String? // HH:mm, Europe/London
+  computeMilliUnits      Int          @default(250)
+  priceMicroUsdPerCuHour Int          @default(106000)
+  updatedBy              String?
+  updatedAt              DateTime     @updatedAt
+}
+
 // Better Auth's standard relational schema (ADR-002) — model/field names match its own
 // conventions so the Prisma adapter needs no custom mapping config. `role` is our own
 // RBAC addition (Customer/Staff/Admin, mission.md); Better Auth passes unknown-to-it

@@ -948,8 +948,13 @@ markers nobody writes, so it would skip the sweep forever and only the daily run
 top-level (non-`--env`) block in each
 file holds a placeholder id that only `npm run preview` / `wrangler dev` use; no deploy reads it.
 
-**Cron Trigger budget:** the scheduler uses **4** of the Workers Free plan's **5** Cron Triggers per
-account (two per environment). The application Worker has none.
+**Cron Trigger budget:** the scheduler has **three** Cron Triggers per environment since #1491
+(`*/15 * * * *`, `0 3 * * *` and the `*/4 * * * *` database warm-up tick). Across the four deployed
+environments (`staging`, `production`, `afc-staging`, `afc-production`) that makes **12**. **8** were
+already live before #1491 (read from the Cloudflare API, 2026-11-10), which is above the Workers Free
+plan's 5 per account, so this account's limit is higher. If a deploy is ever refused for the trigger
+count, the fallback is to move the 15-minute tick to `*/4` and gate the existing jobs by minute;
+see `specs/2026-11-10-db-warmup-ping/plan.md`. The application Worker has none.
 
 ## Email: sending and receiving (`#1217`)
 
