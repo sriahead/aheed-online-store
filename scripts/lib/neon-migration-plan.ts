@@ -104,6 +104,7 @@ export const MODEL_PLAN: Record<string, { class: Classification; reason: string 
   ContactOutbox: { class: "skip", reason: "failed-send queue, deleted once sent (#1409)" },
   VendorEnquiry: { class: "skip", reason: "pre-launch shopper messages, per environment (#1482)" },
   VendorEnquiryReply: { class: "skip", reason: "replies to a skipped VendorEnquiry (#1482)" },
+  DbWarmupConfig: { class: "skip", reason: "per-environment warm-up setting (#1491)" },
   NotificationOutbox: { class: "skip", reason: "failed-send queue, deleted once sent (#1435)" },
   DiscountCodeAttempt: { class: "skip", reason: "rate-limit attempts" },
   AuthenticationAttempt: { class: "skip", reason: "rate-limit attempts" },

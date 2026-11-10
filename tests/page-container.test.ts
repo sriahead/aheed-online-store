@@ -67,6 +67,7 @@ const EXPECTED: Record<string, { width: string; padY: string }> = {
   "app/(admin)/staff/platform/settings/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/platform/health/page.tsx": { width: "wide", padY: "default" },
   "app/(admin)/staff/platform/costs/page.tsx": { width: "wide", padY: "default" },
+  "app/(admin)/staff/platform/db-warmup/page.tsx": { width: "standard", padY: "default" },
   // --- admin: standard
   "app/(admin)/staff/faqs/page.tsx": { width: "standard", padY: "default" },
   "app/(admin)/staff/discounts/page.tsx": { width: "standard", padY: "default" },

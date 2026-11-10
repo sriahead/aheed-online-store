@@ -1,11 +1,15 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
   CONTACT_OUTBOX_PENDING_KEY,
+  DB_WARMUP_LAST_ACTIVITY_KEY,
+  DB_WARMUP_LAST_PING_KEY,
+  DB_WARMUP_SCHEDULE_KEY,
   ERROR_EVENTS_LAST_AT_KEY,
   ERROR_SIGNAL_THROTTLE_MS,
   JOB_SIGNALS_BINDING,
   NOTIFICATION_OUTBOX_PENDING_KEY,
   PAYMENT_SWEEP_DUE_AT_KEY,
+  WARMUP_ACTIVITY_THROTTLE_MS,
 } from "@/lib/job-signal-keys";
 
 /**
@@ -167,4 +171,73 @@ export async function clearNotificationOutboxPending(): Promise<void> {
   } catch (error) {
     logFailure("clear", NOTIFICATION_OUTBOX_PENDING_KEY, error);
   }
+}
+
+/**
+ * #1491 — the database warm-up's three keys. Same rule as every marker here: never fails its caller.
+ * The scheduler reads these on its every-4-minutes tick and never reads the database to decide.
+ */
+
+/** Publish the computed schedule (`lib/db-warmup/payload.ts` JSON). Unconditional. */
+export async function putWarmupSchedule(value: string): Promise<void> {
+  const store = resolveStore();
+  if (!store) return;
+  try {
+    await store.put(DB_WARMUP_SCHEDULE_KEY, value);
+  } catch (error) {
+    logFailure("put", DB_WARMUP_SCHEDULE_KEY, error);
+  }
+}
+
+/** A ping reached the database. Never touches the activity key: a ping is not activity. */
+export async function markWarmupPing(now: Date): Promise<void> {
+  const store = resolveStore();
+  if (!store) return;
+  try {
+    await store.put(DB_WARMUP_LAST_PING_KEY, now.toISOString());
+  } catch (error) {
+    logFailure("mark", DB_WARMUP_LAST_PING_KEY, error);
+  }
+}
+
+/**
+ * A signed-in request was served. Throttled: written only when nothing usable is stored or the stored
+ * instant is older than `WARMUP_ACTIVITY_THROTTLE_MS`, so a busy cell costs one read per request and
+ * at most one write per throttle period. No database access, ever.
+ */
+export async function markWarmupActivity(
+  now: Date,
+  storeOverride?: SignalStore | null,
+): Promise<void> {
+  const store = storeOverride === undefined ? resolveStore() : storeOverride;
+  if (!store) return;
+  try {
+    const stored = parseStored(await store.get(DB_WARMUP_LAST_ACTIVITY_KEY));
+    if (stored !== null && now.getTime() - stored < WARMUP_ACTIVITY_THROTTLE_MS) return;
+    await store.put(DB_WARMUP_LAST_ACTIVITY_KEY, now.toISOString());
+  } catch (error) {
+    logFailure("mark", DB_WARMUP_LAST_ACTIVITY_KEY, error);
+  }
+}
+
+/** For the admin page: the last ping and last recorded activity, null when absent or unreadable. */
+export async function readWarmupStatus(): Promise<{
+  lastPing: Date | null;
+  lastActivity: Date | null;
+}> {
+  const store = resolveStore();
+  if (!store) return { lastPing: null, lastActivity: null };
+  const read = async (key: string): Promise<Date | null> => {
+    try {
+      const at = parseStored(await store.get(key));
+      return at === null ? null : new Date(at);
+    } catch (error) {
+      logFailure("read", key, error);
+      return null;
+    }
+  };
+  return {
+    lastPing: await read(DB_WARMUP_LAST_PING_KEY),
+    lastActivity: await read(DB_WARMUP_LAST_ACTIVITY_KEY),
+  };
 }
