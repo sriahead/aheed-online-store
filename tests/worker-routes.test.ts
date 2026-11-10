@@ -4,6 +4,7 @@ import {
   compareRoutes,
   isRoutableHost,
   parseOtherEnvRoutes,
+  SAAS_ORIGIN_HOSTS,
   parseRoutePatterns,
   renderRoutesBlock,
 } from "../scripts/verify-worker-routes";
@@ -155,7 +156,26 @@ describe("repository Worker config (#1323)", () => {
   });
 
   it("R1/R2: every Merqify-hosted app Worker route is a custom domain, while external SaaS domains use zone_name routes", () => {
-    expect(customDomainCount(read("wrangler.toml"))).toBe(4);
+    // 4 vendor hosts + afc-staging-origin.merqify.com (#1482, the AFC staging SaaS origin).
+    expect(customDomainCount(read("wrangler.toml"))).toBe(5);
+  });
+
+  it("#1482: afc-staging owns its SaaS origin as a custom domain, skipped by the vendor comparison", () => {
+    const toml = read("wrangler.toml");
+    const block = toml.slice(
+      toml.indexOf("[env.afc-staging]"),
+      toml.indexOf("[env.afc-production]"),
+    );
+    expect(block).toMatch(
+      /\[\[env\.afc-staging\.routes\]\]\s*\npattern = "afc-staging-origin\.merqify\.com"\s*\ncustom_domain = true/,
+    );
+    expect(SAAS_ORIGIN_HOSTS.has("afc-staging-origin.merqify.com")).toBe(true);
+    // No other env may claim it: a custom domain belongs to exactly one Worker.
+    for (const env of ["staging", "production", "afc-production"]) {
+      expect(toml).not.toMatch(
+        new RegExp(`\\[\\[env\\.${env}\\.routes\\]\\]\\s*\\npattern = "afc-staging-origin`),
+      );
+    }
   });
 
   it("AFC cell staging routes are exactly staging.aheedfoodcentre.co.uk (#1331)", () => {

@@ -4,8 +4,8 @@ title: "Cloudflare for SaaS Client Onboarding Runbook"
 audience: [platform-admin]
 type: runbook
 status: approved
-version: "1.0.0"
-updated: 2026-11-08
+version: "1.1.0"
+updated: 2026-11-10
 visibility: internal
 summary: "Standard operating procedure for SaaS client onboarding from Cloudflare account creation, zone configuration, custom hostnames, Neon database mapping, to edge validation."
 tags: ["admin", "platform", "cloudflare", "onboarding", "saas", "dns"]
@@ -111,6 +111,25 @@ Before beginning, gather the following parameters:
    - Repeat for staging:
      - **Custom Hostname:** `staging.<client-domain>` (e.g. `staging.aheedfoodcentre.co.uk`)
      - **Custom Origin Server:** `aheed-staging.merqify.com`
+
+   > [!WARNING]
+   > **Dedicated cells (ADR-009) are different.** The two origins above belong to the **platform**
+   > Workers. A client with its own cell (Aheed Food Centre: `afc-store-staging` /
+   > `afc-store-production`) must use **its own cell's origin**, or its traffic reaches the platform
+   > Worker, with the platform database and the platform Google client, whenever its routes do not
+   > intercept it. That happened to `staging.aheedfoodcentre.co.uk` on 2026-11-10 (#1482): Google
+   > sign-in failed with `redirect_uri_mismatch`, and the footer said "Merqify".
+   >
+   > - Give the cell's Worker an origin custom domain in `wrangler.toml`, e.g.
+   >   `afc-staging-origin.merqify.com` with `custom_domain = true` under `[env.afc-staging]`, and list
+   >   it in `SAAS_ORIGIN_HOSTS` (`scripts/verify-worker-routes.ts`). Deploy first.
+   > - Then set the custom hostname's **Origin server** and **Origin SNI** to that host. Do it in this
+   >   order: the new origin must answer before the custom hostname points at it.
+   > - Check that the storefront footer shows the client's own `PLATFORM_TAGLINE`, and that
+   >   `POST /api/auth/sign-in/social` returns the cell's own Google `client_id`.
+   > - Each cell's Worker also needs **its own** `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (`wrangler
+   >   secret put … --env afc-<env>`). These are set by hand, not by CI. Don't copy the platform
+   >   Worker's values.
 
 3. **Retrieve DCV (Domain Control Validation) Records:**
    - In the Custom Hostnames table, click the newly created hostnames.
@@ -256,6 +275,7 @@ access-control-allow-origin: *
 | **HTTP 522 Connection Timed Out** | No Worker Route listening on `fallback.merqify.com/*`. | In Cloudflare Workers, add Route `fallback.merqify.com/*` bound to the production Worker. |
 | **HTTP 307 Temporary Redirect to `/coming-soon`** | Hostname missing from Neon `VendorDomain` table. | Insert row into `VendorDomain` matching `www.<client-domain>` with `isCanonical: true`. |
 | **Staging loads Production content** | Custom hostname CNAME points to `fallback.merqify.com` instead of staging origin, or wildcard `*/*` route exists on prod Worker. | 1. Remove `*/*` route from prod Worker.<br/>2. Point `staging` custom hostname to `aheed-staging.merqify.com`. |
+| **Dedicated-cell staging shows the platform (footer says Merqify, Google `redirect_uri_mismatch`)** | The custom hostname's origin is a **platform** Worker (`aheed-staging.merqify.com`), and the cell Worker's routes are not intercepting. | Point the custom hostname's Origin server and SNI at the cell's own origin custom domain (`afc-staging-origin.merqify.com`). See the Stage 2 warning for dedicated cells (#1482). |
 | **Store loads but Logo/Icons show broken image (HTTP 403)** | Cloudflare WAF Custom Rule on `merqify.com` blocking cross-domain referrers. | In `merqify.com` Security > Custom Rules, disable referrer block or whitelist `<client-domain>`. |
 | **`DNS_PROBE_FINISHED_NXDOMAIN` in browser** | Local ISP / Wi-Fi router cached stale DNS records before nameserver update completed. | Enable Chrome Secure DNS (DoH using Cloudflare 1.1.1.1) or flush local DNS (`ipconfig /flushdns`). |
 
