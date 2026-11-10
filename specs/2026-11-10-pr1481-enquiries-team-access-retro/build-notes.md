@@ -179,3 +179,44 @@ Platform admin guide, Telegram section: the claims were spot-checked against the
   the code and `tests/client-setup-telegram-links.test.ts` both allow. R1 was corrected to match;
   the code is unchanged.
 - **Still open:** R25 and R34 (staging, after the D6 merge).
+
+## Staging status at end of session (2026-11-10, ~17:05 UTC)
+
+Merged to `staging` and deployed through `80be3c8` (deploy run 42857866727, all 10 steps green):
+
+- **#1481** (this slice, `77128d0`) and its follow-ups:
+  - **#1486** (`0de312f`): route guard skips hosts routed by another cell (R34a). `deploy-staging` had
+    been red since `e94ebbb5`.
+  - **#1488** (`d818054`): `20261110120000_vendor_enquiries_reshape` (R30a). Applied to Merqify
+    staging (no-op) and AFC staging (converted); dev was a no-op.
+  - **#1487** (`e134ce4`): AFC SaaS `zone_name` routes and CSP, split from #1485.
+  - **#1489** (`aceba80`): AFC staging owns `afc-staging-origin.merqify.com`.
+  - **#1490** (`31c8eb7`): staging only mails `EMAIL_ALLOWED_RECIPIENTS`; production stays open.
+  - **#1493** (`80be3c8`): AFC cells get their own `JOB_SIGNALS` namespaces.
+- **Owner/dashboard changes made today (not in code):**
+  - The `staging.aheedfoodcentre.co.uk` custom hostname origin and SNI are set to
+    `afc-staging-origin.merqify.com`.
+  - **The client-zone `staging` CNAME is changed to `afc-staging-origin.merqify.com`.** This is what
+    actually moved traffic off the platform Worker.
+  - The `afc-staging` Worker secrets `GOOGLE_CLIENT_ID`/`SECRET` are replaced with the Aheed client.
+  - `EMAIL_ALLOWED_RECIPIENTS` is uploaded to `afc-staging` (3 entries).
+- **R34 so far** (against the AFC Worker, after the DNS fix):
+  - `/record` returns 401 with no token and with a wrong token.
+  - Signed-out `/staff/enquiries` returns 307.
+  - Google sign-in works (in incognito; a normal window held stale platform cookies).
+  - The contact form reached `info-afc@googlegroups.com` tagged `[STAGING]`.
+  - The AFC staging DB holds 1 `VendorEnquiry` row.
+- **Still open:** R34 steps 2–5:
+  - reply to an allow-listed address from `/staff/enquiries`;
+  - reply to a non-listed address shows "Email not sent";
+  - Resolve and Reopen persist;
+  - a new staff account signs in with Google and is refused at `/staff/team` (also covers R25).
+- **Inbound email recording:** not exercised (no Email Routing Worker rule).
+- **Before promotion to `main`:**
+  - all of R34;
+  - production also needs a dedicated origin (`afc-origin.merqify.com`), with the `www` custom
+    hostname and client CNAME moved off `aheed.merqify.com` (the platform production Worker), as
+    agreed;
+  - right after promoting, run `npx tsx scripts/check-enquiry-schema.ts` on
+    `secrets/afc-production.vars AFC_DIRECT_URL` and `secrets/merqify-production.vars DIRECT_URL` to
+    confirm the reshape converted both databases.

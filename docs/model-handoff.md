@@ -4,8 +4,8 @@ title: "Model handoff: repository orientation snapshot"
 audience: [dev]
 type: doc
 status: approved
-version: "1.168.0"
-updated: 2026-11-09
+version: "1.169.0"
+updated: 2026-11-10
 visibility: internal
 summary: "Concise project-state handoff for fresh-session recovery, covering current position, owner priorities, blockers, reconciliation gaps, and the volatile facts Orient must verify live."
 tags: [handoff, orientation, roadmap, backlog, operations]
@@ -38,6 +38,36 @@ Build Notes across the pre-validation Clear. Remove or replace stale information
 reconciliation. If overall project state did not materially change, leave this file untouched.
 
 ## Last Verified
+
+- **2026-11-10 (`#1482`, `#1491`): enquiries retro-spec and database warm-up MERGED TO STAGING. Nothing promoted to `main` today.**
+  - **`#1482`** (PR #1481 retro-specced at `specs/2026-11-10-pr1481-enquiries-team-access-retro/`).
+    Merged with follow-ups #1486, #1488, #1487, #1489, #1490, #1493; all are listed in that slice's
+    build notes, under "Staging status at end of session". **Open:**
+    - R34 steps 2–5 and R25 on `staging.aheedfoodcentre.co.uk` (owner, signed in with Google, in
+      incognito);
+    - the production dedicated origin `afc-origin.merqify.com` before promotion;
+    - after promotion, `scripts/check-enquiry-schema.ts` on both production databases (the reshape
+      migration converts the hand-applied old shape).
+  - **`#1491`** (database warm-up ping, PR #1492, `specs/2026-11-10-db-warmup-ping/`). Live on
+    Aheed staging since about 16:59 UTC, opening-hours mode plus 30-min activity; first ping
+    17:00:39 UTC. **One-week Neon compute comparison due 2026-11-17, then promote.** Production
+    starts off.
+  - **Infrastructure facts verified today (dashboards, not code):**
+    - Aheed staging traffic reaches `afc-store-staging` only because the **client-zone `staging`
+      CNAME targets `afc-staging-origin.merqify.com`**. Changing the SaaS custom-hostname origin
+      alone did nothing.
+    - `www.aheedfoodcentre.co.uk` still has the platform production Worker (`aheed.merqify.com`)
+      as its origin and works only through the AFC routes; fix this at promotion.
+    - `afc-staging` now has its own Google client secrets and `EMAIL_ALLOWED_RECIPIENTS`.
+    - Both staging Workers are allow-list only; production is open.
+    - The AFC cells have their own KV namespaces `afc-jobs-staging` / `afc-jobs-production`.
+    - The account accepts 12 Cron Triggers.
+  - **Draft PR #1485 still holds all of `8531ffc1`.** Its routes, CSP and route-check changes are
+    duplicates of #1487 (already merged); only `scripts/migrate-aheed-to-dedicated-cell.ts` is unique.
+    Trim it to that script, which awaits the owner's decision on copying AFC production data into
+    staging.
+  - Sequence unchanged after these: Aheed custom email (`#104`/`#1343`/`#1392`), then Stripe
+    (`#113`).
 
 - **2026-11-09 (`#1331`, `#1476`): Dedicated Cell Isolation and Cloudflare for SaaS Onboarding Runbook MERGED TO STAGING** (PR #1478 `25bc9fe`, PR #1477 `e94ebbb`).
   - **`#1331` (Aheed Food Centre Dedicated Cell Isolation)** is MERGED TO STAGING (`25bc9fe`). Configured dedicated cell topology (`[env.afc-staging]`, `[env.afc-production]`) in `wrangler.toml`, `workers/scheduler/wrangler.toml`, and `workers/inbound-email/wrangler.toml` targeting `staging.aheedfoodcentre.co.uk` and `www.aheedfoodcentre.co.uk`. Set up sequential lockstep CI deployment pipeline in `deploy-staging.yml` and `deploy-production.yml` guarded with `if: env.AFC_DIRECT_URL != ''`. Added `scripts/bootstrap-dedicated-cell.ts` for automated vendor, domain, and satellite seeding with production demo-account refusal guard. Approved ADR-009 ("Platform Cell plus Dedicated Client Cells"). All 13 unit tests pass.
