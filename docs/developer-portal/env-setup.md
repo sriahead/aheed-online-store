@@ -948,6 +948,21 @@ markers nobody writes, so it would skip the sweep forever and only the daily run
 top-level (non-`--env`) block in each
 file holds a placeholder id that only `npm run preview` / `wrangler dev` use; no deploy reads it.
 
+**Each cell needs its OWN namespace (#1491).** Two cells must never share one: their markers and the
+database warm-up keys would overwrite each other. Until 2026-11-10, `afc-staging` and `afc-production`
+reused the platform `staging` and `production` ids, so one cell emptying its outbox deleted the
+other's pending marker. The current namespaces, all in the Merqify account:
+
+| Environment | Namespace | Id |
+|---|---|---|
+| `staging` | `aheed-jobs-staging` | `20aab8dee7f342809679d36f1d96fc6c` |
+| `production` | `aheed-jobs-production` | `ba3dd6efb50445bc9cf856664fe6c1c5` |
+| `afc-staging` | `afc-jobs-staging` | `9b5c84f21e294e1ca00b78bb1af62328` |
+| `afc-production` | `afc-jobs-production` | `21b5000fa6c34de09e644599d3d103f7` |
+
+A new dedicated cell creates its own (Workers & Pages → KV → Create). `tests/job-signals-namespaces.test.ts`
+fails if two environments share an id, or if a scheduler's id differs from its app Worker's.
+
 **Cron Trigger budget:** the scheduler has **three** Cron Triggers per environment since #1491
 (`*/15 * * * *`, `0 3 * * *` and the `*/4 * * * *` database warm-up tick). Across the four deployed
 environments (`staging`, `production`, `afc-staging`, `afc-production`) that makes **12**. **8** were
