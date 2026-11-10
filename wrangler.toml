@@ -209,6 +209,18 @@ zone_name = "merqify.com"
 pattern = "fallback.merqify.com/*"
 zone_name = "merqify.com"
 
+# #1482 — production's counterpart of afc-staging-origin.merqify.com: this Worker's own ORIGIN for
+# Cloudflare for SaaS. After this deploys, the owner points the www.aheedfoodcentre.co.uk custom hostname
+# (merqify.com zone → SSL/TLS → Custom Hostnames) at it as Origin server and Origin SNI, AND changes the
+# Aheed zone's www CNAME to it. On staging, changing the custom hostname alone moved no traffic; the CNAME
+# change did. Until then www still names aheed.merqify.com (the PLATFORM production Worker) as its origin
+# and reaches this Worker only through the routes above. Not a vendor host: no VendorDomain row;
+# scripts/verify-worker-routes.ts skips it (SAAS_ORIGIN_HOSTS). The fallback.merqify.com route stays
+# until www is confirmed on this origin, so the switch never leaves www unrouted.
+[[env.afc-production.routes]]
+pattern = "afc-origin.merqify.com"
+custom_domain = true
+
 [[env.afc-production.r2_buckets]]
 binding = "IMAGES"
 bucket_name = "afc-images-production"

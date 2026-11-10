@@ -122,7 +122,9 @@ Before beginning, gather the following parameters:
    >
    > - Give the cell's Worker an origin custom domain in `wrangler.toml`, e.g.
    >   `afc-staging-origin.merqify.com` with `custom_domain = true` under `[env.afc-staging]`, and list
-   >   it in `SAAS_ORIGIN_HOSTS` (`scripts/verify-worker-routes.ts`). Deploy first.
+   >   it in `SAAS_ORIGIN_HOSTS` (`scripts/verify-worker-routes.ts`). Deploy first. Production's is
+   >   `afc-origin.merqify.com` under `[env.afc-production]`; it exists once the promotion that carries
+   >   it has deployed, and `www`'s custom hostname and CNAME are then moved to it the same way.
    > - Then set the custom hostname's **Origin server** and **Origin SNI** to that host. Do it in this
    >   order: the new origin must answer before the custom hostname points at it.
    > - **Also change the client zone's DNS record. This is the step that actually moved the traffic.**
