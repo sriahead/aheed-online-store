@@ -53,7 +53,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https://*.merqify.com https://*.aheedfoodcentre.co.uk",
+              "img-src 'self' data: https://*.merqify.com",
               "font-src 'self' data:",
               "connect-src 'self' https://*.r2.cloudflarestorage.com",
               "frame-ancestors 'none'",

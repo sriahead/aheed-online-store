@@ -62,12 +62,7 @@ export function parseRoutePatterns(toml: string, envName: string): string[] {
     }
     if (!inRoutesTable) continue;
     const match = /^pattern\s*=\s*["']([^"']+)["']/.exec(line);
-    if (match) {
-      const normalized = match[1].toLowerCase().replace(/\/\*$/, "");
-      if (normalized !== "fallback.merqify.com") {
-        patterns.push(normalized);
-      }
-    }
+    if (match) patterns.push(match[1].toLowerCase());
   }
 
   return patterns;
