@@ -6,6 +6,13 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Each cell has its own job-signals KV namespace (#1491, found while enabling the warm-up)**
+  - **What was wrong.** `afc-staging`/`afc-production` bound the platform `staging`/`production` `JOB_SIGNALS` namespaces (ids copied in #1331). So one cell emptying its contact or notification outbox deleted the other cell's pending marker, leaving those retries until the 03:00 run, and the two cells would have shared the database warm-up schedule and activity marker. Every job still read its own database, so no data crossed cells.
+  - **Fix.** New namespaces `afc-jobs-staging` (`9b5c84f2…`) and `afc-jobs-production` (`21b5000f…`) in the Merqify account. Both `wrangler.toml` files point the AFC environments at them. `tests/job-signals-namespaces.test.ts` fails if two environments share an id or a scheduler differs from its app Worker. `env-setup.md` lists the four namespaces.
+  - **On deploy** each AFC cell starts with an empty marker store. That is harmless: the 03:00 ungated run is the designed backstop, and the warm-up publishes on its next save.
+
 ### Added
 
 - **Database warm-up ping during opening hours and after signed-in activity (#1491)**, spec `specs/2026-11-10-db-warmup-ping/`

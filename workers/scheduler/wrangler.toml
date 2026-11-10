@@ -75,9 +75,11 @@ name = "afc-scheduler-staging"
 [env.afc-staging.triggers]
 crons = ["*/15 * * * *", "0 3 * * *", "*/4 * * * *"]
 
+# #1491 — the AFC cell's OWN namespace (afc-jobs-staging). It had reused the platform staging id, so the
+# two cells overwrote each other's job markers and warm-up schedule. Same id in both wrangler.toml files.
 [[env.afc-staging.kv_namespaces]]
 binding = "JOB_SIGNALS"
-id = "20aab8dee7f342809679d36f1d96fc6c"
+id = "9b5c84f21e294e1ca00b78bb1af62328"
 
 [env.afc-staging.vars]
 APP_BASE_URL = "https://staging.aheedfoodcentre.co.uk"
@@ -90,9 +92,10 @@ name = "afc-scheduler-production"
 [env.afc-production.triggers]
 crons = ["*/15 * * * *", "0 3 * * *", "*/4 * * * *"]
 
+# #1491 — the AFC cell's OWN namespace (afc-jobs-production); see afc-staging above.
 [[env.afc-production.kv_namespaces]]
 binding = "JOB_SIGNALS"
-id = "ba3dd6efb50445bc9cf856664fe6c1c5"
+id = "21b5000fa6c34de09e644599d3d103f7"
 
 [env.afc-production.vars]
 APP_BASE_URL = "https://www.aheedfoodcentre.co.uk"
