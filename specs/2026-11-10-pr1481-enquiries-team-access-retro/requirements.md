@@ -14,7 +14,7 @@ means `VendorMembership.role = ADMIN` for the current vendor.
 
 R1. `lib/client-setup/telegram-links.ts` exports `TELEGRAM_QUICK_LINKS`. Every entry's `href` is
     either the in-app runbook path `TELEGRAM_RUNBOOK_HREF` or an `https://` URL whose host is
-    `t.me`, `telegram.org` or `core.telegram.org`. No `href` matches `/bot\d+:/` (a bot token). This
+    `t.me`, `telegram.org`, `web.telegram.org` or `core.telegram.org`. No `href` matches `/bot\d+:/` (a bot token). This
     is enforced by `tests/client-setup-telegram-links.test.ts`.
 R2. The Client Setup **Order alerts** card renders every quick link. Each external link carries
     `target="_blank"` and `rel="noopener noreferrer"`, and each link with `shareable: true` shows a

@@ -151,3 +151,31 @@ Platform admin guide, Telegram section: the claims were spot-checked against the
   enquiry with a listed reply. This is benign and visible.
 - **The record route re-resolves `to`** through `resolveInboundEmailWith`. If addresses change
   between `/resolve` and `/record`, a 404 is logged by the Worker and nothing is recorded.
+
+## Pre-merge verification (2026-11-10, in-session, not independent)
+
+- **CI on PR #1481:** `quality`, `kms` and `docs-gates` all pass (run 42795463461).
+- **Dev migration:** the owner applied `20261109225000_vendor_enquiries` to dev (`ep-dry-morning`)
+  with `prisma migrate deploy`.
+- **R33:** `npx tsx scripts/verify-pr1481-integration.ts` passed all 14 checks against dev, with
+  `cleanup: 0 rows left`.
+- **Preview (`npm run preview`, Host `localhost:8787`, demo `@example.com` accounts):**
+  - **R27:** `POST /api/inbound-email/record` returned **503**, because the local `.dev.vars` has
+    no `INBOUND_EMAIL_TOKEN`; that is R27's first branch. `GET` returned **405**. The 401 branch is
+    unit-tested and is checked live under R34.
+  - **R18:** as `demo-platform-admin`, `/staff/team` offers STAFF, ADMIN and PLATFORM_ADMIN and
+    shows the `data-platform-admin-warning`. As `demo-admin` (store admin) it offers STAFF only, with
+    no warning.
+  - **R2:** `/staff/platform/client-setup` renders `[data-telegram-quick-links]`. All 7 external
+    links carry `target="_blank" rel="noopener noreferrer"`, 3 "Shareable" labels match the 3
+    `shareable: true` entries, and the token warning is present.
+  - **R14 and R8:** an enquiry with subject `R14 <b>bold</b>` and message
+    `<img src=x onerror=alert(1)>` was inserted for the localhost vendor directly on dev, because
+    the contact-form server action cannot be driven by curl without its action id. It rendered
+    escaped (`&lt;img …&gt;`, no raw tag), and the row was deleted afterwards. The "sent as" label
+    read the vendor's own sender (`Aheed Food Centre <orders@aheedfoodcentre.co.uk>`, from the
+    database).
+- **Spec correction, R1:** the host list omitted `web.telegram.org`, an official Telegram host that
+  the code and `tests/client-setup-telegram-links.test.ts` both allow. R1 was corrected to match;
+  the code is unchanged.
+- **Still open:** R25 and R34 (staging, after the D6 merge).
