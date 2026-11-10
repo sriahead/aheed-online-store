@@ -6,6 +6,13 @@ every branch merges.
 
 ## [Unreleased]
 
+### Documentation
+
+- **ADR-010 proposed: where a dedicated client cell runs (#1495)**, `specs/decisions/ADR-010-client-cell-account-placement.md`, status `draft` (proposed), nothing decided.
+  - **Why.** On 2026-11-10 `staging.aheedfoodcentre.co.uk` returned Cloudflare 524 because the Cloudflare for SaaS origin named the wrong Worker. SaaS routing needs three settings in two accounts to agree. Production's AFC routing is behind staging and has to be rebuilt at promotion anyway.
+  - **What.** Compares keeping the AFC cell in the Merqify account behind SaaS (ADR-009 Decision 4) with moving it into the Aheed Food Centre account that holds its zone, rejects moving the client's zone, and outlines a migration and rollback for the move. It states that the same day's memory kills, CPU time and hanging requests are application problems that neither option fixes.
+  - **Next.** The owner decides before the AFC production promotion.
+
 ### Fixed
 
 - **Each cell has its own job-signals KV namespace (#1491, found while enabling the warm-up)**
