@@ -31,7 +31,8 @@ export default async function TeamPage() {
       <div className="mb-10 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-primary">Grant Access</h2>
         <p className="mb-4 text-sm text-primary-muted">
-          Search for an existing registered customer by email to upgrade them to Staff or Admin.
+          Search for an existing registered user by email to grant Staff, Store Admin, or Platform
+          Admin access.
         </p>
         <AssignRoleForm currentAuthVia={auth.via} />
       </div>

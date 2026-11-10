@@ -56,11 +56,20 @@ export function AssignRoleForm({
           >
             <option value="STAFF">Staff</option>
             {canGrantAdmin && <option value="ADMIN">Store Admin</option>}
+            {canGrantAdmin && <option value="PLATFORM_ADMIN">Platform Admin</option>}
             <option value="NONE">Revoke Access (Demote)</option>
           </select>
         </div>
         <SubmitButton />
       </div>
+
+      {canGrantAdmin && (
+        <p className="text-xs text-primary-muted" data-platform-admin-warning>
+          <strong className="text-primary">Platform Admin applies to every store</strong>, not just
+          this one. Granting it here, or changing the role of an existing Platform Admin, changes
+          their access everywhere. It can only be granted to someone who already has an account.
+        </p>
+      )}
 
       {state?.error && <p className="text-sm font-medium text-danger">{state.error}</p>}
       {state?.success && (

@@ -8,6 +8,24 @@ every branch merges.
 
 ### Added
 
+- **Enquiries inbox, Team & Access provisioning and inbound-email recording (#1482)**, retro-specced at `specs/2026-11-10-pr1481-enquiries-team-access-retro/`
+  - **`/staff/enquiries` (staff and store admins).** Lists the store's 100 newest customer messages from the Contact us form and from inbound store email, with status filters and search. Staff reply by email as the store, and mark messages Resolved or Reopen them. A reply is recorded only if the email was actually sent; `skipped` (staging allow-list) or `failed` shows the reason and records nothing. Replies are append-only, Reply-To is the store address the customer wrote to, and status values are allow-listed.
+  - **Recording.** A successful, non-honeypot contact-form submission creates a `CONTACT_FORM` enquiry; a failure to record never changes what the shopper sees. After forwarding, the inbound-email Worker posts the sender and plain-text body (at most 4,000 characters) to the new token-guarded `POST /api/inbound-email/record`, which caps every field and stores an `INBOUND_EMAIL` enquiry. A non-2xx response is logged without personal data.
+  - **Migration `20261109225000_vendor_enquiries`** (hand-authored per `#895`, purely additive): enums `EnquirySource` and `EnquiryStatus`, tables `VendorEnquiry` and `VendorEnquiryReply`. `scripts/lib/neon-migration-plan.ts` skips both.
+  - **Team & Access.**
+    - Email lookup is case-insensitive.
+    - A platform admin can grant **Platform Admin** (global), with an on-page warning. Changing a platform admin's role on any store changes it everywhere, and the last platform admin can never be demoted, by anyone.
+    - Granting Staff or Store Admin to an email with no account creates the account in the same transaction. Platform Admin is refused for an email with no account.
+    - The role value is allow-listed before it reaches the repository.
+  - **Tests.** `tests/enquiries-service.test.ts`, `tests/contact-service-enquiry.test.ts`, `tests/inbound-email-record-route.test.ts`, `tests/team-assign-role-action.test.ts`, plus new cases in `tests/roles.test.ts` and `tests/inbound-email-worker.test.ts`. The integration harness `scripts/verify-pr1481-integration.ts` runs against dev through both Neon adapters.
+  - **Split out.** The `#1331` follow-up commit (AFC SaaS fallback routes, CSP, data-copy script) moved to PR #1485.
+
+- **Operator guides: Enquiries & Inbox, Team & Access, Telegram order alerts (#1390, #1217, #1482)**
+  - **Staff playbook.** Rewrote `/staff/enquiries` to describe only what the page does: vendor-neutral, no hard-coded store address. The inbound body limit is 4,000 characters, and the limits are spelled out (staging allow-list, Worker routing, attachments, duplicates).
+  - **Store admin guide.** Rewrote `/staff/team` to match the controls: Apply / Revoke Access (Demote), Platform Admin being global and needing an existing account, the exact scope of both last-admin guards, and that the audit log is not shown on the page.
+  - **Platform admin guide.** Added an end-to-end Telegram order-alert setup under Client Setup: one bot per cell, steps, chat-ID formats, boundary scenarios and where to get help.
+  - **Client Setup quick links.** The Order alerts card now lists Telegram quick links (`lib/client-setup/telegram-links.ts`), marking which are safe to share with a client; guarded by `tests/client-setup-telegram-links.test.ts` (official Telegram domains only, never a token URL).
+
 - **SaaS Scaling Architecture KMS Documentation & Delegated Email Option 2 (#104, #1342, #1343)**
   - **KMS Architecture Guide.** Added `docs/platform-admin-guide/saas-scaling-cost-and-isolation-architecture.md` detailing multi-client unit economics, V8 compute isolation, dedicated database cells (ADR-009), R2 image bucket segregation, and transactional email routing.
   - **Email Option 2 Configuration.** Configured `afc-staging` and `afc-production` environments in `wrangler.toml` with `EMAIL_FROM = "no-reply@merqify.com"`, routing authenticated outbound transactional emails via the platform's verified domain while directing customer replies to `orders@aheedfoodcentre.co.uk`.
