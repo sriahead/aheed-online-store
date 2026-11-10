@@ -88,7 +88,10 @@ PLATFORM_NAME = "Merqify"
 PLATFORM_TAGLINE = "Your Merchandise, Digitised Quickly"
 # #1217 — the platform sender every provider uses when a vendor's own domain is not yet verified.
 EMAIL_FROM = "no-reply@merqify.com"
-EMAIL_RECIPIENT_MODE = "open"
+# EMAIL_RECIPIENT_MODE is deliberately UNSET on staging (owner, 2026-11-10, #1482; reverses #1459):
+# unset means allowlist, so staging only ever mails the EMAIL_ALLOWED_RECIPIENTS secret and can never
+# reach a real customer by accident. Only the production envs set "open"
+# (tests/staging-email-allowlist.test.ts).
 # #1399 — the platform default inbox, prefilled as Forward to in Client Setup. A business group
 # inbox, not a personal address, so committed config. The inbound Worker's INBOUND_FALLBACK_FORWARD
 # secret names the same inbox by convention; it must be a verified Email Routing destination.
@@ -181,7 +184,7 @@ UK_LOCATION_REF_POSTCODE_AREAS = "MK,RG"
 PLATFORM_NAME = "Aheed Food Centre"
 PLATFORM_TAGLINE = "Independent Quality Groceries"
 EMAIL_FROM = "no-reply@merqify.com"
-EMAIL_RECIPIENT_MODE = "open"
+# EMAIL_RECIPIENT_MODE deliberately unset: allowlist (see [env.staging.vars], #1482).
 INBOUND_DEFAULT_FORWARD = "info-afc@googlegroups.com"
 APP_ENV = "staging"
 

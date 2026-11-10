@@ -8,6 +8,11 @@ every branch merges.
 
 ### Fixed
 
+- **Staging only mails the allow-list again; production stays open (#1482, owner decision 2026-11-10)**
+  - **What was wrong.** `EMAIL_RECIPIENT_MODE = "open"` had been set on `[env.staging.vars]` (#1459) and copied to `[env.afc-staging.vars]` (#1478), so both staging Workers could email any address, including real customers copied into staging. `docs/developer-portal/env-setup.md` already said staging should only mail `EMAIL_ALLOWED_RECIPIENTS`.
+  - **Fix.** Both staging envs leave it unset, which `lib/email/policy.ts` treats as allowlist mode. Both production envs keep `"open"`. Both staging Workers already hold an `EMAIL_ALLOWED_RECIPIENTS` secret, so staging still mails the listed test addresses. `tests/staging-email-allowlist.test.ts` pins the split per environment.
+  - **Runbook (v1.2.0).** The dedicated-cell warning and troubleshooting row now name the step that actually moved Aheed staging traffic on 2026-11-10: the client zone's proxied `staging` CNAME must target the cell's origin (`afc-staging-origin.merqify.com`), not the platform's.
+
 - **Aheed staging is served by its own Worker again: a dedicated SaaS origin (#1482, #1331)**
   - **What was broken.** The Cloudflare for SaaS custom hostname `staging.aheedfoodcentre.co.uk` had `aheed-staging.merqify.com` as its origin: the **platform** staging Worker's custom domain. Since 2026-11-10 the platform Worker answered for the Aheed staging host, with the Merqify footer, the platform database and the platform Google client, so Google sign-in failed with `redirect_uri_mismatch`, even though the AFC Worker's route `staging.aheedfoodcentre.co.uk/*` exists. The onboarding runbook told operators to set exactly that origin.
   - **Fix (code).** `afc-store-staging` owns `afc-staging-origin.merqify.com` as a custom domain. `scripts/verify-worker-routes.ts` gains `SAAS_ORIGIN_HOSTS` (`fallback.merqify.com`, `afc-staging-origin.merqify.com`, `afc-origin.merqify.com`), which the vendor comparison skips. `tests/worker-routes.test.ts` checks that the route exists, is a custom domain, and is claimed by no other environment.
