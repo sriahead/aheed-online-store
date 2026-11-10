@@ -6,6 +6,13 @@ every branch merges.
 
 ## [Unreleased]
 
+### Documentation
+
+- **End-of-session handoff for #1482 and #1491 (2026-11-10).**
+  - `docs/model-handoff.md` v1.169.0 records the dashboard-only changes made today: the client-zone `staging` CNAME, the SaaS origin, the `afc-staging` Google and allow-list secrets, and the KV namespaces.
+  - Both slices' build notes carry their staging status and the open steps: R34 steps 2–5 and R25; the production dedicated origin before promotion; the #1491 one-week Neon comparison due 2026-11-17.
+  - New read-only `scripts/check-enquiry-schema.ts`, to run on both production databases right after promoting #1482.
+
 ### Fixed
 
 - **Each cell has its own job-signals KV namespace (#1491, found while enabling the warm-up)**
