@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **Aheed dedicated cell: SaaS fallback-origin routes and data-copy script (#1331 follow-up)**
+  - **Routes.** `afc-staging`/`afc-production` move from custom-domain routes to `zone_name = "merqify.com"` routes, plus `fallback.merqify.com/*` on production, so Cloudflare for SaaS traffic for `www.aheedfoodcentre.co.uk` reaches the AFC Worker. `scripts/verify-worker-routes.ts` normalises `/*` and ignores the fallback host; `tests/worker-routes.test.ts` expects 4 custom domains.
+  - **CSP.** `img-src` adds `https://*.aheedfoodcentre.co.uk`.
+  - **Data copy.** `scripts/migrate-aheed-to-dedicated-cell.ts` copies the Aheed vendor's data from the Merqify production database into the AFC production database (or, with `--staging`, from AFC production into AFC staging).
+
 - **SaaS Scaling Architecture KMS Documentation & Delegated Email Option 2 (#104, #1342, #1343)**
   - **KMS Architecture Guide.** Added `docs/platform-admin-guide/saas-scaling-cost-and-isolation-architecture.md` detailing multi-client unit economics, V8 compute isolation, dedicated database cells (ADR-009), R2 image bucket segregation, and transactional email routing.
   - **Email Option 2 Configuration.** Configured `afc-staging` and `afc-production` environments in `wrangler.toml` with `EMAIL_FROM = "no-reply@merqify.com"`, routing authenticated outbound transactional emails via the platform's verified domain while directing customer replies to `orders@aheedfoodcentre.co.uk`.

@@ -154,8 +154,8 @@ name = "EMAIL"
 name = "afc-store-staging"
 
 [[env.afc-staging.routes]]
-pattern = "staging.aheedfoodcentre.co.uk"
-custom_domain = true
+pattern = "staging.aheedfoodcentre.co.uk/*"
+zone_name = "merqify.com"
 
 [[env.afc-staging.r2_buckets]]
 binding = "IMAGES"
@@ -183,8 +183,15 @@ name = "EMAIL"
 name = "afc-store-production"
 
 [[env.afc-production.routes]]
-pattern = "www.aheedfoodcentre.co.uk"
-custom_domain = true
+pattern = "www.aheedfoodcentre.co.uk/*"
+zone_name = "merqify.com"
+
+# Cloudflare for SaaS fallback origin route: because www.aheedfoodcentre.co.uk is orange-clouded
+# (Proxied) in the customer zone and CNAMEs to fallback.merqify.com, Cloudflare O2O routes traffic
+# via fallback.merqify.com/* while preserving Host: www.aheedfoodcentre.co.uk.
+[[env.afc-production.routes]]
+pattern = "fallback.merqify.com/*"
+zone_name = "merqify.com"
 
 [[env.afc-production.r2_buckets]]
 binding = "IMAGES"
