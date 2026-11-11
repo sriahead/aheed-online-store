@@ -67,6 +67,8 @@ const BUNDLE_INCLUDE = {
           unitLabel: true,
           basePrice: true,
           originalPrice: true,
+          // #1517 — the multi-buy tier, so the bundle is priced exactly as the cart will price it.
+          priceTier: { select: { groupQuantity: true, groupPricePence: true, isActive: true } },
           ...PURCHASABILITY_SELECT,
         },
       },
@@ -83,6 +85,7 @@ type RawBundleItem = {
     unitLabel: string;
     basePrice: number;
     originalPrice: number | null;
+    priceTier: { groupQuantity: number; groupPricePence: number; isActive: boolean } | null;
     isActive: boolean;
     restriction: ProductRestriction | null;
     inventory: { quantity: number; stockMode: StockMode } | null;
@@ -97,6 +100,7 @@ function toItemInput(row: RawBundleItem): BundleItemInput {
     unitLabel: row.product.unitLabel,
     basePrice: row.product.basePrice,
     originalPrice: row.product.originalPrice,
+    tier: row.product.priceTier,
     quantity: row.quantity,
     isActive: row.product.isActive,
     // #1211 — the one purchasability rule, so a restricted, UNKNOWN or sold-out
@@ -147,6 +151,35 @@ export async function getBundleWithItems(
 ): Promise<BundleWithItems | null> {
   const row = await prisma.bundle.findFirst({
     where: { id: bundleId, vendorId },
+    include: BUNDLE_INCLUDE,
+  });
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    tagline: row.tagline,
+    imageKey: row.imageKey,
+    altText: row.altText,
+    isActive: row.isActive,
+    sortOrder: row.sortOrder,
+    items: row.items.map(toItemInput),
+  };
+}
+
+/**
+ * #1517 — the bundle page's read: this vendor's ACTIVE bundle with that slug, or null. Scoped by
+ * `vendorId` for the same reason as `getBundleWithItems`; an inactive bundle reads as missing so a
+ * switched-off offer cannot be reached by its URL.
+ */
+export async function getActiveBundleBySlug(
+  prisma: Db,
+  vendorId: string,
+  slug: string,
+): Promise<BundleWithItems | null> {
+  const row = await prisma.bundle.findFirst({
+    where: { slug, vendorId, isActive: true },
     include: BUNDLE_INCLUDE,
   });
   if (!row) return null;

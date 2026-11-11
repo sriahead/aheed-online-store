@@ -51,6 +51,19 @@ every branch merges.
 
 ### Added
 
+- **One-click "Buy This Offer": tier-priced bundles, a page per bundle, banners that link to it (#1517; spec `specs/2026-11-11-offer-bundles/`)**
+  - **What was wrong.** The cart and checkout already price multi-buys (`lib/tier-pricing.ts`), but a bundle's displayed total was the sum of normal prices, so a "4 for £18" bundle would show £20. A promotion linked to a bundle pointed at `/categories?bundle=<slug>`, which no page reads.
+  - **Pricing.** `lib/bundle-pricing.ts` prices each line with the same `tieredLineTotalPence` the cart uses, and adds `bundleRegularPence` and `bundleSavingPence`. The bundle repository and the promotion query select each product's price tier.
+  - **Storefront.**
+    - `BundleCard` shows the offer total, the normal total struck through and "Save £X", and its button reads "Buy this offer" when there is a saving. The bundle name links to the new `/bundles/[slug]` page, where an unknown, inactive or unavailable bundle is a 404.
+    - A bundle promotion now lands on that page labelled "Buy This Offer" (`lib/promotion-cta.ts`, pure and tested). A bundle beats a category; an explicit link or label beats both.
+  - **Aheed data (staging; inactive until go-live S1e): `scripts/catalogue-offer-bundles.ts`.**
+    - 10 bundles: 7 single multi-buys (4 Medium Chickens £18, 4 Baby £15, 4 Hard £19, breast 3kg £21, thigh 3kg £19, niblets 2kg £11, drumsticks 3kg £12) and 3 combined packs (Whole Chicken Trio £52, Chicken Family Feast £44, BBQ Chicken Pack £31).
+    - 4 promotions linked to them.
+    - An **Offer Type** filter (Multi-Buy on 7 products, Box Offer on 7) through the existing vendor-filter chips. The existing filters (On offer, which counts multi-buys; Brand; Halal; Fresh; price) are fed by the loaded data.
+    - A re-run changes nothing.
+  - **Tests.** `tests/offer-bundles.test.ts` (pricing parity with the cart; banner destination, label and price) and `tests/catalogue-offer-bundles.test.ts`. The full suite (6,340 tests) passed after one fix: the struck-through price was `text-black/50`, which the #649 legibility rule forbids, and is now `/60`.
+
 - **Aheed catalogue S1: restricted lines and departments (#1200, #1330; spec `specs/2026-11-11-aheed-catalogue-s1/`)**
   - **S1c: `scripts/catalogue-restrict-by-policy.ts`.** The 2026-11-07 import bypassed ADR-007's restriction policy, so tobacco, alcohol, lottery, phone cards, newspapers, e-pay and stamps arrived unrestricted.
     - The script applies `DEFAULT_ADR007_POLICY` to existing products by department, through `setProductRestriction` (tighten only, product switched off, audit row).

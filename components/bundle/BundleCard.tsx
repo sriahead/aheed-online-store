@@ -1,11 +1,21 @@
+import Link from "next/link";
 import { addBundleToCart } from "@/features/cart/add-bundle-to-cart";
 import { formatPrice } from "@/components/product/format-price";
 import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
-import { availableBundleItems, bundleTotalPence, type BundleItemInput } from "@/lib/bundle-pricing";
+import {
+  availableBundleItems,
+  bundleRegularPence,
+  bundleSavingPence,
+  bundleTotalPence,
+  type BundleItemInput,
+} from "@/lib/bundle-pricing";
 import { IconMedallion } from "@/components/icons/IconMedallion";
 
 interface BundleCardProps {
   id: string;
+  /** #1517 — the name links to `/bundles/<slug>`; omitted on that page itself. */
+  slug?: string;
+  linkToPage?: boolean;
   name: string;
   tagline: string | null;
   imageKey: string | null;
@@ -17,12 +27,11 @@ interface BundleCardProps {
 /**
  * One curated bundle (P8.5c, #347).
  *
- * THERE IS EXACTLY ONE PRICE ON THIS CARD: the derived total, summed from the
- * constituents' live `basePrice` every render. No struck-through bundle price,
- * no "Save £X", no comparison against anything — because nothing in the current
- * discounts engine actually reduces what this bundle charges. That mechanism is
- * P8.5d (#348), and until it ships, a savings figure here would be a claim the
- * checkout does not honour.
+ * THE TOTAL IS WHAT CHECKOUT CHARGES. #1517: each line is priced with the product's multi-buy tier
+ * through `lib/bundle-pricing.ts`, which calls the same `tieredLineTotalPence` the cart does. When
+ * the multi-buys take something off, the normal total is shown struck through with "Save £X" and the
+ * button reads "Buy this offer" — a saving the checkout honours, unlike the "no saving claims" rule
+ * this card was written under before tiers existed (P8.5c predates P8.5d, #348).
  *
  * THE CONSTITUENT LIST CARRIES NO PRICES AT ALL — quantity and name only. Two
  * reasons, and the second is the one that matters. First, requirements.md R14
@@ -44,8 +53,9 @@ interface BundleCardProps {
  * #498 — shares `ProductCard`'s `.skew-card` treatment (`app/globals.css`)
  * rather than a plain flat card, so the bundle rail reads as the same design
  * language as every product grid on the site instead of a visually distinct
- * component bolted on beside it. There's no bundle detail page to link to, so
- * unlike `ProductCard` the skewed element is a `<div>`, not a `<Link>`.
+ * component bolted on beside it. The skewed element stays a `<div>`, not a `<Link>`: it holds the
+ * add-to-basket form, and a form inside a link is invalid HTML. #1517 links the NAME to the bundle's
+ * own page (`/bundles/<slug>`) instead.
  */
 /** A bundle with no photo, or whose stored photo is missing (#655): the same box either way. */
 function NoBundleImage() {
@@ -58,6 +68,8 @@ function NoBundleImage() {
 
 export function BundleCard({
   id,
+  slug,
+  linkToPage = true,
   name,
   tagline,
   imageKey,
@@ -67,6 +79,8 @@ export function BundleCard({
 }: BundleCardProps) {
   const available = availableBundleItems(items);
   const totalPence = bundleTotalPence(items);
+  const regularPence = bundleRegularPence(items);
+  const savingPence = bundleSavingPence(items);
 
   return (
     <li className="skew-card-wrap h-full">
@@ -92,7 +106,15 @@ export function BundleCard({
 
         <div className="skew-card-inner flex flex-1 flex-col gap-3 p-3.5">
           <div>
-            <h3 className="text-sm leading-tight font-semibold text-black/90">{name}</h3>
+            <h3 className="text-sm leading-tight font-semibold text-black/90">
+              {slug && linkToPage ? (
+                <Link href={`/bundles/${slug}`} className="hover:text-action hover:underline">
+                  {name}
+                </Link>
+              ) : (
+                name
+              )}
+            </h3>
             {tagline && <p className="mt-0.5 text-xs text-black/60">{tagline}</p>}
           </div>
 
@@ -113,7 +135,15 @@ export function BundleCard({
               </p>
               <p className="skew-card-price text-base font-bold text-primary">
                 {formatPrice(totalPence)}
+                {savingPence > 0 ? (
+                  <span className="ml-1.5 text-xs font-normal text-black/60 line-through">
+                    {formatPrice(regularPence)}
+                  </span>
+                ) : null}
               </p>
+              {savingPence > 0 ? (
+                <p className="text-xs font-semibold text-action">Save {formatPrice(savingPence)}</p>
+              ) : null}
             </div>
 
             <form action={addBundleToCart}>
@@ -122,7 +152,7 @@ export function BundleCard({
                 type="submit"
                 className="rounded-xl bg-action px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-action-hover"
               >
-                Add all {available.length} to basket
+                {savingPence > 0 ? "Buy this offer" : `Add all ${available.length} to basket`}
               </button>
             </form>
           </div>
