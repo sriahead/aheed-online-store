@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parseArgs, toStagingEmail, toStagingHost } from "@/scripts/cell-staging-after-refresh";
+import {
+  parseArgs,
+  toStagingEmail,
+  toStagingHost,
+  toStagingLabel,
+} from "@/scripts/cell-staging-after-refresh";
 
 const D = "aheedfoodcentre.co.uk";
 
@@ -22,5 +27,13 @@ describe("#1512 cell-staging-after-refresh", () => {
     expect(
       parseArgs(["f", "K", "--domain", D, "--apply", "--confirm-host", "ep-x.neon.tech"]),
     ).toEqual({ file: "f", key: "K", domain: D, apply: true, confirmHost: "ep-x.neon.tech" });
+  });
+});
+
+describe("#1512 health label", () => {
+  it("adds the staging suffix to a copied label once, and leaves the default alone", () => {
+    expect(toStagingLabel("afc-dedicated-cell")).toBe("afc-dedicated-cell-staging");
+    expect(toStagingLabel("afc-dedicated-cell-staging")).toBe("afc-dedicated-cell-staging");
+    expect(toStagingLabel("ok")).toBe("ok");
   });
 });
