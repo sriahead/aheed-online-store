@@ -195,12 +195,18 @@ describe("repository Worker config (#1323)", () => {
     }
   });
 
-  it("#1482: no single-vendor cell routes the SaaS fallback origin", () => {
+  it("#1482: only the platform production Worker routes the SaaS fallback origin", () => {
     // A cell holds one vendor, so lib/tenant.ts resolves every unmatched host to it: a custom
     // hostname left on the fallback would show that vendor's store. Only the multi-vendor platform
     // Worker, where an unmatched host gets /coming-soon, may route it.
     const toml = read("wrangler.toml");
-    for (const env of ["afc-staging", "afc-production"]) {
+    const start = toml.indexOf("[env.production]");
+    const block = toml.slice(start, toml.indexOf("\n# ----", start + 1));
+    expect(block).toMatch(
+      /\[\[env\.production\.routes\]\]\s*\npattern = "fallback\.merqify\.com\/\*"\s*\nzone_name = "merqify\.com"/,
+    );
+    expect(SAAS_ORIGIN_HOSTS.has("fallback.merqify.com")).toBe(true);
+    for (const env of ["staging", "afc-staging", "afc-production"]) {
       expect(toml).not.toMatch(
         new RegExp(`\\[\\[env\\.${env}\\.routes\\]\\]\\s*\\npattern = "fallback\\.merqify\\.com`),
       );

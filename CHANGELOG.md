@@ -8,6 +8,12 @@ every branch merges.
 
 ### Fixed
 
+- **The Cloudflare for SaaS fallback origin is routed to the platform production Worker (#1482, phase B of 2)**
+  - **The change.** `fallback.merqify.com/*` is now a zone route under `[env.production]` (`aheed-store-production`). Platform production holds several active vendors, so a custom hostname that names no origin and has no `VendorDomain` row resolves to no vendor and is sent to `/coming-soon` (`lib/tenant.ts`, `tests/tenant.test.ts`). The test is renamed `#1482: only the platform production Worker routes the SaaS fallback origin` and asserts both halves.
+  - **Docs.** The onboarding runbook and the scaling doc say the fallback is for marketplace clients only. A dedicated cell names its own origin, and its `www` CNAME points there. The runbook also has a tenant-safety note, a post-change check and a rollback.
+  - **Rollback.** Delete `fallback.merqify.com/*` in merqify.com → Workers Routes. The fallback then fails closed with a 522, which affects no hostname today. Then revert this change.
+  - **Known limits, not changed here.** The "Coming soon" page links to the oldest active vendor's canonical host. If platform production ever had exactly one active vendor, `lib/tenant.ts` would serve that vendor to unmatched hosts.
+
 - **The AFC production Worker no longer routes the Cloudflare for SaaS fallback origin (#1482, phase A of 2)**
   - **What was wrong.** `fallback.merqify.com/*` was bound to `afc-store-production`. The fallback origin serves every custom hostname that names no origin of its own, and the AFC cell holds one vendor, so `lib/tenant.ts` resolves any unmatched host to Aheed. On 2026-11-11, `https://fallback.merqify.com/` served Aheed's storefront. Any other client's hostname left on the fallback would have done the same.
   - **Checks before the change.** Custom Hostnames (filters All) lists only `staging.aheedfoodcentre.co.uk` (origin `afc-staging-origin.merqify.com`) and `www.aheedfoodcentre.co.uk` (origin `afc-origin.merqify.com`), so no hostname depends on the fallback.
