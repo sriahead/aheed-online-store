@@ -14,6 +14,12 @@ every branch merges.
   - **Also.** The unused `UK_LOCATION_REF_DIRECT_URL` Worker secret is deleted from the AFC Workers: the app never reads it, and `configure-env` routes it to GitHub only.
   - **Owner, later.** Delete the two empty `afc-images-*` buckets in the Merqify account after re-checking they are empty.
 
+- **The Aheed Food Centre cell deploys in its own job, independently of ShopLocal (#1505, part of #1337)**
+  - **What was wrong.** In `deploy-production.yml` and `deploy-staging.yml`, the AFC cell's migrate, route check and three Worker deploys ran at the end of the platform's `deploy` job. Any platform failure (build, migrate, route check or wrangler) left Aheed undeployed, and every Aheed release waited on ShopLocal's.
+  - **The fix.** A `deploy-afc` job in both workflows that needs only `quality` and runs in parallel with `deploy`. It keeps the same order: build, then migrate, then route check, then app Worker, scheduler and inbound email. Both jobs deploy the same commit, so ShopLocal changes still reach `www.aheedfoodcentre.co.uk` on every release.
+  - **Tests.** `tests/dedicated-cell-topology.test.ts` asserts, for each workflow, that the AFC steps are in their own job needing only `quality`, that the job builds before it migrates, and that no AFC step is left in the platform job. Run against the old workflows, both new tests fail.
+  - **Docs.** `specs/architecture.md` and `env-setup.md` now describe "same-commit, parallel jobs" instead of "lockstep".
+
 - **The Cloudflare for SaaS fallback origin is routed to the platform production Worker (#1482, phase B of 2)**
   - **The change.** `fallback.merqify.com/*` is now a zone route under `[env.production]` (`aheed-store-production`). Platform production holds several active vendors, so a custom hostname that names no origin and has no `VendorDomain` row resolves to no vendor and is sent to `/coming-soon` (`lib/tenant.ts`, `tests/tenant.test.ts`). The test is renamed `#1482: only the platform production Worker routes the SaaS fallback origin` and asserts both halves.
   - **Docs.** The onboarding runbook and the scaling doc say the fallback is for marketplace clients only. A dedicated cell names its own origin, and its `www` CNAME points there. The runbook also has a tenant-safety note, a post-change check and a rollback.
