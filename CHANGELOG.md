@@ -51,6 +51,18 @@ every branch merges.
 
 ### Added
 
+- **Generated images for live offer products, bundles and banners: a stop-gap with poor results (#1521)**
+  - Owner: "generate images for the live stock, promotions and bundles". `scripts/generate-live-images.ts` targets active products with no real image, and active bundles and promotions with no image.
+    - Products go through `runProductImagePipeline` with Open Food Facts off, and are flagged "Image needs review".
+    - Bundles and banners use the same Workers AI model, with plain photograph prompts.
+    - Everything is metered against the daily AI budget, with a per-item failure guard, a dry run by default and `--production`.
+  - **Staging, 2026-11-11.** 33 images were generated across two prompt versions and every one was looked at.
+    - **Unusable, removed:** live birds in the whole-chicken bundles and banner; a live chick for "Baby Chicken"; whole chickens for "Turkey Box"; garbled text drawn on packaged items and on the first round's banners ("Wolle Chicken", "Greve Chicken").
+    - **Kept, flagged for review:** 11 product photos (fish and turkey boxes, drumsticks, niblets, medium and hard chicken), none of them convincing.
+    - **Refused** even when reworded: Chicken Breast and Boneless Thigh.
+    - The run used the store's whole daily allowance (3,053 of 3,000 neurons).
+  - **Finding.** Real photographs of the stock are needed for the live offer lines. This script only fills gaps, and every image it produces needs a person to look at it.
+
 - **Switch on Aheed's offer products, their departments, bundles and banners (#1519, part of go-live S1e)**
   - Owner: "activate the products for which there are offers, otherwise they are not visible". `scripts/catalogue-activate-offers.ts` switches on every product with an active multi-buy or an Offer Type value, unless it is restricted or priced at £0.
   - It changes stock mode UNKNOWN ("not for sale") to UNTRACKED, so these products can be bought without a stock count. Stock the owner already tracks is left alone: Medium Chicken stays TRACKED at 60.
