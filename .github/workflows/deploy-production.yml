@@ -20,6 +20,13 @@ jobs:
   deploy:
     needs: quality
     runs-on: ubuntu-latest
+    # #1509 — runs for the same Worker set QUEUE rather than overlap. Two merges a minute apart once ran
+    # two deploys of one Worker at the same moment; the second's `wrangler secret put` failed because the
+    # first had just uploaded a version. Not cancelled: an interrupted migrate or deploy is worse than
+    # waiting. GitHub keeps one pending run per group, so a burst of merges still ends on the newest commit.
+    concurrency:
+      group: deploy-production-platform
+      cancel-in-progress: false
     # NOTE: no approval gate is enforced on this environment. GitHub's reviewer-protection
     # feature needs a paid plan for private repos and was rejected with a 422 on this repo's
     # current plan, so `environment: production` here selects the production secret set and
@@ -120,6 +127,10 @@ jobs:
   deploy-afc:
     needs: quality
     runs-on: ubuntu-latest
+    # #1509 — same queueing as `deploy`, in the cell's OWN group, so the two cells still run in parallel.
+    concurrency:
+      group: deploy-production-afc
+      cancel-in-progress: false
     environment: production
     steps:
       - uses: actions/checkout@v4

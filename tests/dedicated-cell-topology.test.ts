@@ -70,6 +70,11 @@ describe("Dedicated Cell Topology Configuration", () => {
     );
     // No AFC step left behind in the platform job, so a platform failure cannot skip the cell.
     expect(platform).not.toMatch(/afc-staging|AFC_DIRECT_URL/);
+    // #1509 — each job queues in its own group: same-cell runs never overlap, the cells stay parallel.
+    expect(platform).toMatch(
+      /concurrency:\s+group: deploy-staging-platform\s+cancel-in-progress: false/,
+    );
+    expect(afc).toMatch(/concurrency:\s+group: deploy-staging-afc\s+cancel-in-progress: false/);
   });
 
   it("includes the AFC deployment steps in deploy-staging.yml", () => {
@@ -92,6 +97,11 @@ describe("Dedicated Cell Topology Configuration", () => {
     );
     // No AFC step left behind in the platform job, so a platform failure cannot skip the cell.
     expect(platform).not.toMatch(/afc-production|AFC_DIRECT_URL/);
+    // #1509 — each job queues in its own group: same-cell runs never overlap, the cells stay parallel.
+    expect(platform).toMatch(
+      /concurrency:\s+group: deploy-production-platform\s+cancel-in-progress: false/,
+    );
+    expect(afc).toMatch(/concurrency:\s+group: deploy-production-afc\s+cancel-in-progress: false/);
   });
 
   it("includes the AFC deployment steps in deploy-production.yml", () => {

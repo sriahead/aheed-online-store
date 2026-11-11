@@ -8,6 +8,11 @@ every branch merges.
 
 ### Fixed
 
+- **Overlapping deploys no longer collide on one Worker (#1509)**
+  - **What happened.** #1507 and #1508 merged into `staging` about a minute apart, and their `deploy-staging` runs overlapped (12:38–12:42 UTC, 2026-11-11). Both deployed `afc-store-staging` at once. The second run's `wrangler secret put` failed with "the latest version of your Worker isn't currently deployed", because the first run had just uploaded a version. Staging was left one commit behind until the job was re-run.
+  - **The fix.** Each deploy job has its own `concurrency` group (`deploy-<env>-platform`, `deploy-<env>-afc`) with `cancel-in-progress: false`, in both deploy workflows. Runs for the same cell queue. The two cells still deploy in parallel (#1505). GitHub keeps one pending run per group, so a burst of merges still ends on the newest commit.
+  - **Tests.** `tests/dedicated-cell-topology.test.ts` asserts both groups in each workflow.
+
 - **The AFC cell no longer binds empty image buckets in the Merqify account (#1503, part of #1337)**
   - **What was wrong.** `[env.afc-staging]` and `[env.afc-production]` bound `IMAGES` to `afc-images-staging` / `afc-images-production` in the **Merqify** account. Both buckets were empty on 2026-11-11, and no code reads `IMAGES`. Aheed's real images are written through the S3 API (`lib/storage`, `S3_*` secrets) to the same-named buckets in **Aheed's own Cloudflare account** and served from `images.aheedfoodcentre.co.uk`. That is where the 25 homepage images checked during the audit were served from.
   - **The fix.** Removed both bindings, with a comment saying why a dedicated cell has none. `tests/dedicated-cell-topology.test.ts` now asserts there is no `r2_buckets` block in either AFC env. The scaling doc explains where each cell's buckets live.
