@@ -37,8 +37,8 @@ export async function generateMetadata() {
  * than as an empty card with a zero total. Sharing the one predicate is what
  * stops the page and the row disagreeing about which bundles exist.
  *
- * `BundleCard` stays a non-navigable card: there is still no bundle detail page
- * (#498), so this is a listing whose cards add to the cart, not a gateway.
+ * #1517 — each card's name now links to its own page, `/bundles/<slug>`, which is where a
+ * promotion banner sends shoppers; the card still adds to the cart from here in one tap.
  */
 export default async function BundlesPage() {
   const [bundles, departments] = await Promise.all([
@@ -91,6 +91,7 @@ export default async function BundlesPage() {
                   <BundleCard
                     key={bundle.id}
                     id={bundle.id}
+                    slug={bundle.slug}
                     name={bundle.name}
                     tagline={bundle.tagline}
                     imageKey={bundle.imageKey}

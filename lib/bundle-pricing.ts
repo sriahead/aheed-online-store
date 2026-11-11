@@ -6,17 +6,20 @@
  * whole modelling decision from `/propose`: a copied price drifts silently out
  * of date, a derived one cannot.
  *
- * WHAT THIS FILE DELIBERATELY DOES NOT COMPUTE: a saving. Nothing in the current
- * discounts engine reduces a bundle's charge — `DiscountCode.code` is required
- * and `lib/discounts.ts` normalises a code on both the create and lookup paths,
- * so there is no codeless-discount path at all. That mechanism is P8.5d (#348),
- * and until it exists the storefront shows this total and makes no savings
- * claim. Adding a `savingsPence` here would produce a number the checkout does
- * not honour.
+ * #1517 — EACH LINE IS PRICED WITH THE PRODUCT'S MULTI-BUY TIER. This file was written before
+ * P8.5d (#348) gave products a group price, and it used to say a saving here would be "a number the
+ * checkout does not honour". That stopped being true once the cart priced lines through
+ * `lib/tier-pricing.ts`: a bundle of 4 × a "4 for £18" product is charged £18. So a line here goes
+ * through the SAME `tieredLineTotalPence` the cart uses, and the saving is reported — it is exactly
+ * what checkout takes off when the bundle is added to an empty basket. Nothing here touches discount
+ * codes; a bundle still has no price of its own.
  */
+import { tieredLineTotalPence, type ProductTier } from "@/lib/tier-pricing";
 
 /** One constituent, as the repository hands it over. */
 export interface BundleItemInput {
+  /** #1517 — the product's multi-buy tier, or null/absent when it has none. */
+  tier?: ProductTier | null;
   productId: string;
   slug: string;
   name: string;
@@ -42,8 +45,10 @@ export interface BundleItemInput {
 
 /** A constituent that can actually be added right now, with its line total. */
 export interface AvailableBundleItem extends BundleItemInput {
-  /** `basePrice * quantity`, pence. */
+  /** What the cart charges for this line: tier-priced when the tier applies, pence (#1517). */
   linePence: number;
+  /** `basePrice * quantity`, pence — the line without any multi-buy. */
+  regularLinePence: number;
 }
 
 /**
@@ -66,9 +71,11 @@ export function isBundleItemAvailable(item: BundleItemInput): boolean {
  * silently does nothing. What the shopper sees is what "Add all" will add.
  */
 export function availableBundleItems(items: readonly BundleItemInput[]): AvailableBundleItem[] {
-  return items
-    .filter(isBundleItemAvailable)
-    .map((item) => ({ ...item, linePence: item.basePrice * item.quantity }));
+  return items.filter(isBundleItemAvailable).map((item) => ({
+    ...item,
+    linePence: tieredLineTotalPence(item.basePrice, item.quantity, item.tier ?? null),
+    regularLinePence: item.basePrice * item.quantity,
+  }));
 }
 
 /**
@@ -80,6 +87,16 @@ export function availableBundleItems(items: readonly BundleItemInput[]): Availab
  */
 export function bundleTotalPence(items: readonly BundleItemInput[]): number {
   return availableBundleItems(items).reduce((total, item) => total + item.linePence, 0);
+}
+
+/** #1517 — the same available lines at base price, ignoring any multi-buy. */
+export function bundleRegularPence(items: readonly BundleItemInput[]): number {
+  return availableBundleItems(items).reduce((total, item) => total + item.regularLinePence, 0);
+}
+
+/** #1517 — what the multi-buys take off the bundle; never negative. */
+export function bundleSavingPence(items: readonly BundleItemInput[]): number {
+  return Math.max(0, bundleRegularPence(items) - bundleTotalPence(items));
 }
 
 /**

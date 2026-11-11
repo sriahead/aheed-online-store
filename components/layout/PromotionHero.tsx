@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatPrice } from "@/components/product/format-price";
 import { ImageWithFallback } from "@/components/ui/ImageWithFallback";
 import { composePublicUrl } from "@/lib/storage";
+import { promotionBundleTotalPence, promotionHref, promotionLabel } from "@/lib/promotion-cta";
 import { Icon } from "@/components/icons/Icon";
 import type { PromotionRow } from "@/lib/repositories/promotions";
 
@@ -69,40 +70,13 @@ export function PromotionHero({
           const imageUrl =
             promo.imageKey && cdnBaseUrl ? composePublicUrl(cdnBaseUrl, promo.imageKey) : null;
 
-          // Compute destination link
-          let ctaHref = promo.linkUrl;
-          if (!ctaHref) {
-            if (promo.category) {
-              ctaHref = `/categories/${promo.category.slug}`;
-            } else if (promo.bundle) {
-              ctaHref = `/categories?bundle=${promo.bundle.slug}`;
-            } else {
-              ctaHref = "/categories";
-            }
-          }
-
-          // Compute CTA label
-          let ctaLabel = promo.callToActionText;
-          if (!ctaLabel) {
-            if (promo.category) {
-              ctaLabel = `Shop ${promo.category.name}`;
-            } else if (promo.bundle) {
-              ctaLabel = "View Bundle";
-            } else if (promo.discountCode) {
-              ctaLabel = "Shop with Code";
-            } else {
-              ctaLabel = "Explore Offers";
-            }
-          }
-
-          // Bundle price computation if applicable
-          let bundleTotalPence: number | null = null;
-          if (promo.bundle?.items && promo.bundle.items.length > 0) {
-            bundleTotalPence = promo.bundle.items.reduce(
-              (acc, item) => acc + (item.product?.basePrice ?? 0) * item.quantity,
-              0,
-            );
-          }
+          // #1517 — destination, label and bundle price come from `lib/promotion-cta.ts`: a bundle
+          // promotion lands on `/bundles/<slug>` ("Buy This Offer"), priced with the multi-buy tier
+          // exactly as the bundle card and the cart do. (The old `/categories?bundle=<slug>` was read
+          // by no page at all.)
+          const ctaHref = promotionHref(promo);
+          const ctaLabel = promotionLabel(promo);
+          const bundleTotalPence = promotionBundleTotalPence(promo);
 
           return (
             <div
