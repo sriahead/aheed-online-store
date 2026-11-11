@@ -60,6 +60,12 @@ every branch merges.
   - **`scripts/cell-staging-after-refresh.ts`** runs after Aheed staging's database is refreshed from production (a Neon branch of the production project, "Reset from parent"). It rewrites production's host and addresses to the staging form: `VendorDomain` `www.` → `staging.`, and the sender and inbound addresses `@<domain>` → `@staging.<domain>`.
     - Without it, the staging deploy's route check would fail and staging emails would link to production.
     - It is idempotent, has a dry run by default, and refuses the production database.
+    - It also adds `-staging` to the copied `HealthCheck` label, so `/api/health` on staging no longer reports production's `afc-dedicated-cell`. Found on the first real refresh, 2026-11-11.
+  - **First real refresh (2026-11-11).**
+    - The owner deleted production's 2 test orders: backup branch first, then dry run, rehearse, apply. Result: 0 orders.
+    - The owner created Neon branch `staging` (`ep-super-cherry`) from production.
+    - The fix-up rewrote 5 rows on it.
+    - The staging Worker's `DATABASE_URL` now points at the branch. `staging.aheedfoodcentre.co.uk` serves production's catalogue, including `/products/medium-chicken`, which exists only in production's data.
   - **Docs.** `env-setup.md` §4 sets out the order: backup branch, delete orders, create the staging branch, repoint secrets, run the fix-up, verify; and how to refresh before each import rehearsal.
   - **Tests.** `tests/delete-cell-orders.test.ts` and `tests/cell-staging-after-refresh.test.ts`, 7 tests.
 
