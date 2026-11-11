@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-11T17:16:49.022Z` · commit `c0de99af` · `330` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-11T23:33:40.364Z` · commit `955cfe1b` · `331` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -315,6 +315,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [PR #1481 retro-spec: enquiries inbox, Team & Access provisioning, inbound-email recording and operator guides (plan)](specs/2026-11-10-pr1481-enquiries-team-access-retro/plan.md) | spec | 1.0.0 | 2026-11-10 | approved | internal | Retrospective Gate 1/2 spec for code already on PR #1481: the /staff/enquiries inbox and its migration, Team & Access Platform Admin grants and pre-provisioning, inbound-email recording, and the Telegram/operator guides. Includes a review of the implementation against it. |
 | [Aheed catalogue S1: departments, restricted lines, price list, real images (plan)](specs/2026-11-11-aheed-catalogue-s1/plan.md) | spec | 1.0.0 | 2026-11-11 | approved | internal | Make the imported Aheed catalogue browsable and safe before go-live: a 12-department tree, restrictions on tobacco, alcohol, lottery and phone-card lines, the owner's price list as main data, and real product images. Staging first. |
 | [One-click Buy This Offer: tier-priced bundles, bundle pages, banners that link to them (plan)](specs/2026-11-11-offer-bundles/plan.md) | spec | 1.0.0 | 2026-11-11 | approved | internal | Bundles priced with the same multi-buy tier function the cart uses, a /bundles/[slug] page with a one-click Buy this offer button, promotion banners that link to it, and Aheed's offer bundles and Offer Type filter built from existing data. Staging first. |
+| [Stock list on staging, Products page paging and bulk quantity, honest savings framing (plan)](specs/2026-11-11-stock-list-products-page/plan.md) | spec | 1.0.0 | 2026-11-11 | approved | internal | Applies the client's 'Stock to upload' list to Aheed staging (category, Untracked stock, activate priced lines only), rebuilds /staff/products paging (numbered pages, 25/50/100, sort, needs-attention filters, bulk quantity) and adds honest savings framing to storefront prices. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.48.0 | 2026-11-05 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
