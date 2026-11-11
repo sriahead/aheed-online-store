@@ -64,9 +64,10 @@ environment-configured seam so the platform can move clouds without a rewrite.
     a **dedicated cell** (ADR-009): the same code deployed as its own Workers (`afc-store-*`), with its own Neon projects,
     bucket (`afc-images-*`) and secrets (`AFC_*`), whose database holds that one business. The first is Aheed Food Centre
     (`aheedfoodcentre.co.uk`; Neon `Aheed Food Centre` and `Aheed Food Centre Staging`).
-  - **Lockstep CI deployment (ADR-009):** OpenNext compiles the application bundle once per run,
-    migrations execute sequentially across all cells, routes are verified per cell, and all workers deploy
-    in a single GitHub Actions workflow run to eliminate schema or version drift.
+  - **Same-commit CI deployment (ADR-009, #1505):** every cell deploys from the same commit in the same
+    GitHub Actions run, so no cell drifts onto other code or another schema. Each cell has its own job
+    (`deploy` for the platform, `deploy-afc` for the dedicated cell), needing only `quality`, with its own
+    build → migrate → route check → deploy, so one cell's failure never blocks another's release.
   - A cell can later move into the client's own Cloudflare and Neon accounts as a unit.
   - **Shared by every cell:** the codebase, the Merqify Workers Paid plan, and the read-only
     `uk-location-reference` database (public data, no client data).

@@ -1756,9 +1756,12 @@ A dedicated client cell provides complete physical database and edge isolation f
 | **GitHub environment secrets** | `gh secret set <NAME> --env staging\|production` | `AFC_DIRECT_URL` | Non-pooled Neon direct connection string for CI migrations (`Aheed Food Centre Staging` and `Aheed Food Centre`) |
 | **Cloudflare Worker secrets** | `wrangler secret put <NAME> --env afc-staging\|afc-production` | `DATABASE_URL` (pooled; `AFC_DATABASE_URL`), `BETTER_AUTH_SECRET`, `S3_*`, `STRIPE_*`, `JOB_INVOCATION_TOKEN`, `INBOUND_EMAIL_TOKEN` | Dedicated cell runtime environment variables and storage/payment credentials |
 
-### 2. Lockstep CI Deployment
-CI deploys the platform cell and the dedicated cell sequentially within the same run.
-When `AFC_DIRECT_URL` is set in GitHub environment secrets:
+### 2. Same-Commit CI Deployment (parallel jobs, #1505)
+Every push to `staging` or `main` deploys the platform cell and the dedicated cell from the **same commit** in the
+same workflow run, as two parallel jobs that each need only `quality`: `deploy` (platform) and `deploy-afc` (the
+cell). Each job builds its own bundle. A failure in one job does not stop the other, so a ShopLocal failure never
+withholds an Aheed release, and the reverse. Every code change still reaches both cells on the same release.
+When `AFC_DIRECT_URL` is set in GitHub environment secrets, `deploy-afc` builds, then:
 1. `npx prisma migrate deploy` applies schema migrations to `AFC_DIRECT_URL`.
 2. `scripts/verify-worker-routes.ts --env afc-staging` (or `afc-production`) verifies that routes in `wrangler.toml` match the cell's `VendorDomain` table.
 3. `wrangler deploy --env afc-staging` (or `afc-production`) deploys the application worker, job scheduler, and inbound email worker.
