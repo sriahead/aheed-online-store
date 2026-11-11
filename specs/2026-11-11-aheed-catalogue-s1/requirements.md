@@ -1,17 +1,3 @@
----
-id: 2026-11-11-aheed-catalogue-s1-requirements
-title: "Aheed catalogue S1: departments (S1b), restricted lines (S1c), real images (S1d) — requirements"
-audience: [dev]
-type: spec
-status: approved
-version: "1.0.0"
-updated: 2026-11-11
-visibility: internal
-summary: "Acceptance criteria for making Aheed Food Centre's imported catalogue browsable and safe before go-live: map the till's GROCERIES/DEFAULT lines into real departments through a reviewed mapping, restrict the age-restricted and non-deliverable lines, and source real product images. Staging first; production only after the owner's approval."
-tags: [catalogue, aheed, departments, restrictions, images, go-live]
-related: [2026-10-22-catalogue-restrictions-stock-states-plan, architecture]
----
-
 # Aheed catalogue S1 — requirements
 
 Issues: S1b `#1330`, S1c `#1200`, S1d `#1515`; tracking `#1337`. Owner scope (2026-11-11): S1a
