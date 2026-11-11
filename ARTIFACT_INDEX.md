@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-11T13:57:15.433Z` · commit `3fc2ee32` · `328` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-11T16:22:06.459Z` · commit `2e0fa3bc` · `329` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -313,6 +313,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Aheed Food Centre Dedicated Cell Isolation: Deployment Topology, Multi-Cell CI & Neon Isolation (plan)](specs/2026-11-09-dedicated-cell-isolation/plan.md) | spec | 1.0.0 | 2026-11-09 | draft | internal | Dedicated cell deployment topology for Aheed Food Centre: separate Workers, dedicated Neon databases, separate R2 buckets, lockstep CI deployment across platform and client cells, and store isolation. |
 | [Database warm-up ping during store opening hours (plan)](specs/2026-11-10-db-warmup-ping/plan.md) | spec | 1.0.0 | 2026-11-10 | approved | internal | A scheduler ping that keeps each cell's Neon database awake during store opening hours, so shoppers do not pay a multi-second cold start. Off by default, configured by platform admins, with a compute-hour and cost estimate. Staging first, then production. |
 | [PR #1481 retro-spec: enquiries inbox, Team & Access provisioning, inbound-email recording and operator guides (plan)](specs/2026-11-10-pr1481-enquiries-team-access-retro/plan.md) | spec | 1.0.0 | 2026-11-10 | approved | internal | Retrospective Gate 1/2 spec for code already on PR #1481: the /staff/enquiries inbox and its migration, Team & Access Platform Admin grants and pre-provisioning, inbound-email recording, and the Telegram/operator guides. Includes a review of the implementation against it. |
+| [Aheed catalogue S1: departments, restricted lines, price list, real images (plan)](specs/2026-11-11-aheed-catalogue-s1/plan.md) | spec | 1.0.0 | 2026-11-11 | approved | internal | Make the imported Aheed catalogue browsable and safe before go-live: a 12-department tree, restrictions on tobacco, alcohol, lottery and phone-card lines, the owner's price list as main data, and real product images. Staging first. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.48.0 | 2026-11-05 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

@@ -51,6 +51,29 @@ every branch merges.
 
 ### Added
 
+- **Aheed catalogue S1: restricted lines and departments (#1200, #1330; spec `specs/2026-11-11-aheed-catalogue-s1/`)**
+  - **S1c: `scripts/catalogue-restrict-by-policy.ts`.** The 2026-11-07 import bypassed ADR-007's restriction policy, so tobacco, alcohol, lottery, phone cards, newspapers, e-pay and stamps arrived unrestricted.
+    - The script applies `DEFAULT_ADR007_POLICY` to existing products by department, through `setProductRestriction` (tighten only, product switched off, audit row).
+    - It sets `NEEDS_REVIEW` on restricted-goods name keywords in DEFAULT and MISC. Known false positives (cider or wine vinegar, vine leaves) are excluded.
+    - `PROHIBITED` and `AGE_RESTRICTED` can never be cleared in the app, so lines the till misfiled (e.g. a dried shrimp under INSTANT LOTTERY) are named with `--soften-plu` and get `NEEDS_REVIEW` instead.
+    - **Applied on staging, 2026-11-11:** 54 lines (24 age-restricted, 22 not deliverable, 8 needs review), with PLUs 4559, 4981, 5516 and 6424 softened by the owner's decision. A re-run changes nothing.
+  - **S1b: `scripts/catalogue-department-map.ts`**, with its rules in `prisma/manifests/aheed-department-map.json` and pure matching in `scripts/lib/department-map.ts`.
+    - `propose` reads the client's stock file (PLU → till department and sub-department) and the database, and writes a review CSV to `.import-reports/`. The rules are till department, then GROCERIES sub-department, then whole-word name keywords; fresh-produce words apply only within FRUIT & VEG.
+    - `apply` moves products to the reviewed targets and creates missing sub-departments **inactive**. It writes `categoryId` only.
+    - **Applied on staging, 2026-11-11:** 4,651 products moved and 8 sub-departments created. `Groceries` went from 3,229 to 59 and `DEFAULT` from 1,060 to 522, the lines no rule recognised, left for review. A re-run moves nothing.
+  - Both scripts do a dry run by default, need `--confirm-host` to apply, and need `--production` for a production secrets file. Production waits for the owner's approval.
+  - **Department tree: `scripts/catalogue-taxonomy.ts`** with `prisma/manifests/aheed-taxonomy.json`.
+    - About 37 top-level categories become **12 shopper departments** with sub-departments, all in Title Case: Meat & Poultry, Fish & Seafood, Fruit & Vegetables, Food Cupboard, Drinks, Snacks & Sweets, Bakery, Dairy & Chilled, Frozen Food, Household, Health & Beauty, Baby & Pet.
+    - Two hidden groups: Not Sold Online (tobacco, alcohol, phone cards, newspapers, lottery, stamps) and Needs Review.
+    - Existing categories are reused by slug, so their images are kept. 16 obsolete categories are archived, and archiving refuses any category still holding products.
+    - **Staging:** 66 nodes set, 258 products absorbed.
+  - **Owner's price list: `scripts/catalogue-load-price-list.ts`.** The list itself stays outside the repository.
+    - It is the main data: same-name products are overridden (word-set match, plus aliases).
+    - Multi-buy offers become price tiers. Box offers become their own products. Diamond and Pluvera are brands. Offer banners are created inactive. Unpriced fruit and veg are created hidden at £0 and listed as "price needed".
+    - **Staging:** 13 overridden, 134 created, 7 multi-buy tiers, 7 box products, 4 inactive promotions. One duplicate till row is reported ("DIAMOND CUT CRAB"). A re-run matches all 147 items and creates nothing.
+  - **S1d images** (#1515) is blocked: the client's export has no barcodes. No AI images.
+  - **Tests.** `tests/catalogue-restrict-by-policy.test.ts` and `tests/catalogue-department-map.test.ts`, 40 tests. The second runs against the real rules file.
+
 - **Scripts to clear test orders from a cell, and to turn a production copy into staging (#1512, part of #1337)**
   - **`scripts/delete-cell-orders.ts`** deletes every order in one cell database. The owner's rule (2026-11-11): Aheed production holds no orders before go-live.
     - It has three modes: dry run (default; lists order number, date, status, total and Stripe mode, nothing personal), `--rehearse` (runs the whole delete transaction, then rolls it back), and `--apply`, which needs `--confirm-host`.
