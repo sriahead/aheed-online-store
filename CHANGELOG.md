@@ -8,6 +8,13 @@ every branch merges.
 
 ### Fixed
 
+- **The AFC production Worker no longer routes the Cloudflare for SaaS fallback origin (#1482, phase A of 2)**
+  - **What was wrong.** `fallback.merqify.com/*` was bound to `afc-store-production`. The fallback origin serves every custom hostname that names no origin of its own, and the AFC cell holds one vendor, so `lib/tenant.ts` resolves any unmatched host to Aheed. On 2026-11-11, `https://fallback.merqify.com/` served Aheed's storefront. Any other client's hostname left on the fallback would have done the same.
+  - **Checks before the change.** Custom Hostnames (filters All) lists only `staging.aheedfoodcentre.co.uk` (origin `afc-staging-origin.merqify.com`) and `www.aheedfoodcentre.co.uk` (origin `afc-origin.merqify.com`), so no hostname depends on the fallback.
+  - **The fix.** Removed the route. The new test `#1482: no single-vendor cell routes the SaaS fallback origin` stops either AFC env from claiming it again. Until phase B, the fallback returns a Cloudflare 522, which affects no hostname.
+  - **Phase B** binds the route to the platform production Worker (`aheed-store-production`), where an unmatched host resolves to no vendor and gets `/coming-soon`. It is a separate release because `deploy-production.yml` deploys the platform Worker before the AFC Worker, so one release would have the platform claim a route the AFC Worker still holds.
+  - **Rollback.** Restore the removed `[[env.afc-production.routes]]` block (`fallback.merqify.com/*`, `zone_name = "merqify.com"`) and redeploy, or add the route to `afc-store-production` in merqify.com → Workers Routes.
+
 - **AFC production owns its Cloudflare for SaaS origin (#1482, needed before promotion)**
   - **What was wrong.** `afc-store-production` had no origin of its own. The `www.aheedfoodcentre.co.uk` custom hostname still names `aheed.merqify.com`, the platform production Worker, so `www` reached the AFC Worker only through its routes. That is the same setup that sent `staging.aheedfoodcentre.co.uk` to the wrong Worker on 2026-11-10 (fixed for staging by #1489).
   - **Fix.** `afc-store-production` claims `afc-origin.merqify.com` as a custom domain, already listed in `SAAS_ORIGIN_HOSTS`. `tests/worker-routes.test.ts` checks the route exists, is a custom domain, and no other environment claims it. The onboarding runbook names it.

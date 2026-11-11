@@ -195,6 +195,18 @@ describe("repository Worker config (#1323)", () => {
     }
   });
 
+  it("#1482: no single-vendor cell routes the SaaS fallback origin", () => {
+    // A cell holds one vendor, so lib/tenant.ts resolves every unmatched host to it: a custom
+    // hostname left on the fallback would show that vendor's store. Only the multi-vendor platform
+    // Worker, where an unmatched host gets /coming-soon, may route it.
+    const toml = read("wrangler.toml");
+    for (const env of ["afc-staging", "afc-production"]) {
+      expect(toml).not.toMatch(
+        new RegExp(`\\[\\[env\\.${env}\\.routes\\]\\]\\s*\\npattern = "fallback\\.merqify\\.com`),
+      );
+    }
+  });
+
   it("AFC cell staging routes are exactly staging.aheedfoodcentre.co.uk (#1331)", () => {
     expect(parseRoutePatterns(read("wrangler.toml"), "afc-staging")).toEqual([
       "staging.aheedfoodcentre.co.uk",

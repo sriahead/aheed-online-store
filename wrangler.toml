@@ -202,21 +202,16 @@ name = "afc-store-production"
 pattern = "www.aheedfoodcentre.co.uk/*"
 zone_name = "merqify.com"
 
-# Cloudflare for SaaS fallback origin route: because www.aheedfoodcentre.co.uk is orange-clouded
-# (Proxied) in the customer zone and CNAMEs to fallback.merqify.com, Cloudflare O2O routes traffic
-# via fallback.merqify.com/* while preserving Host: www.aheedfoodcentre.co.uk.
-[[env.afc-production.routes]]
-pattern = "fallback.merqify.com/*"
-zone_name = "merqify.com"
-
 # #1482 — production's counterpart of afc-staging-origin.merqify.com: this Worker's own ORIGIN for
-# Cloudflare for SaaS. After this deploys, the owner points the www.aheedfoodcentre.co.uk custom hostname
-# (merqify.com zone → SSL/TLS → Custom Hostnames) at it as Origin server and Origin SNI, AND changes the
-# Aheed zone's www CNAME to it. On staging, changing the custom hostname alone moved no traffic; the CNAME
-# change did. Until then www still names aheed.merqify.com (the PLATFORM production Worker) as its origin
-# and reaches this Worker only through the routes above. Not a vendor host: no VendorDomain row;
-# scripts/verify-worker-routes.ts skips it (SAAS_ORIGIN_HOSTS). The fallback.merqify.com route stays
-# until www is confirmed on this origin, so the switch never leaves www unrouted.
+# Cloudflare for SaaS. The www.aheedfoodcentre.co.uk custom hostname names it as Origin server and Origin
+# SNI, and the Aheed zone's www CNAME points at it (both confirmed 2026-11-11). Not a vendor host: no
+# VendorDomain row; scripts/verify-worker-routes.ts skips it (SAAS_ORIGIN_HOSTS).
+#
+# This Worker deliberately does NOT route fallback.merqify.com/* (removed 2026-11-11). The SaaS fallback
+# origin serves every custom hostname that names no origin of its own, and this cell holds exactly one
+# vendor, so lib/tenant.ts resolves ANY unmatched host to Aheed: another client's hostname on the
+# fallback would have shown Aheed's store. The fallback belongs to the multi-vendor platform Worker,
+# where an unmatched host resolves to no vendor and gets /coming-soon.
 [[env.afc-production.routes]]
 pattern = "afc-origin.merqify.com"
 custom_domain = true
