@@ -46,6 +46,16 @@ every branch merges.
 
 ### Added
 
+- **Read-only Aheed data inventory script (#1504, part of #1337)**
+  - `npx tsx scripts/aheed-data-inventory.ts <secrets file> <URL key> [--images]` prints per-vendor **counts only**, so the output can go into an issue. It covers products (active), categories, bundles, product, bundle and category images, staff memberships (demo flagged), orders by status, signed-in and guest customers, and payments by Stripe mode and status. The sender address is reported by domain only, and nothing is written. `--images` sends a HEAD request for every image key to the file's `CDN_BASE_URL`.
+  - Purpose: prove Aheed's catalogue and images are complete in its own cell, and show whether any real customer or order sits on ShopLocal before go-live.
+  - **First run, AFC staging (2026-11-11):**
+    - 6,103 products, **0 active**.
+    - 5 product images, 1 bundle image, 66 category images: 72 keys, **4 missing** from `images-staging`.
+    - 2 test-mode orders.
+    - Production runs go through the owner.
+  - `tests/aheed-data-inventory.test.ts` covers the secrets-file parser (plain and spaced forms), domain-only reporting and Stripe mode detection.
+
 - **Database warm-up ping during opening hours and after signed-in activity (#1491)**, spec `specs/2026-11-10-db-warmup-ping/`
   - **Why.** Neon suspends compute after 5 minutes with no query. On 2026-11-10 the first request after idle took 7.1 s on Aheed staging, against ~0.2 s warm.
   - **What.** A new `*/4 * * * *` Cron Trigger on every scheduler environment pings `POST /api/jobs/warm-db` (token-guarded, one trivial query on the main database only, never the postcode reference DB). It pings only inside published windows, or within N minutes of signed-in activity. The scheduler decides from KV alone (`db-warmup:schedule`, `db-warmup:last-activity`), so deciding never wakes the database, and **every doubt skips**: the opposite of the other jobs, because a missed ping costs one cold start while a stuck one costs compute all night. Each tick logs `warmup tick ran=… reason=…`.
