@@ -8,6 +8,12 @@ every branch merges.
 
 ### Fixed
 
+- **The AFC cell no longer binds empty image buckets in the Merqify account (#1503, part of #1337)**
+  - **What was wrong.** `[env.afc-staging]` and `[env.afc-production]` bound `IMAGES` to `afc-images-staging` / `afc-images-production` in the **Merqify** account. Both buckets were empty on 2026-11-11, and no code reads `IMAGES`. Aheed's real images are written through the S3 API (`lib/storage`, `S3_*` secrets) to the same-named buckets in **Aheed's own Cloudflare account** and served from `images.aheedfoodcentre.co.uk`. That is where the 25 homepage images checked during the audit were served from.
+  - **The fix.** Removed both bindings, with a comment saying why a dedicated cell has none. `tests/dedicated-cell-topology.test.ts` now asserts there is no `r2_buckets` block in either AFC env. The scaling doc explains where each cell's buckets live.
+  - **Also.** The unused `UK_LOCATION_REF_DIRECT_URL` Worker secret is deleted from the AFC Workers: the app never reads it, and `configure-env` routes it to GitHub only.
+  - **Owner, later.** Delete the two empty `afc-images-*` buckets in the Merqify account after re-checking they are empty.
+
 - **The Aheed Food Centre cell deploys in its own job, independently of ShopLocal (#1505, part of #1337)**
   - **What was wrong.** In `deploy-production.yml` and `deploy-staging.yml`, the AFC cell's migrate, route check and three Worker deploys ran at the end of the platform's `deploy` job. Any platform failure (build, migrate, route check or wrangler) left Aheed undeployed, and every Aheed release waited on ShopLocal's.
   - **The fix.** A `deploy-afc` job in both workflows that needs only `quality` and runs in parallel with `deploy`. It keeps the same order: build, then migrate, then route check, then app Worker, scheduler and inbound email. Both jobs deploy the same commit, so ShopLocal changes still reach `www.aheedfoodcentre.co.uk` on every release.
