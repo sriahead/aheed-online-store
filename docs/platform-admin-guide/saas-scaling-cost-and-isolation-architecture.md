@@ -128,5 +128,5 @@ When adding Client #2, #3, etc. as dedicated cells:
 1. **Database:** Create dedicated project in Neon; run migrations (`scripts/bootstrap-dedicated-cell.ts`).
 2. **Storage:** Create dedicated R2 bucket `clientname-images-production` via Cloudflare API.
 3. **Workers:** Add `[env.clientname-production]` in `wrangler.toml` pointing to `clientname-images-production` and `EMAIL_FROM = "no-reply@merqify.com"`.
-4. **Cloudflare for SaaS:** Register custom hostname in `merqify.com` > SSL/TLS > Custom Hostnames.
-5. **Client DNS:** Add CNAME `www` pointing to `fallback.merqify.com` and enable Free Email Routing for inbound mail.
+4. **Cloudflare for SaaS:** Add an origin custom domain for the cell (e.g. `clientname-origin.merqify.com`, `custom_domain = true` under `[env.clientname-production]`, listed in `SAAS_ORIGIN_HOSTS`) and deploy. Then register the custom hostname in `merqify.com` > SSL/TLS > Custom Hostnames, with that host as **Origin server** and **Origin SNI**.
+5. **Client DNS:** Add CNAME `www` pointing to the cell's origin (e.g. `clientname-origin.merqify.com`), never to `fallback.merqify.com`. The fallback is routed to the multi-vendor platform Worker, which shows "Coming soon" to a host it does not know (#1482). Enable Free Email Routing for inbound mail.

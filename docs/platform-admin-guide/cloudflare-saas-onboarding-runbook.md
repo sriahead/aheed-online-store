@@ -61,7 +61,7 @@ Before beginning, gather the following parameters:
 | **Staging Host** | `staging.aheedfoodcentre.co.uk` | Internal pre-release preview URL |
 | **Vendor UUID** | `a4ed0000-0000-4000-a000-000000000001` | Database primary key in Neon `Vendor` table |
 | **Platform Zone** | `merqify.com` | Central SaaS infrastructure zone |
-| **Platform Fallback Origin** | `fallback.merqify.com` | Points to production Worker |
+| **Platform Fallback Origin** | `fallback.merqify.com` | Default origin for a custom hostname that names none. Routed to the **platform** production Worker (`aheed-store-production`), which sends an unmapped host to `/coming-soon`. Never routed to a dedicated cell |
 | **Platform Staging Origin** | `aheed-staging.merqify.com` | Points to staging Worker |
 
 ---
@@ -95,17 +95,35 @@ Before beginning, gather the following parameters:
      - CNAME `fallback` points to `merqify.com` (Proxied - Orange Cloud).
      - CNAME `aheed-staging` points to `merqify.com` (Proxied - Orange Cloud).
    - In **Workers & Pages > aheed-store-production > Settings > Triggers > Routes**:
-     - Ensure Route `fallback.merqify.com/*` is bound to `aheed-store-production`.
+     - Ensure Route `fallback.merqify.com/*` is bound to `aheed-store-production`. It is declared in
+       `wrangler.toml` under `[env.production]`, so a deploy keeps it there.
    - In **Workers & Pages > aheed-store-staging > Settings > Triggers > Routes**:
      - Ensure Route `aheed-staging.merqify.com/*` is bound to `aheed-store-staging`.
    > [!WARNING]
    > Never bind a wildcard route like `*/*` to the production Worker. Doing so intercepts all traffic across the platform, including staging and other client subdomains.
 
+   > [!IMPORTANT]
+   > **The fallback must stay tenant-safe (#1482).** Only the multi-vendor platform Worker may route
+   > `fallback.merqify.com/*`. There, a host with no `VendorDomain` row resolves to no vendor and gets
+   > the "Coming soon" page. A dedicated cell (e.g. `afc-store-production`) holds one vendor and resolves
+   > *every* unmatched host to it, so a fallback routed there shows that client's store under any other
+   > client's hostname. Until 2026-11-11 it was bound to `afc-store-production`, and
+   > `https://fallback.merqify.com/` served Aheed's store. `tests/worker-routes.test.ts` now fails if any
+   > env other than `production` claims it.
+   >
+   > Check after any change: `https://fallback.merqify.com/` must redirect to `/coming-soon`, never
+   > render a store. **Rollback** if it does: in merqify.com → Workers Routes, delete the
+   > `fallback.merqify.com/*` route (the fallback then fails closed with a 522), then fix
+   > `wrangler.toml`.
+
 2. **Register Custom Hostnames:**
    - Go to `merqify.com` > **SSL/TLS > Custom Hostnames**.
    - Click **Add Custom Hostname**:
      - **Custom Hostname:** `www.<client-domain>` (e.g. `www.aheedfoodcentre.co.uk`)
-     - **Custom Origin Server:** Leave blank to use Fallback Origin (`fallback.merqify.com`)
+     - **Custom Origin Server:** a **marketplace** client (served by the platform Worker, with a
+       `VendorDomain` row in the platform database) may leave it blank to use the Fallback Origin
+       (`fallback.merqify.com`). A **dedicated-cell** client must name its cell's origin instead (see
+       the warning below); left blank, its hostname gets "Coming soon" from the platform Worker.
      - **TLS version:** Default (1.2/1.3)
      - **Validation method:** HTTP or TXT
    - Repeat for staging:
@@ -123,8 +141,8 @@ Before beginning, gather the following parameters:
    > - Give the cell's Worker an origin custom domain in `wrangler.toml`, e.g.
    >   `afc-staging-origin.merqify.com` with `custom_domain = true` under `[env.afc-staging]`, and list
    >   it in `SAAS_ORIGIN_HOSTS` (`scripts/verify-worker-routes.ts`). Deploy first. Production's is
-   >   `afc-origin.merqify.com` under `[env.afc-production]`; it exists once the promotion that carries
-   >   it has deployed, and `www`'s custom hostname and CNAME are then moved to it the same way.
+   >   `afc-origin.merqify.com` under `[env.afc-production]`; `www`'s custom hostname and CNAME were
+   >   moved to it on 2026-11-11.
    > - Then set the custom hostname's **Origin server** and **Origin SNI** to that host. Do it in this
    >   order: the new origin must answer before the custom hostname points at it.
    > - **Also change the client zone's DNS record. This is the step that actually moved the traffic.**
@@ -157,7 +175,7 @@ In the client's Cloudflare account:
    - **Type:** `TXT` | **Name:** `_cf-custom-hostname.staging` | **Content:** `<token-from-platform>`
 
 2. **Add Routing CNAMEs:**
-   - **Type:** `CNAME` | **Name:** `www` | **Target:** `fallback.merqify.com` | **Proxy Status:** Proxied (Orange Cloud)
+   - **Type:** `CNAME` | **Name:** `www` | **Target:** `fallback.merqify.com` for a marketplace client, or the cell's origin (e.g. `afc-origin.merqify.com`) for a dedicated cell | **Proxy Status:** Proxied (Orange Cloud)
    - **Type:** `CNAME` | **Name:** `staging` | **Target:** `aheed-staging.merqify.com` | **Proxy Status:** Proxied (Orange Cloud)
 
 3. **Configure Apex 301 Redirect to WWW:**
@@ -281,7 +299,7 @@ access-control-allow-origin: *
 | Symptom / Error | Root Cause | Exact Remedy |
 | :--- | :--- | :--- |
 | **"Gaining account must first add the domain as a website"** | Cloudflare registrar transfer attempted before creating zone container. | Add domain as Free website in gaining Cloudflare account first. |
-| **HTTP 522 Connection Timed Out** | No Worker Route listening on `fallback.merqify.com/*`. | In Cloudflare Workers, add Route `fallback.merqify.com/*` bound to the production Worker. |
+| **HTTP 522 Connection Timed Out** | No Worker Route listening on `fallback.merqify.com/*`. | In Cloudflare Workers, add Route `fallback.merqify.com/*` bound to the platform production Worker (`aheed-store-production`), never to a cell. |
 | **HTTP 307 Temporary Redirect to `/coming-soon`** | Hostname missing from Neon `VendorDomain` table. | Insert row into `VendorDomain` matching `www.<client-domain>` with `isCanonical: true`. |
 | **Staging loads Production content** | Custom hostname CNAME points to `fallback.merqify.com` instead of staging origin, or wildcard `*/*` route exists on prod Worker. | 1. Remove `*/*` route from prod Worker.<br/>2. Point `staging` custom hostname to `aheed-staging.merqify.com`. |
 | **Dedicated-cell staging shows the platform (footer says Merqify, Google `redirect_uri_mismatch`)** | The client zone's proxied `staging` CNAME targets a **platform** Worker host (`aheed-staging.merqify.com`), and/or the custom hostname's origin does. | 1. In the client account's DNS, set the `staging` CNAME target to the cell's origin (`afc-staging-origin.merqify.com`), proxied. This is the fix that moved traffic on 2026-11-10.<br/>2. Point the custom hostname's Origin server and SNI at the same host. See the Stage 2 warning for dedicated cells (#1482). |
