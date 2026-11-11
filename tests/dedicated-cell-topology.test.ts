@@ -12,7 +12,8 @@ describe("Dedicated Cell Topology Configuration", () => {
   it("configures afc-staging in root wrangler.toml with correct routes, buckets, and vars", () => {
     expect(rootToml).toContain("[env.afc-staging]");
     expect(rootToml).toContain('name = "afc-store-staging"');
-    expect(rootToml).toContain('bucket_name = "afc-images-staging"');
+    // #1503 — images go through S3_* to the client's own account, never a Merqify-account binding.
+    expect(rootToml).not.toMatch(/\[\[env\.afc-staging\.r2_buckets\]\]/);
     expect(rootToml).toContain('PLATFORM_NAME = "Aheed Food Centre"');
 
     const routes = parseRoutePatterns(rootToml, "afc-staging");
@@ -22,7 +23,7 @@ describe("Dedicated Cell Topology Configuration", () => {
   it("configures afc-production in root wrangler.toml with correct routes, buckets, and vars", () => {
     expect(rootToml).toContain("[env.afc-production]");
     expect(rootToml).toContain('name = "afc-store-production"');
-    expect(rootToml).toContain('bucket_name = "afc-images-production"');
+    expect(rootToml).not.toMatch(/\[\[env\.afc-production\.r2_buckets\]\]/);
     expect(rootToml).toContain('PLATFORM_NAME = "Aheed Food Centre"');
 
     const routes = parseRoutePatterns(rootToml, "afc-production");

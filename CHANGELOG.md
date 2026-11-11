@@ -8,6 +8,12 @@ every branch merges.
 
 ### Fixed
 
+- **The AFC cell no longer binds empty image buckets in the Merqify account (#1503, part of #1337)**
+  - **What was wrong.** `[env.afc-staging]` and `[env.afc-production]` bound `IMAGES` to `afc-images-staging` / `afc-images-production` in the **Merqify** account. Both buckets were empty on 2026-11-11, and no code reads `IMAGES`. Aheed's real images are written through the S3 API (`lib/storage`, `S3_*` secrets) to the same-named buckets in **Aheed's own Cloudflare account** and served from `images.aheedfoodcentre.co.uk`. That is where the 25 homepage images checked during the audit were served from.
+  - **The fix.** Removed both bindings, with a comment saying why a dedicated cell has none. `tests/dedicated-cell-topology.test.ts` now asserts there is no `r2_buckets` block in either AFC env. The scaling doc explains where each cell's buckets live.
+  - **Also.** The unused `UK_LOCATION_REF_DIRECT_URL` Worker secret is deleted from the AFC Workers: the app never reads it, and `configure-env` routes it to GitHub only.
+  - **Owner, later.** Delete the two empty `afc-images-*` buckets in the Merqify account after re-checking they are empty.
+
 - **The Cloudflare for SaaS fallback origin is routed to the platform production Worker (#1482, phase B of 2)**
   - **The change.** `fallback.merqify.com/*` is now a zone route under `[env.production]` (`aheed-store-production`). Platform production holds several active vendors, so a custom hostname that names no origin and has no `VendorDomain` row resolves to no vendor and is sent to `/coming-soon` (`lib/tenant.ts`, `tests/tenant.test.ts`). The test is renamed `#1482: only the platform production Worker routes the SaaS fallback origin` and asserts both halves.
   - **Docs.** The onboarding runbook and the scaling doc say the fallback is for marketplace clients only. A dedicated cell names its own origin, and its `www` CNAME points there. The runbook also has a tenant-safety note, a post-change check and a rollback.
