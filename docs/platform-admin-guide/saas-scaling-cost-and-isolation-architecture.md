@@ -53,9 +53,9 @@ A common concern in multi-tenant architectures is whether onboarding additional 
 
 | Infrastructure Layer | Plan Baseline | Usage Allowance Included | Over-Quota Rate |
 | :--- | :--- | :--- | :--- |
-| **Cloudflare Workers** | $5.00 / month | 10,000,000 requests/mo<br>30,000,000 CPU ms/mo | $0.30 per 1M requests<br>$0.02 per 1M CPU ms |
+| **Cloudflare Workers** | $5.00 / month | 10,000,000 requests/mo<br/>30,000,000 CPU ms/mo | $0.30 per 1M requests<br/>$0.02 per 1M CPU ms |
 | **Cloudflare for SaaS** | Included | 100 Custom Hostnames (50 client domains) | $0.10 / hostname / mo |
-| **Cloudflare R2 Storage** | Free tier / usage | 10 GB storage<br>10M Class B (read) ops/mo | $0.015 / GB-month<br>**Zero egress / bandwidth fees** |
+| **Cloudflare R2 Storage** | Free tier / usage | 10 GB storage<br/>10M Class B (read) ops/mo | $0.015 / GB-month<br/>**Zero egress / bandwidth fees** |
 | **Cloudflare Email Sending** | Included in Workers Paid | 3,000 outbound emails / month | $0.35 per 1,000 emails |
 | **Neon PostgreSQL** | Free / usage tier | Dedicated connection pool per cell | Compute auto-scales to zero at idle |
 
