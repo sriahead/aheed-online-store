@@ -1,3 +1,4 @@
+import { publishWarmupSchedule } from "@/lib/db-warmup-service";
 import { cache } from "react";
 import { getPrisma, getPrismaWs } from "@/lib/db";
 import { getCurrentVendorIdOrNull } from "@/lib/tenant";
@@ -136,7 +137,10 @@ export async function updateVendorStorefrontConfig(
  * carrying `createMany`, neither of which the HTTP adapter can run.
  */
 export async function replaceVendorFooterHours(vendorId: string, data: VendorFooterHoursInput) {
-  return replaceVendorFooterHoursRepo(getPrismaWs(), vendorId, data);
+  const result = await replaceVendorFooterHoursRepo(getPrismaWs(), vendorId, data);
+  // #1491 R7 — opening hours drive the database warm-up windows; republish them (never throws).
+  await publishWarmupSchedule();
+  return result;
 }
 
 /** #1060 — HTTP client: prune, count and `upsert` open no interactive transaction. */
@@ -145,12 +149,16 @@ export async function saveVendorHoursOverride(
   today: string,
   row: HoursOverrideRow,
 ) {
-  return saveVendorHoursOverrideRepo(getPrisma(), vendorId, today, row);
+  const result = await saveVendorHoursOverrideRepo(getPrisma(), vendorId, today, row);
+  await publishWarmupSchedule(); // #1491 R7
+  return result;
 }
 
 /** #1060 — `deleteMany` scoped by vendor, which the HTTP client runs fine. */
 export async function deleteVendorHoursOverride(vendorId: string, id: string) {
-  return deleteVendorHoursOverrideRepo(getPrisma(), vendorId, id);
+  const result = await deleteVendorHoursOverrideRepo(getPrisma(), vendorId, id);
+  await publishWarmupSchedule(); // #1491 R7
+  return result;
 }
 
 /** The seeded theme catalogue (#75), for the `/staff/storefront` picker. */

@@ -19,10 +19,13 @@ compatibility_date = "2025-03-25"
 # says there is work, so an idle store never wakes the database. The number the
 # 15 minutes buys is recovery latency for a shopper who paid into a lost webhook.
 # Plus `0 3 * * *`: the daily ungated run, which calls every job whatever the
-# markers say and is the only run of the guest-cart reaper. Two triggers per
-# environment, four in all: the Workers Free plan allows five per account.
+# markers say and is the only run of the guest-cart reaper.
+# Plus `*/4 * * * *` (#1491): the database warm-up tick. It reads two KV keys and pings the database
+# only inside the published opening-hours windows or after recent signed-in activity; anything in doubt
+# skips. Three triggers per environment, 12 across the four deployed environments (8 were live before
+# #1491, so this account's limit is above the Workers Free plan's 5).
 [triggers]
-crons = ["*/15 * * * *", "0 3 * * *"]
+crons = ["*/15 * * * *", "0 3 * * *", "*/4 * * * *"]
 
 # LOCAL SIMULATION ONLY. `wrangler dev` simulates this namespace on disk; no
 # deploy reads it, because both deploy workflows pass `--env` and kv_namespaces
@@ -37,7 +40,7 @@ id = "local-job-signals"
 name = "aheed-scheduler-staging"
 
 [env.staging.triggers]
-crons = ["*/15 * * * *", "0 3 * * *"]
+crons = ["*/15 * * * *", "0 3 * * *", "*/4 * * * *"]
 
 # #1324/#1325 — JOB_SIGNALS for staging: KV namespace `aheed-jobs-staging` in the Merqify account
 # (created 2026-10-31). The SAME id is in both this file and the other wrangler.toml.
@@ -53,7 +56,7 @@ APP_BASE_URL = "https://aheed-staging.merqify.com"
 name = "aheed-scheduler-production"
 
 [env.production.triggers]
-crons = ["*/15 * * * *", "0 3 * * *"]
+crons = ["*/15 * * * *", "0 3 * * *", "*/4 * * * *"]
 
 # #1324/#1325 — JOB_SIGNALS for production: KV namespace `aheed-jobs-production` in the Merqify account
 # (created 2026-10-31). The SAME id is in both this file and the other wrangler.toml.
@@ -63,6 +66,39 @@ id = "ba3dd6efb50445bc9cf856664fe6c1c5"
 
 [env.production.vars]
 APP_BASE_URL = "https://aheed.merqify.com"
+
+# ---- Aheed Food Centre Dedicated Cell (Staging) -------------------------
+# #1331 — Dedicated scheduler for Aheed Food Centre
+[env.afc-staging]
+name = "afc-scheduler-staging"
+
+[env.afc-staging.triggers]
+crons = ["*/15 * * * *", "0 3 * * *", "*/4 * * * *"]
+
+# #1491 — the AFC cell's OWN namespace (afc-jobs-staging). It had reused the platform staging id, so the
+# two cells overwrote each other's job markers and warm-up schedule. Same id in both wrangler.toml files.
+[[env.afc-staging.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "9b5c84f21e294e1ca00b78bb1af62328"
+
+[env.afc-staging.vars]
+APP_BASE_URL = "https://staging.aheedfoodcentre.co.uk"
+
+# ---- Aheed Food Centre Dedicated Cell (Production) ----------------------
+# #1331 — Dedicated scheduler for Aheed Food Centre
+[env.afc-production]
+name = "afc-scheduler-production"
+
+[env.afc-production.triggers]
+crons = ["*/15 * * * *", "0 3 * * *", "*/4 * * * *"]
+
+# #1491 — the AFC cell's OWN namespace (afc-jobs-production); see afc-staging above.
+[[env.afc-production.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "21b5000fa6c34de09e644599d3d103f7"
+
+[env.afc-production.vars]
+APP_BASE_URL = "https://www.aheedfoodcentre.co.uk"
 
 # NOTE: JOB_INVOCATION_TOKEN is NOT set here. It is a runtime secret and must be
 # set per environment, on BOTH this Worker and the application Worker, with the

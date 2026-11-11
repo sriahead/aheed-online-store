@@ -110,3 +110,47 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # #1331 — Dedicated AFC Cell (Production). Deployed in lockstep with the platform cell.
+      - name: Apply migrations to AFC dedicated cell (direct connection)
+        if: env.AFC_DIRECT_URL != ''
+        run: npx prisma migrate deploy
+        env:
+          DIRECT_URL: ${{ secrets.AFC_DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.AFC_DIRECT_URL }}
+          AFC_DIRECT_URL: ${{ secrets.AFC_DIRECT_URL }}
+
+      - name: Verify AFC Worker routes
+        if: env.AFC_DIRECT_URL != ''
+        run: npx tsx scripts/verify-worker-routes.ts --env afc-production
+        env:
+          DIRECT_URL: ${{ secrets.AFC_DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.AFC_DIRECT_URL }}
+          AFC_DIRECT_URL: ${{ secrets.AFC_DIRECT_URL }}
+
+      - name: Deploy AFC Dedicated Worker
+        if: env.AFC_DIRECT_URL != ''
+        run: |
+          echo "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID --env afc-production
+          echo "${{ secrets.CLOUDFLARE_API_TOKEN }}" | npx wrangler secret put CLOUDFLARE_API_TOKEN --env afc-production
+          npx wrangler deploy --env afc-production --var "GIT_COMMIT_SHA:$(git rev-parse --short HEAD)"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          AFC_DIRECT_URL: ${{ secrets.AFC_DIRECT_URL }}
+
+      - name: Deploy AFC job scheduler
+        if: env.AFC_DIRECT_URL != ''
+        run: npx wrangler deploy --config workers/scheduler/wrangler.toml --env afc-production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          AFC_DIRECT_URL: ${{ secrets.AFC_DIRECT_URL }}
+
+      - name: Deploy AFC inbound email worker
+        if: env.AFC_DIRECT_URL != ''
+        run: npx wrangler deploy --config workers/inbound-email/wrangler.toml --env afc-production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          AFC_DIRECT_URL: ${{ secrets.AFC_DIRECT_URL }}

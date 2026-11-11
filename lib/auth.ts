@@ -9,6 +9,7 @@ import { resolveAuthOrigin } from "./auth-origin";
 import { recordSignUpMarketingConsent } from "./marketing-consent-signup";
 import { recordMarketingConsent } from "./repositories/marketing-consent";
 import { recordHandledErrorEvent } from "./error-events-service";
+import { recordWarmupActivity } from "./db-warmup/activity";
 
 /**
  * Hide `$transaction` from the client handed to Better Auth's Prisma adapter
@@ -170,7 +171,7 @@ export async function getAuth() {
 
   const wrappedDb = authDb(getPrisma());
 
-  return betterAuth({
+  const auth = betterAuth({
     database: prismaAdapter(wrappedDb, { provider: "postgresql" }),
     secret: env.BETTER_AUTH_SECRET,
     // Derived per request from the host; BETTER_AUTH_URL is only a fallback when
@@ -277,4 +278,25 @@ export async function getAuth() {
       },
     },
   });
+
+  return withWarmupActivity(auth);
+}
+
+/**
+ * #1491 R6a — every server-side session read in this app is `(await getAuth()).api.getSession(...)`
+ * (35 call sites), so wrapping it here records signed-in activity for the database warm-up in one
+ * place. A null session (signed out) records nothing. The record is KV-only, throttled, and handed to
+ * `waitUntil`, so it can neither fail nor slow the read.
+ */
+export function withWarmupActivity<
+  T extends { api: { getSession: (...args: never[]) => unknown } },
+>(auth: T, record: () => void = recordWarmupActivity): T {
+  const original = auth.api.getSession.bind(auth.api) as (...args: unknown[]) => Promise<unknown>;
+  const getSession = async (...args: unknown[]) => {
+    const session = await original(...args);
+    if (session && typeof session === "object" && "user" in session && session.user) record();
+    return session;
+  };
+  (auth.api as { getSession: unknown }).getSession = getSession;
+  return auth;
 }

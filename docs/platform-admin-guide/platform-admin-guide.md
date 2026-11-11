@@ -4,8 +4,8 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.11.0"
-updated: 2026-11-05
+version: "1.12.0"
+updated: 2026-11-10
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
 tags: ["admin", "platform", "technical", "multi-tenancy"]
@@ -187,6 +187,111 @@ reload to see them.
 - **When the token shows "Not set", every alert is skipped**, and **Send test alert** says "Skipped: TELEGRAM_BOT_TOKEN unset". The token is a secret on the Worker, not a control on this page (see the environment setup guide).
 - **A failed alert does not stop the email.** Forwarding and the contact form work exactly as before; alerts are a convenience on top, with no retry.
 
+##### Telegram order alerts — end-to-end setup
+
+The bullets above say what the **Order alerts** card does. This part says how to set it up for a
+client from nothing, what can go wrong, and where to get help. The card itself lists the same quick
+links under **Telegram quick links**, and marks the ones that are safe to send to a client as
+**Shareable**.
+
+**Why this exists (SCQA).**
+
+- **Situation:** A store's staff need to know within minutes when a customer emails about an order,
+  complains, or pays. Email alone is slow to notice on a busy shop floor.
+- **Complication:** Telegram can only post through a bot, and a bot only reaches a chat it has been
+  let into. The token belongs to a Worker, not to a store, so one wrong token or one missing step
+  produces `chat not found` or `TELEGRAM_BOT_TOKEN unset` with nothing obviously wrong on the page.
+- **Question:** How does a platform admin connect a client's own Telegram chat, prove it works, and
+  keep each client's alerts separate?
+- **Answer:** Give each deployment cell its own bot, let that bot into the client's group or
+  channel, read the chat ID once, register it on this card, and press **Send test alert**.
+
+**The model in one table.** Three things must line up. Each has one owner and one place it lives.
+
+| Piece | What it is | Where it lives | Who sets it |
+| --- | --- | --- | --- |
+| **Bot** | A Telegram account that posts the alerts, made in `@BotFather` | Telegram | Platform admin |
+| **Bot token** | The bot's password (`123456789:AA…`) | Worker secret `TELEGRAM_BOT_TOKEN`, one per Worker | Platform admin, with `wrangler secret put` |
+| **Chat ID** | The number naming the group, channel or person to post to | This card, one row per recipient, per store | Platform admin, on this page |
+
+**One bot per cell, not per store.** The token is a Worker secret, so every store served by the same
+Worker shares one bot. Today that means:
+
+| Cell | Workers | Bot |
+| --- | --- | --- |
+| Aheed Food Centre (dedicated) | `afc-store-production`, `afc-store-staging` | `@AheedFoodCentre_alerts_bot` |
+| Merqify (shared, multi-store) | `aheed-store-production`, `aheed-store-staging` | `@Merqify_alerts_bot` |
+
+A chat ID registered on a store only works if **that cell's** bot is in the chat.
+
+**Steps, in order.**
+
+1. **Create the bot** (once per cell). In Telegram open `@BotFather`, send `/newbot`, give a display
+   name (for example "Aheed Food Centre Alerts") and a username ending in `bot`. Copy the token it
+   replies with. Optionally `/setuserpic` to give it the store's logo.
+2. **Store the token on the cell's Workers.** Put it in the cell's local secrets file (for example
+   `secrets/afc-production.vars`), then upload it to both of that cell's Workers:
+   `wrangler secret put TELEGRAM_BOT_TOKEN --env afc-production` and the same for `afc-staging`.
+   On Windows set `CLOUDFLARE_ACCOUNT_ID` first, or wrangler refuses with "More than one account
+   available". No redeploy is needed. Reload this page: the card shows **Telegram bot token: Set**.
+3. **Create the client's alerts chat.** The client (or you) creates a Telegram **group** for a team
+   that may reply among themselves, or a **channel** for a one-way feed. Send the client the
+   **Shareable** links from the card if they need help.
+4. **Let the bot in.**
+   - **Group:** add the bot as a member, then send `/start@<bot username>` in the group. A plain
+     message is not enough: bots have privacy mode on and ignore it.
+   - **Channel:** open the channel's **Administrators**, add the bot as an admin with **Post
+     Messages** on, then post any message (for example `hello`). A bot added only as a subscriber
+     sees nothing and cannot post.
+   - **One person:** that person opens the bot and presses **Start**.
+5. **Read the chat ID.** Open `https://api.telegram.org/bot<token>/getUpdates` in your own browser
+   and copy `chat.id` from the newest entry (`message` for a group, `channel_post` for a channel).
+   Or open the chat in **Telegram Web**: the number after `#` in the address bar is the ID.
+6. **Register it.** On this page pick the store, leave **Channel** on Telegram, paste the chat ID
+   including its leading `-`, and press **Add recipient**.
+7. **Prove it.** Press **Send test alert** on the new row. Check the message arrives in the chat.
+   Remove any row that belongs to a different cell's bot.
+
+**Chat ID formats.**
+
+| Chat type | Looks like | The bot must be |
+| --- | --- | --- |
+| Channel | `-100` then digits, for example `-1003925079524` | An admin with **Post Messages** |
+| Supergroup | `-100` then digits | A member |
+| Basic group | `-` then digits, for example `-5277792253` | A member |
+| One person | Digits only, no `-` | Started by that person |
+
+**Boundary conditions and scenarios.**
+
+| Scenario | What happens | What to do |
+| --- | --- | --- |
+| `getUpdates` returns `{"ok":true,"result":[]}` | The bot has seen nothing yet | Group: send `/start@<bot username>`. Channel: make the bot an admin, then post a new message. Updates are kept by Telegram for about 24 hours, so an old message may have expired |
+| Test says **Skipped: TELEGRAM_BOT_TOKEN unset** | This Worker has no token | Step 2 for this cell's Workers. A token in a local file does nothing until it is uploaded |
+| Test says **Failed: telegram 400: Bad Request: chat not found** | The Worker's bot is not in that chat, or the ID is wrong | Check which bot the cell uses (`/getMe` with its token); add **that** bot to the chat; check the full ID, including `-100` |
+| **Failed: telegram 403: bot was kicked / blocked by the user** | Someone removed the bot or the person blocked it | Add it back (or ask them to press **Start**), then test again |
+| **Failed: telegram 401: Unauthorized** | The token was revoked or mistyped | Get the current token from `@BotFather` (`/token`) and repeat step 2 |
+| **Failed: telegram 400: … upgraded to a supergroup** | The group became a supergroup and got a new `-100…` ID | Read the new ID (step 5), add it, remove the old row |
+| Same chat ID on two stores in the same cell | Both stores' alerts go to that chat | Allowed. Use separate chats if the stores have different staff |
+| Moving a store to a dedicated cell | The new Workers have a different bot | Repeat steps 1–7 for the new cell; the old bot's chat IDs fail with `chat not found` |
+| Staging alerts | Sent with `[STAGING]` at the start | Point staging at a test chat, not the client's live one |
+| Telegram is down or slow | The send times out after 5 seconds; email delivery is not affected | Contact-form and inbound-email alerts are not retried. Paid-order notifications are retried every 15 minutes for 24 hours |
+| A token was pasted into chat, a ticket or a screenshot | Anyone holding it can post as the bot | In `@BotFather` send `/revoke`, then repeat step 2 with the new token |
+
+**Never do these.** Share the token or any `getUpdates` address (it contains the token). Put a
+customer's details in the chat: the alert deliberately carries only the order number, sender name
+and subject. Reuse one bot's chat ID on another cell.
+
+**Where to get help.**
+
+| Problem | Go to |
+| --- | --- |
+| Alert test fails with a Telegram reason | The scenarios table above, then Telegram's `@BotSupport` |
+| Bot creation, renaming, token revoke | `@BotFather` |
+| How `getUpdates` and privacy mode work | Telegram Bot API docs (`core.telegram.org/bots`) — linked on the card |
+| Uploading the token, or wrangler errors | `docs/developer-portal/env-setup.md`; the platform developer |
+| Alerts sent but staff never act on them | The store admin; the same messages are in **Enquiries & Inbox** (`/staff/enquiries`) |
+| A fault in the platform itself | **Error events** (`/staff/errors`), then raise a GitHub issue |
+
 ## Platform Domain Registry — `/staff/platform/domains`
 
 **Purpose:** Platform-wide hostname routing registry showing all mapped subdomains and custom apex domains.
@@ -220,6 +325,63 @@ reload to see them.
 
 **What happens after changes are saved:** Environment changes deployed to Cloudflare Workers or GitHub environment secrets are reflected upon worker restart.
 
+
+## Database Warm-up — `/staff/platform/db-warmup`
+
+**Purpose:** Keep this cell's database awake so shoppers don't wait for it to start. Neon stops the
+database after 5 minutes with no query; the next visitor then waits several seconds (7.1 s measured
+on Aheed staging, 2026-11-10). While warm-up is on, the scheduler sends one tiny query every 4
+minutes during the chosen windows, which keeps the database awake.
+
+**Who can access:** Platform admins only
+
+**What you can do:**
+
+- **Warm-up on:** switch it on or off for this cell. It starts **off**.
+- **When to keep the database warm:**
+  - **During store opening hours** (the default) uses every store's weekly hours in this cell, plus
+    holiday closures. A closed day has no pings.
+  - **Always** pings around the clock.
+  - **A fixed daily window** uses the From and Until times you set, in London time.
+  - **Only after signed-in activity** has no scheduled windows at all.
+- **Start this many minutes before opening** (opening-hours mode, default 30): so the first shopper
+  of the day finds it warm.
+- **Also keep warm after signed-in activity** (on by default) and **for this many minutes** (default
+  30): after any signed-in request, pings continue for that long. This helps someone who pauses on a
+  page for more than 5 minutes, and staff working outside opening hours. It cannot help the first
+  visitor after a quiet spell.
+- **Minimum compute size (CU)** and **Price per CU-hour (USD)**: inputs for the estimate only. Copy
+  the compute size from the Neon console. The price defaults to Neon Launch ($0.106).
+
+**Typical workflow:** Switch it on in opening-hours mode and save. The scheduler picks the change up
+within 4 minutes. Check **Last ping** during opening hours. After a week, compare the estimate with
+the compute hours shown in the Neon console.
+
+**Important fields and filters:**
+
+- **Status** shows whether warm-up is on, the **last ping**, the **last signed-in activity**, and
+  **Database expected to go cold at**. That is the later of those two times plus Neon's 5 minutes,
+  and it is approximate because shoppers who are not signed in are not recorded.
+- **Next 7 days (London time)** lists the ping windows per day, or "None".
+- **Estimated cost (per month)** gives the CU-hours and dollars for the scheduled windows, and the
+  always-on figure for comparison.
+
+**Common mistakes and limitations:**
+
+- **This applies to every store in this cell**, because they share one database.
+- **In opening-hours mode with no opening hours set** for any store, no pings run, and the page says
+  so. Set the hours under **Storefront**.
+- **The estimate is arithmetic, not a bill:** window hours × 30.4/7 days × compute size × price,
+  plus a 5-minute tail per window. It covers scheduled windows only; activity time adds on top.
+- **Neon's 5 minutes is fixed** on the Launch plan. The other option is turning scale-to-zero off in
+  the Neon console (always on, roughly double the cost of opening hours).
+- **If anything is in doubt**, the scheduler skips the ping rather than risk running all night. A
+  missing or out-of-date schedule means no pings until the next save or the daily refresh at 03:00.
+
+**What happens after changes are saved:** The settings are saved with your email and the time
+("Last changed by"), the next 8 days of windows are recalculated and published for the scheduler,
+and the change takes effect on the next 4-minute tick. Editing any store's opening hours or holiday
+closures also recalculates the windows automatically.
 
 ## Platform System Health — `/staff/platform/health`
 

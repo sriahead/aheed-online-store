@@ -4,21 +4,21 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.21.0"
-updated: 2026-11-06
+version: "2.23.0"
+updated: 2026-11-10
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
-tags: ["admin", "guide", "ui", "configuration", "vendor", "payments"]
+tags: ["admin", "guide", "ui", "configuration", "vendor", "payments", "team"]
 ---
 
 # Store Admin Management Guide
 
 This guide covers every page reserved strictly for a **store admin**, one section per menu item.
 Pages accessible to both staff and admins — such as Products, Categories, Brands, Bundles,
-Promotions, Live Inventory & Availability, Orders, Search dictionary moderation, and the Runbook —
-are described in the Staff Daily Operations Playbook rather than repeated here. You can open all of
-those as well (generating new AI proposals within Search dictionary remains an admin-only
-capability).
+Promotions, Live Inventory & Availability, Orders, Enquiries & Inbox, Search dictionary moderation,
+and the Runbook — are described in the Staff Daily Operations Playbook rather than repeated here.
+You can open all of those as well (generating new AI proposals within Search dictionary remains an
+admin-only capability).
 
 The menu is grouped. You see six groups beside **Overview**: **Orders & Fulfilment**,
 **Catalogue**, **Offers & Loyalty**, **Customers & Content**, **Store setup** and
@@ -29,9 +29,10 @@ The menu is grouped. You see six groups beside **Overview**: **Orders & Fulfilme
 - **There is no refund control anywhere in this panel.** Refunding a customer is done directly in
   your payment provider's own dashboard, outside this application. Nothing here will move money back
   to a customer, and nothing here records that you did.
-- **There is no way to invite someone to join your team.** A colleague must register their own
-  account on the shop first, exactly as a customer would. Once they have, you can give that account
-  a role from the Team & Access page.
+- **Role grants do not send an invitation email.** You can pre-provision a colleague by entering their
+  email address on the Team & Access page even before they have signed in, and their role takes effect
+  immediately when they sign in with Google or email — but the system does not send them an automatic
+  onboarding email, so let them know directly once you have granted access.
 
 
 ## Discount codes — `/staff/discounts`
@@ -545,31 +546,76 @@ or adjust their points.
 
 ## Team & Access — `/staff/team`
 
-**Purpose:** Give a colleague access to the panel, change their level of access, or take it away.
+**Purpose:** Give colleagues access to the store panel, change their role, or take it away.
+
+- **Situation:** Staff handle daily picking, catalogue and customer messages; store settings and
+  commercial controls stay with admins.
+- **Complication:** Waiting for a colleague to register before you can add them slows onboarding,
+  and a careless change can leave a store or the platform without an administrator.
+- **Question:** How do you add a colleague by email straight away, give them only the access they
+  need, and keep a record of every change?
+- **Answer:** **Team & Access** finds the person by email (capital letters do not matter), creates
+  the account if they have none yet, refuses changes that would lock out the last administrator,
+  and records every change in an audit log.
 
 **Who can access:** Store admins only
 
-**What you can do:** Grant the Staff role to a registered account by email address, and revoke access
-from someone who has it.
+**What you can do:**
 
-**Typical workflow:** A new colleague starts. **Ask them to register an account on the shop
-themselves first**, using the email address you will grant access to. Once they have registered, come
-here, enter that email address, choose Staff, and save.
+1. **Grant access:** under **Grant Access**, enter the colleague's email, choose a role and click
+   **Apply**. A store admin can choose **Staff**. A platform admin can also choose **Store Admin**
+   or **Platform Admin**.
+2. **Change or revoke access:** enter the email of someone who already has access, choose the new
+   role or **Revoke Access (Demote)**, and click **Apply**.
+3. **See who has access:** the **Current Members** table lists each member's name, email, store
+   role, platform role and when they were added.
 
-**Important fields and filters:** People are identified by the email address on their account, and
-that account must already exist. The role options are Staff and Revoke access.
+**Typical workflow:**
 
-**Common mistakes and limitations:** **Entering the email of someone who has not registered fails
-with "User not found"** — that is not a fault, it means they have not created their account yet.
-**As a store admin you can grant the Staff role only.** Making someone a store admin requires a
-platform administrator, so the Store Admin option does not appear for you. You also cannot change the
-privileges of a platform administrator, and the system will not let the shop be left with no store
-admin at all, so you cannot remove your own admin access if you are the last one.
+1. Enter the colleague's email, choose **Staff** (or a higher role if you are a platform admin) and
+   click **Apply**.
+2. If they had no account, one is created for that email. Ask them to sign in at `/login` with
+   **Continue with Google** using exactly that address; that links to the account and takes them to
+   `/staff`. No invitation email is sent.
+3. When they leave or change duties, enter their email, choose **Revoke Access (Demote)** and click
+   **Apply**.
 
-**What happens after changes are saved:** Access changes immediately — the person sees the panel on
-their next page load, or loses it. Every change is recorded in an audit log with who made it.
+**Important fields and filters:**
 
+| Role | Applies to | What it opens |
+| --- | --- | --- |
+| **Staff** | This store only | The panel pages marked for staff: orders, catalogue, inventory, customer feedback, Enquiries & Inbox and similar daily work. |
+| **Store Admin** | This store only | Everything Staff can open, plus this store's settings, reports, customers and Team & Access. |
+| **Platform Admin** | **Every store** | Every store's panel plus the platform pages. Granting it also makes the person a Store Admin of this store. |
+| **Revoke Access (Demote)** | This store; for a platform admin, every store | Removes this store's access. For a platform admin it also removes Platform Admin everywhere. |
 
+| You are | Can grant Staff | Can grant Store Admin | Can grant Platform Admin | Can change a platform admin's role |
+| --- | --- | --- | --- | --- |
+| **Store admin** | Yes | No | No | No |
+| **Platform admin** | Yes | Yes | Yes, to someone who already has an account | Yes, unless they are the last platform admin |
+
+**Common mistakes and limitations:**
+
+- **Check the spelling of the email before you click Apply.** For Staff and Store Admin, an address
+  with no account gets a new account, so a typo gives access to whoever owns the mistyped address.
+- **Platform Admin can only go to someone who already has an account.** Ask them to sign up first.
+  This stops a typo from handing a stranger access to every store.
+- **Any change to a platform admin's role here applies to every store**, not only this one. That
+  includes choosing Staff, Store Admin or Revoke for them: they stop being a platform admin
+  everywhere.
+- **The last platform admin cannot be demoted**, by themselves or by anyone else.
+- **A store admin cannot remove their own admin access if they are this store's last store admin.**
+  A platform admin is not stopped by that check, so take care not to remove a store's only admin.
+- **No invitation email is sent.** Tell your colleague which address you used.
+- **Signing in to a newly created account:** Continue with Google using the same address is the
+  supported route. Email-and-password sign-up does not work for an address that already has an
+  account.
+
+**What happens after changes are saved:**
+
+- **Access changes on their next page load.** Every `/staff` page checks the role on the server.
+- **Every change is recorded** in the role audit log with who made it, whose role changed, the old
+  role and the new one. The log is kept in the database; it is not shown on this page.
 
 ## Payment Issues — `/staff/payments`
 

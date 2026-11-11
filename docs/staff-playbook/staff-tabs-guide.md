@@ -4,11 +4,11 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.16.0"
-updated: "2026-11-05"
+version: "2.18.0"
+updated: "2026-11-10"
 visibility: internal
-summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, product filters, bundles, promotions, inventory, search dictionary moderation, customer feedback moderation, and finding the guides. One section per menu item."
-tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback"]
+summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, filters, bundles, promotions, inventory, search dictionary, customer feedback, enquiries & inbox, and runbooks. One section per menu item."
+tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback", "enquiries", "inbox"]
 ---
 
 # Staff Daily Operations Playbook
@@ -23,7 +23,7 @@ The panel's menu is grouped, and you see five groups beside **Overview**:
 - **Catalogue** — Products, Live Inventory & Availability, Categories, Brands, Product filters,
   Net content review.
 - **Offers & Loyalty** — Promotions, Bundles. (Loyalty and Discount codes belong to a store admin.)
-- **Customers & Content** — Customer Feedback, Search dictionary. (Customers, Help Centre Answers
+- **Customers & Content** — Customer Feedback, Enquiries & Inbox, Search dictionary. (Customers, Help Centre Answers
   and Help Assistant belong to a store admin.)
 - **Insights & Help** — this **Runbook**. (Reports belong to a store admin.)
 
@@ -561,3 +561,88 @@ section misleading, which is worse for trust than a low rating.
 un-approving removes it, both straight away. If a customer edits feedback you already approved, it
 comes back to you as **PENDING** and disappears from the home page until you check it again — so
 what is published is always something a person has read.
+
+
+## Enquiries & Inbox — `/staff/enquiries`
+
+**Purpose:** Read, reply to and resolve customer messages in one place: messages sent through the
+storefront **Contact us** form (`/contact`), and emails sent to the store's own receiving addresses
+(the ORDERS and SUPPORT addresses set up in Client Setup).
+
+- **Situation:** Customers reach the store through the Contact us form and by emailing the store's
+  addresses. Both normally land in a shared mailbox outside the platform.
+- **Complication:** In a shared mailbox, staff cannot see whether a colleague has already answered,
+  and a reply from a personal address does not come from the store.
+- **Question:** How do staff see every message, avoid answering twice, and reply as the store?
+- **Answer:** **Enquiries & Inbox** keeps a record of each message, the replies sent from it, and
+  whether it is still open. Replies go out from the store's sender address.
+
+**Who can access:** Staff and store admins.
+
+**What you can do:**
+
+1. **Filter and search:** switch between **All Messages**, **OPEN**, **REPLIED** and **RESOLVED**,
+   and search by customer name, email, order number, subject or message text. The counter at the top
+   shows how many messages are open and how many are listed in total. The page lists the 100 newest
+   messages.
+2. **Read a message:** each card shows its status, where it came from (**Contact Form** or
+   **Inbound Email**) and its type, the sender's name, email and phone (if given), the store
+   address it was sent to (inbound email only), any order number, and the full message.
+3. **Reply:** click **Reply to Customer**, write your answer, and click **Send Email Reply**. The
+   email goes only to the customer who sent the message, from the address shown at the top of the
+   page ("Outgoing replies are sent as ..."). Every reply you send is listed on the card with who
+   sent it and when; a second reply is added below the first and never replaces it.
+4. **Resolve or reopen:** click **Mark Resolved** when nothing more is needed, or **Reopen** to
+   put a resolved message back in the OPEN list.
+
+**Typical workflow:**
+
+1. Open the **OPEN** tab. Handle **COMPLAINT** and **ORDERS** messages first, then **SUPPORT** and
+   **ENQUIRY**.
+2. If the card shows an **Order #** badge, look the order up in **Orders** (`/staff/orders`) before
+   you reply. On a contact-form message the order number is the one the customer typed; check it
+   belongs to them.
+3. Reply from the card. If you need to send an attachment or copy someone in, reply from the
+   store's shared mailbox instead, then come back and click **Mark Resolved**.
+4. Click **Mark Resolved** once nothing more is needed.
+
+**Important fields and filters:**
+
+| Badge | Comes from | Types you will see |
+| --- | --- | --- |
+| **Contact Form** | A shopper submits `/contact`. Recorded once the form has been accepted; spam caught by the form's hidden trap is not recorded. | **COMPLAINT** or **ENQUIRY**: whichever the shopper chose. |
+| **Inbound Email** | Someone emails one of the store's receiving addresses. The store's email Worker forwards it as usual, then records it here. | **ORDERS** or **SUPPORT**: the purpose of the address it was sent to. |
+
+| Status | Meaning | What you can do next |
+| --- | --- | --- |
+| **OPEN** | New, not yet answered. | Reply (it becomes **REPLIED**) or **Mark Resolved**. |
+| **REPLIED** | At least one reply has been sent from this page. | Send another reply, or **Mark Resolved**. |
+| **RESOLVED** | Closed. | **Reopen** (back to **OPEN**), or send another reply. |
+
+**Common mistakes and limitations:**
+
+- **A sent email cannot be recalled.** Check the customer's details and order before you send.
+- **"Email not sent: ..." means nothing was sent and nothing was recorded.** Two cases:
+  - On the staging site, mail only goes to an approved list of test addresses, so a reply to anyone
+    else is refused with this message.
+  - Outside staging, it can mean email sending is not set up yet.
+
+  The message stays as it was; nothing is lost.
+- **Inbound email only appears once the store's addresses are routed to the email Worker.** Until
+  the platform team adds that routing in Cloudflare, emails still reach the shared mailbox but do not
+  appear here. Contact-form messages appear either way.
+- **Only the text of an inbound email is shown**, up to 4,000 characters, with formatting removed.
+  Attachments are not shown here. Open the shared mailbox to see them.
+- **Replies from the customer** go to the store address they first wrote to (or to the store's
+  sender address for a contact-form message). They appear here as a new **Inbound Email** message
+  only when that address is routed to the email Worker.
+- **The same email can occasionally appear twice** if the mail system delivers it twice. Resolve
+  the duplicate.
+- **Resolve without replying** only when the message was handled another way (phone, the shared
+  mailbox) or is spam or an automatic message.
+
+**What happens after changes are saved:**
+
+- **Send Email Reply:** the email is sent first. Only if it was actually sent is your reply saved
+  on the card (text, your email address, the time) and the status set to **REPLIED**.
+- **Mark Resolved / Reopen:** the status changes straight away and the open counter updates.

@@ -948,8 +948,28 @@ markers nobody writes, so it would skip the sweep forever and only the daily run
 top-level (non-`--env`) block in each
 file holds a placeholder id that only `npm run preview` / `wrangler dev` use; no deploy reads it.
 
-**Cron Trigger budget:** the scheduler uses **4** of the Workers Free plan's **5** Cron Triggers per
-account (two per environment). The application Worker has none.
+**Each cell needs its OWN namespace (#1491).** Two cells must never share one: their markers and the
+database warm-up keys would overwrite each other. Until 2026-11-10, `afc-staging` and `afc-production`
+reused the platform `staging` and `production` ids, so one cell emptying its outbox deleted the
+other's pending marker. The current namespaces, all in the Merqify account:
+
+| Environment | Namespace | Id |
+|---|---|---|
+| `staging` | `aheed-jobs-staging` | `20aab8dee7f342809679d36f1d96fc6c` |
+| `production` | `aheed-jobs-production` | `ba3dd6efb50445bc9cf856664fe6c1c5` |
+| `afc-staging` | `afc-jobs-staging` | `9b5c84f21e294e1ca00b78bb1af62328` |
+| `afc-production` | `afc-jobs-production` | `21b5000fa6c34de09e644599d3d103f7` |
+
+A new dedicated cell creates its own (Workers & Pages → KV → Create). `tests/job-signals-namespaces.test.ts`
+fails if two environments share an id, or if a scheduler's id differs from its app Worker's.
+
+**Cron Trigger budget:** the scheduler has **three** Cron Triggers per environment since #1491
+(`*/15 * * * *`, `0 3 * * *` and the `*/4 * * * *` database warm-up tick). Across the four deployed
+environments (`staging`, `production`, `afc-staging`, `afc-production`) that makes **12**. **8** were
+already live before #1491 (read from the Cloudflare API, 2026-11-10), which is above the Workers Free
+plan's 5 per account, so this account's limit is higher. If a deploy is ever refused for the trigger
+count, the fallback is to move the 15-minute tick to `*/4` and gate the existing jobs by minute;
+see `specs/2026-11-10-db-warmup-ping/plan.md`. The application Worker has none.
 
 ## Email: sending and receiving (`#1217`)
 
@@ -1724,4 +1744,34 @@ failures that section does not prevent, moved here from `CLAUDE.md` in #786.
   line the route promises, a duplicate delivery (`already-processed`) logs nothing, and no unrelated
   error fires alongside either. `GET .../cdn-cgi/local/explorer/api/local/workers` lists the other
   endpoints the same Explorer API exposes (KV, D1, R2, Durable Objects, Workflows).
+
+## Dedicated Client Cells: Aheed Food Centre (AFC) Secrets & Onboarding (#1331, ADR-009)
+
+A dedicated client cell provides complete physical database and edge isolation for an independent business while running the shared codebase.
+
+### 1. Two-Tier Secrets Configuration
+
+| Store | Scope / Command | Variables | Purpose |
+| :--- | :--- | :--- | :--- |
+| **GitHub environment secrets** | `gh secret set <NAME> --env staging\|production` | `AFC_DIRECT_URL` | Non-pooled Neon direct connection string for CI migrations (`Aheed Food Centre Staging` and `Aheed Food Centre`) |
+| **Cloudflare Worker secrets** | `wrangler secret put <NAME> --env afc-staging\|afc-production` | `DATABASE_URL` (pooled; `AFC_DATABASE_URL`), `BETTER_AUTH_SECRET`, `S3_*`, `STRIPE_*`, `JOB_INVOCATION_TOKEN`, `INBOUND_EMAIL_TOKEN` | Dedicated cell runtime environment variables and storage/payment credentials |
+
+### 2. Lockstep CI Deployment
+CI deploys the platform cell and the dedicated cell sequentially within the same run.
+When `AFC_DIRECT_URL` is set in GitHub environment secrets:
+1. `npx prisma migrate deploy` applies schema migrations to `AFC_DIRECT_URL`.
+2. `scripts/verify-worker-routes.ts --env afc-staging` (or `afc-production`) verifies that routes in `wrangler.toml` match the cell's `VendorDomain` table.
+3. `wrangler deploy --env afc-staging` (or `afc-production`) deploys the application worker, job scheduler, and inbound email worker.
+
+### 3. Dedicated Cell Database Bootstrap
+To initialize a freshly migrated AFC Neon project:
+```bash
+# Staging
+env DIRECT_URL="<afc-staging-direct-url>" npx tsx scripts/bootstrap-dedicated-cell.ts --env afc-staging
+
+# Production (strictly refuses demo users)
+env DIRECT_URL="<afc-production-direct-url>" npx tsx scripts/bootstrap-dedicated-cell.ts --env afc-production
+```
+Admin privileges are granted via `scripts/grant-role.ts`. Demo accounts are never created in production (#1332).
+
 

@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   compareRoutes,
   isRoutableHost,
+  parseOtherEnvRoutes,
+  SAAS_ORIGIN_HOSTS,
   parseRoutePatterns,
   renderRoutesBlock,
 } from "../scripts/verify-worker-routes";
@@ -153,14 +155,67 @@ describe("repository Worker config (#1323)", () => {
     ]);
   });
 
-  it("R1/R2: every app Worker route is a custom domain", () => {
-    expect(customDomainCount(read("wrangler.toml"))).toBe(4);
+  it("R1/R2: every Merqify-hosted app Worker route is a custom domain, while external SaaS domains use zone_name routes", () => {
+    // 4 vendor hosts + afc-staging-origin.merqify.com and afc-origin.merqify.com (#1482, the AFC
+    // cells' SaaS origins).
+    expect(customDomainCount(read("wrangler.toml"))).toBe(6);
+  });
+
+  it("#1482: afc-staging owns its SaaS origin as a custom domain, skipped by the vendor comparison", () => {
+    const toml = read("wrangler.toml");
+    const block = toml.slice(
+      toml.indexOf("[env.afc-staging]"),
+      toml.indexOf("[env.afc-production]"),
+    );
+    expect(block).toMatch(
+      /\[\[env\.afc-staging\.routes\]\]\s*\npattern = "afc-staging-origin\.merqify\.com"\s*\ncustom_domain = true/,
+    );
+    expect(SAAS_ORIGIN_HOSTS.has("afc-staging-origin.merqify.com")).toBe(true);
+    // No other env may claim it: a custom domain belongs to exactly one Worker.
+    for (const env of ["staging", "production", "afc-production"]) {
+      expect(toml).not.toMatch(
+        new RegExp(`\\[\\[env\\.${env}\\.routes\\]\\]\\s*\\npattern = "afc-staging-origin`),
+      );
+    }
+  });
+
+  it("#1482: afc-production owns its SaaS origin as a custom domain, skipped by the vendor comparison", () => {
+    const toml = read("wrangler.toml");
+    const start = toml.indexOf("[env.afc-production]");
+    const block = toml.slice(start, toml.indexOf("\n# ----", start + 1));
+    expect(block).toMatch(
+      /\[\[env\.afc-production\.routes\]\]\s*\npattern = "afc-origin\.merqify\.com"\s*\ncustom_domain = true/,
+    );
+    expect(SAAS_ORIGIN_HOSTS.has("afc-origin.merqify.com")).toBe(true);
+    // No other env may claim it: a custom domain belongs to exactly one Worker.
+    for (const env of ["staging", "production", "afc-staging"]) {
+      expect(toml).not.toMatch(
+        new RegExp(`\\[\\[env\\.${env}\\.routes\\]\\]\\s*\\npattern = "afc-origin`),
+      );
+    }
+  });
+
+  it("AFC cell staging routes are exactly staging.aheedfoodcentre.co.uk (#1331)", () => {
+    expect(parseRoutePatterns(read("wrangler.toml"), "afc-staging")).toEqual([
+      "staging.aheedfoodcentre.co.uk",
+    ]);
+  });
+
+  it("AFC cell production routes are exactly www.aheedfoodcentre.co.uk (#1331)", () => {
+    expect(parseRoutePatterns(read("wrangler.toml"), "afc-production")).toEqual([
+      "www.aheedfoodcentre.co.uk",
+    ]);
   });
 
   it("R3: the scheduler calls the Aheed host of its own environment", () => {
     const toml = read("workers/scheduler/wrangler.toml");
     const urls = [...toml.matchAll(/^APP_BASE_URL\s*=\s*"([^"]+)"/gm)].map((m) => m[1]);
-    expect(urls).toEqual(["https://aheed-staging.merqify.com", "https://aheed.merqify.com"]);
+    expect(urls).toEqual([
+      "https://aheed-staging.merqify.com",
+      "https://aheed.merqify.com",
+      "https://staging.aheedfoodcentre.co.uk",
+      "https://www.aheedfoodcentre.co.uk",
+    ]);
   });
 
   // #1328 moved the host (owner, 2026-10-30); this amends #1323's R4.
@@ -176,5 +231,95 @@ describe("repository Worker config (#1323)", () => {
     const imgSrc = /"img-src[^"]*"/.exec(config)?.[0] ?? "";
     expect(imgSrc).toContain("https://*.merqify.com");
     expect(config).not.toMatch(/nocaped/);
+  });
+});
+
+/**
+ * #1482 R34a — a host in this env's database that ANOTHER env in the same wrangler.toml routes (a
+ * dedicated cell, ADR-009) is covered, not missing. It is what failed every platform staging deploy
+ * from #1477 on: the platform DB still holds `staging.aheedfoodcentre.co.uk`, which `afc-staging`
+ * routes.
+ */
+describe("parseOtherEnvRoutes / compareRoutes across cells (#1482 R34a)", () => {
+  const TOML = [
+    "[[env.staging.routes]]",
+    'pattern = "aheed-staging.merqify.com"',
+    "custom_domain = true",
+    "",
+    "[env.staging.vars]",
+    'pattern = "not-a-route.example"',
+    "",
+    "[[env.afc-staging.routes]]",
+    'pattern = "staging.aheedfoodcentre.co.uk/*"',
+    'zone_name = "merqify.com"',
+    "",
+    "[[env.afc-staging.r2_buckets]]",
+    'binding = "IMAGES"',
+  ].join("\n");
+
+  it("lists only other envs' route hosts, with a trailing /* dropped, ignoring non-route tables", () => {
+    expect([...parseOtherEnvRoutes(TOML, "staging")]).toEqual([
+      ["staging.aheedfoodcentre.co.uk", "afc-staging"],
+    ]);
+    expect([...parseOtherEnvRoutes(TOML, "afc-staging")]).toEqual([
+      ["aheed-staging.merqify.com", "staging"],
+    ]);
+  });
+
+  it("a host routed by another env is reported as elsewhere, not missing", () => {
+    const result = compareRoutes(
+      ["aheed-staging.merqify.com", "staging.aheedfoodcentre.co.uk"],
+      parseRoutePatterns(TOML, "staging"),
+      parseOtherEnvRoutes(TOML, "staging"),
+    );
+    expect(result.missing).toEqual([]);
+    expect(result.elsewhere).toEqual([
+      { host: "staging.aheedfoodcentre.co.uk", env: "afc-staging" },
+    ]);
+  });
+
+  it("a host routed by NO env is still missing (the tear-down guard is not weakened)", () => {
+    const result = compareRoutes(
+      ["aheed-staging.merqify.com", "new-vendor.example.com"],
+      parseRoutePatterns(TOML, "staging"),
+      parseOtherEnvRoutes(TOML, "staging"),
+    );
+    expect(result.missing).toEqual(["new-vendor.example.com"]);
+    expect(result.elsewhere).toEqual([]);
+  });
+
+  it("without the third argument, behaviour is unchanged", () => {
+    expect(compareRoutes(["staging.aheedfoodcentre.co.uk"], []).missing).toEqual([
+      "staging.aheedfoodcentre.co.uk",
+    ]);
+  });
+
+  it("the real wrangler.toml: the failing staging deploy's three hosts now pass", () => {
+    const toml = readFileSync("wrangler.toml", "utf8");
+    const hosts = [
+      "aheed-staging.merqify.com",
+      "srimart-staging.merqify.com",
+      "staging.aheedfoodcentre.co.uk",
+    ];
+    const result = compareRoutes(
+      hosts,
+      parseRoutePatterns(toml, "staging"),
+      parseOtherEnvRoutes(toml, "staging"),
+    );
+    expect(result.missing).toEqual([]);
+    expect(result.elsewhere.map((e) => e.env)).toEqual(["afc-staging"]);
+  });
+
+  it("the real wrangler.toml: production's www.aheedfoodcentre.co.uk is covered by afc-production", () => {
+    const toml = readFileSync("wrangler.toml", "utf8");
+    const result = compareRoutes(
+      ["aheed.merqify.com", "srimart.merqify.com", "www.aheedfoodcentre.co.uk"],
+      parseRoutePatterns(toml, "production"),
+      parseOtherEnvRoutes(toml, "production"),
+    );
+    expect(result.missing).toEqual([]);
+    expect(result.elsewhere).toEqual([
+      { host: "www.aheedfoodcentre.co.uk", env: "afc-production" },
+    ]);
   });
 });

@@ -88,7 +88,10 @@ PLATFORM_NAME = "Merqify"
 PLATFORM_TAGLINE = "Your Merchandise, Digitised Quickly"
 # #1217 — the platform sender every provider uses when a vendor's own domain is not yet verified.
 EMAIL_FROM = "no-reply@merqify.com"
-EMAIL_RECIPIENT_MODE = "open"
+# EMAIL_RECIPIENT_MODE is deliberately UNSET on staging (owner, 2026-11-10, #1482; reverses #1459):
+# unset means allowlist, so staging only ever mails the EMAIL_ALLOWED_RECIPIENTS secret and can never
+# reach a real customer by accident. Only the production envs set "open"
+# (tests/staging-email-allowlist.test.ts).
 # #1399 — the platform default inbox, prefilled as Forward to in Client Setup. A business group
 # inbox, not a personal address, so committed config. The inbound Worker's INBOUND_FALLBACK_FORWARD
 # secret names the same inbox by convention; it must be a verified Email Routing destination.
@@ -148,5 +151,97 @@ APP_ENV = "production"
 [[env.production.send_email]]
 name = "EMAIL"
 
+# ---- Aheed Food Centre Dedicated Cell (Staging) -------------------------
+# #1331 — Dedicated cell for Aheed Food Centre at staging.aheedfoodcentre.co.uk
+[env.afc-staging]
+name = "afc-store-staging"
+
+[[env.afc-staging.routes]]
+pattern = "staging.aheedfoodcentre.co.uk/*"
+zone_name = "merqify.com"
+
+# #1482 — this Worker's own ORIGIN for Cloudflare for SaaS. The custom hostname
+# staging.aheedfoodcentre.co.uk (merqify.com zone → SSL/TLS → Custom Hostnames) must name this as its
+# Origin server and Origin SNI. Its origin had been aheed-staging.merqify.com — the PLATFORM staging
+# Worker's custom domain — so staging traffic reached the platform Worker (platform DB, platform
+# Google client) whenever no route above intercepted it, as on 2026-11-10. A custom domain cannot be
+# taken by another Worker, so this pins the hostname to the AFC Worker. Not a vendor host: no
+# VendorDomain row; scripts/verify-worker-routes.ts skips it (SAAS_ORIGIN_HOSTS).
+[[env.afc-staging.routes]]
+pattern = "afc-staging-origin.merqify.com"
+custom_domain = true
+
+[[env.afc-staging.r2_buckets]]
+binding = "IMAGES"
+bucket_name = "afc-images-staging"
+
+# #1491 — the AFC cell's OWN namespace (afc-jobs-staging). It had reused the platform staging id, so the
+# two cells overwrote each other's job markers and warm-up schedule. Same id in both wrangler.toml files.
+[[env.afc-staging.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "9b5c84f21e294e1ca00b78bb1af62328"
+
+[env.afc-staging.vars]
+UK_LOCATION_REF_POSTCODE_AREAS = "MK,RG"
+PLATFORM_NAME = "Aheed Food Centre"
+PLATFORM_TAGLINE = "Independent Quality Groceries"
+EMAIL_FROM = "no-reply@merqify.com"
+# EMAIL_RECIPIENT_MODE deliberately unset: allowlist (see [env.staging.vars], #1482).
+INBOUND_DEFAULT_FORWARD = "info-afc@googlegroups.com"
+APP_ENV = "staging"
+
+[[env.afc-staging.send_email]]
+name = "EMAIL"
+
+# ---- Aheed Food Centre Dedicated Cell (Production) ----------------------
+# #1331 — Dedicated cell for Aheed Food Centre at www.aheedfoodcentre.co.uk
+[env.afc-production]
+name = "afc-store-production"
+
+[[env.afc-production.routes]]
+pattern = "www.aheedfoodcentre.co.uk/*"
+zone_name = "merqify.com"
+
+# Cloudflare for SaaS fallback origin route: because www.aheedfoodcentre.co.uk is orange-clouded
+# (Proxied) in the customer zone and CNAMEs to fallback.merqify.com, Cloudflare O2O routes traffic
+# via fallback.merqify.com/* while preserving Host: www.aheedfoodcentre.co.uk.
+[[env.afc-production.routes]]
+pattern = "fallback.merqify.com/*"
+zone_name = "merqify.com"
+
+# #1482 — production's counterpart of afc-staging-origin.merqify.com: this Worker's own ORIGIN for
+# Cloudflare for SaaS. After this deploys, the owner points the www.aheedfoodcentre.co.uk custom hostname
+# (merqify.com zone → SSL/TLS → Custom Hostnames) at it as Origin server and Origin SNI, AND changes the
+# Aheed zone's www CNAME to it. On staging, changing the custom hostname alone moved no traffic; the CNAME
+# change did. Until then www still names aheed.merqify.com (the PLATFORM production Worker) as its origin
+# and reaches this Worker only through the routes above. Not a vendor host: no VendorDomain row;
+# scripts/verify-worker-routes.ts skips it (SAAS_ORIGIN_HOSTS). The fallback.merqify.com route stays
+# until www is confirmed on this origin, so the switch never leaves www unrouted.
+[[env.afc-production.routes]]
+pattern = "afc-origin.merqify.com"
+custom_domain = true
+
+[[env.afc-production.r2_buckets]]
+binding = "IMAGES"
+bucket_name = "afc-images-production"
+
+# #1491 — the AFC cell's OWN namespace (afc-jobs-production); see afc-staging above.
+[[env.afc-production.kv_namespaces]]
+binding = "JOB_SIGNALS"
+id = "21b5000fa6c34de09e644599d3d103f7"
+
+[env.afc-production.vars]
+UK_LOCATION_REF_POSTCODE_AREAS = "MK,RG"
+SEO_INDEXABLE = "true"
+PLATFORM_NAME = "Aheed Food Centre"
+PLATFORM_TAGLINE = "Independent Quality Groceries"
+EMAIL_FROM = "no-reply@merqify.com"
+EMAIL_RECIPIENT_MODE = "open"
+INBOUND_DEFAULT_FORWARD = "info-afc@googlegroups.com"
+APP_ENV = "production"
+
+[[env.afc-production.send_email]]
+name = "EMAIL"
+
 # NOTE: secrets (DATABASE_URL, UK_LOCATION_REF_DATABASE_URL, S3_*, STRIPE_*, BETTER_AUTH_SECRET)
-# are NOT set here. Add them per environment with:  wrangler secret put NAME --env staging|production
+# are NOT set here. Add them per environment with:  wrangler secret put NAME --env <env>

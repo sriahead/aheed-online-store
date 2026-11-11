@@ -6,7 +6,100 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **AFC production owns its Cloudflare for SaaS origin (#1482, needed before promotion)**
+  - **What was wrong.** `afc-store-production` had no origin of its own. The `www.aheedfoodcentre.co.uk` custom hostname still names `aheed.merqify.com`, the platform production Worker, so `www` reached the AFC Worker only through its routes. That is the same setup that sent `staging.aheedfoodcentre.co.uk` to the wrong Worker on 2026-11-10 (fixed for staging by #1489).
+  - **Fix.** `afc-store-production` claims `afc-origin.merqify.com` as a custom domain, already listed in `SAAS_ORIGIN_HOSTS`. `tests/worker-routes.test.ts` checks the route exists, is a custom domain, and no other environment claims it. The onboarding runbook names it.
+  - **Also: the internal docs site builds again.** `deploy-docs-internal` had failed on every `staging` push since #1480: `saas-scaling-cost-and-isolation-architecture.md` used `<br>` inside a table, which the docs site's MDX parser rejects. Lines 56 and 58 now use `<br/>`. The same workflow runs on `main`, so the promotion would have broken the production docs deploy too.
+  - **After the promotion deploys,** the owner sets the `www` custom hostname's Origin server and SNI to `afc-origin.merqify.com` and changes the Aheed zone's `www` CNAME to it (the CNAME is what moves traffic). The `fallback.merqify.com/*` route stays until `www` is confirmed on the new origin.
+
+- **Each cell has its own job-signals KV namespace (#1491, found while enabling the warm-up)**
+  - **What was wrong.** `afc-staging`/`afc-production` bound the platform `staging`/`production` `JOB_SIGNALS` namespaces (ids copied in #1331). So one cell emptying its contact or notification outbox deleted the other cell's pending marker, leaving those retries until the 03:00 run, and the two cells would have shared the database warm-up schedule and activity marker. Every job still read its own database, so no data crossed cells.
+  - **Fix.** New namespaces `afc-jobs-staging` (`9b5c84f2…`) and `afc-jobs-production` (`21b5000f…`) in the Merqify account. Both `wrangler.toml` files point the AFC environments at them. `tests/job-signals-namespaces.test.ts` fails if two environments share an id or a scheduler differs from its app Worker. `env-setup.md` lists the four namespaces.
+  - **On deploy** each AFC cell starts with an empty marker store. That is harmless: the 03:00 ungated run is the designed backstop, and the warm-up publishes on its next save.
+
 ### Added
+
+- **Database warm-up ping during opening hours and after signed-in activity (#1491)**, spec `specs/2026-11-10-db-warmup-ping/`
+  - **Why.** Neon suspends compute after 5 minutes with no query. On 2026-11-10 the first request after idle took 7.1 s on Aheed staging, against ~0.2 s warm.
+  - **What.** A new `*/4 * * * *` Cron Trigger on every scheduler environment pings `POST /api/jobs/warm-db` (token-guarded, one trivial query on the main database only, never the postcode reference DB). It pings only inside published windows, or within N minutes of signed-in activity. The scheduler decides from KV alone (`db-warmup:schedule`, `db-warmup:last-activity`), so deciding never wakes the database, and **every doubt skips**: the opposite of the other jobs, because a missed ping costs one cold start while a stuck one costs compute all night. Each tick logs `warmup tick ran=… reason=…`.
+  - **Schedule.** `lib/db-warmup/schedule.ts` computes 8 days of Europe/London, DST-correct windows from `DbWarmupConfig` and every vendor's `VendorWeeklyHours` and `VendorHoursOverride` (union across the cell, closed days skipped). It is republished on settings saves, on every opening-hours or override change, and by a new daily job `/api/jobs/refresh-warmup-schedule`.
+  - **Activity.** Every server-side session read goes through `getAuth().api.getSession`, now wrapped (`withWarmupActivity`). A signed-in result records `db-warmup:last-activity` in KV, throttled to one write per 3 minutes and handed to `waitUntil`, with no database write. A ping never counts as activity.
+  - **Admin page** `/staff/platform/db-warmup` (platform admins only). It has an on/off switch (default **off**), mode (opening hours, the default / always / custom window / activity only), lead minutes, the activity toggle and minutes, and compute size and price. It shows the next 7 days of windows, last ping, last activity, "expected to go cold at", and a monthly CU-hour and cost estimate beside always-on. The save is allow-listed and audited (`updatedBy`).
+  - **Migration** `20261110130000_db_warmup_config` (hand-authored per #895, additive): enum `DbWarmupMode` and table `DbWarmupConfig`, a single row per cell with integers for compute (milli-CU) and price (micro-USD).
+  - **Docs.** Platform admin guide section, and `env-setup.md`'s Cron Trigger budget corrected (8 live before, 12 after).
+
+- **Staging only mails the allow-list again; production stays open (#1482, owner decision 2026-11-10)**
+  - **What was wrong.** `EMAIL_RECIPIENT_MODE = "open"` had been set on `[env.staging.vars]` (#1459) and copied to `[env.afc-staging.vars]` (#1478), so both staging Workers could email any address, including real customers copied into staging. `docs/developer-portal/env-setup.md` already said staging should only mail `EMAIL_ALLOWED_RECIPIENTS`.
+  - **Fix.** Both staging envs leave it unset, which `lib/email/policy.ts` treats as allowlist mode. Both production envs keep `"open"`. Both staging Workers already hold an `EMAIL_ALLOWED_RECIPIENTS` secret, so staging still mails the listed test addresses. `tests/staging-email-allowlist.test.ts` pins the split per environment.
+  - **Runbook (v1.2.0).** The dedicated-cell warning and troubleshooting row now name the step that actually moved Aheed staging traffic on 2026-11-10: the client zone's proxied `staging` CNAME must target the cell's origin (`afc-staging-origin.merqify.com`), not the platform's.
+
+- **Aheed staging is served by its own Worker again: a dedicated SaaS origin (#1482, #1331)**
+  - **What was broken.** The Cloudflare for SaaS custom hostname `staging.aheedfoodcentre.co.uk` had `aheed-staging.merqify.com` as its origin: the **platform** staging Worker's custom domain. Since 2026-11-10 the platform Worker answered for the Aheed staging host, with the Merqify footer, the platform database and the platform Google client, so Google sign-in failed with `redirect_uri_mismatch`, even though the AFC Worker's route `staging.aheedfoodcentre.co.uk/*` exists. The onboarding runbook told operators to set exactly that origin.
+  - **Fix (code).** `afc-store-staging` owns `afc-staging-origin.merqify.com` as a custom domain. `scripts/verify-worker-routes.ts` gains `SAAS_ORIGIN_HOSTS` (`fallback.merqify.com`, `afc-staging-origin.merqify.com`, `afc-origin.merqify.com`), which the vendor comparison skips. `tests/worker-routes.test.ts` checks that the route exists, is a custom domain, and is claimed by no other environment.
+  - **Fix (owner, after deploy).** Set the custom hostname's Origin server and SNI to `afc-staging-origin.merqify.com`. The runbook (`docs/platform-admin-guide/cloudflare-saas-onboarding-runbook.md` v1.1.0) now carries a dedicated-cell warning, the order of steps, the per-cell Google client, and a troubleshooting row.
+  - **Also done (2026-11-10, not code).** The `afc-staging` Worker's `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` held the platform client. They were replaced with the Aheed client from `secrets/afc-staging.vars`.
+
+- **Aheed dedicated cell deploys: Cloudflare for SaaS routes (#1331 follow-up, split from PR #1485)**
+  - **What was broken.** `deploy-staging` run 42804393058 failed at "Deploy AFC Dedicated Worker" with `Could not find zone for staging.aheedfoodcentre.co.uk`. The `aheedfoodcentre.co.uk` zone lives in the client's Cloudflare account, so a `custom_domain` route cannot be created from the Merqify account. The script still published, leaving the AFC staging Worker on new code while its scheduler and inbound Worker were skipped.
+  - **Fix.** `afc-staging`/`afc-production` use `zone_name = "merqify.com"` routes (`host/*`), plus `fallback.merqify.com/*` on production: the Cloudflare for SaaS fallback origin. `scripts/verify-worker-routes.ts` compares `host/*` as the bare host and ignores the fallback host. `tests/worker-routes.test.ts` now expects 4 custom domains.
+  - **CSP.** `img-src` adds `https://*.aheedfoodcentre.co.uk`.
+  - **Not included.** `scripts/migrate-aheed-to-dedicated-cell.ts` stays on PR #1485 pending the owner's decision on copying AFC production data into staging.
+
+- **Enquiry tables reach the same shape on every database (#1482 R30a)**
+  - **What was broken.** The original text of `20261109225000_vendor_enquiries` had been applied by hand on 2026-11-09 to AFC staging, AFC production and Merqify production, before that migration was edited in place on 2026-11-10. `prisma migrate deploy` never re-checks an applied migration's checksum, so those three kept the old shape: text `source`/`status`, the reply columns, and no `VendorEnquiryReply`. The new code fails against that shape; all three held 0 rows when checked.
+  - **Fix.** The new hand-authored migration `20261110120000_vendor_enquiries_reshape` is one guarded `DO` block. On the old shape it creates the enums if missing, converts `source`/`status`, creates `VendorEnquiryReply`, copies any recorded reply into it, and drops the three reply columns. On the new shape (dev, Merqify staging) it does nothing.
+  - **Proven.** `scripts/verify-enquiry-reshape.ts` tests it against dev in throwaway schemas: the old shape converts with replies kept, the FK cascades, the status default holds, a second run is a no-op, and the new shape is untouched. `tests/migration-enquiry-reshape.test.ts` guards the file's structure.
+
+- **`deploy-staging` unblocked: the route guard knows about dedicated cells (#1482 R34a, #1331)**
+  - **What was broken.** Every `deploy-staging` run since `e94ebbb5` (#1477, 2026-11-08) failed at "Verify Worker routes", so #1478, #1480 and #1481 never reached the staging Workers. The platform staging database still holds a `VendorDomain` row for `staging.aheedfoodcentre.co.uk`, which the dedicated `afc-staging` Worker now routes. The script's own advice (`--write`) would have moved that custom domain off the dedicated Worker.
+  - **Fix.** `scripts/verify-worker-routes.ts` treats a host routed by another environment in the same `wrangler.toml` as covered, and prints an INFO line naming that environment. A host routed by no environment still fails the deploy. This is covered by `tests/worker-routes.test.ts`, including the real `wrangler.toml` for the staging and production Aheed hosts.
+
+### Added
+
+- **Enquiries inbox, Team & Access provisioning and inbound-email recording (#1482)**, retro-specced at `specs/2026-11-10-pr1481-enquiries-team-access-retro/`
+  - **`/staff/enquiries` (staff and store admins).** Lists the store's 100 newest customer messages from the Contact us form and from inbound store email, with status filters and search. Staff reply by email as the store, and mark messages Resolved or Reopen them. A reply is recorded only if the email was actually sent; `skipped` (staging allow-list) or `failed` shows the reason and records nothing. Replies are append-only, Reply-To is the store address the customer wrote to, and status values are allow-listed.
+  - **Recording.** A successful, non-honeypot contact-form submission creates a `CONTACT_FORM` enquiry; a failure to record never changes what the shopper sees. After forwarding, the inbound-email Worker posts the sender and plain-text body (at most 4,000 characters) to the new token-guarded `POST /api/inbound-email/record`, which caps every field and stores an `INBOUND_EMAIL` enquiry. A non-2xx response is logged without personal data.
+  - **Migration `20261109225000_vendor_enquiries`** (hand-authored per `#895`, purely additive): enums `EnquirySource` and `EnquiryStatus`, tables `VendorEnquiry` and `VendorEnquiryReply`. `scripts/lib/neon-migration-plan.ts` skips both.
+  - **Team & Access.**
+    - Email lookup is case-insensitive.
+    - A platform admin can grant **Platform Admin** (global), with an on-page warning. Changing a platform admin's role on any store changes it everywhere, and the last platform admin can never be demoted, by anyone.
+    - Granting Staff or Store Admin to an email with no account creates the account in the same transaction. Platform Admin is refused for an email with no account.
+    - The role value is allow-listed before it reaches the repository.
+  - **Tests.** `tests/enquiries-service.test.ts`, `tests/contact-service-enquiry.test.ts`, `tests/inbound-email-record-route.test.ts`, `tests/team-assign-role-action.test.ts`, plus new cases in `tests/roles.test.ts` and `tests/inbound-email-worker.test.ts`. The integration harness `scripts/verify-pr1481-integration.ts` runs against dev through both Neon adapters.
+  - **Split out.** The `#1331` follow-up commit (AFC SaaS fallback routes, CSP, data-copy script) moved to PR #1485.
+
+- **Operator guides: Enquiries & Inbox, Team & Access, Telegram order alerts (#1390, #1217, #1482)**
+  - **Staff playbook.** Rewrote `/staff/enquiries` to describe only what the page does: vendor-neutral, no hard-coded store address. The inbound body limit is 4,000 characters, and the limits are spelled out (staging allow-list, Worker routing, attachments, duplicates).
+  - **Store admin guide.** Rewrote `/staff/team` to match the controls: Apply / Revoke Access (Demote), Platform Admin being global and needing an existing account, the exact scope of both last-admin guards, and that the audit log is not shown on the page.
+  - **Platform admin guide.** Added an end-to-end Telegram order-alert setup under Client Setup: one bot per cell, steps, chat-ID formats, boundary scenarios and where to get help.
+  - **Client Setup quick links.** The Order alerts card now lists Telegram quick links (`lib/client-setup/telegram-links.ts`), marking which are safe to share with a client; guarded by `tests/client-setup-telegram-links.test.ts` (official Telegram domains only, never a token URL).
+
+- **SaaS Scaling Architecture KMS Documentation & Delegated Email Option 2 (#104, #1342, #1343)**
+  - **KMS Architecture Guide.** Added `docs/platform-admin-guide/saas-scaling-cost-and-isolation-architecture.md` detailing multi-client unit economics, V8 compute isolation, dedicated database cells (ADR-009), R2 image bucket segregation, and transactional email routing.
+  - **Email Option 2 Configuration.** Configured `afc-staging` and `afc-production` environments in `wrangler.toml` with `EMAIL_FROM = "no-reply@merqify.com"`, routing authenticated outbound transactional emails via the platform's verified domain while directing customer replies to `orders@aheedfoodcentre.co.uk`.
+  - **Dedicated R2 Media Segregation.** Provisioned `afc-images-staging` and `afc-images-production` buckets in Cloudflare R2, ensuring complete image asset partitioning and zero cross-tenant namespace collisions.
+  - **KMS Index Regeneration.** Rebuilt artifact indexes via `npm run kms:build-index` (326 registered artifacts).
+
+- **Post-Merge Documentation, Model Handoff & Roadmap Alignment (#1331, #1476)**
+  - **Roadmap & Handoff Tracking.** Updated `specs/roadmap.md` with change log entries for #1331 and #1476 and updated `docs/model-handoff.md` to v1.168.0 documenting dedicated cell isolation and next target sequencing.
+  - **KMS Regeneration.** Rebuilt KMS index bundle with `npm run kms:build-index` (325 registered artifacts).
+
+- **Aheed Food Centre Dedicated Cell Isolation (#1331)**
+  - **Wrangler Environment Topology.** Added dedicated `afc-staging` and `afc-production` environments to root `wrangler.toml`, `workers/scheduler/wrangler.toml`, and `workers/inbound-email/wrangler.toml` targeting `staging.aheedfoodcentre.co.uk` and `www.aheedfoodcentre.co.uk` with dedicated R2 image buckets (`afc-images-*`) and scheduler gating.
+  - **Lockstep CI Deployment.** Updated `.github/workflows/deploy-staging.yml` and `.github/workflows/deploy-production.yml` to execute sequential database migrations, route verification, and worker deployments for both the platform cell and the dedicated cell in a single workflow run, guaranteeing zero cross-cell schema or code drift.
+  - **Dedicated Cell Database Provisioning.** Added `scripts/bootstrap-dedicated-cell.ts` to safely bootstrap fresh AFC databases with the canonical vendor entity (`a4ed0000-0000-4000-a000-000000000001`), domain mappings, theme catalog, and initial store configuration, while strictly refusing demo users in production (#1332).
+  - **Architecture & Standing Decision.** Codified dual-topology cell architecture in ADR-009 (`specs/decisions/ADR-009-dedicated-client-cells.md`) and updated `specs/architecture.md` and `docs/developer-portal/env-setup.md`.
+
+- **Cloudflare for SaaS Client Onboarding Runbook (#1476)**
+  - **Comprehensive Operational Runbook.** Added `docs/platform-admin-guide/cloudflare-saas-onboarding-runbook.md` establishing the canonical end-to-end standard operating procedure (SOP) for SaaS client onboarding from Cloudflare account creation, Free website container setup, zone delegation, fallback origin worker routing, custom hostnames, Neon database tenant mapping (`VendorDomain`), CDN asset WAF cross-domain permissions, and multi-tier verification probes.
+  - **KMS Regeneration & Indexing.** Updated `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts` via `npm run kms:build-index` (323 registered artifacts) and verified clean static site compilation in `kms/site-internal`.
+
+- **Post-Ship Documentation & Roadmap Audit Reconciliation**
+  - **KMS Plan Indexing.** Added YAML front-matter to `specs/2026-11-08-platform-documentation-update/plan.md` and regenerated `ARTIFACT_INDEX.md` and `app/(admin)/staff/runbook/docs.ts` via `npm run kms:build-index` (322 total artifacts).
+  - **Build Notes Contract Conformance.** Standardized `specs/2026-11-08-onboarding-menus-and-store-admin-readiness/build-notes.md` with the four required template sections.
+  - **Roadmap & Promotion Tracking.** Updated `specs/roadmap.md` with closure entries for recent shipped slices (`specs/2026-11-06-slot-booking-cutoff/`, `specs/2026-11-08-platform-documentation-update/`, `specs/2026-11-08-app-improvements-vat-quickview-onboarding/`, `specs/2026-11-08-onboarding-menus-and-store-admin-readiness/`, and prior slices) and promotion PR citations (PR #1423, PR #1439, PR #1443, PR #1465, PR #1467, PR #1469, PR #1472, PR #1474). `npm run sdd:audit` exits 0 with 0 documentation gaps.
 
 - **Staff Onboarding Menu Coverage Expansion & Store Admin Readiness Checklist Access**
   - **Store Admin Launch Readiness Checklist Access.** Updated `app/(admin)/staff/onboarding/page.tsx` and `OnboardingReadinessDashboard.tsx` to grant Store Administrators (`ADMIN` vendor role) access to the Launch Readiness Checklist, completion score, requirement breakdown, and the 8 category audit cards alongside Platform Admin, while keeping internal metrics hidden from standard store staff (`STAFF`).

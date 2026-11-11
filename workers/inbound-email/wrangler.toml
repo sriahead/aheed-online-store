@@ -30,6 +30,22 @@ name = "aheed-inbound-email"
 [env.production.vars]
 APP_BASE_URL = "https://aheed.merqify.com"
 
+# ---- Aheed Food Centre Dedicated Cell (Staging) -------------------------
+# #1331 — Dedicated inbound email worker for Aheed Food Centre
+[env.afc-staging]
+name = "afc-inbound-email-staging"
+
+[env.afc-staging.vars]
+APP_BASE_URL = "https://staging.aheedfoodcentre.co.uk"
+
+# ---- Aheed Food Centre Dedicated Cell (Production) ----------------------
+# #1331 — Dedicated inbound email worker for Aheed Food Centre
+[env.afc-production]
+name = "afc-inbound-email"
+
+[env.afc-production.vars]
+APP_BASE_URL = "https://www.aheedfoodcentre.co.uk"
+
 # NOTE: two values are NOT set here, per environment, with `wrangler secret put … --config
 # workers/inbound-email/wrangler.toml --env <env>`:
 #   INBOUND_EMAIL_TOKEN       — the SAME value as on the application Worker (configure-env pushes

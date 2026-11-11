@@ -59,6 +59,13 @@ export const PLATFORM_NAV_ITEMS: readonly PlatformNavItem[] = [
     icon: "gauge",
   },
   {
+    // #1491 — keep this cell's database warm during opening hours / after signed-in activity.
+    href: "/staff/platform/db-warmup",
+    label: "Database Warm-up",
+    description: "Keep the database awake during opening hours, with a monthly cost estimate.",
+    icon: "clock",
+  },
+  {
     href: "/staff/platform/costs",
     label: "Costs, Pricing & Business Model",
     description:

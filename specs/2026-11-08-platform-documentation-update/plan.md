@@ -1,3 +1,16 @@
+---
+id: 2026-11-08-platform-documentation-update-plan
+title: "Platform documentation review and comprehensive update (plan)"
+audience: [dev]
+type: spec
+status: approved
+version: "1.0.0"
+updated: 2026-11-08
+visibility: internal
+summary: Platform documentation review and comprehensive update across storefront help, staff onboarding, runbooks, and KMS documentation.
+tags: [documentation, onboarding, help, kms]
+---
+
 # Platform Documentation Review and Comprehensive Update (Plan)
 
 **Issue:** #1468  

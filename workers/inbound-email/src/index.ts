@@ -31,6 +31,8 @@ export interface Env {
 /** The part of Cloudflare's ForwardableEmailMessage this Worker uses, so tests can fake it. */
 export interface InboundMessage {
   readonly to: string;
+  readonly from?: string;
+  readonly raw?: ReadableStream<Uint8Array>;
   readonly headers: Headers;
   forward(rcptTo: string, headers?: Headers): Promise<unknown>;
   setReject(reason: string): void;
@@ -46,6 +48,7 @@ interface Resolution {
 
 export const RESOLVE_PATH = "/api/inbound-email/resolve";
 export const ALERT_PATH = "/api/inbound-email/alert";
+export const RECORD_PATH = "/api/inbound-email/record";
 
 async function forwardToFallback(message: InboundMessage, env: Env, why: string): Promise<void> {
   console.error(`inbound-email resolve failed (${why}); forwarding to the fallback mailbox`);
@@ -90,7 +93,65 @@ export async function handleInboundEmail(message: InboundMessage, env: Env): Pro
       `orderRelated=${resolution.orderRelated} orderNumber=${resolution.orderNumber ?? "none"}`,
   );
 
+  if (message.raw) {
+    await recordInboundEnquiry(message, env);
+  }
+
   if (resolution.orderRelated) await requestOrderAlert(message, env);
+}
+
+export function parseFromEmailAddress(header: string | null, envelopeFrom?: string): string {
+  if (header) {
+    const match = /<([^>]+@[^>]+)>/.exec(header);
+    if (match) return match[1].trim();
+    if (header.includes("@") && !header.includes(" ")) return header.trim();
+  }
+  return envelopeFrom?.trim() || "unknown@sender";
+}
+
+export function extractBodyFromRawEmail(rawText: string): string {
+  const splitIdx = rawText.search(/\r?\n\r?\n/);
+  if (splitIdx === -1) return "";
+  const bodyPart = rawText.slice(splitIdx).replace(/^\r?\n\r?\n/, "");
+  const plainMatch =
+    /Content-Type:\s*text\/plain[^\r\n]*(?:\r?\n[^\r\n]+)*\r?\n\r?\n([\s\S]*?)(?:\r?\n--|\s*$)/i.exec(
+      rawText,
+    );
+  const candidate = plainMatch ? plainMatch[1] : bodyPart;
+  return candidate
+    .replace(/=\r?\n/g, "")
+    .replace(/=([0-9A-Fa-f]{2})/g, (_m, hex: string) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/<[^>]+>/g, " ")
+    .trim()
+    .slice(0, 4000);
+}
+
+async function recordInboundEnquiry(message: InboundMessage, env: Env): Promise<void> {
+  try {
+    let rawText = "";
+    if (message.raw) {
+      rawText = await new Response(message.raw).text();
+    }
+    const fromHeader = message.headers.get("from");
+    const fromEmail = parseFromEmailAddress(fromHeader, message.from);
+    const fromName = parseFromDisplayName(fromHeader);
+    const bodyText = extractBodyFromRawEmail(rawText) || "(No message body)";
+    const response = await fetch(new URL(RECORD_PATH, env.APP_BASE_URL), {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-inbound-token": env.INBOUND_EMAIL_TOKEN },
+      body: JSON.stringify({
+        to: message.to,
+        fromEmail,
+        fromName,
+        subject: message.headers.get("subject") ?? "(No subject)",
+        message: bodyText,
+      }),
+    });
+    // #1482 R26: fetch resolves on a 4xx/5xx, so a refused record is only visible if logged here.
+    if (!response.ok) console.error(`inbound-email record call failed (status ${response.status})`);
+  } catch {
+    console.error("inbound-email record call failed (network error)");
+  }
 }
 
 /**

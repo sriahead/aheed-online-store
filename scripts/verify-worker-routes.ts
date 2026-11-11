@@ -43,6 +43,17 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 const WRANGLER_CONFIG = "wrangler.toml";
 
 /**
+ * Cloudflare for SaaS ORIGIN hosts (#1331, #1482): routes that exist so a custom hostname's traffic
+ * reaches the right Worker, not vendor storefronts. They never have a VendorDomain row, so they are
+ * excluded from the vendor comparison instead of warning as "stale" on every deploy.
+ */
+export const SAAS_ORIGIN_HOSTS: ReadonlySet<string> = new Set([
+  "fallback.merqify.com",
+  "afc-staging-origin.merqify.com",
+  "afc-origin.merqify.com",
+]);
+
+/**
  * Every `pattern` declared by a `[[env.<envName>.routes]]` table.
  *
  * Deliberately narrow: it keys on the exact table header, so `[env.staging.vars]` and
@@ -62,10 +73,50 @@ export function parseRoutePatterns(toml: string, envName: string): string[] {
     }
     if (!inRoutesTable) continue;
     const match = /^pattern\s*=\s*["']([^"']+)["']/.exec(line);
-    if (match) patterns.push(match[1].toLowerCase());
+    if (match) {
+      // #1331: a dedicated cell reached through Cloudflare for SaaS uses `zone_name` routes
+      // (`host/*`), not custom domains — compare them as the bare host. SaaS origin hosts are not
+      // vendor hosts (see SAAS_ORIGIN_HOSTS).
+      const normalized = match[1].toLowerCase().replace(/\/\*$/, "");
+      if (!SAAS_ORIGIN_HOSTS.has(normalized)) patterns.push(normalized);
+    }
   }
 
   return patterns;
+}
+
+/**
+ * Every route host declared by an environment OTHER than `envName`, mapped to that environment
+ * (#1482 R34a). A trailing `/*` is dropped so a zone route compares equal to its host.
+ *
+ * WHY. A dedicated cell (ADR-009, #1331) moves a vendor's host to its own Worker, but the platform
+ * database can still hold that vendor's `VendorDomain` row. The host is then correctly ABSENT from
+ * the platform env's routes and present under `afc-<env>`. Without this, the platform deploy failed
+ * on `staging.aheedfoodcentre.co.uk` from #1477 onwards, and the script's own advice (`--write`)
+ * would have moved the custom domain off the dedicated Worker. A custom domain belongs to the
+ * Worker that declares it, so deploying `envName` without a host another env declares cannot tear
+ * that domain down. A host declared NOWHERE is still a failure.
+ */
+export function parseOtherEnvRoutes(toml: string, envName: string): Map<string, string> {
+  const routed = new Map<string, string>();
+  let currentEnv: string | null = null;
+
+  for (const raw of toml.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (line.startsWith("[")) {
+      const header = /^\[\[env\.([A-Za-z0-9_-]+)\.routes\]\]$/.exec(line);
+      currentEnv = header && header[1] !== envName ? header[1] : null;
+      continue;
+    }
+    if (!currentEnv) continue;
+    const match = /^pattern\s*=\s*["']([^"']+)["']/.exec(line);
+    if (match) {
+      const host = match[1].toLowerCase().replace(/\/\*$/, "");
+      if (!routed.has(host)) routed.set(host, currentEnv);
+    }
+  }
+
+  return routed;
 }
 
 /**
@@ -93,14 +144,19 @@ export function isRoutableHost(host: string): boolean {
 export function compareRoutes(
   hosts: string[],
   patterns: string[],
-): { missing: string[]; stale: string[] } {
+  routedElsewhere: ReadonlyMap<string, string> = new Map(),
+): { missing: string[]; stale: string[]; elsewhere: { host: string; env: string }[] } {
   const routable = hosts.filter(isRoutableHost).map((h) => h.toLowerCase());
   const declared = new Set(patterns.map((p) => p.toLowerCase()));
   const live = new Set(routable);
+  const unrouted = [...new Set(routable.filter((h) => !declared.has(h)))].sort();
 
   return {
-    missing: [...new Set(routable.filter((h) => !declared.has(h)))].sort(),
+    missing: unrouted.filter((h) => !routedElsewhere.has(h)),
     stale: [...declared].filter((p) => !live.has(p)).sort(),
+    elsewhere: unrouted
+      .filter((h) => routedElsewhere.has(h))
+      .map((host) => ({ host, env: routedElsewhere.get(host) as string })),
   };
 }
 
@@ -120,7 +176,7 @@ async function main() {
 
   if (!envName || envName.startsWith("--")) {
     console.error(
-      "usage: npx tsx scripts/verify-worker-routes.ts --env <staging|production> [--write]\n" +
+      "usage: npx tsx scripts/verify-worker-routes.ts --env <staging|production|afc-staging|afc-production> [--write]\n" +
         "  --write  print the wrangler.toml route block for this environment instead of comparing",
     );
     process.exit(1);
@@ -147,8 +203,13 @@ async function main() {
     return;
   }
 
-  const patterns = parseRoutePatterns(readFileSync(WRANGLER_CONFIG, "utf8"), envName);
-  const { missing, stale } = compareRoutes(hosts, patterns);
+  const toml = readFileSync(WRANGLER_CONFIG, "utf8");
+  const patterns = parseRoutePatterns(toml, envName);
+  const { missing, stale, elsewhere } = compareRoutes(
+    hosts,
+    patterns,
+    parseOtherEnvRoutes(toml, envName),
+  );
   const routableCount = hosts.filter(isRoutableHost).length;
 
   console.log(
@@ -160,6 +221,13 @@ async function main() {
     console.log(
       `  WARNING  ${pattern} is routed but has no VendorDomain row — fine if the vendor is not ` +
         "created yet, otherwise stale",
+    );
+  }
+
+  for (const { host, env } of elsewhere) {
+    console.log(
+      `  INFO  ${host} has a VendorDomain row here but is routed by env ${env} (another cell's ` +
+        "Worker); not this deploy's to declare",
     );
   }
 

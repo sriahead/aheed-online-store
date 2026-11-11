@@ -613,6 +613,14 @@ export const STAFF: RoleCatalogue = {
           status: "live",
         },
         {
+          name: "Enquiries & Inbox",
+          what: "Lists customer messages from the Contact us form and the store's email addresses, and sends email replies as the store.",
+          value: "Every customer message answered once, from the store's own address.",
+          demo: "Submit the Contact us form, then reply to it from the inbox.",
+          route: "/staff/enquiries",
+          status: "live",
+        },
+        {
           name: "Search dictionary",
           what: "Maps the words shoppers use to the store's product names.",
           value: "Searches that used to find nothing now sell.",
@@ -699,6 +707,14 @@ export const PLATFORM: RoleCatalogue = {
           value: "Confirms the platform is up before a demo.",
           demo: "Open it and read the database check.",
           route: "/staff/platform/health",
+          status: "live",
+        },
+        {
+          name: "Database warm-up",
+          what: "Keeps the cell's database awake during opening hours and after signed-in activity, with a monthly cost estimate.",
+          value: "Shoppers don't wait several seconds for a sleeping database on their first page.",
+          demo: "Switch it on and watch Last ping update during opening hours.",
+          route: "/staff/platform/db-warmup",
           status: "live",
         },
         {

@@ -1,5 +1,5 @@
 {
-  "total": 17,
+  "total": 16,
   "directories": {
     ".": 5,
     ".github": 2,
@@ -9,7 +9,6 @@
     "kms/site-internal": 3,
     "prisma/manifests": 1,
     "specs/2026-08-19-p7-closeout": 1,
-    "specs/2026-09-17-claude-md-guardrail-refactor": 1,
-    "specs/2026-11-08-platform-documentation-update": 1
+    "specs/2026-09-17-claude-md-guardrail-refactor": 1
   }
 }

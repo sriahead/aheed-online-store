@@ -33,11 +33,19 @@
 
 import {
   CONTACT_OUTBOX_PENDING_KEY,
+  DB_WARMUP_LAST_ACTIVITY_KEY,
+  DB_WARMUP_SCHEDULE_KEY,
   ERROR_EVENTS_LAST_AT_KEY,
   NOTIFICATION_OUTBOX_PENDING_KEY,
   PAYMENT_SWEEP_DUE_AT_KEY,
 } from "../../../lib/job-signal-keys";
-import { ALL_JOB_PATHS, selectJobs, type SignalRead } from "./select-jobs";
+import {
+  ALL_JOB_PATHS,
+  WARMUP_CRON,
+  selectJobs,
+  selectWarmupJobs,
+  type SignalRead,
+} from "./select-jobs";
 
 interface Env {
   /** Origin of the application Worker, e.g. `https://staging.aheedfoodcentre.nocaped.com`. */
@@ -58,7 +66,7 @@ async function readSignal(env: Env, key: string): Promise<SignalRead> {
     return { ok: true, value: await env.JOB_SIGNALS.get(key) };
   } catch (error) {
     console.error(
-      `job-signal read of ${key} failed; running its job: ${error instanceof Error ? error.message : String(error)}`,
+      `job-signal read of ${key} failed (15-minute jobs run anyway; the warm-up skips): ${error instanceof Error ? error.message : String(error)}`,
     );
     return { ok: false };
   }
@@ -99,6 +107,17 @@ async function invoke(env: Env, path: string): Promise<void> {
 
 const scheduler = {
   async scheduled(controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
+    // #1491 — the warm-up tick reads only its two keys and runs only the ping. Its decision fails
+    // toward SKIPPING (see selectWarmupJobs); the readSignal log line still says what went wrong.
+    if (controller.cron === WARMUP_CRON) {
+      const schedule = await readSignal(env, DB_WARMUP_SCHEDULE_KEY);
+      const lastActivity = await readSignal(env, DB_WARMUP_LAST_ACTIVITY_KEY);
+      const { jobs, reason } = selectWarmupJobs({ now: new Date(), schedule, lastActivity });
+      console.log(`warmup tick ran=${listOrNone(jobs)} reason=${reason}`);
+      for (const path of jobs) await invoke(env, path);
+      return;
+    }
+
     // Read one after the other, each in its own try: a throwing first read must
     // not cost the second its answer.
     const paymentDueAt = await readSignal(env, PAYMENT_SWEEP_DUE_AT_KEY);

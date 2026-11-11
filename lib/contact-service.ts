@@ -12,12 +12,13 @@ import {
   type ContactOutboxRow,
 } from "@/lib/repositories/contact";
 import { listInboundAddresses } from "@/lib/repositories/inbound-address";
+import { createVendorEnquiry } from "@/lib/repositories/enquiries";
 import { listAllVendorIds } from "@/lib/repositories/vendor";
 import { findOrderForUser, listOrdersForUser } from "@/lib/repositories/orders";
 import { fetchVendorProfile } from "@/lib/vendor-service";
 import { processContactSubmission } from "@/lib/contact/submit";
 import { sendOrderAlertForVendor } from "@/lib/order-alert-service";
-import type { ContactFormState } from "@/features/contact/validate-contact";
+import { parseContactFields, type ContactFormState } from "@/features/contact/validate-contact";
 
 /**
  * #1409 — the request-scoped half of the storefront contact form, plus the outbox retry job.
@@ -43,7 +44,7 @@ export async function submitContactForVendor(input: {
   const prisma = getPrisma();
   const { vendorId } = input;
   const profile = await fetchVendorProfile(vendorId);
-  return processContactSubmission(input.fields, {
+  const state = await processContactSubmission(input.fields, {
     vendorId,
     storeName: profile.name,
     userId: input.userId,
@@ -61,6 +62,28 @@ export async function submitContactForVendor(input: {
     },
     now: () => new Date(),
   });
+
+  if (state.status === "success" && (input.fields.website ?? "") === "") {
+    const parsed = parseContactFields(input.fields);
+    if (parsed.ok) {
+      try {
+        await createVendorEnquiry(prisma, vendorId, {
+          source: "CONTACT_FORM",
+          type: parsed.value.type,
+          senderName: parsed.value.name,
+          senderEmail: parsed.value.email,
+          senderPhone: parsed.value.phone || null,
+          orderNumber: parsed.value.orderNumber || null,
+          subject: parsed.value.subject,
+          message: parsed.value.message,
+        });
+      } catch (err) {
+        console.error(`contact form: failed to record enquiry for vendor ${vendorId}`, err);
+      }
+    }
+  }
+
+  return state;
 }
 
 export const CONTACT_OUTBOX_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
