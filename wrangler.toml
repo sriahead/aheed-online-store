@@ -116,6 +116,17 @@ custom_domain = true
 pattern = "srimart.merqify.com"
 custom_domain = true
 
+# #1482 phase B — the Cloudflare for SaaS FALLBACK ORIGIN: every custom hostname that names no origin
+# of its own (merqify.com → SSL/TLS → Custom Hostnames, Origin server left as default) reaches this
+# Worker. It belongs here because this Worker holds several vendors: an unmatched host resolves to no
+# vendor (lib/tenant.ts) and is sent to /coming-soon, so the fallback can never show one client's
+# store under another client's hostname. Never route it to a single-vendor cell (afc-*), where every
+# unmatched host resolves to that cell's one vendor — tests/worker-routes.test.ts enforces both.
+# Not a vendor host: scripts/verify-worker-routes.ts skips it (SAAS_ORIGIN_HOSTS).
+[[env.production.routes]]
+pattern = "fallback.merqify.com/*"
+zone_name = "merqify.com"
+
 [[env.production.r2_buckets]]
 binding = "IMAGES"
 bucket_name = "shoplocal-images-production"
@@ -211,7 +222,7 @@ zone_name = "merqify.com"
 # origin serves every custom hostname that names no origin of its own, and this cell holds exactly one
 # vendor, so lib/tenant.ts resolves ANY unmatched host to Aheed: another client's hostname on the
 # fallback would have shown Aheed's store. The fallback belongs to the multi-vendor platform Worker,
-# where an unmatched host resolves to no vendor and gets /coming-soon.
+# where an unmatched host resolves to no vendor and gets /coming-soon ([env.production], phase B).
 [[env.afc-production.routes]]
 pattern = "afc-origin.merqify.com"
 custom_domain = true
