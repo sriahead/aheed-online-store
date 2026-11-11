@@ -51,6 +51,13 @@ every branch merges.
 
 ### Added
 
+- **Switch on Aheed's offer products, their departments, bundles and banners (#1519, part of go-live S1e)**
+  - Owner: "activate the products for which there are offers, otherwise they are not visible". `scripts/catalogue-activate-offers.ts` switches on every product with an active multi-buy or an Offer Type value, unless it is restricted or priced at £0.
+  - It changes stock mode UNKNOWN ("not for sale") to UNTRACKED, so these products can be bought without a stock count. Stock the owner already tracks is left alone: Medium Chicken stays TRACKED at 60.
+  - It switches on the products' departments and parents, every bundle made only of these products, and the promotions linked to those bundles or departments. Nothing else is activated.
+  - **Staging, 2026-11-11:** 14 products, 5 departments (Chicken, Meat & Poultry, Frozen Meat, Frozen Fish, Fish & Seafood), 10 bundles, 7 promotions. `/bundles/four-medium-chickens` shows £18.00, normally £20.00, Save £2.00, with "Buy this offer". The Chicken department lists all 7 chicken products, and the homepage banners link to the bundles. A re-run changes nothing.
+  - Dry run by default; `--confirm-host` to apply; `--production` for a production secrets file. Tests: `tests/catalogue-activate-offers.test.ts`.
+
 - **One-click "Buy This Offer": tier-priced bundles, a page per bundle, banners that link to it (#1517; spec `specs/2026-11-11-offer-bundles/`)**
   - **What was wrong.** The cart and checkout already price multi-buys (`lib/tier-pricing.ts`), but a bundle's displayed total was the sum of normal prices, so a "4 for £18" bundle would show £20. A promotion linked to a bundle pointed at `/categories?bundle=<slug>`, which no page reads.
   - **Pricing.** `lib/bundle-pricing.ts` prices each line with the same `tieredLineTotalPence` the cart uses, and adds `bundleRegularPence` and `bundleSavingPence`. The bundle repository and the promotion query select each product's price tier.
