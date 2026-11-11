@@ -80,6 +80,33 @@ R11. Blocked on the source of truth: the client's export has no barcodes. The ow
      candidate list for review, with attribution kept) and the alternatives in `#1515`. Until then
      S1d delivers nothing that writes images.
 
+## S1b addendum — department tree and price list (owner, 2026-11-11)
+
+The owner asked for the ~37 top-level categories to become a few departments with sub-departments,
+named consistently, and gave a price list (chicken, fresh meat, frozen meat, fish, prawns, seafood,
+vegetables, fruit) that is the **main data**: it overrides an existing product of the same name.
+
+R12. `prisma/manifests/aheed-taxonomy.json` declares 12 shopper departments plus two hidden groups
+     (`Not Sold Online` for the restricted till departments, `Needs Review` for unsorted lines). Every
+     name is Title Case (`isTitleCase`, tested against the file).
+R13. `scripts/catalogue-taxonomy.ts` reuses an existing category by slug (rename, re-parent, re-order,
+     keeping its images), creates a missing one inactive, moves products via `absorb`, and archives
+     every category the tree does not name under an inactive `Archived` node. It refuses to archive a
+     category that still holds products. Dry run default; `--confirm-host`; `--production`.
+R14. `scripts/catalogue-load-price-list.ts` loads a price list kept outside the repository. A list item
+     overrides an existing product whose name has the same word set (or one of its aliases);
+     identically named till duplicates override the first and are reported; different names that
+     both match are skipped as ambiguous. Override writes name, price and price label, department,
+     brand and fresh/halal flags, keeping PLU, active flag and restriction.
+R15. New products are created hidden with a default stock row. An item without a price is created at
+     £0 and reported as "price needed"; S1e never activates a £0 line.
+R16. "N for £X" offers become the product's `ProductPriceTier`; box offers are their own products;
+     brands are upserted by slug; offer banners are `Promotion` rows linked to their department,
+     created **inactive**.
+R17. Verified on staging: the storefront shows the new department names; the loader overrides 13 and
+     creates 134, with 7 multi-buy tiers, 7 box products and 4 inactive promotions; re-runs of both
+     scripts change nothing.
+
 ## Out of scope
 
 S1a (sample products, the two £0 lines), S1e (activation), stock tracking policy, age verification

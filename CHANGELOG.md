@@ -62,6 +62,15 @@ every branch merges.
     - `apply` moves products to the reviewed targets and creates missing sub-departments **inactive**. It writes `categoryId` only.
     - **Applied on staging, 2026-11-11:** 4,651 products moved and 8 sub-departments created. `Groceries` went from 3,229 to 59 and `DEFAULT` from 1,060 to 522, the lines no rule recognised, left for review. A re-run moves nothing.
   - Both scripts do a dry run by default, need `--confirm-host` to apply, and need `--production` for a production secrets file. Production waits for the owner's approval.
+  - **Department tree: `scripts/catalogue-taxonomy.ts`** with `prisma/manifests/aheed-taxonomy.json`.
+    - About 37 top-level categories become **12 shopper departments** with sub-departments, all in Title Case: Meat & Poultry, Fish & Seafood, Fruit & Vegetables, Food Cupboard, Drinks, Snacks & Sweets, Bakery, Dairy & Chilled, Frozen Food, Household, Health & Beauty, Baby & Pet.
+    - Two hidden groups: Not Sold Online (tobacco, alcohol, phone cards, newspapers, lottery, stamps) and Needs Review.
+    - Existing categories are reused by slug, so their images are kept. 16 obsolete categories are archived, and archiving refuses any category still holding products.
+    - **Staging:** 66 nodes set, 258 products absorbed.
+  - **Owner's price list: `scripts/catalogue-load-price-list.ts`.** The list itself stays outside the repository.
+    - It is the main data: same-name products are overridden (word-set match, plus aliases).
+    - Multi-buy offers become price tiers. Box offers become their own products. Diamond and Pluvera are brands. Offer banners are created inactive. Unpriced fruit and veg are created hidden at £0 and listed as "price needed".
+    - **Staging:** 13 overridden, 134 created, 7 multi-buy tiers, 7 box products, 4 inactive promotions. One duplicate till row is reported ("DIAMOND CUT CRAB"). A re-run matches all 147 items and creates nothing.
   - **S1d images** (#1515) is blocked: the client's export has no barcodes. No AI images.
   - **Tests.** `tests/catalogue-restrict-by-policy.test.ts` and `tests/catalogue-department-map.test.ts`, 40 tests. The second runs against the real rules file.
 
