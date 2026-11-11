@@ -51,6 +51,18 @@ every branch merges.
 
 ### Added
 
+- **Scripts to clear test orders from a cell, and to turn a production copy into staging (#1512, part of #1337)**
+  - **`scripts/delete-cell-orders.ts`** deletes every order in one cell database. The owner's rule (2026-11-11): Aheed production holds no orders before go-live.
+    - It has three modes: dry run (default; lists order number, date, status, total and Stripe mode, nothing personal), `--rehearse` (runs the whole delete transaction, then rolls it back), and `--apply`, which needs `--confirm-host`.
+    - It refuses any Stripe **live** payment.
+    - In one transaction it also deletes loyalty accounts left empty, gives back the redemptions those orders used on discount codes, and deletes guest addresses that only those orders used.
+    - Rehearsed on AFC staging: 2 orders deleted inside the transaction, rolled back, staging unchanged.
+  - **`scripts/cell-staging-after-refresh.ts`** runs after Aheed staging's database is refreshed from production (a Neon branch of the production project, "Reset from parent"). It rewrites production's host and addresses to the staging form: `VendorDomain` `www.` → `staging.`, and the sender and inbound addresses `@<domain>` → `@staging.<domain>`.
+    - Without it, the staging deploy's route check would fail and staging emails would link to production.
+    - It is idempotent, has a dry run by default, and refuses the production database.
+  - **Docs.** `env-setup.md` §4 sets out the order: backup branch, delete orders, create the staging branch, repoint secrets, run the fix-up, verify; and how to refresh before each import rehearsal.
+  - **Tests.** `tests/delete-cell-orders.test.ts` and `tests/cell-staging-after-refresh.test.ts`, 7 tests.
+
 - **Read-only Aheed data inventory script (#1504, part of #1337)**
   - `npx tsx scripts/aheed-data-inventory.ts <secrets file> <URL key> [--images]` prints per-vendor **counts only**, so the output can go into an issue. It covers products (active), categories, bundles, product, bundle and category images, staff memberships (demo flagged), orders by status, signed-in and guest customers, and payments by Stripe mode and status. The sender address is reported by domain only, and nothing is written. `--images` sends a HEAD request for every image key to the file's `CDN_BASE_URL`.
   - Purpose: prove Aheed's catalogue and images are complete in its own cell, and show whether any real customer or order sits on ShopLocal before go-live.

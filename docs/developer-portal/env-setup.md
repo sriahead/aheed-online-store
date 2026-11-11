@@ -1778,3 +1778,51 @@ env DIRECT_URL="<afc-production-direct-url>" npx tsx scripts/bootstrap-dedicated
 Admin privileges are granted via `scripts/grant-role.ts`. Demo accounts are never created in production (#1332).
 
 
+### 4. Remove test orders, and refresh staging from production (#1512)
+
+Before go-live, Aheed production holds **no orders**, and every product stays inactive until launch
+(owner decision, 2026-11-11). Aheed staging is a **copy of production**, so a stock import is rehearsed
+on staging first, then repeated on production.
+
+**Remove every order from a cell database.** The owner runs this, because production database commands
+go through the owner. Back up first: Neon console → `Aheed Food Centre` → Branches → **Create branch**
+from `main`.
+
+```bash
+npx tsx scripts/delete-cell-orders.ts secrets/afc-production.vars AFC_DIRECT_URL              # dry run
+npx tsx scripts/delete-cell-orders.ts secrets/afc-production.vars AFC_DIRECT_URL --rehearse   # delete, then roll back
+npx tsx scripts/delete-cell-orders.ts secrets/afc-production.vars AFC_DIRECT_URL --apply --confirm-host <db host>
+```
+
+The dry run lists orders by number, date, status, total and Stripe mode, and nothing personal. The
+script refuses any order with a Stripe **live** payment. Deleting an order cascades to its items,
+payment, status events, loyalty ledger entries, discount redemptions, reconciliation and
+binding-refusal rows. In the same transaction it also:
+- deletes loyalty accounts left with no ledger entries;
+- gives back the redemptions those orders used on discount codes;
+- deletes guest addresses that only those orders used.
+
+**Staging as a copy of production (a Neon branch).** Aheed staging's database is a **branch of the
+production project**, so it starts as an exact copy and can be reset to production at any time:
+
+1. Neon console → `Aheed Food Centre` → Branches → **Create branch** `staging` from `main`. Do this
+   after the orders are removed, so staging starts clean too.
+2. Point the staging cell at the branch:
+   - Worker secret `DATABASE_URL` on `afc-store-staging`: the branch's **pooled** string.
+   - GitHub `staging` environment secret `AFC_DIRECT_URL`: the branch's **direct** string.
+   - Local `secrets/afc-staging.vars`: `AFC_DATABASE_URL` and `AFC_DIRECT_URL`.
+3. Put back the staging-only rows (store host, sender address, inbound addresses):
+   ```bash
+   npx tsx scripts/cell-staging-after-refresh.ts secrets/afc-staging.vars AFC_DIRECT_URL --domain aheedfoodcentre.co.uk
+   npx tsx scripts/cell-staging-after-refresh.ts secrets/afc-staging.vars AFC_DIRECT_URL --domain aheedfoodcentre.co.uk --apply --confirm-host <branch host>
+   ```
+   This step is required. The staging deploy's route check (#1198) fails while the database still names
+   `www.aheedfoodcentre.co.uk`, and staging emails would link to production. The script refuses the
+   production database.
+4. Check that `https://staging.aheedfoodcentre.co.uk/api/health` reports the branch, and that the
+   inventory (`scripts/aheed-data-inventory.ts`) shows the same counts as production.
+
+**Refresh later**, before an import rehearsal: Neon → the `staging` branch → **Reset from parent**, then
+step 3 again. A reset throws away everything written on staging since the last refresh; that is the point.
+The old staging project (`ep-shiny-thunder`) stays untouched as a fallback until the branch is proven,
+then it can be deleted.
