@@ -182,9 +182,9 @@ zone_name = "merqify.com"
 pattern = "afc-staging-origin.merqify.com"
 custom_domain = true
 
-[[env.afc-staging.r2_buckets]]
-binding = "IMAGES"
-bucket_name = "afc-images-staging"
+# #1503 — no R2 binding for this cell. The app writes images through the S3 API (lib/storage, S3_* secrets)
+# to the cell's bucket in the CLIENT's own Cloudflare account, served from images-staging.aheedfoodcentre.co.uk.
+# The IMAGES binding that stood here named a same-named, EMPTY bucket in the Merqify account; no code read it.
 
 # #1491 — the AFC cell's OWN namespace (afc-jobs-staging). It had reused the platform staging id, so the
 # two cells overwrote each other's job markers and warm-up schedule. Same id in both wrangler.toml files.
@@ -227,9 +227,8 @@ zone_name = "merqify.com"
 pattern = "afc-origin.merqify.com"
 custom_domain = true
 
-[[env.afc-production.r2_buckets]]
-binding = "IMAGES"
-bucket_name = "afc-images-production"
+# #1503 — no R2 binding for this cell; see afc-staging above. Images live in afc-images-production in the
+# CLIENT's own Cloudflare account, written through S3_* and served from images.aheedfoodcentre.co.uk.
 
 # #1491 — the AFC cell's OWN namespace (afc-jobs-production); see afc-staging above.
 [[env.afc-production.kv_namespaces]]

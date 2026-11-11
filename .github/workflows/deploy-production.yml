@@ -20,6 +20,13 @@ jobs:
   deploy:
     needs: quality
     runs-on: ubuntu-latest
+    # #1509 — runs for the same Worker set QUEUE rather than overlap. Two merges a minute apart once ran
+    # two deploys of one Worker at the same moment; the second's `wrangler secret put` failed because the
+    # first had just uploaded a version. Not cancelled: an interrupted migrate or deploy is worse than
+    # waiting. GitHub keeps one pending run per group, so a burst of merges still ends on the newest commit.
+    concurrency:
+      group: deploy-production-platform
+      cancel-in-progress: false
     # NOTE: no approval gate is enforced on this environment. GitHub's reviewer-protection
     # feature needs a paid plan for private repos and was rejected with a 422 on this repo's
     # current plan, so `environment: production` here selects the production secret set and
@@ -111,7 +118,36 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      # #1331 — Dedicated AFC Cell (Production). Deployed in lockstep with the platform cell.
+  # #1505 — the dedicated AFC cell deploys in its OWN job, in parallel with the platform's `deploy`.
+  # Its steps used to run at the end of `deploy`, so any platform failure (build, migrate, route
+  # check, wrangler) left Aheed undeployed, and Aheed's release always waited on ShopLocal's. Same
+  # commit, same code, same `quality` gate: every platform change still reaches the cell, but neither
+  # cell's failure blocks the other. Order inside the job is unchanged: build BEFORE migrating (#434),
+  # migrate before the route check (#1198), app Worker before its scheduler and inbound-email Workers.
+  deploy-afc:
+    needs: quality
+    runs-on: ubuntu-latest
+    # #1509 — same queueing as `deploy`, in the cell's OWN group, so the two cells still run in parallel.
+    concurrency:
+      group: deploy-production-afc
+      cancel-in-progress: false
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+
+      # Same as `deploy`: both Prisma clients from the schema files; no database is contacted.
+      - name: Generate Prisma clients
+        env:
+          UK_LOCATION_REF_DATABASE_URL: ${{ secrets.UK_LOCATION_REF_DATABASE_URL }}
+          UK_LOCATION_REF_DIRECT_URL: ${{ secrets.UK_LOCATION_REF_DIRECT_URL }}
+        run: npm run db:generate
+
+      - name: Build (OpenNext)
+        run: npx opennextjs-cloudflare build
+
       - name: Apply migrations to AFC dedicated cell (direct connection)
         if: env.AFC_DIRECT_URL != ''
         run: npx prisma migrate deploy

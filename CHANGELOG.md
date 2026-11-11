@@ -8,6 +8,23 @@ every branch merges.
 
 ### Fixed
 
+- **Overlapping deploys no longer collide on one Worker (#1509)**
+  - **What happened.** #1507 and #1508 merged into `staging` about a minute apart, and their `deploy-staging` runs overlapped (12:38–12:42 UTC, 2026-11-11). Both deployed `afc-store-staging` at once. The second run's `wrangler secret put` failed with "the latest version of your Worker isn't currently deployed", because the first run had just uploaded a version. Staging was left one commit behind until the job was re-run.
+  - **The fix.** Each deploy job has its own `concurrency` group (`deploy-<env>-platform`, `deploy-<env>-afc`) with `cancel-in-progress: false`, in both deploy workflows. Runs for the same cell queue. The two cells still deploy in parallel (#1505). GitHub keeps one pending run per group, so a burst of merges still ends on the newest commit.
+  - **Tests.** `tests/dedicated-cell-topology.test.ts` asserts both groups in each workflow.
+
+- **The AFC cell no longer binds empty image buckets in the Merqify account (#1503, part of #1337)**
+  - **What was wrong.** `[env.afc-staging]` and `[env.afc-production]` bound `IMAGES` to `afc-images-staging` / `afc-images-production` in the **Merqify** account. Both buckets were empty on 2026-11-11, and no code reads `IMAGES`. Aheed's real images are written through the S3 API (`lib/storage`, `S3_*` secrets) to the same-named buckets in **Aheed's own Cloudflare account** and served from `images.aheedfoodcentre.co.uk`. That is where the 25 homepage images checked during the audit were served from.
+  - **The fix.** Removed both bindings, with a comment saying why a dedicated cell has none. `tests/dedicated-cell-topology.test.ts` now asserts there is no `r2_buckets` block in either AFC env. The scaling doc explains where each cell's buckets live.
+  - **Also.** The unused `UK_LOCATION_REF_DIRECT_URL` Worker secret is deleted from the AFC Workers: the app never reads it, and `configure-env` routes it to GitHub only.
+  - **Owner, later.** Delete the two empty `afc-images-*` buckets in the Merqify account after re-checking they are empty.
+
+- **The Aheed Food Centre cell deploys in its own job, independently of ShopLocal (#1505, part of #1337)**
+  - **What was wrong.** In `deploy-production.yml` and `deploy-staging.yml`, the AFC cell's migrate, route check and three Worker deploys ran at the end of the platform's `deploy` job. Any platform failure (build, migrate, route check or wrangler) left Aheed undeployed, and every Aheed release waited on ShopLocal's.
+  - **The fix.** A `deploy-afc` job in both workflows that needs only `quality` and runs in parallel with `deploy`. It keeps the same order: build, then migrate, then route check, then app Worker, scheduler and inbound email. Both jobs deploy the same commit, so ShopLocal changes still reach `www.aheedfoodcentre.co.uk` on every release.
+  - **Tests.** `tests/dedicated-cell-topology.test.ts` asserts, for each workflow, that the AFC steps are in their own job needing only `quality`, that the job builds before it migrates, and that no AFC step is left in the platform job. Run against the old workflows, both new tests fail.
+  - **Docs.** `specs/architecture.md` and `env-setup.md` now describe "same-commit, parallel jobs" instead of "lockstep".
+
 - **The Cloudflare for SaaS fallback origin is routed to the platform production Worker (#1482, phase B of 2)**
   - **The change.** `fallback.merqify.com/*` is now a zone route under `[env.production]` (`aheed-store-production`). Platform production holds several active vendors, so a custom hostname that names no origin and has no `VendorDomain` row resolves to no vendor and is sent to `/coming-soon` (`lib/tenant.ts`, `tests/tenant.test.ts`). The test is renamed `#1482: only the platform production Worker routes the SaaS fallback origin` and asserts both halves.
   - **Docs.** The onboarding runbook and the scaling doc say the fallback is for marketplace clients only. A dedicated cell names its own origin, and its `www` CNAME points there. The runbook also has a tenant-safety note, a post-change check and a rollback.
@@ -33,6 +50,16 @@ every branch merges.
   - **On deploy** each AFC cell starts with an empty marker store. That is harmless: the 03:00 ungated run is the designed backstop, and the warm-up publishes on its next save.
 
 ### Added
+
+- **Read-only Aheed data inventory script (#1504, part of #1337)**
+  - `npx tsx scripts/aheed-data-inventory.ts <secrets file> <URL key> [--images]` prints per-vendor **counts only**, so the output can go into an issue. It covers products (active), categories, bundles, product, bundle and category images, staff memberships (demo flagged), orders by status, signed-in and guest customers, and payments by Stripe mode and status. The sender address is reported by domain only, and nothing is written. `--images` sends a HEAD request for every image key to the file's `CDN_BASE_URL`.
+  - Purpose: prove Aheed's catalogue and images are complete in its own cell, and show whether any real customer or order sits on ShopLocal before go-live.
+  - **First run, AFC staging (2026-11-11):**
+    - 6,103 products, **0 active**.
+    - 5 product images, 1 bundle image, 66 category images: 72 keys, **4 missing** from `images-staging`.
+    - 2 test-mode orders.
+    - Production runs go through the owner.
+  - `tests/aheed-data-inventory.test.ts` covers the secrets-file parser (plain and spaced forms), domain-only reporting and Stripe mode detection.
 
 - **Database warm-up ping during opening hours and after signed-in activity (#1491)**, spec `specs/2026-11-10-db-warmup-ping/`
   - **Why.** Neon suspends compute after 5 minutes with no query. On 2026-11-10 the first request after idle took 7.1 s on Aheed staging, against ~0.2 s warm.

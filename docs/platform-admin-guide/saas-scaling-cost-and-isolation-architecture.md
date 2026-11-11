@@ -91,7 +91,8 @@ Dedicated clients do not share Postgres tables, foreign keys, or database connec
 To eliminate any hazard of cross-tenant image mixups, accidental overwrites, or asset naming collisions, media storage is strictly partitioned per client cell:
 - Platform Cell: `shoplocal-images-staging` and `shoplocal-images-production`
 - Aheed Food Centre Cell: `afc-images-staging` and `afc-images-production`
-- Each environment specifies its dedicated bucket in `wrangler.toml` (`[[env.afc-*.r2_buckets]]`) and runtime secrets (`S3_BUCKET`).
+- The platform cell's buckets live in the Merqify account. **The Aheed cell's buckets live in the client's own Cloudflare account** (the one holding `aheedfoodcentre.co.uk`), served from `images.aheedfoodcentre.co.uk` and `images-staging.aheedfoodcentre.co.uk`.
+- The app reaches a bucket only through the S3 API (`lib/storage`), named by the `S3_ENDPOINT` and `S3_BUCKET` runtime secrets. A dedicated cell has **no** `[[env.afc-*.r2_buckets]]` binding: a binding can only name a bucket in the Worker's own (Merqify) account. The one that existed pointed at an empty, same-named bucket there and was removed (#1503).
 - Product graphics, department banners, and branding assets are uploaded directly into the tenant's dedicated bucket.
 - Because Cloudflare R2 has zero bandwidth egress fees, serving high-resolution product photography never incurs variable bandwidth surcharges.
 
