@@ -4,7 +4,7 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.20.0"
+version: "2.21.0"
 updated: "2026-11-12"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, filters, bundles, promotions, inventory, search dictionary, customer feedback, enquiries & inbox, and runbooks. One section per menu item."
@@ -543,6 +543,13 @@ button says how many got a suggestion, how many got no answer and how many faile
 the next 10. Then, for each suggestion, read it and the text the AI quoted as its evidence, compare
 it with the packaging if you can, and accept, correct or reject it. If it quoted a photo, the photo
 is shown beside it.
+
+**Before the AI, fixed rules (#697):** each click first reads every pack size that is certain,
+free and without AI. That means a single fixed size in the product name ("Squid Block – 2kg"), or a
+unit label pricing the product per kg at exactly its price ("£6.49 / kg", read as 1 kg). These rows
+show the model **rules (no AI)** and still wait for your Accept. The rules deliberately skip a weight
+range ("500–800g"), a minimum ("800g+") and "Pack of 2" beside a single weight; those go to the AI
+or to you, because the real pack size is not certain.
 
 **Important fields and filters:** **Suggested** is the pack size, with the price shoppers would
 see. **Confidence** is the AI's own estimate, not a guarantee. **From the product name / unit

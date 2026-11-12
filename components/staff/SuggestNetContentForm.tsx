@@ -17,7 +17,8 @@ export function SuggestNetContentForm() {
   return (
     <form action={action} className="mb-6 rounded-2xl border border-black/10 bg-surface-muted p-4">
       <p className="mb-3 text-sm text-primary-muted">
-        Ask the AI to suggest a pack size for up to 10 products that don&apos;t have one yet.
+        First reads pack sizes that are certain from product names and per-kg prices, free and
+        without AI. Then asks the AI about up to 10 more products that don&apos;t have one yet.
         Suggestions arrive below for review; nothing changes on a product until you accept it.
       </p>
       <button
@@ -25,7 +26,7 @@ export function SuggestNetContentForm() {
         disabled={pending}
         className="rounded-full border border-action px-4 py-2 font-semibold text-action disabled:opacity-60"
       >
-        {pending ? "Asking the AI…" : "Suggest net content"}
+        {pending ? "Suggesting…" : "Suggest net content"}
       </button>
       {state.error ? (
         <p role="alert" className="mt-2 text-sm text-danger">

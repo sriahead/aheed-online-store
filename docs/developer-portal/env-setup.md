@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.36.0"
-updated: 2026-11-05
+version: "1.37.0"
+updated: 2026-11-12
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -631,7 +631,9 @@ npx tsx scripts/suggest-net-content.ts --env-file .dev.vars --product <id> --inc
   never-attempted products only. On a Worker it reads the existing `CLOUDFLARE_ACCOUNT_ID` and
   `CLOUDFLARE_API_TOKEN` Worker secrets, which both deploy workflows already
   `wrangler secret put`, plus the optional `NET_CONTENT_AI_MODEL`. No new secret is needed. A model
-  missing from the rate table is refused (the button has no `--unpriced-ok`).
+  missing from the rate table is refused (the button has no `--unpriced-ok`). Since `#697` the
+  button first runs a free rule step (`lib/net-content-rules.ts`, up to 500 products, model
+  `rules (no AI)`) that needs no AI configuration at all; the script does not.
 
 ### Workers AI model overrides and the per-vendor AI budget (`#1016`, `#1017`)
 

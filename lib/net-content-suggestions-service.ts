@@ -20,6 +20,7 @@ import {
   type ReviewDecision,
 } from "@/lib/repositories/net-content-suggestions";
 import { getVendorConfig } from "@/lib/repositories/vendor";
+import { RULES_MODEL, suggestNetContentByRule } from "@/lib/net-content-rules";
 import { getStorage } from "@/lib/storage";
 
 /**
@@ -59,11 +60,19 @@ export function reviewNetContentSuggestionForVendor(
 export const STAFF_RUN_PRODUCT_LIMIT = 10;
 export const STAFF_RUN_NEURON_BUDGET = 150;
 
-export type StaffNetContentRunResult =
+/**
+ * #697 — how many products the free rule step reads per click. Generous on purpose: a rule costs
+ * nothing, and every product it answers is one fewer for the paid model.
+ */
+export const RULE_RUN_PRODUCT_LIMIT = 500;
+
+/** `ruled` (#697) is how many suggestions the rule step queued this click; absent when none. */
+export type StaffNetContentRunResult = { ruled?: number } & (
   | { kind: "unpriced-model"; model: string }
   | { kind: "nothing-eligible" }
   | { kind: "not-configured" }
-  | { kind: "ran"; summary: RunSummary };
+  | { kind: "ran"; summary: RunSummary }
+);
 
 /**
  * #927 — the same wiring `scripts/suggest-net-content.ts` does, for the signed-in vendor, bounded
@@ -76,6 +85,44 @@ export type StaffNetContentRunResult =
 export async function runNetContentSuggestionsForVendor(
   vendorId: string,
 ): Promise<StaffNetContentRunResult> {
+  // #697 — rules first: free and exact where they apply. Each answer becomes a PENDING suggestion,
+  // which also takes that product out of the model's eligible list below.
+  const ruled = await queueRuleSuggestions(vendorId);
+  const result = await runModelSuggestions(vendorId);
+  return ruled > 0 ? { ...result, ruled } : result;
+}
+
+/**
+ * #697 — queue a rule-read suggestion (`lib/net-content-rules.ts`) for every eligible product the
+ * rules can read. Products they cannot read get no row, so the model is still asked about them.
+ */
+async function queueRuleSuggestions(vendorId: string): Promise<number> {
+  const prisma = getPrisma();
+  const products = await listEligibleProductsForNetContent(
+    prisma,
+    vendorId,
+    { includeAttempted: false },
+    RULE_RUN_PRODUCT_LIMIT,
+  );
+  let queued = 0;
+  for (const product of products) {
+    const value = suggestNetContentByRule(product);
+    if (!value) continue;
+    await createNetContentSuggestion(prisma, vendorId, {
+      productId: product.id,
+      productImageId: null,
+      value,
+      model: RULES_MODEL,
+      latencyMs: 0,
+      inputTokens: null,
+      outputTokens: null,
+    });
+    queued++;
+  }
+  return queued;
+}
+
+async function runModelSuggestions(vendorId: string): Promise<StaffNetContentRunResult> {
   const model = resolveNetContentModel(undefined, getAiEnv().NET_CONTENT_AI_MODEL);
   const rate = NET_CONTENT_MODEL_RATES[model];
   if (!rate) return { kind: "unpriced-model", model };
