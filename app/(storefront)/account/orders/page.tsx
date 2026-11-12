@@ -8,6 +8,7 @@ import { formatOrderDate } from "@/lib/order-status";
 import { formatPrice } from "@/components/product/format-price";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Pagination } from "@/components/ui/Pagination";
 import { IconMedallion } from "@/components/icons/IconMedallion";
 import { Icon } from "@/components/icons/Icon";
 import { reorderItems } from "@/features/orders/reorder-items";
@@ -155,14 +156,12 @@ export default async function OrdersPage({
         </ul>
       )}
 
-      {nextCursor && (
-        <Link
-          href={`/account/orders?cursor=${encodeURIComponent(nextCursor)}`}
-          className="mt-6 inline-block rounded-full bg-action px-4 py-2 font-semibold text-white"
-        >
-          Older orders
-        </Link>
-      )}
+      <Pagination
+        mode="sequential"
+        label="Order pages"
+        nextHref={nextCursor ? `/account/orders?cursor=${encodeURIComponent(nextCursor)}` : null}
+        firstHref={cursor ? "/account/orders" : null}
+      />
     </PageContainer>
   );
 }

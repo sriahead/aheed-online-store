@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getProductRepository } from "@/lib/products-service";
 import { getRequestCartQuantities } from "@/lib/cart-summary";
 import { getRequestFavouriteState } from "@/lib/favourites-summary";
@@ -20,6 +19,7 @@ import { parsePriceInput } from "@/components/product/parse-price-input";
 import {
   categoryFilterHref,
   searchCategoryFilterQuery,
+  searchFirstPageHref,
   searchPageHref,
 } from "@/components/product/search-href";
 import { searchHeading } from "@/components/product/search-heading";
@@ -37,6 +37,8 @@ import { listCurrentVendorAttributeDefinitions } from "@/lib/attributes-service"
 import { resolveAttributeFilters } from "@/lib/attribute-filters";
 import type { FilterParamValue } from "@/components/product/filter-params";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Pagination } from "@/components/ui/Pagination";
+import { pageCountFor } from "@/lib/pagination";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
 // can't load during next build's Node-based static prerendering.
@@ -180,6 +182,13 @@ export default async function SearchPage({
   const result = query ? await products.search(query, options) : await products.list(options);
   const items = result.items;
   const nextCursor = result.nextCursor;
+  // Set only for a typed (ranked) search; see ProductPage.rankedTotal.
+  const rankedTotal = result.rankedTotal;
+  const searchOffset = Number.parseInt(typeof params.cursor === "string" ? params.cursor : "0", 10);
+  const searchPage =
+    Number.isFinite(searchOffset) && searchOffset > 0
+      ? Math.floor(searchOffset / PAGE_SIZE) + 1
+      : 1;
   // #564 — the repository decides this, not the page: it is the only layer that
   // knows whether more matches existed than it was willing to rank. `list()`
   // always reports false, so browse mode never shows the notice.
@@ -375,14 +384,35 @@ export default async function SearchPage({
             </>
           )}
 
-          {nextCursor && (
-            <Link
-              href={searchPageHref(params, nextCursor)}
-              data-tap-surface="pagination"
-              className="mt-6 inline-flex min-h-tap items-center rounded-full bg-action px-4 py-2 font-semibold text-white lg:min-h-0"
-            >
-              Next page
-            </Link>
+          {rankedTotal !== undefined ? (
+            rankedTotal > 0 && (
+              // A typed search ranks a bounded set, so it knows its total and gets page numbers. Its
+              // cursor is an offset into that set (`parseSearchOffset`), so page N is offset
+              // (N - 1) × PAGE_SIZE.
+              <Pagination
+                mode="numbered"
+                label="Search result pages"
+                page={searchPage}
+                pageCount={pageCountFor(rankedTotal, PAGE_SIZE)}
+                total={rankedTotal}
+                perPage={PAGE_SIZE}
+                shown={items.length}
+                noun={["result", "results"]}
+                hrefFor={(target) =>
+                  target === 1
+                    ? searchFirstPageHref(params)
+                    : searchPageHref(params, String((target - 1) * PAGE_SIZE))
+                }
+              />
+            )
+          ) : (
+            // Browsing with no query pages by keyset cursor: next only, plus a way back to the start.
+            <Pagination
+              mode="sequential"
+              label="Product pages"
+              nextHref={nextCursor ? searchPageHref(params, nextCursor) : null}
+              firstHref={params.cursor ? searchFirstPageHref(params) : null}
+            />
           )}
         </div>
       </div>

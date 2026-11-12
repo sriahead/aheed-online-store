@@ -176,6 +176,16 @@ export function staffProductsHref(query: StaffProductsQuery, page?: number | nul
 }
 
 /**
+ * The active filters as name/value pairs: exactly the parameters `staffProductsHref` writes, without
+ * `page`. The jump-to-page box sends them as hidden fields, and deriving them from the href means
+ * the two can never disagree about which filters a page carries.
+ */
+export function staffProductsFilterFields(query: StaffProductsQuery): [string, string][] {
+  const qs = staffProductsHref(query).split("?")[1] ?? "";
+  return [...new URLSearchParams(qs).entries()];
+}
+
+/**
  * @param categories every category belonging to the current vendor. REQUIRED,
  *   not optional-with-a-default: an omitted list would silently resolve every
  *   selection to CATEGORY_ALL, i.e. render a filter control that does nothing.
@@ -298,23 +308,5 @@ export function clampPage(requested: number, pages: number): number {
   return Math.min(Math.max(1, requested), Math.max(1, pages));
 }
 
-/**
- * #1523 — the page numbers a pagination bar shows: always the first and last page, the current
- * page and its two neighbours either side, and `"gap"` where a run is skipped. Seven pages or fewer
- * show every number. A gap of exactly one page shows that page instead, since an ellipsis standing
- * for one number saves nothing.
- */
-export function pageWindow(current: number, pages: number): (number | "gap")[] {
-  if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
-  const wanted = new Set<number>([1, pages]);
-  for (let p = current - 2; p <= current + 2; p++) if (p >= 1 && p <= pages) wanted.add(p);
-  const sorted = [...wanted].sort((a, b) => a - b);
-  const out: (number | "gap")[] = [];
-  for (const p of sorted) {
-    const last = out[out.length - 1];
-    if (typeof last === "number" && p - last === 2) out.push(last + 1);
-    else if (typeof last === "number" && p - last > 2) out.push("gap");
-    out.push(p);
-  }
-  return out;
-}
+/** #1523 — moved to `lib/pagination.ts`, shared by every pagination bar; re-exported here. */
+export { pageWindow } from "@/lib/pagination";

@@ -17,11 +17,12 @@ import {
   SORT_OPTIONS,
   STOCK_ALL,
   parseStaffProductsQuery,
+  staffProductsFilterFields,
   staffProductsHref,
 } from "@/lib/staff-products-query";
 import { BulkProductActions } from "@/components/staff/BulkProductActions";
 import { BulkQuantityBar } from "@/components/staff/BulkQuantityBar";
-import { StaffProductsPagination } from "@/components/staff/StaffProductsPagination";
+import { Pagination } from "@/components/ui/Pagination";
 import { BULK_PRODUCTS_FORM_ID } from "@/lib/product-restriction-form";
 import {
   BULK_QUANTITY_FORM_ID,
@@ -155,33 +156,6 @@ export default async function StaffProductsPage({
           URL is shareable. Submitting it starts again at page 1 (it carries no `page`), because
           a new filter makes the old page number meaningless. */}
       <form method="get" action="/staff/products" className="mb-4 space-y-3">
-        {/* #1523 — search gets its own full-width row: it is the most-used control. */}
-        <div className="flex gap-2">
-          <label className="sr-only" htmlFor="product-search">
-            Search products
-          </label>
-          <div className="relative flex-1">
-            <Icon
-              name="search"
-              className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-primary-muted"
-            />
-            <input
-              id="product-search"
-              type="search"
-              name="q"
-              defaultValue={query.search ?? ""}
-              placeholder="Search your favourite products…"
-              className="w-full rounded-2xl border border-black/10 bg-white py-3 pr-3 pl-10 text-base text-primary"
-            />
-          </div>
-          <button
-            type="submit"
-            className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-bold text-white"
-          >
-            Search
-          </button>
-        </div>
-
         <div className="flex flex-wrap items-end gap-3">
           <label className={labelClass}>
             Status
@@ -295,6 +269,34 @@ export default async function StaffProductsPage({
             </Link>
           )}
         </div>
+
+        {/* #1523 — search gets its own full-width row: it is the most-used control. Below the
+            filters and Apply filters since 2026-11-12 (owner request). */}
+        <div className="flex gap-2">
+          <label className="sr-only" htmlFor="product-search">
+            Search products
+          </label>
+          <div className="relative flex-1">
+            <Icon
+              name="search"
+              className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-primary-muted"
+            />
+            <input
+              id="product-search"
+              type="search"
+              name="q"
+              defaultValue={query.search ?? ""}
+              placeholder="Search your favourite products…"
+              className="w-full rounded-2xl border border-black/10 bg-white py-3 pr-3 pl-10 text-base text-primary"
+            />
+          </div>
+          <button
+            type="submit"
+            className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-bold text-white"
+          >
+            Search
+          </button>
+        </div>
       </form>
 
       {/* #1523 — one-click worklists. Each keeps the rest of the view and starts at page 1. */}
@@ -324,13 +326,18 @@ export default async function StaffProductsPage({
       {items.length > 0 && <BulkProductActions />}
       {items.length > 0 && <BulkQuantityBar />}
 
-      <StaffProductsPagination
-        query={query}
+      <Pagination
+        mode="numbered"
+        label="Product pages"
+        position="top"
         page={page}
         pageCount={pageCount}
         total={total}
+        perPage={query.perPage}
         shown={items.length}
-        position="top"
+        noun={["product", "products"]}
+        hrefFor={(target) => staffProductsHref(query, target)}
+        jump={{ action: "/staff/products", hidden: staffProductsFilterFields(query) }}
       />
 
       {items.length === 0 ? (
@@ -489,13 +496,18 @@ export default async function StaffProductsPage({
       )}
 
       {items.length > 0 && (
-        <StaffProductsPagination
-          query={query}
+        <Pagination
+          mode="numbered"
+          label="Product pages"
+          position="bottom"
           page={page}
           pageCount={pageCount}
           total={total}
+          perPage={query.perPage}
           shown={items.length}
-          position="bottom"
+          noun={["product", "products"]}
+          hrefFor={(target) => staffProductsHref(query, target)}
+          jump={{ action: "/staff/products", hidden: staffProductsFilterFields(query) }}
         />
       )}
     </PageContainer>
