@@ -292,7 +292,7 @@ describe("processContactSubmission (R13-R18)", () => {
   });
 });
 
-describe("processContactSubmission order alert (#1390 R12)", () => {
+describe("processContactSubmission order alert (#1390 R12, #1548)", () => {
   const alertMock = (d: ContactDeps) => d.alert as ReturnType<typeof vi.fn>;
 
   it("a complaint with no order alerts once, with only the brief's fields", async () => {
@@ -305,6 +305,7 @@ describe("processContactSubmission order alert (#1390 R12)", () => {
       orderNumber: null,
       senderName: "Sam Shopper",
       subject: "Missing items",
+      contactType: "COMPLAINT",
     });
   });
 
@@ -326,10 +327,18 @@ describe("processContactSubmission order alert (#1390 R12)", () => {
     expect(order).toEqual(["enqueue", "alert"]);
   });
 
-  it("an enquiry with no order does not alert", async () => {
+  it("an enquiry with no order alerts once, typed ENQUIRY (#1548 R1, R3)", async () => {
     const d = deps();
     await processContactSubmission({ ...VALID, type: "ENQUIRY" }, d);
-    expect(alertMock(d)).not.toHaveBeenCalled();
+    expect(alertMock(d)).toHaveBeenCalledTimes(1);
+    expect(alertMock(d).mock.calls[0][0]).toEqual({
+      source: "contact-form",
+      storeName: "Corner Shop",
+      orderNumber: null,
+      senderName: "Sam Shopper",
+      subject: "Missing items",
+      contactType: "ENQUIRY",
+    });
   });
 
   it.each([

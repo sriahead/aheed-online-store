@@ -36,6 +36,31 @@ describe("formatOrderAlert (R5)", () => {
     expect(text.split("\n")[4]).toBe("Via: contact form");
   });
 
+  it.each([
+    ["COMPLAINT", "Complaint: Corner Shop"],
+    ["ENQUIRY", "Enquiry: Corner Shop"],
+  ] as const)("a %s contact-form brief names its type in the heading (#1548 R4)", (type, head) => {
+    const lines = formatOrderAlert(
+      { ...BRIEF, source: "contact-form", contactType: type, orderNumber: null },
+      "production",
+    ).split("\n");
+    expect(lines[0]).toBe(head);
+    expect(lines.slice(1)).toEqual([
+      "Order: not given",
+      "From: Jane Doe",
+      "Subject: Where is my order?",
+      "Via: contact form",
+    ]);
+  });
+
+  it("tags a typed heading on staging (#1548 R4)", () => {
+    const text = formatOrderAlert(
+      { ...BRIEF, source: "contact-form", contactType: "ENQUIRY" },
+      "staging",
+    );
+    expect(text.split("\n")[0]).toBe("[STAGING] Enquiry: Corner Shop");
+  });
+
   it("tags development", () => {
     expect(formatOrderAlert(BRIEF, "development").startsWith("[DEV] Order inquiry: ")).toBe(true);
   });

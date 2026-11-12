@@ -18,8 +18,8 @@ import { resolveContactRecipient, type RecipientAddress } from "./recipient";
  * The order is fixed (R14): honeypot, validation, rate limit, order ownership, recipient, send.
  * Only a submission that passes validation counts against the rate limit.
  *
- * #1390 R12 — after the send (or the outbox enqueue), a complaint or a message about the shopper's
- * own order alerts the store's staff. Awaited, because a Worker may cancel an unawaited promise once
+ * #1390 R12, widened by #1548 — after the send (or the outbox enqueue), every successful submission
+ * alerts the store's staff, its brief naming the contact type. Awaited, because a Worker may cancel an unawaited promise once
  * the response is sent; a failed alert is logged and never changes what the shopper sees.
  */
 
@@ -114,18 +114,17 @@ export async function processContactSubmission(
     await deps.markPending();
   }
 
-  if (input.type === "COMPLAINT" || orderNumber !== null) {
-    try {
-      await deps.alert({
-        source: "contact-form",
-        storeName: deps.storeName,
-        orderNumber,
-        senderName: input.name,
-        subject: input.subject,
-      });
-    } catch {
-      deps.logError(`contact form: order alert failed for vendor ${deps.vendorId}`);
-    }
+  try {
+    await deps.alert({
+      source: "contact-form",
+      storeName: deps.storeName,
+      orderNumber,
+      senderName: input.name,
+      subject: input.subject,
+      contactType: input.type,
+    });
+  } catch {
+    deps.logError(`contact form: order alert failed for vendor ${deps.vendorId}`);
   }
   return succeeded(input.email);
 }

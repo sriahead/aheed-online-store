@@ -4,7 +4,7 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.198.0"
+version: "1.199.0"
 updated: 2026-11-12
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P12, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, onboarding P11, Merqify move P12.
@@ -1416,3 +1416,4 @@ is unrelated guest-cart retention, and no correctly-numbered issue for this exis
 | 2026-11-12 | **Net content: a free rule step before the AI, and no HIGH-confidence guess on ambiguous sizes (`#697`)** merged to staging (PR #1542, merge `70dc6c2`; `specs/2026-11-12-net-content-rules/`). A read-only preview on AFC staging found that the rules suggest 39 of the 73 live products. | Staging merge (catch-up row) |
 | 2026-11-12 | **Net content rule step promoted to production** (promotion **PR #1543**, merge `5efc74b`, `staging -> main`; `specs/2026-11-12-net-content-rules/`). `#697` stays open until staff accept the suggestions in production. | Promotion (catch-up row) |
 | 2026-11-12 | **Staging email reaches Client Setup's own addresses (`#1546`)** merged to staging (PR #1547; `specs/2026-11-12-staging-allowlist-client-setup/`). Allowlist mode also accepts saved forward-to mailboxes and the admin's test email; production is unchanged. | Staging merge |
+| 2026-11-12 | **Every Contact us message alerts on Telegram (`#1548`)** merged to staging (PR #1549; `specs/2026-11-12-telegram-every-enquiry/`). Enquiries alert too, not only complaints and order messages; the heading names the type. No migration. | Staging merge |

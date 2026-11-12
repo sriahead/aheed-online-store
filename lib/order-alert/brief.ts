@@ -1,5 +1,6 @@
 import type { AppEnvironment } from "../config";
 import { withEnvironmentTag } from "../email/environment-tag";
+import type { ContactType } from "../contact/recipient";
 
 /**
  * #1390 R5 — what an order alert says, and nothing more.
@@ -19,6 +20,8 @@ export interface OrderAlertBrief {
   orderNumber: string | null;
   senderName: string | null;
   subject: string;
+  /** #1548 — set by the contact form so the heading names the message type. */
+  contactType?: ContactType;
 }
 
 const SENDER_MAX = 100;
@@ -27,6 +30,11 @@ const SUBJECT_MAX = 200;
 const VIA: Record<OrderAlertBrief["source"], string> = {
   email: "email",
   "contact-form": "contact form",
+};
+
+const HEADING: Record<ContactType, string> = {
+  COMPLAINT: "Complaint",
+  ENQUIRY: "Enquiry",
 };
 
 /**
@@ -46,7 +54,10 @@ function subjectLine(subject: string): string {
 
 export function formatOrderAlert(brief: OrderAlertBrief, environment: AppEnvironment): string {
   return [
-    withEnvironmentTag(`Order inquiry: ${brief.storeName}`, environment),
+    withEnvironmentTag(
+      `${brief.contactType ? HEADING[brief.contactType] : "Order inquiry"}: ${brief.storeName}`,
+      environment,
+    ),
     `Order: ${brief.orderNumber ?? "not given"}`,
     `From: ${senderLine(brief.senderName)}`,
     `Subject: ${subjectLine(brief.subject)}`,
