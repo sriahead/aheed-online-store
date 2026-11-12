@@ -11,7 +11,7 @@ import { formatPrice } from "@/components/product/format-price";
 import { deriveUnitPriceLabel } from "@/components/product/unit-price";
 import { ProductImageGallery } from "@/components/product/ProductImageGallery";
 import { ProductRating } from "@/components/product/ProductRating";
-import { tierThresholdQuantity } from "@/lib/tier-pricing";
+import { multiBuyLabel, savingLabel } from "@/lib/price-psychology";
 import { showsLowStock } from "@/lib/cart-rules";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { RestockNotice } from "@/components/product/RestockNotice";
@@ -112,18 +112,18 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   );
   const isLowStock = isInStock && showsLowStock(product);
   const hasDiscount = product.originalPrice != null && product.originalPrice > product.basePrice;
-  const saving = hasDiscount ? product.originalPrice! - product.basePrice : 0;
-  const tierQuantity = tierThresholdQuantity(product.tier);
-  const hasTier = tierQuantity !== null && product.tier !== null;
+  // #1523 — savings framing from the real prices only (lib/price-psychology.ts).
+  const discountLabel = savingLabel(product.originalPrice ?? null, product.basePrice);
+  const tierLabel = multiBuyLabel(product.basePrice, product.tier);
 
   return (
     <PageContainer width="standard">
       <div className="grid gap-8 sm:grid-cols-2">
         <div className="relative">
           <ProductImageGallery images={product.images} cdnBaseUrl={CDN_BASE_URL ?? ""} />
-          {hasDiscount && (
+          {discountLabel && (
             <div className="absolute top-3 left-3 z-10 rounded-full bg-danger px-2.5 py-1 text-xs font-bold text-white shadow-sm">
-              Save {formatPrice(saving)}
+              {discountLabel}
             </div>
           )}
         </div>
@@ -159,9 +159,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 {formatPrice(product.originalPrice!)}
               </span>
             )}
-            {hasDiscount && (
+            {discountLabel && (
               <span className="rounded-full bg-danger/10 px-2.5 py-0.5 text-xs font-bold text-danger">
-                Save {formatPrice(saving)}
+                {discountLabel}
               </span>
             )}
           </div>
@@ -170,9 +170,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <p className="text-xs text-primary-muted font-medium">{unitDisplay}</p>
 
           {/* Tier Pricing */}
-          {hasTier && (
+          {tierLabel && (
             <div className="rounded-xl bg-action-tint/60 border border-action/20 p-2.5 text-xs font-bold text-action">
-              Multi-buy offer: {tierQuantity} for {formatPrice(product.tier!.groupPricePence)}
+              Multi-buy offer: {tierLabel}
             </div>
           )}
 

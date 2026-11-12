@@ -47,9 +47,41 @@ export const STOCK_ALL = "all";
 export const STOCK_FILTERS = ["TRACKED", "UNTRACKED", "UNKNOWN"] as const;
 export type StockFilter = (typeof STOCK_FILTERS)[number];
 
-/** #1211 — the page sizes the list offers; anything else is the default. */
-export const PER_PAGE_OPTIONS = [25, 100] as const;
+/**
+ * #1211 — the page sizes the list offers; anything else is the default. #1523 added 50. There is
+ * deliberately no "All" (owner decision 2026-11-11): the catalogue is thousands of products deep,
+ * and one page of all of them is a multi-megabyte render on a phone.
+ */
+export const PER_PAGE_OPTIONS = [25, 50, 100] as const;
 export const DEFAULT_PER_PAGE = 25;
+
+/**
+ * #1523 — list order. `newest` is the default and is the order the list always had
+ * (`createdAt desc, id desc`), so an absent or unknown value changes nothing.
+ */
+export const SORT_OPTIONS = ["newest", "name", "price-asc", "price-desc"] as const;
+export type StaffProductsSort = (typeof SORT_OPTIONS)[number];
+export const DEFAULT_SORT: StaffProductsSort = "newest";
+export const SORT_LABELS: Record<StaffProductsSort, string> = {
+  newest: "Newest first",
+  name: "Name A–Z",
+  "price-asc": "Price: low to high",
+  "price-desc": "Price: high to low",
+};
+
+/**
+ * #1523 — "needs attention" worklists: the next job, one click away. `price` = priced at £0 (cannot
+ * be switched on); `ready` = hidden, priced and unrestricted (could be switched on now); `image` =
+ * no photo.
+ */
+export const NEEDS_ALL = "all";
+export const NEEDS_FILTERS = ["price", "ready", "image"] as const;
+export type NeedsFilter = (typeof NEEDS_FILTERS)[number];
+export const NEEDS_LABELS: Record<NeedsFilter, string> = {
+  price: "Price needed (£0)",
+  ready: "Ready to switch on",
+  image: "No photo",
+};
 
 /**
  * The shape of a category this module needs to resolve a filter — an id and its
@@ -107,12 +139,27 @@ export interface StaffProductsQuery {
   /** #1211 — the normalised stock selection (`"all"` or one of STOCK_FILTERS). */
   stockFilter: string;
   stockMode: StockFilter | undefined;
-  /** #1211 — 25 or 100; any other value is 25. */
+  /** #1211/#1523 — one of PER_PAGE_OPTIONS; any other value is 25. */
   perPage: number;
+  /** #1523 — the normalised sort (always one of SORT_OPTIONS). */
+  sort: StaffProductsSort;
+  /** #1523 — the normalised needs selection (`"all"` or one of NEEDS_FILTERS). */
+  needsFilter: string;
+  /** #1523 — the repository argument: undefined means no filter. */
+  needs: NeedsFilter | undefined;
+  /**
+   * #1523 — the REQUESTED 1-based page: a positive integer, else 1. Not clamped to the last page
+   * here, because the page count is only known after the count query — see clampPage().
+   */
+  page: number;
 }
 
-/** A URL-encoded query string carrying the current filter, for the next-page link. */
-export function staffProductsHref(query: StaffProductsQuery, cursor?: string | null): string {
+/**
+ * A URL-encoded query string carrying the current filter, for a pagination link. #1523 — a page
+ * NUMBER replaced #1211's keyset cursor, so a link can name any page, not only the next one.
+ * Page 1 is the default and is omitted.
+ */
+export function staffProductsHref(query: StaffProductsQuery, page?: number | null): string {
   const params = new URLSearchParams();
   // `all` is the default, so it is omitted — a clean URL for the common case.
   if (query.status && query.status !== PRODUCT_STATUS_ALL) params.set("status", query.status);
@@ -121,7 +168,9 @@ export function staffProductsHref(query: StaffProductsQuery, cursor?: string | n
   if (query.restriction) params.set("restriction", query.restriction);
   if (query.stockMode) params.set("stock", query.stockMode);
   if (query.perPage !== DEFAULT_PER_PAGE) params.set("perPage", String(query.perPage));
-  if (cursor) params.set("cursor", cursor);
+  if (query.sort !== DEFAULT_SORT) params.set("sort", query.sort);
+  if (query.needs) params.set("needs", query.needs);
+  if (page && page > 1) params.set("page", String(page));
   const qs = params.toString();
   return qs ? `/staff/products?${qs}` : "/staff/products";
 }
@@ -145,6 +194,9 @@ export function parseStaffProductsQuery(
     restriction?: string;
     stock?: string;
     perPage?: string;
+    sort?: string;
+    needs?: string;
+    page?: string;
   },
   categories: readonly CategoryChoice[],
 ): StaffProductsQuery {
@@ -205,6 +257,19 @@ export function parseStaffProductsQuery(
     ? rawPerPage
     : DEFAULT_PER_PAGE;
 
+  // #1523 — exact matches only, like every filter above.
+  const rawSort = (input.sort ?? "").trim();
+  const sort = (SORT_OPTIONS as readonly string[]).includes(rawSort)
+    ? (rawSort as StaffProductsSort)
+    : DEFAULT_SORT;
+  const rawNeeds = (input.needs ?? "").trim();
+  const needs = (NEEDS_FILTERS as readonly string[]).includes(rawNeeds)
+    ? (rawNeeds as NeedsFilter)
+    : undefined;
+  // Digits only: "2abc", "1.5", "-3" and "1e3" are all page 1, not a parseInt guess.
+  const rawPage = (input.page ?? "").trim();
+  const page = /^[0-9]{1,6}$/.test(rawPage) && Number(rawPage) >= 1 ? Number(rawPage) : 1;
+
   return {
     isActive,
     search: rawSearch === "" ? null : rawSearch,
@@ -216,5 +281,40 @@ export function parseStaffProductsQuery(
     stockFilter: stockMode ?? STOCK_ALL,
     stockMode,
     perPage,
+    sort,
+    needsFilter: needs ?? NEEDS_ALL,
+    needs,
+    page,
   };
+}
+
+/** #1523 — the number of pages for `total` items; at least 1, so an empty list is "Page 1 of 1". */
+export function pageCount(total: number, perPage: number): number {
+  return Math.max(1, Math.ceil(total / perPage));
+}
+
+/** #1523 — a requested page clamped into [1, pages]: a stale "page 40" link lands on the last page. */
+export function clampPage(requested: number, pages: number): number {
+  return Math.min(Math.max(1, requested), Math.max(1, pages));
+}
+
+/**
+ * #1523 — the page numbers a pagination bar shows: always the first and last page, the current
+ * page and its two neighbours either side, and `"gap"` where a run is skipped. Seven pages or fewer
+ * show every number. A gap of exactly one page shows that page instead, since an ellipsis standing
+ * for one number saves nothing.
+ */
+export function pageWindow(current: number, pages: number): (number | "gap")[] {
+  if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
+  const wanted = new Set<number>([1, pages]);
+  for (let p = current - 2; p <= current + 2; p++) if (p >= 1 && p <= pages) wanted.add(p);
+  const sorted = [...wanted].sort((a, b) => a - b);
+  const out: (number | "gap")[] = [];
+  for (const p of sorted) {
+    const last = out[out.length - 1];
+    if (typeof last === "number" && p - last === 2) out.push(last + 1);
+    else if (typeof last === "number" && p - last > 2) out.push("gap");
+    out.push(p);
+  }
+  return out;
 }

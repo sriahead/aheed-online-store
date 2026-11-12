@@ -4,6 +4,7 @@ import { getCurrentVendorIdOrNull } from "@/lib/tenant";
 import {
   listActiveBundles,
   getBundleWithItems,
+  getActiveBundleBySlug,
   listBundlesForAdmin,
   upsertBundle,
   setBundleItems,
@@ -43,6 +44,15 @@ export const getBundlesForStorefront = cache(async (): Promise<BundleWithItems[]
   if (!vendorId) return [];
   return listActiveBundles(getPrisma(), vendorId);
 });
+
+/** #1517 — `/bundles/[slug]`'s read: the current vendor's active bundle with that slug. */
+export async function getActiveBundleBySlugForStorefront(
+  slug: string,
+): Promise<BundleWithItems | null> {
+  const vendorId = await getCurrentVendorIdOrNull();
+  if (!vendorId) return null;
+  return getActiveBundleBySlug(getPrisma(), vendorId, slug);
+}
 
 /** The add-to-cart action's read. `vendorId` resolved here, bundle id stays untrusted. */
 export async function getBundleForCurrentVendor(bundleId: string): Promise<BundleWithItems | null> {

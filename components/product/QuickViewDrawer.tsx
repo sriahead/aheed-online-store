@@ -11,7 +11,7 @@ import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { formatPrice } from "./format-price";
 import { deriveUnitPriceLabel, isNetContentUnit } from "./unit-price";
 import { showsLowStock } from "@/lib/cart-rules";
-import { tierThresholdQuantity } from "@/lib/tier-pricing";
+import { multiBuyLabel, savingLabel } from "@/lib/price-psychology";
 import { submitReview } from "@/features/reviews/submit-review";
 import { deleteReview } from "@/features/reviews/delete-review";
 import type { ProductDetail } from "@/lib/repositories/products";
@@ -174,7 +174,10 @@ export function QuickViewDrawer() {
   const hasDiscount =
     displayProduct?.originalPrice != null &&
     displayProduct.originalPrice > (displayProduct?.basePrice ?? 0);
-  const saving = hasDiscount ? displayProduct!.originalPrice! - displayProduct!.basePrice : 0;
+  // #1523 — savings framing from the real prices only (lib/price-psychology.ts).
+  const discountLabel = displayProduct
+    ? savingLabel(displayProduct.originalPrice ?? null, displayProduct.basePrice)
+    : null;
 
   const unitDisplay = displayProduct
     ? displayProduct.netContentAmount !== null &&
@@ -198,8 +201,9 @@ export function QuickViewDrawer() {
       ].filter((facet): facet is string => facet !== null)
     : [];
 
-  const tierQuantity = tierThresholdQuantity(displayProduct?.tier ?? null);
-  const hasTier = tierQuantity !== null && displayProduct?.tier != null;
+  const tierLabel = displayProduct
+    ? multiBuyLabel(displayProduct.basePrice, displayProduct.tier ?? null)
+    : null;
 
   const description =
     currentData?.product?.description ??
@@ -398,18 +402,14 @@ export function QuickViewDrawer() {
                         {formatPrice(displayProduct.originalPrice!)}
                       </span>
                     )}
-                    {hasDiscount && (
+                    {discountLabel && (
                       <span className="rounded-full bg-danger px-2 py-0.5 text-xs font-bold text-white">
-                        Save {formatPrice(saving)}
+                        {discountLabel}
                       </span>
                     )}
                   </div>
 
-                  {hasTier && (
-                    <p className="text-xs font-semibold text-action">
-                      {tierQuantity} for {formatPrice(displayProduct.tier!.groupPricePence)}
-                    </p>
-                  )}
+                  {tierLabel && <p className="text-xs font-semibold text-action">{tierLabel}</p>}
 
                   <p className="text-xs text-primary-muted">{unitDisplay}</p>
 

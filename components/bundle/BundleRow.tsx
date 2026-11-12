@@ -69,6 +69,7 @@ export function BundleRow({ title, bundles, cdnBaseUrl, viewAllLink }: BundleRow
           <BundleCard
             key={bundle.id}
             id={bundle.id}
+            slug={bundle.slug}
             name={bundle.name}
             tagline={bundle.tagline}
             imageKey={bundle.imageKey}

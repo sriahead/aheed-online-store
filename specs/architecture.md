@@ -4,8 +4,8 @@ title: System Architecture — Merqify Platform
 audience: [dev]
 type: doc
 status: approved
-version: "1.48.0"
-updated: 2026-11-05
+version: "1.49.0"
+updated: 2026-11-12
 visibility: internal
 summary: The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design.
 tags: [architecture, cloudflare, neon, clean-architecture, multi-tenancy]
@@ -627,6 +627,19 @@ matches provably exist", not merely "the cap was reached", which would misreport
 exactly 200 matches. Raising the cap needs either an index that can serve ranking or the `pg_trgm` work in
 `#286`; until then the bound is deliberate, and this exception must not be cited to justify offset
 pagination over an **unbounded** query anywhere else.
+
+**A second scoped exception: the staff product list's numbered pages** (`#1523`, 2026-11-12).
+`/staff/products` shows "Page X of Y" with page numbers, a total and a jump-to-page box, above and
+below the list (owner request). A keyset cursor can only reach the *next* page, so
+`listProductsForAdminPage` in `lib/repositories/products.ts` uses `count` plus `skip`/`take`. The
+rule's rationale is bounded here rather than engaged. The query is **staff-only and vendor-scoped**
+(Aheed's whole catalogue is ~6,200 rows), and `take` is capped at **100** in the repository whatever
+the caller passes, so the deepest page skips one vendor's catalogue at most. It is not a shopper grid
+and not an infinite scroll. The page number is a digits-only parsed integer clamped to the real page
+count, never a row id, so the `#682` cursor guard has nothing to guard, and a stale "page 40" lands on
+the last page instead of an empty list. The keyset `listProductsForAdmin` stays for the bundle picker.
+Every shopper-facing list and every other admin table is unchanged. This exception covers one
+bounded, staff-only, per-vendor list and must not be cited for an unbounded or shopper-facing one.
 
 ### Composing `where` fragments: never emit a bare top-level `OR` from a filter
 

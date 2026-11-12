@@ -1,0 +1,495 @@
+{
+  "$comment": "Aheed catalogue S1b (#1330): till department / sub-department / name keywords → store department. Department names only; no product data. Targets are category SLUGS. Keywords are whole words, matched in order against the upper-cased product name; the first match wins. 'keep' leaves the product where it is; 'review' sends it to the review list (also kept where it is). New categories are created INACTIVE (requirements R6).",
+  "newCategories": {
+    "spices-masalas": { "name": "Spices & Masalas", "parent": "groceries" },
+    "pasta-noodles": { "name": "Pasta & Noodles", "parent": "groceries" },
+    "flour-atta": { "name": "Flour & Atta", "parent": "groceries" },
+    "sauces-pickles": { "name": "Sauces & Pickles", "parent": "groceries" },
+    "tinned-food": { "name": "Tinned Food", "parent": "groceries" },
+    "sugar-baking": { "name": "Sugar & Baking", "parent": "groceries" },
+    "breakfast-cereals": { "name": "Breakfast & Cereals", "parent": "groceries" },
+    "spreads-honey": { "name": "Spreads & Honey", "parent": "groceries" }
+  },
+  "nameKeywords": [
+    {
+      "words": [
+        "MASALA",
+        "POWDER",
+        "SPICE",
+        "SPICES",
+        "TURMERIC",
+        "CUMIN",
+        "JEERA",
+        "GARAM",
+        "CURRY",
+        "CHILLI POWDER",
+        "HALDI",
+        "METHI",
+        "AJWAIN",
+        "CARDAMOM",
+        "CLOVES",
+        "CINNAMON",
+        "BAY LEAVES",
+        "PEPPER",
+        "SEASONING",
+        "STOCK CUBE",
+        "MAGGI CUBE"
+      ],
+      "target": "spices-masalas"
+    },
+    { "words": ["OIL", "GHEE", "VANASPATI"], "target": "cooking-oils" },
+    {
+      "words": [
+        "RICE",
+        "BASMATI",
+        "PONNI",
+        "SONA MASOORI",
+        "POHA",
+        "MILLET",
+        "QUINOA",
+        "COUSCOUS",
+        "BULGUR"
+      ],
+      "target": "rice-grains"
+    },
+    {
+      "words": [
+        "ATTA",
+        "FLOUR",
+        "SEMOLINA",
+        "SOOJI",
+        "SUJI",
+        "BESAN",
+        "GARRI",
+        "GARI",
+        "FUFU",
+        "POUNDED YAM",
+        "IYAN",
+        "ELUBO",
+        "CASSAVA DOUGH",
+        "MAIDA"
+      ],
+      "target": "flour-atta"
+    },
+    {
+      "words": [
+        "DAL",
+        "DHAL",
+        "DAAL",
+        "LENTIL",
+        "LENTILS",
+        "CHANA",
+        "CHICKPEAS",
+        "GRAM",
+        "MOONG",
+        "MUNG",
+        "TOOR",
+        "URAD",
+        "MASOOR",
+        "RAJMA",
+        "PEAS",
+        "BEANS",
+        "BLACK EYE",
+        "EGUSI",
+        "OGBONO"
+      ],
+      "target": "lentils-pulses"
+    },
+    {
+      "words": ["NOODLES", "NOODLE", "PASTA", "SPAGHETTI", "MACARONI", "VERMICELLI", "SEVIYAN"],
+      "target": "pasta-noodles"
+    },
+    {
+      "words": [
+        "PICKLE",
+        "PICKLES",
+        "ACHAR",
+        "SAUCE",
+        "CHUTNEY",
+        "PASTE",
+        "KETCHUP",
+        "MAYONNAISE",
+        "SHITO",
+        "VINEGAR"
+      ],
+      "target": "sauces-pickles"
+    },
+    { "words": ["TEA", "CHAI", "COFFEE", "NESCAFE", "TETLEY", "PG TIPS"], "target": "tea-coffee" },
+    { "words": ["WATER", "TONIC", "SODA WATER"], "target": "water-mixers" },
+    {
+      "words": [
+        "JUICE",
+        "DRINK",
+        "DRINKS",
+        "LASSI",
+        "COLA",
+        "PEPSI",
+        "FANTA",
+        "SPRITE",
+        "VIMTO",
+        "RUBICON",
+        "MALT",
+        "SMOOTHIE",
+        "NECTAR",
+        "SQUASH",
+        "CORDIAL",
+        "CAN",
+        "CANS"
+      ],
+      "target": "juices-soft-drinks"
+    },
+    {
+      "words": [
+        "NAAN",
+        "PARATHA",
+        "ROTI",
+        "CHAPATI",
+        "CHAPATTI",
+        "BREAD",
+        "PITTA",
+        "PITA",
+        "BUN",
+        "BUNS",
+        "LOAF",
+        "TORTILLA",
+        "WRAPS",
+        "KULCHA"
+      ],
+      "target": "bread-loaves"
+    },
+    {
+      "words": ["SAMOSA", "PASTRY", "PASTRIES", "PATTIES", "PATTY", "PUFF", "CROISSANT"],
+      "target": "pastries"
+    },
+    {
+      "words": [
+        "CAKE",
+        "CAKES",
+        "RUSK",
+        "RUSKS",
+        "SWISS ROLL",
+        "MUFFIN",
+        "BAKLAVA",
+        "GULAB JAMUN",
+        "RASMALAI",
+        "KHEER",
+        "DESSERT",
+        "JELLY",
+        "CUSTARD"
+      ],
+      "target": "cakes-desserts"
+    },
+    {
+      "words": [
+        "BISCUIT",
+        "BISCUITS",
+        "COOKIES",
+        "COOKIE",
+        "CHOCOLATE",
+        "SWEETS",
+        "MITHAI",
+        "BARFI",
+        "LADOO",
+        "LADDU",
+        "HALWA",
+        "TOFFEE",
+        "CANDY",
+        "GUM",
+        "LOLLY"
+      ],
+      "target": "biscuits-sweets"
+    },
+    {
+      "words": [
+        "CRISPS",
+        "CHIPS",
+        "NAMKEEN",
+        "MIXTURE",
+        "BHUJIA",
+        "CHEVDA",
+        "CHIVDA",
+        "SEV",
+        "PAPAD",
+        "POPPADOM",
+        "POPPADOMS",
+        "CHIN CHIN",
+        "PLANTAIN CHIPS",
+        "POPCORN"
+      ],
+      "target": "crisps-namkeen"
+    },
+    {
+      "words": [
+        "NUTS",
+        "CASHEW",
+        "CASHEWS",
+        "ALMOND",
+        "ALMONDS",
+        "PISTACHIO",
+        "PISTACHIOS",
+        "PEANUTS",
+        "WALNUT",
+        "WALNUTS",
+        "RAISINS",
+        "SULTANAS",
+        "DATES",
+        "DRIED FRUIT",
+        "FIGS",
+        "APRICOTS",
+        "SEEDS"
+      ],
+      "target": "nuts-dried-fruit"
+    },
+    {
+      "words": [
+        "SUGAR",
+        "JAGGERY",
+        "GUR",
+        "BAKING",
+        "YEAST",
+        "COCOA",
+        "ESSENCE",
+        "CORNFLOUR",
+        "CUSTARD POWDER"
+      ],
+      "target": "sugar-baking"
+    },
+    {
+      "words": [
+        "CEREAL",
+        "CEREALS",
+        "CORNFLAKES",
+        "OATS",
+        "PORRIDGE",
+        "MUESLI",
+        "GRANOLA",
+        "WEETABIX"
+      ],
+      "target": "breakfast-cereals"
+    },
+    {
+      "words": ["HONEY", "JAM", "MARMALADE", "SPREAD", "NUTELLA", "PEANUT BUTTER", "MARMITE"],
+      "target": "spreads-honey"
+    },
+    {
+      "words": [
+        "TINNED",
+        "TIN",
+        "CANNED",
+        "BAKED BEANS",
+        "TUNA",
+        "SARDINES",
+        "MACKEREL IN",
+        "CORNED BEEF",
+        "SOUP",
+        "SOUPS"
+      ],
+      "target": "tinned-food"
+    },
+    {
+      "words": ["MILK", "CREAM", "YOGHURT", "YOGURT", "CURD", "DAHI", "EVAPORATED", "CONDENSED"],
+      "target": "milk-cream"
+    },
+    { "words": ["PANEER", "CHEESE", "HALLOUMI", "FETA"], "target": "cheese-paneer" },
+    { "words": ["EGG", "EGGS", "BUTTER", "MARGARINE"], "target": "eggs-butter" },
+    {
+      "words": [
+        "PRAWN",
+        "PRAWNS",
+        "SHRIMP",
+        "CATFISH",
+        "STOCK FISH",
+        "STOCKFISH",
+        "TILAPIA",
+        "MACKEREL",
+        "SARDINE",
+        "HILSA",
+        "ROHU",
+        "POMFRET",
+        "SALMON",
+        "COD",
+        "FISH",
+        "CRAYFISH",
+        "BONGA"
+      ],
+      "target": "fish"
+    },
+    {
+      "words": [
+        "CHICKEN",
+        "LAMB",
+        "MUTTON",
+        "GOAT",
+        "BEEF",
+        "MINCE",
+        "TURKEY",
+        "WINGS",
+        "DRUMSTICKS"
+      ],
+      "target": "halal-meat"
+    },
+    { "words": ["NAPPIES", "NAPPY", "BABY", "INFANT", "WIPES"], "target": "baby-kids" },
+    {
+      "words": [
+        "CUP",
+        "CUPS",
+        "PLATE",
+        "PLATES",
+        "FOIL",
+        "CLING",
+        "BAGS",
+        "BAG",
+        "NAPKINS",
+        "SERVIETTES",
+        "SPOONS",
+        "TEASPOONS",
+        "FORKS",
+        "STRAWS",
+        "CONTAINERS",
+        "TRAY",
+        "TRAYS"
+      ],
+      "target": "kitchen-foil"
+    },
+    {
+      "words": [
+        "DETERGENT",
+        "BLEACH",
+        "WASHING",
+        "CLEANER",
+        "DISINFECTANT",
+        "SPONGE",
+        "SCOURER",
+        "BIN BAGS",
+        "FAIRY",
+        "DOMESTOS"
+      ],
+      "target": "cleaning"
+    },
+    {
+      "words": ["TISSUE", "TISSUES", "TOILET ROLL", "KITCHEN ROLL", "TOOTHPASTE", "TOOTHBRUSH"],
+      "target": "paper-toiletries"
+    },
+    {
+      "words": [
+        "SOAP",
+        "SHAMPOO",
+        "CONDITIONER",
+        "LOTION",
+        "DEODORANT",
+        "HAIR",
+        "COCOA BUTTER",
+        "SHEA",
+        "VASELINE",
+        "BODY",
+        "FACE",
+        "RELAXER",
+        "HENNA"
+      ],
+      "target": "health-beauty"
+    },
+    {
+      "words": [
+        "ONION",
+        "ONIONS",
+        "POTATO",
+        "POTATOES",
+        "GARLIC",
+        "GINGER",
+        "OKRA",
+        "CASSAVA",
+        "YAM",
+        "PLANTAIN",
+        "AUBERGINE",
+        "CABBAGE",
+        "TOMATO",
+        "TOMATOES",
+        "CARROT",
+        "CARROTS"
+      ],
+      "target": "fresh-vegetables",
+      "onlyIn": ["FRUIT & VEG"]
+    },
+    {
+      "words": ["CORIANDER", "MINT", "CURRY LEAVES", "METHI LEAVES", "SPINACH", "LETTUCE"],
+      "target": "herbs-salads",
+      "onlyIn": ["FRUIT & VEG"]
+    },
+    {
+      "words": [
+        "MANGO",
+        "MANGOES",
+        "BANANA",
+        "BANANAS",
+        "APPLE",
+        "APPLES",
+        "ORANGE",
+        "ORANGES",
+        "GRAPES",
+        "LEMON",
+        "LIME",
+        "PAPAYA",
+        "GUAVA",
+        "COCONUT",
+        "FRUITS"
+      ],
+      "target": "fresh-fruit",
+      "onlyIn": ["FRUIT & VEG"]
+    }
+  ],
+  "departments": {
+    "SOFT DRINKS": { "target": "juices-soft-drinks", "keywords": true },
+    "FROZEN FOODS": "frozen-foods",
+    "ICE CREAM": "frozen-foods",
+    "HEALTH & BEAUTY": "health-beauty",
+    "CRISPS & SNACKS": "crisps-namkeen",
+    "HOUSEHOLD SUNDRIES": { "target": "household", "keywords": true },
+    "CHILLED FOODS": "chilled-foods",
+    "FOOD TO GO": "food-to-go",
+    "CONFECTIONERY": "biscuits-sweets",
+    "CAKES": "cakes-desserts",
+    "FRUIT & VEG": { "target": "fruit-veg", "keywords": true },
+    "DEFAULT": { "target": "review", "keywords": true },
+    "TOBACCO": "keep",
+    "ALCOHOL": "keep",
+    "PHONE CARDS": { "target": "keep", "keywords": true },
+    "NEWS": { "target": "keep", "keywords": true },
+    "E-PAY": "keep",
+    "INSTANT LOTTERY": { "target": "keep", "keywords": true },
+    "STAMPS": "keep",
+    "NON FOOD": "keep",
+    "STATIONARY": "keep",
+    "GREETING CARDS": "keep",
+    "CD/TAPES/VIDEO": "keep",
+    "FLOWERS & PLANTS": "keep",
+    "SEASONAL": "keep",
+    "MISC": { "target": "keep", "keywords": true }
+  },
+  "subDepartments": {
+    "GROCERIES": {
+      "BEVERAGES": { "target": "beverages", "keywords": true },
+      "OILS AND SPICES": { "target": "spices-masalas", "keywords": true },
+      "PASTA / RICE": { "target": "rice-grains", "keywords": true },
+      "SAUCES AND PICKLES": "sauces-pickles",
+      "BABY FOODS/DRINKS": "baby-kids",
+      "MISC": { "target": "groceries", "keywords": true },
+      "LONG LIFE DAIRY": "milk-cream",
+      "VEG TINNED": "tinned-food",
+      "FISH TINNED": "tinned-food",
+      "FRUIT TINNED": "tinned-food",
+      "MEAT TINNED": "tinned-food",
+      "TIN MEAL": "tinned-food",
+      "SOUPS": "tinned-food",
+      "SUGARS & BAKING": "sugar-baking",
+      "BISCUITS": "biscuits-sweets",
+      "DESSERTS": "cakes-desserts",
+      "BREAKFAST CEREALS": "breakfast-cereals",
+      "BREAD / EGG": { "target": "bread-loaves", "keywords": true },
+      "TEA AND COFFEE": "tea-coffee",
+      "CAKES": "cakes-desserts",
+      "DRY FRUIT": "nuts-dried-fruit",
+      "SPREADS": "spreads-honey",
+      "PET FOOD": "pet-supplies"
+    }
+  }
+}

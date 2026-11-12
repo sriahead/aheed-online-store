@@ -37,7 +37,14 @@ export interface PromotionRow {
     id: string;
     name: string;
     slug: string;
-    items: { quantity: number; product: { id: string; basePrice: number } }[];
+    items: {
+      quantity: number;
+      product: {
+        id: string;
+        basePrice: number;
+        priceTier?: { groupQuantity: number; groupPricePence: number; isActive: boolean } | null;
+      };
+    }[];
   } | null;
   discountCode?: {
     id: string;
@@ -97,6 +104,8 @@ const PROMOTION_SELECT = {
             select: {
               id: true,
               basePrice: true,
+              // #1517 — so the banner prices a bundle exactly as the bundle card and the cart do.
+              priceTier: { select: { groupQuantity: true, groupPricePence: true, isActive: true } },
             },
           },
         },

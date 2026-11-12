@@ -1,0 +1,147 @@
+{
+  "$comment": "Aheed catalogue S1b taxonomy (#1330, owner 2026-11-11): ~37 till/top-level categories restructured into 12 shopper departments with sub-departments, consistent Title Case names. Existing categories are REUSED by slug (keeping their images); `absorb` moves the products sitting directly in the named categories into this node. A category not named anywhere here is moved under `archived` and switched off. `active` is set only where given; new categories are created inactive (go-live activation is S1e).",
+  "archive": { "slug": "archived", "name": "Archived" },
+  "departments": [
+    {
+      "slug": "halal-meat",
+      "name": "Meat & Poultry",
+      "children": [
+        { "slug": "chicken-poultry", "name": "Chicken" },
+        { "slug": "lamb-mutton", "name": "Lamb & Mutton" },
+        { "slug": "beef-mince", "name": "Beef" },
+        { "slug": "offal", "name": "Offal & Specialty Cuts" },
+        { "slug": "frozen-meat", "name": "Frozen Meat" }
+      ]
+    },
+    {
+      "slug": "fish",
+      "name": "Fish & Seafood",
+      "children": [
+        { "slug": "frozen-fish", "name": "Frozen Fish", "absorb": ["fresh-fish"] },
+        { "slug": "prawns", "name": "Prawns" },
+        { "slug": "crab-squid-seafood", "name": "Crab, Squid & Seafood" },
+        { "slug": "fish-fillets-smoked", "name": "Fillets & Smoked Fish" }
+      ]
+    },
+    {
+      "slug": "fruit-veg",
+      "name": "Fruit & Vegetables",
+      "children": [
+        { "slug": "fresh-fruit", "name": "Fresh Fruit" },
+        { "slug": "fresh-vegetables", "name": "Fresh Vegetables" },
+        { "slug": "onions-potatoes-roots", "name": "Onions, Potatoes & Roots" },
+        { "slug": "herbs-salads", "name": "Herbs & Leafy Greens" }
+      ]
+    },
+    {
+      "slug": "groceries",
+      "name": "Food Cupboard",
+      "children": [
+        { "slug": "rice-grains", "name": "Rice & Grains" },
+        { "slug": "flour-atta", "name": "Flour & Atta" },
+        { "slug": "lentils-pulses", "name": "Lentils & Pulses" },
+        { "slug": "spices-masalas", "name": "Spices & Masalas" },
+        { "slug": "cooking-oils", "name": "Cooking Oils & Ghee" },
+        { "slug": "sauces-pickles", "name": "Sauces & Pickles" },
+        { "slug": "tinned-food", "name": "Tinned Food" },
+        { "slug": "pasta-noodles", "name": "Pasta & Noodles" },
+        { "slug": "sugar-baking", "name": "Sugar & Baking" },
+        { "slug": "breakfast-cereals", "name": "Breakfast & Cereals" },
+        { "slug": "spreads-honey", "name": "Spreads & Honey" }
+      ]
+    },
+    {
+      "slug": "beverages",
+      "name": "Drinks",
+      "children": [
+        { "slug": "tea-coffee", "name": "Tea & Coffee" },
+        { "slug": "juices-soft-drinks", "name": "Juices & Soft Drinks", "absorb": ["soft-drinks"] },
+        { "slug": "water-mixers", "name": "Water & Mixers" }
+      ]
+    },
+    {
+      "slug": "snacks",
+      "name": "Snacks & Sweets",
+      "children": [
+        { "slug": "crisps-namkeen", "name": "Crisps & Namkeen", "absorb": ["crisps-snacks"] },
+        { "slug": "biscuits-sweets", "name": "Biscuits & Sweets", "absorb": ["confectionery"] },
+        { "slug": "nuts-dried-fruit", "name": "Nuts & Dried Fruit" }
+      ]
+    },
+    {
+      "slug": "bakery",
+      "name": "Bakery",
+      "children": [
+        { "slug": "bread-loaves", "name": "Bread & Flatbreads" },
+        { "slug": "pastries", "name": "Pastries & Savouries" },
+        { "slug": "cakes-desserts", "name": "Cakes & Desserts", "absorb": ["cakes"] }
+      ]
+    },
+    {
+      "slug": "dairy-eggs",
+      "name": "Dairy & Chilled",
+      "children": [
+        { "slug": "milk-cream", "name": "Milk & Cream" },
+        { "slug": "cheese-paneer", "name": "Cheese & Paneer" },
+        { "slug": "eggs-butter", "name": "Eggs & Butter" },
+        { "slug": "chilled-foods", "name": "Chilled Foods" },
+        { "slug": "food-to-go", "name": "Food To Go" }
+      ]
+    },
+    {
+      "slug": "frozen-foods",
+      "name": "Frozen Food",
+      "children": [{ "slug": "ice-cream", "name": "Ice Cream" }]
+    },
+    {
+      "slug": "household",
+      "name": "Household",
+      "children": [
+        { "slug": "cleaning", "name": "Cleaning" },
+        { "slug": "kitchen-foil", "name": "Kitchen & Disposables" },
+        { "slug": "paper-toiletries", "name": "Paper & Toiletries" },
+        { "slug": "household-sundries", "name": "Household Essentials" },
+        {
+          "slug": "non-food",
+          "name": "Home & Gifts",
+          "absorb": [
+            "stationary",
+            "greeting-cards",
+            "cdtapesvideo",
+            "flowers-plants",
+            "seasonal",
+            "misc"
+          ]
+        }
+      ]
+    },
+    { "slug": "health-beauty", "name": "Health & Beauty", "children": [] },
+    {
+      "slug": "baby-kids",
+      "name": "Baby & Pet",
+      "children": [
+        { "slug": "baby-care", "name": "Baby Food & Care", "absorb": ["baby-kids"] },
+        { "slug": "pet-supplies", "name": "Pet Supplies" }
+      ]
+    },
+    {
+      "slug": "not-sold-online",
+      "name": "Not Sold Online",
+      "active": false,
+      "children": [
+        { "slug": "tobacco", "name": "Tobacco & Smoking", "active": false },
+        { "slug": "alcohol", "name": "Alcohol", "active": false },
+        {
+          "slug": "phone-cards",
+          "name": "Phone Cards & Top-Ups",
+          "active": false,
+          "absorb": ["e-pay"]
+        },
+        { "slug": "news", "name": "Newspapers", "active": false },
+        { "slug": "instant-lottery", "name": "Lottery", "active": false },
+        { "slug": "stamps", "name": "Stamps", "active": false }
+      ]
+    },
+    { "slug": "default", "name": "Needs Review", "active": false, "children": [] }
+  ]
+}

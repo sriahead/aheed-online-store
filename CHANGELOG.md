@@ -51,6 +51,87 @@ every branch merges.
 
 ### Added
 
+- **Stock list on staging, a faster Products page, and honest savings framing (#1523)**
+  - **Stock list (Aheed staging only).** The client's `Stock to upload.xlsx` holds 100 product rows (52 Fish, 46 Fruit & Veg, `STELLA BOTTLE`, `ANGEL SLICES 5`). All of them already existed, created by the owner's price list (#1330) under corrected spellings, so **no products and no categories were created**. `scripts/catalogue-apply-stock-list.ts` moved the 104 matched products into the spreadsheet's categories (Fish & Seafood › Frozen Fish, Fruit & Vegetables › Fresh Vegetables / Fresh Fruit; 50 moves, several out of inactive subcategories shoppers could not browse). It set every one to stock **Not tracked**, with an audit row each, and switched on the **59 with a price and no restriction**. The 44 priced at £0 stay hidden as "price needed", and STELLA stays hidden (age-restricted). Dry run by default, `--confirm-host`, and `--production` for a production file. A re-run changes nothing. Production is untouched: every production product stays hidden until go-live.
+  - **Products page (`/staff/products`).** Search has its own row and matches name, **PLU** or **barcode**. Numbered pagination sits **above and below** the list ("Page 3 of 63 · Showing 51–75 of 1,560"), with page numbers, Previous/Next and jump-to-page. Page sizes are **25 / 50 / 100** (no "All", owner decision). New: a **Sort** (newest, name, price either way), **Needs attention** worklists (price needed, ready to switch on, no photo) as a filter and as one-click quick views, a red **Price needed** badge, the PLU, the was-price and multi-buy offer on each row, and **Clear all**. Every page link keeps every filter. A repeated query parameter no longer reaches the parser as an array.
+  - **Bulk stock counts.** Each row has a **Qty** box, and **Set selected to N** fills the ticked rows. One **Save N quantities** writes only the changed rows, in one interactive transaction (`bulkSetInventoryQuantities`, `getPrismaWs()`), with the same rules as the Inventory quick update: whole numbers 0–100,000, a count makes the product Tracked, and each change gets an `InventoryAuditLog` row (`STAFF_ADJUSTMENT`). Rows already at that count, and ids from another vendor, are skipped and reported. **Discard changes** restores the page.
+  - **Savings framing (storefront).** `lib/price-psychology.ts` is now the one place the card, Quick View and product page word an offer. A markdown reads "Save £1.00 (20%)", with the percentage rounded down so it is never overstated. A multi-buy reads "4 for £18.00 · save £2.00", where the saving is the cart's own `tierSavingPence`, so the figure is what checkout charges. No urgency, countdown or invented-scarcity copy is added, following the UK unfair-trading rules on reference prices and pressure selling.
+  - **Standing decision.** Offset paging for this one staff list is recorded as a second scoped exception to the keyset rule in `specs/architecture.md` (1.49.0). The list is vendor-scoped and capped at 100 rows a page. The keyset `listProductsForAdmin` stays for the bundle picker.
+  - **Docs and tests.** The staff guide's Catalogue section covers finding products and bulk stock counts. New tests: `tests/price-psychology.test.ts`, `tests/bulk-quantity.test.ts` (parser, transaction, paging, sort, needs, search), `tests/catalogue-apply-stock-list.test.ts`, and extended `tests/staff-products-query.test.ts` (page parsing, window, round-trip). Spec: `specs/2026-11-11-stock-list-products-page/`.
+
+- **Generated images for live offer products, bundles and banners: a stop-gap with poor results (#1521)**
+  - Owner: "generate images for the live stock, promotions and bundles". `scripts/generate-live-images.ts` targets active products with no real image, and active bundles and promotions with no image.
+    - Products go through `runProductImagePipeline` with Open Food Facts off, and are flagged "Image needs review".
+    - Bundles and banners use the same Workers AI model, with plain photograph prompts.
+    - Everything is metered against the daily AI budget, with a per-item failure guard, a dry run by default and `--production`.
+  - **Staging, 2026-11-11.** 33 images were generated across two prompt versions and every one was looked at.
+    - **Unusable, removed:** live birds in the whole-chicken bundles and banner; a live chick for "Baby Chicken"; whole chickens for "Turkey Box"; garbled text drawn on packaged items and on the first round's banners ("Wolle Chicken", "Greve Chicken").
+    - **Kept, flagged for review:** 11 product photos (fish and turkey boxes, drumsticks, niblets, medium and hard chicken), none of them convincing.
+    - **Refused** even when reworded: Chicken Breast and Boneless Thigh.
+    - The run used the store's whole daily allowance (3,053 of 3,000 neurons).
+  - **Finding.** Real photographs of the stock are needed for the live offer lines. This script only fills gaps, and every image it produces needs a person to look at it.
+
+- **Switch on Aheed's offer products, their departments, bundles and banners (#1519, part of go-live S1e)**
+  - Owner: "activate the products for which there are offers, otherwise they are not visible". `scripts/catalogue-activate-offers.ts` switches on every product with an active multi-buy or an Offer Type value, unless it is restricted or priced at £0.
+  - It changes stock mode UNKNOWN ("not for sale") to UNTRACKED, so these products can be bought without a stock count. Stock the owner already tracks is left alone: Medium Chicken stays TRACKED at 60.
+  - It switches on the products' departments and parents, every bundle made only of these products, and the promotions linked to those bundles or departments. Nothing else is activated.
+  - **Staging, 2026-11-11:** 14 products, 5 departments (Chicken, Meat & Poultry, Frozen Meat, Frozen Fish, Fish & Seafood), 10 bundles, 7 promotions. `/bundles/four-medium-chickens` shows £18.00, normally £20.00, Save £2.00, with "Buy this offer". The Chicken department lists all 7 chicken products, and the homepage banners link to the bundles. A re-run changes nothing.
+  - Dry run by default; `--confirm-host` to apply; `--production` for a production secrets file. Tests: `tests/catalogue-activate-offers.test.ts`.
+
+- **One-click "Buy This Offer": tier-priced bundles, a page per bundle, banners that link to it (#1517; spec `specs/2026-11-11-offer-bundles/`)**
+  - **What was wrong.** The cart and checkout already price multi-buys (`lib/tier-pricing.ts`), but a bundle's displayed total was the sum of normal prices, so a "4 for £18" bundle would show £20. A promotion linked to a bundle pointed at `/categories?bundle=<slug>`, which no page reads.
+  - **Pricing.** `lib/bundle-pricing.ts` prices each line with the same `tieredLineTotalPence` the cart uses, and adds `bundleRegularPence` and `bundleSavingPence`. The bundle repository and the promotion query select each product's price tier.
+  - **Storefront.**
+    - `BundleCard` shows the offer total, the normal total struck through and "Save £X", and its button reads "Buy this offer" when there is a saving. The bundle name links to the new `/bundles/[slug]` page, where an unknown, inactive or unavailable bundle is a 404.
+    - A bundle promotion now lands on that page labelled "Buy This Offer" (`lib/promotion-cta.ts`, pure and tested). A bundle beats a category; an explicit link or label beats both.
+  - **Aheed data (staging; inactive until go-live S1e): `scripts/catalogue-offer-bundles.ts`.**
+    - 10 bundles: 7 single multi-buys (4 Medium Chickens £18, 4 Baby £15, 4 Hard £19, breast 3kg £21, thigh 3kg £19, niblets 2kg £11, drumsticks 3kg £12) and 3 combined packs (Whole Chicken Trio £52, Chicken Family Feast £44, BBQ Chicken Pack £31).
+    - 4 promotions linked to them.
+    - An **Offer Type** filter (Multi-Buy on 7 products, Box Offer on 7) through the existing vendor-filter chips. The existing filters (On offer, which counts multi-buys; Brand; Halal; Fresh; price) are fed by the loaded data.
+    - A re-run changes nothing.
+  - **Tests.** `tests/offer-bundles.test.ts` (pricing parity with the cart; banner destination, label and price) and `tests/catalogue-offer-bundles.test.ts`. The full suite (6,340 tests) passed after one fix: the struck-through price was `text-black/50`, which the #649 legibility rule forbids, and is now `/60`.
+
+- **Aheed catalogue S1: restricted lines and departments (#1200, #1330; spec `specs/2026-11-11-aheed-catalogue-s1/`)**
+  - **S1c: `scripts/catalogue-restrict-by-policy.ts`.** The 2026-11-07 import bypassed ADR-007's restriction policy, so tobacco, alcohol, lottery, phone cards, newspapers, e-pay and stamps arrived unrestricted.
+    - The script applies `DEFAULT_ADR007_POLICY` to existing products by department, through `setProductRestriction` (tighten only, product switched off, audit row).
+    - It sets `NEEDS_REVIEW` on restricted-goods name keywords in DEFAULT and MISC. Known false positives (cider or wine vinegar, vine leaves) are excluded.
+    - `PROHIBITED` and `AGE_RESTRICTED` can never be cleared in the app, so lines the till misfiled (e.g. a dried shrimp under INSTANT LOTTERY) are named with `--soften-plu` and get `NEEDS_REVIEW` instead.
+    - **Applied on staging, 2026-11-11:** 54 lines (24 age-restricted, 22 not deliverable, 8 needs review), with PLUs 4559, 4981, 5516 and 6424 softened by the owner's decision. A re-run changes nothing.
+  - **S1b: `scripts/catalogue-department-map.ts`**, with its rules in `prisma/manifests/aheed-department-map.json` and pure matching in `scripts/lib/department-map.ts`.
+    - `propose` reads the client's stock file (PLU → till department and sub-department) and the database, and writes a review CSV to `.import-reports/`. The rules are till department, then GROCERIES sub-department, then whole-word name keywords; fresh-produce words apply only within FRUIT & VEG.
+    - `apply` moves products to the reviewed targets and creates missing sub-departments **inactive**. It writes `categoryId` only.
+    - **Applied on staging, 2026-11-11:** 4,651 products moved and 8 sub-departments created. `Groceries` went from 3,229 to 59 and `DEFAULT` from 1,060 to 522, the lines no rule recognised, left for review. A re-run moves nothing.
+  - Both scripts do a dry run by default, need `--confirm-host` to apply, and need `--production` for a production secrets file. Production waits for the owner's approval.
+  - **Department tree: `scripts/catalogue-taxonomy.ts`** with `prisma/manifests/aheed-taxonomy.json`.
+    - About 37 top-level categories become **12 shopper departments** with sub-departments, all in Title Case: Meat & Poultry, Fish & Seafood, Fruit & Vegetables, Food Cupboard, Drinks, Snacks & Sweets, Bakery, Dairy & Chilled, Frozen Food, Household, Health & Beauty, Baby & Pet.
+    - Two hidden groups: Not Sold Online (tobacco, alcohol, phone cards, newspapers, lottery, stamps) and Needs Review.
+    - Existing categories are reused by slug, so their images are kept. 16 obsolete categories are archived, and archiving refuses any category still holding products.
+    - **Staging:** 66 nodes set, 258 products absorbed.
+  - **Owner's price list: `scripts/catalogue-load-price-list.ts`.** The list itself stays outside the repository.
+    - It is the main data: same-name products are overridden (word-set match, plus aliases).
+    - Multi-buy offers become price tiers. Box offers become their own products. Diamond and Pluvera are brands. Offer banners are created inactive. Unpriced fruit and veg are created hidden at £0 and listed as "price needed".
+    - **Staging:** 13 overridden, 134 created, 7 multi-buy tiers, 7 box products, 4 inactive promotions. One duplicate till row is reported ("DIAMOND CUT CRAB"). A re-run matches all 147 items and creates nothing.
+  - **S1d images** (#1515) is blocked: the client's export has no barcodes. No AI images.
+  - **Tests.** `tests/catalogue-restrict-by-policy.test.ts` and `tests/catalogue-department-map.test.ts`, 40 tests. The second runs against the real rules file.
+
+- **Scripts to clear test orders from a cell, and to turn a production copy into staging (#1512, part of #1337)**
+  - **`scripts/delete-cell-orders.ts`** deletes every order in one cell database. The owner's rule (2026-11-11): Aheed production holds no orders before go-live.
+    - It has three modes: dry run (default; lists order number, date, status, total and Stripe mode, nothing personal), `--rehearse` (runs the whole delete transaction, then rolls it back), and `--apply`, which needs `--confirm-host`.
+    - It refuses any Stripe **live** payment.
+    - In one transaction it also deletes loyalty accounts left empty, gives back the redemptions those orders used on discount codes, and deletes guest addresses that only those orders used.
+    - Rehearsed on AFC staging: 2 orders deleted inside the transaction, rolled back, staging unchanged.
+  - **`scripts/cell-staging-after-refresh.ts`** runs after Aheed staging's database is refreshed from production (a Neon branch of the production project, "Reset from parent"). It rewrites production's host and addresses to the staging form: `VendorDomain` `www.` → `staging.`, and the sender and inbound addresses `@<domain>` → `@staging.<domain>`.
+    - Without it, the staging deploy's route check would fail and staging emails would link to production.
+    - It is idempotent, has a dry run by default, and refuses the production database.
+    - It also adds `-staging` to the copied `HealthCheck` label, so `/api/health` on staging no longer reports production's `afc-dedicated-cell`. Found on the first real refresh, 2026-11-11.
+  - **First real refresh (2026-11-11).**
+    - The owner deleted production's 2 test orders: backup branch first, then dry run, rehearse, apply. Result: 0 orders.
+    - The owner created Neon branch `staging` (`ep-super-cherry`) from production.
+    - The fix-up rewrote 5 rows on it.
+    - The staging Worker's `DATABASE_URL` now points at the branch. `staging.aheedfoodcentre.co.uk` serves production's catalogue, including `/products/medium-chicken`, which exists only in production's data.
+  - **Docs.** `env-setup.md` §4 sets out the order: backup branch, delete orders, create the staging branch, repoint secrets, run the fix-up, verify; and how to refresh before each import rehearsal.
+  - **Tests.** `tests/delete-cell-orders.test.ts` and `tests/cell-staging-after-refresh.test.ts`, 7 tests.
+
 - **Read-only Aheed data inventory script (#1504, part of #1337)**
   - `npx tsx scripts/aheed-data-inventory.ts <secrets file> <URL key> [--images]` prints per-vendor **counts only**, so the output can go into an issue. It covers products (active), categories, bundles, product, bundle and category images, staff memberships (demo flagged), orders by status, signed-in and guest customers, and payments by Stripe mode and status. The sender address is reported by domain only, and nothing is written. `--images` sends a HEAD request for every image key to the file's `CDN_BASE_URL`.
   - Purpose: prove Aheed's catalogue and images are complete in its own cell, and show whether any real customer or order sits on ShopLocal before go-live.

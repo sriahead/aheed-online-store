@@ -3,6 +3,9 @@ import {
   CATEGORY_ALL,
   PRODUCT_STATUS_ALL,
   type CategoryChoice,
+  clampPage,
+  pageCount,
+  pageWindow,
   parseStaffProductsQuery,
   staffProductsHref,
 } from "@/lib/staff-products-query";
@@ -172,17 +175,17 @@ describe("staffProductsHref", () => {
   it("omits the default status so the common URL stays clean", () => {
     const href = staffProductsHref(
       parseStaffProductsQuery({ status: PRODUCT_STATUS_ALL }, CATEGORIES),
-      "abc",
+      2,
     );
-    expect(href).toBe("/staff/products?cursor=abc");
+    expect(href).toBe("/staff/products?page=2");
   });
 
   it("carries the active filter and search into the next-page link", () => {
     const query = parseStaffProductsQuery({ status: "inactive", q: "basmati rice" }, CATEGORIES);
-    const href = staffProductsHref(query, "cur123");
+    const href = staffProductsHref(query, 3);
     expect(href).toContain("status=inactive");
     expect(href).toContain("q=basmati+rice");
-    expect(href).toContain("cursor=cur123");
+    expect(href).toContain("page=3");
   });
 
   it("encodes a search term that would otherwise break the query string", () => {
@@ -190,22 +193,23 @@ describe("staffProductsHref", () => {
     expect(staffProductsHref(query)).toBe("/staff/products?q=a%26b%3Dc");
   });
 
-  it("omits the cursor when there is no next page", () => {
+  it("omits the page for page 1 or none (#1523)", () => {
     const query = parseStaffProductsQuery({ q: "rice" }, CATEGORIES);
     expect(staffProductsHref(query, null)).toBe("/staff/products?q=rice");
+    expect(staffProductsHref(query, 1)).toBe("/staff/products?q=rice");
   });
 
   it("carries the selected category into the next-page link (#503)", () => {
     // The whole point of R18: a next page that quietly widened back to the full
     // catalogue would be worse than no paging at all.
     const query = parseStaffProductsQuery({ category: GRAINS.id }, CATEGORIES);
-    expect(staffProductsHref(query, "cur999")).toContain(`category=${GRAINS.id}`);
+    expect(staffProductsHref(query, 2)).toContain(`category=${GRAINS.id}`);
   });
 
   it("omits the category when none is selected", () => {
     for (const category of ["", CATEGORY_ALL, "not-a-real-id"]) {
       const query = parseStaffProductsQuery({ category }, CATEGORIES);
-      expect(staffProductsHref(query, "cur1")).not.toContain("category=");
+      expect(staffProductsHref(query, 2)).not.toContain("category=");
     }
   });
 
@@ -214,11 +218,11 @@ describe("staffProductsHref", () => {
       { status: "active", q: "rice", category: RICE.id },
       CATEGORIES,
     );
-    const href = staffProductsHref(query, "cur42");
+    const href = staffProductsHref(query, 42);
     expect(href).toContain("status=active");
     expect(href).toContain("q=rice");
     expect(href).toContain(`category=${RICE.id}`);
-    expect(href).toContain("cursor=cur42");
+    expect(href).toContain("page=42");
   });
 });
 
@@ -258,8 +262,10 @@ describe("parseStaffProductsQuery — restriction, stock and page size (#1211, R
     }
   });
 
-  it("offers 25 or 100 per page and treats anything else as 25", () => {
+  it("offers 25, 50 or 100 per page and treats anything else (including all) as 25", () => {
     expect(parseStaffProductsQuery({ perPage: "100" }, CATEGORIES).perPage).toBe(100);
+    expect(parseStaffProductsQuery({ perPage: "50" }, CATEGORIES).perPage).toBe(50);
+    expect(parseStaffProductsQuery({ perPage: "all" }, CATEGORIES).perPage).toBe(25);
     expect(parseStaffProductsQuery({ perPage: "7" }, CATEGORIES).perPage).toBe(25);
     expect(parseStaffProductsQuery({ perPage: "1000" }, CATEGORIES).perPage).toBe(25);
     expect(parseStaffProductsQuery({ perPage: "abc" }, CATEGORIES).perPage).toBe(25);
@@ -271,7 +277,7 @@ describe("parseStaffProductsQuery — restriction, stock and page size (#1211, R
         { restriction: "NEEDS_REVIEW", stock: "UNKNOWN", perPage: "100" },
         CATEGORIES,
       ),
-      "c1",
+      2,
     );
     expect(href).toContain("restriction=NEEDS_REVIEW");
     expect(href).toContain("stock=UNKNOWN");
@@ -279,5 +285,83 @@ describe("parseStaffProductsQuery — restriction, stock and page size (#1211, R
     expect(staffProductsHref(parseStaffProductsQuery({ perPage: "25" }, CATEGORIES))).toBe(
       "/staff/products",
     );
+  });
+});
+
+describe("parseStaffProductsQuery — sort, needs and page (#1523)", () => {
+  it("defaults to newest, no needs filter and page 1", () => {
+    const query = parseStaffProductsQuery({}, CATEGORIES);
+    expect(query.sort).toBe("newest");
+    expect(query.needs).toBeUndefined();
+    expect(query.needsFilter).toBe("all");
+    expect(query.page).toBe(1);
+  });
+
+  it("accepts every sort and needs value exactly, and nothing else", () => {
+    for (const sort of ["newest", "name", "price-asc", "price-desc"]) {
+      expect(parseStaffProductsQuery({ sort }, CATEGORIES).sort).toBe(sort);
+    }
+    expect(parseStaffProductsQuery({ sort: "NAME" }, CATEGORIES).sort).toBe("newest");
+    for (const needs of ["price", "ready", "image"]) {
+      expect(parseStaffProductsQuery({ needs }, CATEGORIES).needs).toBe(needs);
+    }
+    expect(parseStaffProductsQuery({ needs: "bogus" }, CATEGORIES).needs).toBeUndefined();
+  });
+
+  it("parses page as a positive integer only", () => {
+    expect(parseStaffProductsQuery({ page: "4" }, CATEGORIES).page).toBe(4);
+    for (const page of ["abc", "0", "-3", "1.5", "2abc", "1e3", ""]) {
+      expect(parseStaffProductsQuery({ page }, CATEGORIES).page).toBe(1);
+    }
+  });
+
+  it("round-trips every parameter through the href (R10)", () => {
+    const input = {
+      status: "inactive",
+      q: "prawns 13/15",
+      category: RICE.id,
+      restriction: "none",
+      stock: "UNTRACKED",
+      perPage: "50",
+      sort: "price-desc",
+      needs: "ready",
+    };
+    const query = parseStaffProductsQuery(input, CATEGORIES);
+    const href = staffProductsHref(query, 7);
+    const params = Object.fromEntries(new URL(href, "https://x.test").searchParams);
+    expect(params).toEqual({ ...input, page: "7" });
+    const again = parseStaffProductsQuery(params, CATEGORIES);
+    expect(again).toEqual({ ...query, page: 7 });
+  });
+});
+
+describe("pageCount, clampPage and pageWindow (#1523)", () => {
+  it("counts pages, never fewer than one", () => {
+    expect(pageCount(0, 25)).toBe(1);
+    expect(pageCount(25, 25)).toBe(1);
+    expect(pageCount(26, 25)).toBe(2);
+    expect(pageCount(6238, 100)).toBe(63);
+  });
+
+  it("clamps a stale page to the last page and a low one to 1", () => {
+    expect(clampPage(999, 3)).toBe(3);
+    expect(clampPage(0, 3)).toBe(1);
+    expect(clampPage(2, 3)).toBe(2);
+    expect(clampPage(5, 1)).toBe(1);
+  });
+
+  it("shows every page when there are seven or fewer", () => {
+    expect(pageWindow(1, 1)).toEqual([1]);
+    expect(pageWindow(4, 7)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it("keeps first, last and two either side of the current page, with gaps", () => {
+    expect(pageWindow(1, 250)).toEqual([1, 2, 3, "gap", 250]);
+    expect(pageWindow(50, 250)).toEqual([1, "gap", 48, 49, 50, 51, 52, "gap", 250]);
+    expect(pageWindow(250, 250)).toEqual([1, "gap", 248, 249, 250]);
+  });
+
+  it("shows a single skipped page instead of a gap", () => {
+    expect(pageWindow(5, 20)).toEqual([1, 2, 3, 4, 5, 6, 7, "gap", 20]);
   });
 });
