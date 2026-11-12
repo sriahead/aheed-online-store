@@ -4,8 +4,8 @@ title: Design System
 audience: [dev]
 type: doc
 status: approved
-version: "1.26.0"
-updated: 2026-10-27
+version: "1.27.0"
+updated: 2026-11-12
 visibility: internal
 summary: The authored decision doc for Aheed's visual language — brand-kit colors, typography, shape tokens, per-vendor runtime theming (primitive + semantic override), and the open items (logo assets, danger-color role) carried into later phases.
 tags: [design-system, tokens, brand, multi-tenancy]
@@ -326,7 +326,7 @@ both the hook and the `tap` class:
 - `filter-panel`: the mobile filter disclosure's `<summary>`, which was already 50px tall and
   carries the hook only;
 - `subcategories` and `collections`: the subcategory pills and the collection links;
-- `pagination`: Previous page and Next page on the category and search pages;
+- `pagination`: the shared `components/ui/Pagination.tsx` bar (every link, the jump box and Go);
 - `cart-line-controls`: each cart line's decrease, increase and remove buttons, in the drawer and on
   `/cart`;
 - `scroller-arrow`: `HorizontalScroller`'s left and right arrows. Every row that uses it gets
@@ -691,6 +691,40 @@ follow-on work — a single sweep would be an unreviewable diff.
 **Not built, and not for lack of a complete-looking set:** `Toast` and `Skeleton`. Nothing in the app
 dispatches a toast and there are zero `loading.tsx` files. Building a primitive because the list has
 a gap is the same speculative reasoning retired above, and it is still wrong for those two.
+
+## Pagination: one bar everywhere (2026-11-12)
+
+**Every paginated list renders `components/ui/Pagination.tsx`**, a server component with no client
+JavaScript. Its design is the `/staff/products` bar (#1523), chosen by the owner as the standard:
+"Page X of Y · Showing a–b of N" on the left, then Previous, page numbers with gaps, Next, and a
+jump-to-page box once there are more than 7 pages. The current page is a filled `bg-primary` chip;
+every other control is a bordered chip with a `min-h-tap` touch target below `lg`. A list with a bar
+above and below passes `position`, so each bar has its own name and form ids.
+
+**There are two modes, because the architecture allows page numbers only on bounded lists**
+(`specs/architecture.md`, "Pagination").
+
+- **`numbered`** needs a total. It is used for Staff Products and Staff Customers (offset paging over
+  one vendor's rows) and for a typed search (a ranked set of at most 200 results, whose cursor is an
+  offset).
+- **`sequential`** is used for keyset lists: category browsing, browse-only search, and the staff and
+  account Orders lists. They get the same chips: "Page N" when the list knows it (the category cursor
+  stack does), Previous and Next when they exist, and "First page" for a next-only list once past the
+  start. There is no total or page list, because a keyset cursor cannot jump.
+
+The owner chose this split over numbered pages everywhere, which would have needed a new
+architecture exception and a count query on every category page a shopper opens.
+
+**Rules:**
+
+- Every href is built by the caller and must carry the list's filters. A next page that quietly
+  drops a filter reads as lost data (#503).
+- The copy is neutral. The caller passes the noun (`["product", "products"]`), because vendors sell
+  different things.
+- `?page=` is 1-based, parsed by `parsePageParam` (digits only, clamped), so a forged or stale page
+  never renders an empty list.
+- Do not hand-write Previous/Next links on a page. `tests/pagination.test.tsx` lists every paginated
+  page and fails on a hand-rolled "Next page", "Previous page" or "Older orders".
 
 ## Storefront components (P2.5b2)
 

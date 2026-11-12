@@ -60,6 +60,8 @@ export interface AdminCustomerPage {
   /** Zero-based, matching the `page` argument. */
   page: number;
   hasMore: boolean;
+  /** Every customer this vendor has, for "Page X of Y" (the shared numbered pagination bar). */
+  total: number;
 }
 
 /**
@@ -84,15 +86,22 @@ export async function listCustomersForAdmin(
 ): Promise<AdminCustomerPage> {
   const safePage = Number.isInteger(page) && page > 0 ? page : 0;
 
-  const groups = await prisma.order.groupBy({
-    by: ["userId", "guestEmail"],
-    where: { vendorId, status: { in: [...REVENUE_STATUSES] } },
-    _count: { _all: true },
-    _sum: { totalPence: true },
-    orderBy: { _sum: { totalPence: "desc" } },
-    take: take + 1,
-    skip: safePage * take,
-  });
+  const where = { vendorId, status: { in: [...REVENUE_STATUSES] } };
+  // The total is the number of groups. Prisma cannot count groups directly, so this reads one tiny
+  // row per customer. It is bounded by one vendor's customers, the same bound that makes offset
+  // paging acceptable here (see above).
+  const [groups, allGroups] = await Promise.all([
+    prisma.order.groupBy({
+      by: ["userId", "guestEmail"],
+      where,
+      _count: { _all: true },
+      _sum: { totalPence: true },
+      orderBy: { _sum: { totalPence: "desc" } },
+      take: take + 1,
+      skip: safePage * take,
+    }),
+    prisma.order.groupBy({ by: ["userId", "guestEmail"], where }),
+  ]);
 
   const hasMore = groups.length > take;
   const pageGroups = hasMore ? groups.slice(0, take) : groups;
@@ -171,5 +180,5 @@ export async function listCustomersForAdmin(
     };
   });
 
-  return { items, page: safePage, hasMore };
+  return { items, page: safePage, hasMore, total: allGroups.length };
 }

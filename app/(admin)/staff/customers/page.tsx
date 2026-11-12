@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { listCustomersForVendor } from "@/lib/customers-service";
@@ -9,6 +8,8 @@ import { Card } from "@/components/ui/Card";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Icon } from "@/components/icons/Icon";
 import { IconMedallion } from "@/components/icons/IconMedallion";
+import { Pagination } from "@/components/ui/Pagination";
+import { pageCountFor, parsePageParam } from "@/lib/pagination";
 
 // Reads the session and this vendor's live order history — must render per-request.
 export const dynamic = "force-dynamic";
@@ -46,15 +47,18 @@ export default async function StaffCustomersPage({
     );
   }
 
-  const requestedPage = Number.parseInt(page ?? "0", 10);
-  const {
-    items,
-    page: currentPage,
-    hasMore,
-  } = await listCustomersForVendor(auth.vendorId, {
+  // `?page=` is 1-based, like every numbered list. The total arrives with the page itself, so a
+  // page past the end is only known after the read; it redirects to the last page below.
+  const requestedPage = parsePageParam(page, Number.MAX_SAFE_INTEGER);
+  const { items, total } = await listCustomersForVendor(auth.vendorId, {
     take: PAGE_SIZE,
-    page: Number.isNaN(requestedPage) ? 0 : requestedPage,
+    page: requestedPage - 1,
   });
+  const pageCount = pageCountFor(total, PAGE_SIZE);
+  const customersHref = (target: number) =>
+    target > 1 ? `/staff/customers?page=${target}` : "/staff/customers";
+  // A stale or hand-typed page past the end lands on the last real page, never an empty one.
+  if (requestedPage > pageCount) redirect(customersHref(pageCount));
 
   return (
     <PageContainer width="wide">
@@ -124,26 +128,20 @@ export default async function StaffCustomersPage({
         </ul>
       )}
 
-      <div className="mt-6 flex gap-3">
-        {currentPage > 0 && (
-          <Link
-            href={
-              currentPage === 1 ? "/staff/customers" : `/staff/customers?page=${currentPage - 1}`
-            }
-            className="inline-block rounded-full border border-black/10 px-4 py-2 font-semibold text-primary"
-          >
-            Previous
-          </Link>
-        )}
-        {hasMore && (
-          <Link
-            href={`/staff/customers?page=${currentPage + 1}`}
-            className="inline-block rounded-full bg-action px-4 py-2 font-semibold text-white"
-          >
-            Next
-          </Link>
-        )}
-      </div>
+      {total > 0 && (
+        <Pagination
+          mode="numbered"
+          label="Customer pages"
+          page={requestedPage}
+          pageCount={pageCount}
+          total={total}
+          perPage={PAGE_SIZE}
+          shown={items.length}
+          noun={["customer", "customers"]}
+          hrefFor={customersHref}
+          jump={{ action: "/staff/customers", hidden: [] }}
+        />
+      )}
     </PageContainer>
   );
 }

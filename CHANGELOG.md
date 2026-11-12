@@ -8,6 +8,11 @@ every branch merges.
 
 ### Added
 
+- **One pagination bar across the app; staff product search moved below the filters (#1538, 2026-11-12)**
+  - **Pagination.** `components/ui/Pagination.tsx` replaces six hand-built versions with the Staff Products design. Numbered pages, totals and a Go box appear on Staff Products, Staff Customers (now 1-based `?page=`, with a total) and typed Search. The same chips appear as "Page N" / Previous / Next / First page on category browsing, browse-only Search and both Orders lists. Those lists stay keyset-paged, as the architecture requires (owner decision).
+  - **Staff Products.** The search field and its button now sit below **Apply filters**.
+  - Pure helpers live in `lib/pagination.ts`. Rules are in `specs/design-system.md` 1.27.0 ("Pagination"), spec in `specs/2026-11-12-shared-pagination/`, tests in `tests/pagination.test.tsx`.
+
 - **Bundle and promotion images get the products' options (#1535, 2026-11-12)**
   - **Bundles.** The photo box has **Auto-Generate with AI** (admins), **Remove photo**, and a "needs review" banner with **Approve photo**. The Bundles list shows "No photo" / "Photo needs review" and, for admins, **Fill missing bundle photos** (10 per click, live first). The AI prompt is built from the bundle's contents and rules out live animals, people and text.
   - **Promotions.** **Generate banner with AI** makes a new photo without touching the wording; the upload is always offered (Replace), and AI banners are flagged until **Approve banner**.

@@ -17,6 +17,7 @@ import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { advanceStatus } from "@/features/orders/advance-status";
 import { advanceStatusBulk } from "@/features/orders/advance-status-bulk";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Pagination } from "@/components/ui/Pagination";
 import { Icon } from "@/components/icons/Icon";
 import { IconMedallion } from "@/components/icons/IconMedallion";
 import { LiveRefresh } from "@/components/orders/LiveRefresh";
@@ -241,14 +242,12 @@ export default async function StaffOrdersPage({
 
       {/* The cursor link MUST carry the active filter — a next page that quietly
           reverted to the default queue would look like data loss. */}
-      {nextCursor && (
-        <Link
-          href={staffOrdersHref(query, nextCursor)}
-          className="mt-6 inline-block rounded-full bg-action px-4 py-2 font-semibold text-white"
-        >
-          Older orders
-        </Link>
-      )}
+      <Pagination
+        mode="sequential"
+        label="Order pages"
+        nextHref={nextCursor ? staffOrdersHref(query, nextCursor) : null}
+        firstHref={cursor ? staffOrdersHref(query) : null}
+      />
     </PageContainer>
   );
 }

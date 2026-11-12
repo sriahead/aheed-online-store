@@ -68,6 +68,15 @@ export function prevCategoryPageHref(slug: string, params: CategoryPageParams): 
 }
 
 /**
+ * The 1-based page being viewed: page 1 with no cursor, otherwise one more than the pages stacked
+ * behind it in `back`. The keyset list has no total, so this is all the pagination bar can show.
+ */
+export function categoryPageNumber(params: CategoryPageParams): number {
+  if (typeof params.cursor !== "string" || params.cursor === "") return 1;
+  return parseBack(params.back).length + 1;
+}
+
+/**
  * Returns the query string of active filters and sort orders to preserve when switching categories.
  */
 export function categoryNavQuery(params: CategoryPageParams): string {

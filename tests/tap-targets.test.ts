@@ -20,8 +20,8 @@ const surfaces: Record<string, string[]> = {
   "components/product/FilterPanel.tsx": ["filter-panel"],
   "components/product/SubcategoryLinks.tsx": ["subcategories"],
   "components/product/CollectionNav.tsx": ["collections"],
-  "app/(storefront)/categories/[slug]/page.tsx": ["pagination"],
-  "app/(storefront)/search/page.tsx": ["pagination"],
+  // The category and search pages' pagination is the shared bar (owner request, 2026-11-12).
+  "components/ui/Pagination.tsx": ["pagination"],
   "components/cart/CartContents.tsx": ["cart-line-controls"],
   "components/layout/HorizontalScroller.tsx": ["scroller-arrow"],
   // #979 — the controls #964 left out.

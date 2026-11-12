@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { buildCategoryMetadata } from "@/lib/page-metadata";
@@ -24,6 +23,7 @@ import { parsePriceInput } from "@/components/product/parse-price-input";
 import {
   categoryNavHref,
   categoryNavQuery,
+  categoryPageNumber,
   nextCategoryPageHref,
   prevCategoryPageHref,
 } from "@/components/product/category-href";
@@ -35,6 +35,7 @@ import { parseSortOption } from "@/components/product/sort-params";
 import { listCurrentVendorAttributeDefinitions } from "@/lib/attributes-service";
 import { resolveAttributeFilters } from "@/lib/attribute-filters";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { Pagination } from "@/components/ui/Pagination";
 
 // See app/(storefront)/categories/page.tsx — Prisma's @prisma/client/wasm
 // can't load during next build's Node-based static prerendering.
@@ -270,26 +271,15 @@ export default async function CategoryPage({
               ))}
             </ProductGrid>
           )}
-          {(nextCursor || !isFirstPage) && (
-            <div data-tap-surface="pagination" className="mt-6 flex gap-3">
-              {!isFirstPage && (
-                <Link
-                  href={prevCategoryPageHref(slug, query)}
-                  className="inline-flex min-h-tap items-center rounded-full border border-black/10 bg-white px-4 py-2 font-semibold text-primary hover:bg-surface-muted lg:min-h-0"
-                >
-                  Previous page
-                </Link>
-              )}
-              {nextCursor && (
-                <Link
-                  href={nextCategoryPageHref(slug, query, nextCursor)}
-                  className="inline-flex min-h-tap items-center rounded-full bg-action px-4 py-2 font-semibold text-white lg:min-h-0"
-                >
-                  Next page
-                </Link>
-              )}
-            </div>
-          )}
+          {/* Keyset paging (specs/architecture.md): Previous through the cursor stack, Next by
+              cursor, and the page number from the stack's depth. No total, so no page list. */}
+          <Pagination
+            mode="sequential"
+            label="Product pages"
+            page={isFirstPage && !nextCursor ? undefined : categoryPageNumber(query)}
+            prevHref={isFirstPage ? null : prevCategoryPageHref(slug, query)}
+            nextHref={nextCursor ? nextCategoryPageHref(slug, query, nextCursor) : null}
+          />
         </section>
       </div>
     </PageContainer>

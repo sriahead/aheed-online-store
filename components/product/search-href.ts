@@ -63,6 +63,13 @@ export function searchPageHref(params: SearchHrefParams, cursor: string): string
   return `/search?${qs.toString()}`;
 }
 
+/** The first page of the same results: every filter and the query kept, the cursor dropped. */
+export function searchFirstPageHref(params: SearchHrefParams): string {
+  const qs = carriedQuery(params, ["cursor"]);
+  const query = qs.toString();
+  return query ? `/search?${query}` : "/search";
+}
+
 export function searchCategoryFilterQuery(params: SearchHrefParams): string {
   const qs = carriedQuery(params, ["category", "cursor"]);
   return qs.toString();
