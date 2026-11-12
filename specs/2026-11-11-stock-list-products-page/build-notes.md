@@ -1,8 +1,11 @@
 # Stock list, Products page, savings framing (build notes)
 
 Worktree: `E:\GitRepositories\aheed-wt-1523` (branch `feature/1523-stock-list-products-page`, from
-`origin/staging` at `955cfe1b`). `node_modules` is a **junction** to the main checkout. Remove the
-junction with `rmdir` before `git worktree remove`, or the main checkout's `node_modules` is emptied.
+`origin/staging` at `955cfe1b`). It started with `node_modules` as a junction to the main checkout,
+but **`npm run preview` cannot bundle through a junction**: OpenNext's `copyTracedFiles` tries to
+symlink the resolved `node_modules` and Windows refuses (`EPERM: operation not permitted, symlink`),
+after `next build` and the iOS 15.4 syntax check have already passed. The junction was removed (link
+only) and the worktree now has its own `npm ci` + `db:generate`. So `git worktree remove` is safe.
 
 ## What changed and why
 
@@ -53,6 +56,18 @@ junction with `rmdir` before `git worktree remove`, or the main checkout's `node
 - R6: the moves include products in `fish-fillets-smoked`, `prawns`, `crab-squid-seafood`,
   `herbs-salads` and `onions-potatoes-roots`, all into the spreadsheet's three categories, as the owner
   instructed. Those five subcategories are now emptier. None was deleted or deactivated.
+
+## Preview check (2026-11-12, `npm run preview`, dev DB `ep-dry-morning`, demo-admin@example.com)
+
+Not independent: this was run in the build session. `/staff/products` showed both `data-pagination` bars,
+"Page 1 of 208 · Showing 1–25 of 5,184 products", the search row, and 25 Qty boxes.
+`?page=99999&perPage=50&sort=price-desc` gave "Page 104 of 104". `?page=2&page=3` gave page 2, with
+no crash. `?q=7957` (a PLU) found FRUITS. `?needs=price` showed "Price needed". Bulk save through
+the real action (no-JS form post): `-4` was refused with nothing saved, then "2 updated", then a
+resubmit gave "0 updated, 2 already at that count", and a reload showed 7 and 3. **Two dev products
+are now TRACKED** at 7 and 3 (ids `1b7593fb…`, `18242a56…`). Dev has no active product with a tier
+or markdown, so the storefront savings copy was not seen rendered; it is covered by unit tests.
+The homepage returned 200.
 
 ## Known-shaky areas
 
