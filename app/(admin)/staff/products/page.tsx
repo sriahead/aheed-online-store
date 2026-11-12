@@ -170,7 +170,7 @@ export default async function StaffProductsPage({
               type="search"
               name="q"
               defaultValue={query.search ?? ""}
-              placeholder="Search by product name, PLU or barcode"
+              placeholder="Search your favourite products…"
               className="w-full rounded-2xl border border-black/10 bg-white py-3 pr-3 pl-10 text-base text-primary"
             />
           </div>
