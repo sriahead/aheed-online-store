@@ -40,6 +40,19 @@ export async function findInboundAddress(
   });
 }
 
+/**
+ * #1546 — whether any store has saved this mailbox as a receiving address's forward-to. Staging's
+ * email allowlist accepts such a mailbox. Un-scoped by design: the question is about the address,
+ * not a vendor.
+ */
+export async function isRegisteredForwardTo(prisma: Db, address: string): Promise<boolean> {
+  const row = await prisma.vendorInboundAddress.findFirst({
+    where: { forwardTo: normaliseAddress(address) },
+    select: { id: true },
+  });
+  return row !== null;
+}
+
 export async function listInboundAddresses(
   prisma: Db,
   vendorId: string,

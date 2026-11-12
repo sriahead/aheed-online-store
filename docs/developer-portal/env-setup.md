@@ -4,7 +4,7 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.37.0"
+version: "1.38.0"
 updated: 2026-11-12
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
@@ -998,7 +998,7 @@ sender name and address, and the receiving addresses with the mailbox each forwa
 |---|---|---|
 | `EMAIL_FROM` | `wrangler.toml` `[vars]` (both envs) | The platform sender, used whenever a store's own domain is not verified. Required in production builds. |
 | `EMAIL_RECIPIENT_MODE` | `wrangler.toml` `[env.production.vars]` only | `open` mails anyone. **Unset means allowlist**, so staging only mails `EMAIL_ALLOWED_RECIPIENTS`. `NODE_ENV` cannot tell staging from production, so this is the only switch. |
-| `EMAIL_ALLOWED_RECIPIENTS` | Worker secret (staging) | Comma list of tester inboxes. Empty means staging sends nothing. A secret, so no personal address is committed. |
+| `EMAIL_ALLOWED_RECIPIENTS` | Worker secret (staging) | Comma list of tester inboxes. A secret, so no personal address is committed. In allowlist mode, two more recipients are also accepted (`#1546`): any forward-to mailbox saved under Client Setup → Receiving addresses (allowed while that receiving address exists), and Client Setup's test email to the signed-in platform admin. Every other recipient needs this list. |
 | `EMAIL_VERIFIED_DOMAINS` | Worker secret (per env) | Comma list of domains onboarded in Email Sending. A store whose `senderEmail` domain is listed sends as itself; otherwise it sends from `EMAIL_FROM` with Reply-To set to the store. A secret rather than `[vars]`, so adding a domain needs no commit (secrets survive `wrangler deploy`). |
 | `EMAIL_PROVIDER` | Worker secret or unset | `cloudflare`, `resend` or `log`. Unset means Cloudflare when the binding exists. |
 | `RESEND_API_KEY` | Worker secret, optional | Read only when `EMAIL_PROVIDER=resend`. |
@@ -1018,8 +1018,8 @@ type, the store and the order, for example `Complaint · <store> · Order <numbe
 Only a send that returns **failed** is kept, in the `ContactOutbox` table, and the scheduler's
 `/api/jobs/retry-contact-outbox` retries it (the `contact-outbox:pending` marker below), deleting it
 once sent. After **7 days** unsent it is deleted and logged by id and store only. A **skipped** send
-is not kept: in dev that is the log provider, and on staging an unlisted recipient, so add the
-forward-to to `EMAIL_ALLOWED_RECIPIENTS` to receive contact mail there. The rate limit is 5
+is not kept: in dev that is the log provider, and on staging an unlisted recipient. A forward-to saved under
+Receiving addresses counts as listed (`#1546`), so contact mail reaches it on staging too. The rate limit is 5
 messages an hour per store and IP (`ContactAttempt`). The footer prints the store's contact email
 only on the store's **own domain**; on a platform (`merqify.com`) host it is hidden, and shoppers use
 the form.
@@ -1110,8 +1110,8 @@ Client Setup shows these as a checklist per store, with links.
      No moderation, and add `no-reply@merqify.com` as a member with delivery **No email**. When a
      test seems lost, check in this order: Email Sending → Activity log (Delivered?), Email
      Routing → Activity log (Forwarded?), then the group's Conversations → **Pending**.
-7. **Send a test email** from Client Setup. It goes to your own signed-in address only. On staging
-   your address must be on `EMAIL_ALLOWED_RECIPIENTS`.
+7. **Send a test email** from Client Setup. It goes to your own signed-in address only. On staging it
+   is sent without `EMAIL_ALLOWED_RECIPIENTS` (`#1546`).
 
 A message counts as **order-related** when it is sent to an Orders address, or when its subject
 carries one of that store's own order numbers. `#1390` (WhatsApp alerts) builds on this.
@@ -1151,7 +1151,7 @@ Live checks (after the owner steps):
 
 6. In Client Setup on `aheed-staging.merqify.com`, open the Email section. Expected: Provider
    `cloudflare`, Platform sender `no-reply@merqify.com`, Recipients "Allowlist only".
-7. Click **Send test email** with your address on `EMAIL_ALLOWED_RECIPIENTS`. Expected: "Sent to …",
+7. Click **Send test email** (your address need not be on `EMAIL_ALLOWED_RECIPIENTS`, `#1546`). Expected: "Sent to …",
    and the message arrives. From is the store's address if its domain is verified, otherwise
    `no-reply@merqify.com` with Reply-To the store.
 8. Remove your address from the allowlist and repeat. Expected: "Skipped by recipient policy", and no

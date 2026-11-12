@@ -19,7 +19,10 @@ import {
   type SectionStatus,
 } from "@/lib/client-setup/sections";
 import { groupAddressesByForwardTo } from "@/lib/client-setup/inbound-groups";
-import { DESTINATIONS_UNAVAILABLE_SHORT } from "@/lib/client-setup/destination-copy";
+import {
+  ALLOWLIST_FORWARD_NOTE,
+  DESTINATIONS_UNAVAILABLE_SHORT,
+} from "@/lib/client-setup/destination-copy";
 import { TELEGRAM_QUICK_LINKS } from "@/lib/client-setup/telegram-links";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -303,6 +306,11 @@ async function ClientSetupSections({
               </Card>
 
               <Card title="Receiving addresses">
+                {email.platform.recipientMode === "allowlist" && (
+                  <p className="mb-3 text-xs text-primary-muted" data-allowlist-forward-note>
+                    {ALLOWLIST_FORWARD_NOTE}
+                  </p>
+                )}
                 {email.addresses.length === 0 ? (
                   <p className="mb-3 text-sm text-primary-muted">No receiving addresses yet.</p>
                 ) : (
