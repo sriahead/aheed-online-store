@@ -12,7 +12,7 @@ import { ProductRating } from "./ProductRating";
 import { useQuickView } from "./quick-view-context";
 import { composePublicUrl } from "@/lib/storage";
 import { showsLowStock } from "@/lib/cart-rules";
-import { tierThresholdQuantity } from "@/lib/tier-pricing";
+import { multiBuyLabel, savingLabel } from "@/lib/price-psychology";
 import { formatPrice } from "./format-price";
 import { deriveUnitPriceLabel } from "./unit-price";
 import type { ProductSummary } from "@/lib/repositories/products";
@@ -74,7 +74,8 @@ export function ProductCard({
 }) {
   const { openQuickView, prefetchQuickView } = useQuickView();
   const hasDiscount = product.originalPrice != null && product.originalPrice > product.basePrice;
-  const saving = hasDiscount ? product.originalPrice! - product.basePrice : 0;
+  // #1523 — "Save £1.00 (20%)", from the real prices only (lib/price-psychology.ts).
+  const discountLabel = savingLabel(product.originalPrice ?? null, product.basePrice);
   /**
    * P8.5d (#348) — the multi-buy tier, e.g. "3 for £10.00".
    *
@@ -87,8 +88,8 @@ export function ProductCard({
    * naming a quantity. Collapsing them into one "saving" would state something
    * false for whichever shopper isn't buying the group quantity.
    */
-  const tierQuantity = tierThresholdQuantity(product.tier);
-  const hasTier = tierQuantity !== null && product.tier !== null;
+  // #1523 — "4 for £18.00 · save £2.00"; the saving is what one group saves at checkout.
+  const tierLabel = multiBuyLabel(product.basePrice, product.tier);
   // Unified stock determination ensuring consistency across card, details and quick view
   const isInStock = product.inStock;
   // #1211 — one rule (lib/cart-rules.ts): TRACKED stock only, and only while
@@ -172,9 +173,9 @@ export function ProductCard({
               <div className="h-full w-full bg-surface-muted" />
             )}
           </div>
-          {hasDiscount && (
+          {discountLabel && (
             <div className="skew-card-badge absolute right-2 bottom-2 rounded bg-danger px-1.5 py-0.5 text-[11px] font-bold text-white">
-              Save {formatPrice(saving)}
+              {discountLabel}
             </div>
           )}
 
@@ -336,9 +337,9 @@ export function ProductCard({
               )}
             </div>
 
-            {hasTier && (
+            {tierLabel && (
               <p className="skew-card-price -mt-1 text-[11px] font-semibold text-action">
-                {tierQuantity} for {formatPrice(product.tier!.groupPricePence)}
+                {tierLabel}
               </p>
             )}
 

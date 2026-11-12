@@ -22,6 +22,8 @@ import {
   listProducts,
   listProductsByCategory,
   listProductsForAdmin as listProductsForAdminRepo,
+  listProductsForAdminPage as listProductsForAdminPageRepo,
+  bulkSetInventoryQuantities as bulkSetInventoryQuantitiesRepo,
   matchProductListTerms,
   promoteProductImage as promoteProductImageRepo,
   quickUpdateInventory as quickUpdateInventoryRepo,
@@ -35,7 +37,9 @@ import {
   suggestProducts as suggestProductsRepo,
   updateProductForVendor as updateProductForVendorRepo,
   type AdminProductDetail,
+  type AdminProductNumberedPage,
   type AdminProductPage,
+  type BulkQuantityResult,
   type CatalogueWriteResult,
   type ProductPage,
   type ProductRepository,
@@ -210,6 +214,14 @@ export async function listProductsForAdmin(
   return listProductsForAdminRepo(getPrisma(), vendorId, options);
 }
 
+/** #1523 — the numbered staff list (/staff/products). */
+export async function listProductsForAdminPage(
+  vendorId: string,
+  options: Parameters<typeof listProductsForAdminPageRepo>[2],
+): Promise<AdminProductNumberedPage> {
+  return listProductsForAdminPageRepo(getPrisma(), vendorId, options);
+}
+
 export async function getProductForAdmin(
   vendorId: string,
   id: string,
@@ -341,4 +353,12 @@ export async function quickUpdateInventory(
   data: { quantity?: number; isActive?: boolean },
 ): Promise<CatalogueWriteResult> {
   return quickUpdateInventoryRepo(getPrismaWs(), vendorId, productId, data);
+}
+
+/** #1523 — bulk stock counts; one interactive transaction, so the WebSocket client. */
+export async function bulkSetInventoryQuantities(
+  vendorId: string,
+  updates: readonly { productId: string; quantity: number }[],
+): Promise<BulkQuantityResult> {
+  return bulkSetInventoryQuantitiesRepo(getPrismaWs(), vendorId, updates);
 }
