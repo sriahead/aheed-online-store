@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-12T05:08:21.666Z` · commit `225b4fc8` · `334` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-12T09:01:30.368Z` · commit `fe4b8232` · `335` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -319,6 +319,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Copy the Aheed catalogue from staging to production, images included (plan)](specs/2026-11-12-catalogue-copy-to-production/plan.md) | spec | 1.0.0 | 2026-11-12 | approved | internal | One script copies a cell's catalogue tables from its staging database to production by shared id, and copies image objects key for key, replacing the six-script production run order and any image regeneration. |
 | [Every live promotion on the landing page; plainer staff search placeholder (plan)](specs/2026-11-12-landing-promotions-search-placeholder/plan.md) | spec | 1.0.0 | 2026-11-12 | approved | internal | Raises the landing hero's promotion limit from 3 to 12 so every live promotion rotates, and makes the staff Products search placeholder plainer. |
 | [Promotion edit page keeps its saved bundle, code or product (plan)](specs/2026-11-12-promotion-form-current-target/plan.md) | spec | 1.0.0 | 2026-11-12 | approved | internal | The promotion edit page always lists the promotion's saved bundle, discount code or product, marked when switched off, so the picker never shows its placeholder for a linked promotion and a save never drops the link. |
+| [Landing promotion slides fill the carousel when stacked (plan)](specs/2026-11-12-promotion-hero-slide-fill/plan.md) | spec | 1.0.0 | 2026-11-12 | approved | internal | Removes h-full from each promotion hero slide so short slides stretch to the carousel height instead of leaving a bare band under the photo on narrow screens. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.49.0 | 2026-11-12 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
