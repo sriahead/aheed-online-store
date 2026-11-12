@@ -8,6 +8,16 @@ every branch merges.
 
 ### Fixed
 
+- **The promotion edit page keeps the promotion's saved bundle, code or product (2026-11-12)**
+  - **What was wrong.** The edit page offered only switched-on bundles, active discount codes and products currently on offer. When a promotion's own target was switched off, the picker showed "-- Choose an active bundle --" and saving would have dropped the link. The owner saw this on "BBQ Chicken Pack: Save £8.48".
+  - **The fix.** The saved target is always listed, marked "(switched off — turn it on in Bundles)" or "(inactive)" where it applies. A department filter no longer hides the chosen product. Under the date fields, a hint says blank dates run the promotion until it is switched off; that promotion's blank dates were correct, since it has none set.
+  - **Tests.** `tests/promotion-target-options.test.ts`.
+
+- **Every live promotion shows on the landing page, and a plainer staff search box (2026-11-12)**
+  - **What was wrong.** The landing-page hero showed at most 3 promotions: `getLivePromotionsForStorefront` defaulted to `limit = 3`. With 7 live in production, 4 never appeared.
+  - **The fix.** The default is now `HERO_PROMOTION_LIMIT` (12). The hero is already a slideshow with dots, so the extra promotions become extra slides, in priority order. `tests/landing-promotions-limit.test.ts` guards it.
+  - **Staff Products search.** The placeholder reads "Search your favourite products…" instead of naming PLU and barcode (owner request). The search still matches name, PLU and barcode.
+
 - **Overlapping deploys no longer collide on one Worker (#1509)**
   - **What happened.** #1507 and #1508 merged into `staging` about a minute apart, and their `deploy-staging` runs overlapped (12:38–12:42 UTC, 2026-11-11). Both deployed `afc-store-staging` at once. The second run's `wrangler secret put` failed with "the latest version of your Worker isn't currently deployed", because the first run had just uploaded a version. Staging was left one commit behind until the job was re-run.
   - **The fix.** Each deploy job has its own `concurrency` group (`deploy-<env>-platform`, `deploy-<env>-afc`) with `cancel-in-progress: false`, in both deploy workflows. Runs for the same cell queue. The two cells still deploy in parallel (#1505). GitHub keeps one pending run per group, so a burst of merges still ends on the newest commit.
