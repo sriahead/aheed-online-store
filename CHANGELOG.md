@@ -6,6 +6,13 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Bundle and promotion images get the products' options (#1535, 2026-11-12)**
+  - **Bundles.** The photo box has **Auto-Generate with AI** (admins), **Remove photo**, and a "needs review" banner with **Approve photo**. The Bundles list shows "No photo" / "Photo needs review" and, for admins, **Fill missing bundle photos** (10 per click, live first). The AI prompt is built from the bundle's contents and rules out live animals, people and text.
+  - **Promotions.** **Generate banner with AI** makes a new photo without touching the wording; the upload is always offered (Replace), and AI banners are flagged until **Approve banner**.
+  - **Under the hood.** `imageNeedsReview` on `Bundle` and `Promotion`, and `AiFeature.BUNDLE_IMAGE` (hand-authored migration `20261112120000_bundle_promotion_image_review`). The new routes are `/api/admin/bundle-images/{generate,backfill}` and `/api/admin/promotions/banner-generate`, built on `lib/ai-image-store.ts` and `lib/ai-image-prompts.ts`. Spec: `specs/2026-11-12-bundle-promotion-images/`. Tests: `tests/bundle-promotion-images.test.ts`.
+
 ### Fixed
 
 - **Landing promotion slides fill the carousel on narrower screens (2026-11-12)**

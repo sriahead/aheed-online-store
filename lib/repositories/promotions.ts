@@ -19,6 +19,8 @@ export interface PromotionRow {
   callToActionText: string | null;
   imageKey: string | null;
   altText: string | null;
+  /** #1535 — the banner was AI-generated and nobody has approved it yet. */
+  imageNeedsReview: boolean;
   linkUrl: string | null;
   priority: number;
   isActive: boolean;
@@ -72,6 +74,7 @@ const PROMOTION_SELECT = {
   callToActionText: true,
   imageKey: true,
   altText: true,
+  imageNeedsReview: true,
   linkUrl: true,
   priority: true,
   isActive: true,
@@ -140,6 +143,7 @@ export interface PromotionWriteInput {
   callToActionText?: string | null;
   imageKey?: string | null;
   altText?: string | null;
+  imageNeedsReview?: boolean;
   linkUrl?: string | null;
   priority?: number;
   isActive?: boolean;
@@ -232,6 +236,7 @@ export async function createPromotion(
         callToActionText: input.callToActionText ?? null,
         imageKey: input.imageKey ?? null,
         altText: input.altText ?? null,
+        imageNeedsReview: (input.imageKey ?? null) !== null && (input.imageNeedsReview ?? false),
         linkUrl: input.linkUrl ?? null,
         priority: input.priority ?? 0,
         isActive: input.isActive ?? true,
@@ -280,6 +285,7 @@ export async function updatePromotion(
         callToActionText: input.callToActionText !== undefined ? input.callToActionText : undefined,
         imageKey: input.imageKey !== undefined ? input.imageKey : undefined,
         altText: input.altText !== undefined ? input.altText : undefined,
+        imageNeedsReview: input.imageNeedsReview !== undefined ? input.imageNeedsReview : undefined,
         linkUrl: input.linkUrl !== undefined ? input.linkUrl : undefined,
         priority: input.priority !== undefined ? input.priority : undefined,
         isActive: input.isActive !== undefined ? input.isActive : undefined,

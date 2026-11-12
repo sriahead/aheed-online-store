@@ -9,7 +9,11 @@ import {
   upsertBundle,
   setBundleItems,
   setBundleImage,
+  clearBundleImage,
+  approveBundleImage,
+  listBundlesWithoutImages,
   deleteBundle,
+  type BundleNeedingImage,
   type BundleWithItems,
   type BundleAdminRow,
   type BundleWriteInput,
@@ -108,7 +112,32 @@ export function saveBundleImageForVendor(
   bundleId: string,
   imageKey: string,
   altText: string,
+  needsReview = false,
 ): Promise<BundleWriteResult> {
   // getPrismaWs(), not getPrisma(): same reason as saveBundleForVendor above (#382).
-  return setBundleImage(getPrismaWs(), vendorId, bundleId, imageKey, altText);
+  return setBundleImage(getPrismaWs(), vendorId, bundleId, imageKey, altText, needsReview);
+}
+
+/** #1535 — `removeBundleImage`. updateMany, so the WebSocket client (#382). */
+export function clearBundleImageForVendor(
+  vendorId: string,
+  bundleId: string,
+): Promise<BundleWriteResult> {
+  return clearBundleImage(getPrismaWs(), vendorId, bundleId);
+}
+
+/** #1535 — `approveBundleImage`. updateMany, so the WebSocket client (#382). */
+export function approveBundleImageForVendor(
+  vendorId: string,
+  bundleId: string,
+): Promise<BundleWriteResult> {
+  return approveBundleImage(getPrismaWs(), vendorId, bundleId);
+}
+
+/** #1535 — the "Fill missing bundle photos" batch. */
+export function listBundlesWithoutImagesForVendor(
+  vendorId: string,
+  limit: number,
+): Promise<BundleNeedingImage[]> {
+  return listBundlesWithoutImages(getPrisma(), vendorId, limit);
 }

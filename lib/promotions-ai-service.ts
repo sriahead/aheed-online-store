@@ -6,6 +6,7 @@ import {
   type PromotionAiOutput,
 } from "@/lib/promotions-ai";
 import type { AudienceSegment, PromotionChannel } from "@/lib/promotions-service";
+import { describeItems } from "@/lib/ai-image-prompts";
 
 export interface GeneratePromotionAiParams {
   targetType: "PRODUCT" | "BUNDLE" | "DISCOUNT_CODE" | "GENERIC";
@@ -154,4 +155,50 @@ export async function generatePromotionAiForVendor(
   };
 
   return generatePromotionAiContent(input);
+}
+
+/**
+ * #1535 — what a promotion banner should picture: the chosen product, the bundle's contents, or
+ * the department, in that order. Empty when the promotion has no such target (a code-only or
+ * general promotion); the banner prompt then falls back to the headline.
+ */
+export async function describePromotionSubjectForVendor(
+  vendorId: string,
+  target: { productId?: string | null; bundleId?: string | null; categoryId?: string | null },
+): Promise<string> {
+  const prisma = getPrisma();
+  if (target.productId) {
+    const product = await prisma.product.findFirst({
+      where: { id: target.productId, vendorId },
+      select: { name: true },
+    });
+    if (product) return product.name;
+  }
+  if (target.bundleId) {
+    const bundle = await prisma.bundle.findFirst({
+      where: { id: target.bundleId, vendorId },
+      select: {
+        name: true,
+        items: {
+          orderBy: { sortOrder: "asc" },
+          select: { quantity: true, product: { select: { name: true } } },
+        },
+      },
+    });
+    if (bundle) {
+      return (
+        describeItems(
+          bundle.items.map((item) => ({ name: item.product.name, quantity: item.quantity })),
+        ) || bundle.name
+      );
+    }
+  }
+  if (target.categoryId) {
+    const category = await prisma.category.findFirst({
+      where: { id: target.categoryId, vendorId },
+      select: { name: true },
+    });
+    if (category) return category.name;
+  }
+  return "";
 }
