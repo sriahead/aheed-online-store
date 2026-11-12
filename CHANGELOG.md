@@ -6,6 +6,10 @@ every branch merges.
 
 ## [Unreleased]
 
+### Documentation
+
+- **Roadmap catch-up (2026-11-12).** `specs/roadmap.md` 1.197.0 adds the 20 missing change-log rows. They cover 12 slices (10–12 Nov) and their promotions (PRs #1498–#1543), so `sdd:audit` is clean again. Documentation only.
+
 ### Added
 
 - **Pack sizes for the live catalogue: a free rule step before the AI (#697, 2026-11-12)**
