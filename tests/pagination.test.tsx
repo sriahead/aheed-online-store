@@ -183,3 +183,24 @@ describe("every paginated page uses the shared component", () => {
     expect(source.indexOf('id="product-search"')).toBeGreaterThan(source.indexOf("Apply filters"));
   });
 });
+
+describe("category page number (keyset cursor stack)", () => {
+  it("counts pages through real Next and Previous links", async () => {
+    const { categoryPageNumber, nextCategoryPageHref, prevCategoryPageHref } =
+      await import("@/components/product/category-href");
+    const paramsOf = (href: string) =>
+      Object.fromEntries(new URL(href, "http://x").searchParams) as Record<string, string>;
+
+    expect(categoryPageNumber({})).toBe(1);
+    const page2 = nextCategoryPageHref("fish", {}, "c2");
+    expect(categoryPageNumber(paramsOf(page2))).toBe(2);
+    const page3 = nextCategoryPageHref("fish", paramsOf(page2), "c3");
+    expect(categoryPageNumber(paramsOf(page3))).toBe(3);
+    const page4 = nextCategoryPageHref("fish", paramsOf(page3), "c4");
+    expect(categoryPageNumber(paramsOf(page4))).toBe(4);
+    const back3 = prevCategoryPageHref("fish", paramsOf(page4));
+    expect(categoryPageNumber(paramsOf(back3))).toBe(3);
+    const back1 = prevCategoryPageHref("fish", paramsOf(page2));
+    expect(categoryPageNumber(paramsOf(back1))).toBe(1);
+  });
+});

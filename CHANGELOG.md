@@ -20,6 +20,8 @@ every branch merges.
 
 ### Fixed
 
+- **Pagination page numbers after the staging check (#1538, 2026-11-12)**: page 2 of a category read "Page 1" (the cursor stack never stores page 1), and a stale search link past the end read "Page 2 of 1"; it now offers "First page".
+
 - **Landing promotion slides fill the carousel on narrower screens (2026-11-12)**
   - **What was wrong.** Below the large breakpoint the hero stacks. Each slide was only as tall as its own text, so a slide with short copy (e.g. "Fresh Catch Sale") left a bare band under its photo. The owner reported this from production.
   - **Fix.** Slides no longer pin their height (`h-full` cancelled flex stretching), so every slide is as tall as the carousel. `components/layout/PromotionHero.tsx`; guarded by `tests/promotion-hero-slide-fill.test.ts`. Spec: `specs/2026-11-12-promotion-hero-slide-fill/`.
