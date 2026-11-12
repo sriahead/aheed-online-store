@@ -2,11 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
   diffRows,
   imageKeys,
+  isNetworkError,
   normalise,
   parentsFirst,
   TABLES,
   uniqueClashes,
   withActivationPolicy,
+  withRetry,
   writePlan,
   type Delegate,
   type RowDiff,
@@ -221,5 +223,39 @@ describe("writePlan", () => {
       where: { id: "inv" },
       data: { stockMode: "UNTRACKED", version: { increment: 1 } },
     });
+  });
+});
+
+describe("withRetry (storage connection drops)", () => {
+  const reset = () => new TypeError("fetch failed", { cause: { code: "ECONNRESET" } });
+
+  it("recognises a dropped connection but not an HTTP error", () => {
+    expect(isNetworkError(reset())).toBe(true);
+    expect(isNetworkError(new Error("x", { cause: { code: "UND_ERR_SOCKET" } }))).toBe(true);
+    expect(isNetworkError(new Error("storage headObject failed: 403"))).toBe(false);
+  });
+
+  it("retries a reset until it succeeds", async () => {
+    const fn = vi
+      .fn()
+      .mockRejectedValueOnce(reset())
+      .mockRejectedValueOnce(reset())
+      .mockResolvedValue("ok");
+    await expect(withRetry("HEAD k", fn, 5, 0)).resolves.toBe("ok");
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not retry an HTTP error, and names the object when it gives up", async () => {
+    const forbidden = vi.fn().mockRejectedValue(new Error("storage headObject failed: 403"));
+    await expect(withRetry("HEAD products/a.png", forbidden, 5, 0)).rejects.toThrow(
+      "HEAD products/a.png: storage headObject failed: 403 (attempt 1 of 5)",
+    );
+    expect(forbidden).toHaveBeenCalledTimes(1);
+
+    const alwaysReset = vi.fn().mockRejectedValue(reset());
+    await expect(withRetry("GET products/b.png", alwaysReset, 3, 0)).rejects.toThrow(
+      "GET products/b.png: fetch failed (attempt 3 of 3)",
+    );
+    expect(alwaysReset).toHaveBeenCalledTimes(3);
   });
 });
