@@ -2436,6 +2436,167 @@ export async function listProductsForAdmin(
   };
 }
 
+/** #1523 — one row of the numbered staff list: the cursor row plus what the pricing column shows. */
+export interface AdminProductListRow extends AdminProductRow {
+  originalPrice: number | null;
+  plu: string | null;
+  /** The multi-buy tier, or null. Shaped for lib/tier-pricing.ts's ProductTier. */
+  tier: { groupQuantity: number; groupPricePence: number; isActive: boolean } | null;
+}
+
+export interface AdminProductNumberedPage {
+  items: AdminProductListRow[];
+  /** Products matching the filter across every page. */
+  total: number;
+  /** The page actually served, after clamping to the last page. 1-based. */
+  page: number;
+  pageCount: number;
+}
+
+/** #1523 — the staff list's sort as an orderBy. `id` breaks every tie, so paging is stable. */
+function adminProductOrderBy(
+  sort: "newest" | "name" | "price-asc" | "price-desc",
+): Prisma.ProductOrderByWithRelationInput[] {
+  if (sort === "name") return [{ name: "asc" }, { id: "asc" }];
+  if (sort === "price-asc") return [{ basePrice: "asc" }, { name: "asc" }, { id: "asc" }];
+  if (sort === "price-desc") return [{ basePrice: "desc" }, { name: "asc" }, { id: "asc" }];
+  return [{ createdAt: "desc" }, { id: "desc" }];
+}
+
+/**
+ * #1523 — the staff search: name, PLU or barcode, case-insensitive substring. An owner holding a
+ * shelf label or a POS printout knows the PLU, not the exact spelling the import gave the name.
+ * Nested under AND (specs/architecture.md: a fragment never puts OR at its top level).
+ */
+function adminProductSearchWhere(search: string | null | undefined): Prisma.ProductWhereInput {
+  if (!search) return {};
+  return {
+    AND: [
+      {
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { plu: { contains: search, mode: "insensitive" } },
+          { barcode: { contains: search, mode: "insensitive" } },
+        ],
+      },
+    ],
+  };
+}
+
+/** #1523 — the "needs attention" worklists (see NEEDS_FILTERS in lib/staff-products-query.ts). */
+function adminNeedsWhere(needs: "price" | "ready" | "image" | undefined): Prisma.ProductWhereInput {
+  if (needs === "price") return { basePrice: { lte: 0 } };
+  if (needs === "ready") return { isActive: false, basePrice: { gt: 0 }, restriction: null };
+  if (needs === "image") return { images: { none: {} } };
+  return {};
+}
+
+/**
+ * #1523 — the staff product list with NUMBERED pages ("Page 3 of 63"), a total, a sort and the
+ * needs-attention worklists.
+ *
+ * OFFSET, deliberately, and the one scoped exception to specs/architecture.md's keyset rule that
+ * this list takes (see "Pagination" there). A numbered page has to be reachable without walking
+ * every page before it, which a keyset cursor cannot do. The rule's rationale, linear degradation
+ * on unbounded grids, is bounded here: the query is staff-only, vendor-scoped (Aheed's whole
+ * catalogue is ~6,200 rows), and `perPage` is at most 100, so the deepest page skips one vendor's
+ * catalogue at most. The page number is a parsed integer, never a row id, so the #682 cursor guard
+ * has nothing to guard. listProductsForAdmin (keyset) stays for the bundle picker.
+ *
+ * The count runs FIRST, not alongside the page read: clamping a stale "page 40" to the real last
+ * page needs the total. A product created between the two reads can shift a row by one place,
+ * which is harmless on an admin list.
+ */
+export async function listProductsForAdminPage(
+  prisma: Db,
+  vendorId: string,
+  {
+    page,
+    perPage,
+    sort,
+    search,
+    isActive,
+    categoryIds,
+    restriction,
+    stockMode,
+    needs,
+  }: {
+    page: number;
+    perPage: number;
+    sort: "newest" | "name" | "price-asc" | "price-desc";
+    search?: string | null;
+    isActive?: boolean;
+    categoryIds?: readonly string[];
+    restriction?: "any" | "none" | ProductRestriction;
+    stockMode?: StockMode;
+    needs?: "price" | "ready" | "image";
+  },
+): Promise<AdminProductNumberedPage> {
+  const take = Math.min(Math.max(1, Math.trunc(perPage) || 25), 100);
+  const where = combineWhere(
+    { vendorId },
+    isActive === undefined ? undefined : { isActive },
+    categoryIds && categoryIds.length > 0 ? { categoryId: { in: [...categoryIds] } } : undefined,
+    restrictionWhere(restriction),
+    stockModeWhere(stockMode),
+    adminNeedsWhere(needs),
+    adminProductSearchWhere(search),
+  );
+
+  const total = await prisma.product.count({ where });
+  const pageCount = Math.max(1, Math.ceil(total / take));
+  const requested = Number.isInteger(page) && page > 0 ? page : 1;
+  const served = Math.min(requested, pageCount);
+
+  const rows = await prisma.product.findMany({
+    where,
+    orderBy: adminProductOrderBy(sort),
+    skip: (served - 1) * take,
+    take,
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      plu: true,
+      basePrice: true,
+      originalPrice: true,
+      isActive: true,
+      imageNeedsReview: true,
+      restriction: true,
+      category: { select: { name: true } },
+      brand: { select: { name: true } },
+      netContentAmount: true,
+      netContentUnit: true,
+      inventory: { select: { quantity: true, stockMode: true } },
+      priceTier: { select: { groupQuantity: true, groupPricePence: true, isActive: true } },
+    },
+  });
+
+  return {
+    items: rows.map((row) => ({
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      plu: row.plu,
+      basePrice: row.basePrice,
+      originalPrice: row.originalPrice,
+      isActive: row.isActive,
+      categoryName: row.category?.name ?? "Unknown",
+      brandName: row.brand?.name ?? null,
+      netContentAmount: row.netContentAmount,
+      netContentUnit: row.netContentUnit,
+      quantity: row.inventory?.quantity ?? 0,
+      imageNeedsReview: row.imageNeedsReview,
+      restriction: row.restriction,
+      stockMode: stockModeOf(row.inventory),
+      tier: row.priceTier ?? null,
+    })),
+    total,
+    page: served,
+    pageCount,
+  };
+}
+
 export async function getProductForAdmin(
   prisma: Db,
   vendorId: string,
@@ -3273,6 +3434,113 @@ export async function quickUpdateInventory(
   } catch (error) {
     throw error;
   }
+}
+
+export interface BulkQuantityResult {
+  updated: number;
+  unchanged: number;
+  /** Ids that do not belong to this vendor (or no longer exist); nothing was written for them. */
+  missing: string[];
+}
+
+/**
+ * #1523 — set many products' stock counts from /staff/products in ONE interactive transaction.
+ *
+ * The same rules as quickUpdateInventory above, applied per row: entering a count (0 included)
+ * makes the product TRACKED, and every change writes an InventoryAuditLog row (STAFF_ADJUSTMENT).
+ * Validation of the numbers themselves (whole, 0–100000) is the caller's job
+ * (lib/bulk-quantity.ts); this layer refuses a negative anyway, because it can be handed anything.
+ *
+ * The CURRENT values are re-read inside the transaction, so a row whose count is already that
+ * number and already TRACKED writes nothing. A stale form cannot produce a no-op audit trail.
+ * Vendor-scoped by the `findMany` below: an id from another vendor is reported missing, never
+ * written. `getPrismaWs()` only — an interactive transaction (CLAUDE.md, Database).
+ */
+export async function bulkSetInventoryQuantities(
+  prismaWs: DbWs,
+  vendorId: string,
+  updates: readonly { productId: string; quantity: number }[],
+  reason = "Bulk quantity update (staff products list)",
+): Promise<BulkQuantityResult> {
+  if (updates.some((u) => !Number.isInteger(u.quantity) || u.quantity < 0)) {
+    throw new Error("bulkSetInventoryQuantities: quantities must be whole numbers, 0 or more.");
+  }
+  if (updates.length === 0) return { updated: 0, unchanged: 0, missing: [] };
+
+  return prismaWs.$transaction(
+    async (tx) => {
+      const ids = [...new Set(updates.map((u) => u.productId))];
+      const products = await tx.product.findMany({
+        where: { vendorId, id: { in: ids } },
+        select: {
+          id: true,
+          manuallyEditedFields: true,
+          inventory: { select: { quantity: true, stockMode: true } },
+        },
+      });
+      const byId = new Map(products.map((p) => [p.id, p]));
+      const result: BulkQuantityResult = { updated: 0, unchanged: 0, missing: [] };
+
+      for (const { productId, quantity } of updates) {
+        const existing = byId.get(productId);
+        if (!existing) {
+          result.missing.push(productId);
+          continue;
+        }
+        const prevQty = existing.inventory?.quantity ?? 0;
+        const prevMode = existing.inventory?.stockMode ?? "UNKNOWN";
+        if (prevMode === "TRACKED" && prevQty === quantity) {
+          result.unchanged += 1;
+          continue;
+        }
+
+        const fieldSet = new Set(existing.manuallyEditedFields || []);
+        fieldSet.add("quantity");
+        await tx.product.update({
+          where: { id: productId },
+          data: {
+            isManuallyEdited: true,
+            manuallyEditedFields: Array.from(fieldSet),
+            lastManualEditAt: new Date(),
+          },
+        });
+        const inv = await tx.inventory.upsert({
+          where: { productId, vendorId },
+          create: {
+            vendorId,
+            productId,
+            quantity,
+            stockMode: "TRACKED",
+            lowStockThreshold: 3,
+            version: 1,
+          },
+          update: { quantity, stockMode: "TRACKED", version: { increment: 1 } },
+        });
+        await tx.inventoryAuditLog.create({
+          data: {
+            vendorId,
+            productId,
+            inventoryId: inv.id,
+            previousQuantity: prevQty,
+            newQuantity: quantity,
+            changeAmount: quantity - prevQty,
+            previousStockMode: prevMode,
+            newStockMode: "TRACKED",
+            source: "STAFF_ADJUSTMENT",
+            reason,
+            actorType: "STAFF",
+          },
+        });
+        // Keep the in-memory row current, so a product listed twice in one submission is
+        // compared against what this transaction just wrote, not the stale read.
+        existing.inventory = { quantity, stockMode: "TRACKED" };
+        result.updated += 1;
+      }
+      return result;
+    },
+    // 100 rows x 3 writes over one socket; the 5s default is too tight on a cold compute.
+    { timeout: 30_000, maxWait: 10_000 },
+  );
 }
 
 /**

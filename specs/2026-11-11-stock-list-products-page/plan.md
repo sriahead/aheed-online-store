@@ -61,7 +61,8 @@ an offer saves them, computed only from prices the store actually charges.
   Previous/Next, a compact page-number window, and a jump-to-page box. It is offset-based
   (`page` query param) with a total count, via a new repository function
   `listProductsForAdminPage` in `lib/repositories/products.ts`. The cursor function stays, because the
-  bundle picker uses it.
+  bundle picker uses it. Offset paging is a **standing-decision change**: it is recorded as a second
+  scoped exception under "Pagination" in `specs/architecture.md` (1.49.0).
 - Page sizes **25 / 50 / 100** (`PER_PAGE_OPTIONS`). No "All".
 - **Sort:** newest (default, the current order), name A–Z, price low→high, price high→low.
 - **Needs-attention filter** (`needs`): price needed (£0), ready to switch on (hidden, priced,

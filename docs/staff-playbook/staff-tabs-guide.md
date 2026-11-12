@@ -4,8 +4,8 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.18.0"
-updated: "2026-11-10"
+version: "2.19.0"
+updated: "2026-11-12"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, filters, bundles, promotions, inventory, search dictionary, customer feedback, enquiries & inbox, and runbooks. One section per menu item."
 tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback", "enquiries", "inbox"]
@@ -422,7 +422,7 @@ the **Restriction** section at the foot of its page. A restricted product is alw
   cannot be edited or removed.
 
 **Changing many products at once:** Tick products in the list (or **Select all on this page**;
-choose 100 under **Per page** to work through a large catalogue faster), choose an action under
+choose 50 or 100 under **Per page** to work through a large catalogue faster), choose an action under
 **With selected**, and press **Preview**. The actions are:
 
 - **Make available**
@@ -437,6 +437,33 @@ or **Cancel**. Apply re-checks every product at that moment, so nothing a single
 gets through in bulk. Afterwards a summary lists what was updated, what was skipped and why, and
 anything that failed because it changed after you selected it. Hiding or marking stock as not
 tracked never removes a restriction or makes a product visible.
+
+**Finding products in a large catalogue:** The search box has its own row at the top. It finds a
+product by any part of its **name**, its **PLU** (the till number on a shelf label or POS printout),
+or its **barcode**. Below it, the filters narrow the list by status, category, restriction, stock and
+**Needs attention**, and **Sort** orders it by newest (the default), name, or price either way. Press
+**Apply filters** to use them, or **Clear all** to start again. The **Quick views** under the filters
+open the three worklists in one click, and a second click turns one off:
+
+- **Price needed (£0):** products with no price yet. They cannot go on sale until they have one.
+- **Ready to switch on:** hidden products that have a price and no restriction.
+- **No photo:** products shoppers would see without a picture.
+
+The page bar sits **above and below** the list. It shows the page you are on, how many pages there
+are, and which products are showing out of how many ("Page 3 of 63 · Showing 51–75 of 1,560
+products"). Use the page numbers or Previous/Next; on a list longer than seven pages you can also type a page
+number and press **Go**. Every page keeps your
+search, filters and sort. **Per page** offers 25, 50 or 100. A product carrying **Price needed** in
+red has a price of £0.
+
+**Updating stock counts for many products:** Every row has a **Qty** box on the right. It is blank
+for a product whose stock is not tracked. Either type a new count into any rows, or tick rows, enter
+a number under **Set selected to** and press **Apply to selected**. Changed boxes are highlighted,
+and the button counts them ("Save 3 quantities"). Press it to save them all at once, or press
+**Discard changes**. Entering a count, including 0, switches the product to **Tracked**, the same as
+on the Inventory page. Counts must be whole numbers from 0 to 100,000. If any box is not, nothing is
+saved and the message names the value to fix. A row whose count is already that number is left
+alone. Every change is written to the stock audit log.
 
 **What happens after changes are saved:** The change is live immediately — the storefront, the
 department listing and the product's own page all update. Existing orders are unaffected: they keep
