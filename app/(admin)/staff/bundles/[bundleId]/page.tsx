@@ -88,6 +88,7 @@ export default async function EditBundlePage({
         bundle={bundle}
         products={products.items.map((product) => ({ id: product.id, name: product.name }))}
         imageUrl={imageUrl}
+        canGenerate={auth.via !== "STAFF"}
       />
     </PageContainer>
   );

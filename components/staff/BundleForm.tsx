@@ -50,10 +50,13 @@ export function BundleForm({
   bundle,
   products,
   imageUrl,
+  canGenerate,
 }: {
   bundle: BundleWithItems | null;
   products: ProductOption[];
   imageUrl: string | null;
+  /** #1535 — admins only: AI generation is paid, and its route refuses staff. */
+  canGenerate: boolean;
 }) {
   const [state, action, saving] = useActionState(saveBundle, initialBundleFormState);
   const [rows, setRows] = useState<ItemRow[]>(() => initialRows(bundle));
@@ -246,6 +249,8 @@ export function BundleForm({
           bundleId={bundle.id}
           imageUrl={imageUrl}
           existingAltText={bundle.altText}
+          needsReview={bundle.imageNeedsReview ?? false}
+          canGenerate={canGenerate}
         />
       )}
     </div>

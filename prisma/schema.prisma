@@ -877,6 +877,8 @@ model Promotion {
   callToActionText String?
   imageKey         String? // RELATIVE key only (ADR-003) — never a URL
   altText          String? // required by jsx-a11y whenever imageKey is set
+  // #1535 — set when the image was AI-generated, cleared by Approve, a new upload or Remove.
+  imageNeedsReview Boolean         @default(false)
   linkUrl          String? // relative path only, e.g. "/categories/household?isOffer=true"
   priority         Int             @default(0)
   isActive         Boolean         @default(true)
@@ -945,6 +947,8 @@ model Bundle {
   tagline   String?
   imageKey  String? // RELATIVE key only (ADR-003) — never a URL
   altText   String? // required by jsx-a11y whenever imageKey is set
+  // #1535 — set when the image was AI-generated, cleared by Approve, a new upload or Remove.
+  imageNeedsReview Boolean @default(false)
   isActive  Boolean      @default(true)
   sortOrder Int          @default(0)
   createdAt DateTime     @default(now())
@@ -2371,6 +2375,7 @@ enum AiFeature {
   PRODUCT_IMAGE
   CAMPAIGN_IMAGE
   PRICING_REVIEW
+  BUNDLE_IMAGE
 }
 
 // REPORTED = Workers AI's own figure for the call; ESTIMATED = computed from lib/workers-ai.ts.

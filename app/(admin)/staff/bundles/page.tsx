@@ -7,6 +7,7 @@ import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Icon } from "@/components/icons/Icon";
 import { IconMedallion } from "@/components/icons/IconMedallion";
+import { BackfillBundleImagesButton } from "@/components/staff/BackfillBundleImagesButton";
 
 // Reads the session and this vendor's bundles — must render per-request.
 export const dynamic = "force-dynamic";
@@ -35,6 +36,9 @@ export default async function StaffBundlesPage() {
   }
 
   const bundles = await listBundlesForVendor(auth.vendorId);
+  const missingCount = bundles.filter((bundle) => !bundle.hasImage).length;
+  // #1535 — AI generation is paid and its route is admin-only, so staff do not see the button.
+  const canGenerate = auth.via !== "STAFF";
 
   return (
     <PageContainer width="wide">
@@ -52,6 +56,12 @@ export default async function StaffBundlesPage() {
         A named group of products shoppers can add in one tap. The price is added up from the
         products&apos; live prices, so there is nothing to keep in step by hand.
       </p>
+
+      {canGenerate && bundles.length > 0 && (
+        <div className="mb-6">
+          <BackfillBundleImagesButton missingCount={missingCount} />
+        </div>
+      )}
 
       {bundles.length === 0 ? (
         <div className="rounded-2xl border border-black/10 bg-surface-muted p-8 text-center">
@@ -74,6 +84,10 @@ export default async function StaffBundlesPage() {
                   </Link>
                   <p className="text-xs text-primary-muted">
                     {bundle.itemCount} {bundle.itemCount === 1 ? "product" : "products"}
+                    {!bundle.hasImage && " · No photo"}
+                    {bundle.imageNeedsReview && (
+                      <span className="font-semibold text-accent"> · Photo needs review</span>
+                    )}
                   </p>
                 </div>
                 <span

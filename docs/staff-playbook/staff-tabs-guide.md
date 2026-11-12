@@ -4,7 +4,7 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.19.0"
+version: "2.20.0"
 updated: "2026-11-12"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, filters, bundles, promotions, inventory, search dictionary, customer feedback, enquiries & inbox, and runbooks. One section per menu item."
@@ -306,6 +306,14 @@ price callout is always shown alongside your campaign copy and cannot be suppres
 daily AI allowance: once that is used up it is refused until 00:00 UTC, and uploading a banner still
 works.
 
+**Promotion banners (#1535):** in a promotion's **4. Promotional Banner & Creative** section you can
+upload a photo, **Replace photo** or **Remove photo**. **Generate banner with AI** makes a new photo
+from what the promotion is for (the product, the bundle's contents or the department) and leaves
+your headline and text as they are. **Generate Message and Banner Using AI** rewrites both. An AI
+banner is marked **needs review** until you press **Approve banner**, or replace or remove it; then
+press **Save changes**, because nothing in this section is kept until you save. Both AI buttons are
+for store admins and count against the daily AI allowance.
+
 **What happens after changes are saved:** The banner appears on that department's page as soon as its
 schedule allows.
 
@@ -331,6 +339,16 @@ recalculated on every view.
 changes every bundle containing it immediately, with nothing to review or re-save on the bundle
 itself. Removing a product from the catalogue that a bundle still references will leave that bundle
 incomplete, and a product going out of stock drops it from the bundle until it returns.
+
+**Bundle photos (#1535):** the **Bundle photo** box on a bundle's page has the same options as a
+product's photo. **Upload** (or **Replace photo**) takes your own picture; **Remove photo** takes it
+off, and the bundle shows a plain card. Store admins also see **Auto-Generate with AI**: the picture is
+described from what is in the bundle (for example "4 × Medium Chicken"). An AI photo is marked
+**needs review** until someone presses **Approve photo**, or replaces or removes it. The Bundles list
+shows **No photo** and **Photo needs review** against each bundle. Store admins also have **Fill
+missing bundle photos** there, which fills up to 10 bundles per click, live ones first. Every AI photo
+counts against the store's daily AI allowance, and once that is used up it is refused until 00:00 UTC.
+Check each AI photo before approving it: it is a guess by something that has never seen your products.
 
 **What happens after changes are saved:** The bundle appears in the shop's bundle listing
 immediately.

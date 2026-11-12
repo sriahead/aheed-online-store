@@ -22,7 +22,8 @@ const FEATURE_LABELS: Record<AiFeature, string> = {
   SEARCH_SYNONYMS: "Search dictionary suggestions",
   NET_CONTENT: "Net content suggestions",
   PRODUCT_IMAGE: "Product images",
-  CAMPAIGN_IMAGE: "Department campaign images",
+  CAMPAIGN_IMAGE: "Department and promotion banners",
+  BUNDLE_IMAGE: "Bundle photos",
   PRICING_REVIEW: "Pricing review",
 };
 
