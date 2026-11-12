@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-12T04:55:29.710Z` · commit `11cb6d6b` · `333` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-12T05:08:21.666Z` · commit `225b4fc8` · `334` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -318,6 +318,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Stock list on staging, Products page paging and bulk quantity, honest savings framing (plan)](specs/2026-11-11-stock-list-products-page/plan.md) | spec | 1.0.0 | 2026-11-11 | approved | internal | Applies the client's 'Stock to upload' list to Aheed staging (category, Untracked stock, activate priced lines only), rebuilds /staff/products paging (numbered pages, 25/50/100, sort, needs-attention filters, bulk quantity) and adds honest savings framing to storefront prices. |
 | [Copy the Aheed catalogue from staging to production, images included (plan)](specs/2026-11-12-catalogue-copy-to-production/plan.md) | spec | 1.0.0 | 2026-11-12 | approved | internal | One script copies a cell's catalogue tables from its staging database to production by shared id, and copies image objects key for key, replacing the six-script production run order and any image regeneration. |
 | [Every live promotion on the landing page; plainer staff search placeholder (plan)](specs/2026-11-12-landing-promotions-search-placeholder/plan.md) | spec | 1.0.0 | 2026-11-12 | approved | internal | Raises the landing hero's promotion limit from 3 to 12 so every live promotion rotates, and makes the staff Products search placeholder plainer. |
+| [Promotion edit page keeps its saved bundle, code or product (plan)](specs/2026-11-12-promotion-form-current-target/plan.md) | spec | 1.0.0 | 2026-11-12 | approved | internal | The promotion edit page always lists the promotion's saved bundle, discount code or product, marked when switched off, so the picker never shows its placeholder for a linked promotion and a save never drops the link. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.49.0 | 2026-11-12 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |

@@ -8,6 +8,11 @@ every branch merges.
 
 ### Fixed
 
+- **The promotion edit page keeps the promotion's saved bundle, code or product (2026-11-12)**
+  - **What was wrong.** The edit page offered only switched-on bundles, active discount codes and products currently on offer. When a promotion's own target was switched off, the picker showed "-- Choose an active bundle --" and saving would have dropped the link. The owner saw this on "BBQ Chicken Pack: Save £8.48".
+  - **The fix.** The saved target is always listed, marked "(switched off — turn it on in Bundles)" or "(inactive)" where it applies. A department filter no longer hides the chosen product. Under the date fields, a hint says blank dates run the promotion until it is switched off; that promotion's blank dates were correct, since it has none set.
+  - **Tests.** `tests/promotion-target-options.test.ts`.
+
 - **Every live promotion shows on the landing page, and a plainer staff search box (2026-11-12)**
   - **What was wrong.** The landing-page hero showed at most 3 promotions: `getLivePromotionsForStorefront` defaulted to `limit = 3`. With 7 live in production, 4 never appeared.
   - **The fix.** The default is now `HERO_PROMOTION_LIMIT` (12). The hero is already a slideshow with dots, so the extra promotions become extra slides, in priority order. `tests/landing-promotions-limit.test.ts` guards it.

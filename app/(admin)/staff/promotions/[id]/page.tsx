@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { listBundlesForVendor } from "@/lib/bundles-service";
+import { keepCurrentOption } from "@/lib/promotion-target-options";
 import { getDiscountRepository } from "@/lib/discounts-service";
 import {
   getPromotionForAdmin,
@@ -33,29 +34,44 @@ export default async function EditPromotionPage({ params }: { params: Promise<{ 
     );
   }
 
-  const [promotion, allCategories, eligibleProducts, bundles, discountCodes, profile] =
-    await Promise.all([
-      getPromotionForAdmin(auth.vendorId, id),
-      listCategoriesForAdmin(auth.vendorId),
-      listEligiblePromotionalProductsForAdmin(auth.vendorId),
-      listBundlesForVendor(auth.vendorId),
-      getDiscountRepository().list(),
-      getCurrentVendorProfile(),
-    ]);
-
+  const promotion = await getPromotionForAdmin(auth.vendorId, id);
   if (!promotion) notFound();
 
-  const bundleOptions = bundles.filter((b) => b.isActive).map((b) => ({ id: b.id, name: b.name }));
+  const [allCategories, eligibleProducts, bundles, discountCodes, profile] = await Promise.all([
+    listCategoriesForAdmin(auth.vendorId),
+    // The saved product stays listed even if its offer has ended (keepCurrentOption's reason).
+    listEligiblePromotionalProductsForAdmin(
+      auth.vendorId,
+      promotion.productId ? [promotion.productId] : [],
+    ),
+    listBundlesForVendor(auth.vendorId),
+    getDiscountRepository().list(),
+    getCurrentVendorProfile(),
+  ]);
 
-  const discountOptions = discountCodes
-    .filter((d) => d.isActive)
-    .map((d) => ({
-      id: d.id,
-      code: d.code,
-      description: d.description,
-      kind: d.kind,
-      value: d.value,
-    }));
+  // Only switched-on bundles and active codes are offered, but the promotion's saved one is kept,
+  // marked, so the picker shows what is actually linked and a save does not drop it.
+  const toBundleOption = (b: (typeof bundles)[number]) => ({ id: b.id, name: b.name });
+  const bundleOptions = keepCurrentOption(
+    bundles.filter((b) => b.isActive).map(toBundleOption),
+    bundles.map(toBundleOption),
+    promotion.bundleId,
+    (b) => ({ ...b, name: `${b.name} (switched off — turn it on in Bundles)` }),
+  );
+
+  const toDiscountOption = (d: (typeof discountCodes)[number]) => ({
+    id: d.id,
+    code: d.code,
+    description: d.description,
+    kind: d.kind,
+    value: d.value,
+  });
+  const discountOptions = keepCurrentOption(
+    discountCodes.filter((d) => d.isActive).map(toDiscountOption),
+    discountCodes.map(toDiscountOption),
+    promotion.discountCodeId,
+    (d) => ({ ...d, code: `${d.code} (inactive)` }),
+  );
 
   const timezone = profile?.timezone ?? STORE_TIMEZONE;
   const { CDN_BASE_URL } = getEnv();
