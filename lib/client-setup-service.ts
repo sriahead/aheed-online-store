@@ -205,5 +205,7 @@ export async function sendClientSetupTestEmail(
     sender: { name: profile.senderName, email: profile.senderEmail },
     subject: `${profile.senderName} — test email from Client Setup`,
     html: `<p>This is a test email sent from the Client Setup dashboard.</p><p>If it arrived, ${profile.senderName}'s outgoing email works in this environment.</p>`,
+    // #1546 — sendTestEmailAction passes the signed-in platform admin's own address.
+    recipientIsSignedInAdmin: true,
   });
 }

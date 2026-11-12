@@ -21,6 +21,12 @@ export interface OutgoingEmail {
    * store's staff reply straight to the shopper.
    */
   replyTo?: string;
+  /**
+   * #1546 — `to` is the signed-in platform admin's own address, so allowlist mode sends it without
+   * EMAIL_ALLOWED_RECIPIENTS. Only Client Setup's test email sets it
+   * (tests/email-allowlist-client-setup.test.ts).
+   */
+  recipientIsSignedInAdmin?: boolean;
 }
 
 /** What an adapter delivers: the From is final, and `replyTo` is set only when R5 says so. */

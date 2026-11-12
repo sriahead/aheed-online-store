@@ -4,8 +4,8 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.12.0"
-updated: 2026-11-10
+version: "1.13.0"
+updated: 2026-11-12
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
 tags: ["admin", "platform", "technical", "multi-tenancy"]
@@ -175,7 +175,7 @@ reload to see them.
 - **Store admins cannot open this page**; they see a "Platform admin only" panel.
 - **An address can belong to only one store.** Adding one that is already registered is refused.
 - **A forward-to mailbox must not itself be a receiving address**, because mail would loop. That is refused too.
-- **On staging**, the test email only arrives if your address is on the environment's allowlist; otherwise the page reports "Skipped by recipient policy".
+- **On staging**, mail only goes to allowed addresses. Your test email is always allowed, and so is every forward-to mailbox listed under Receiving addresses, for as long as its receiving address exists (the card says so). Any other address must be on the environment's allowlist; otherwise the page reports "Skipped by recipient policy".
 - **The storefront Contact us form uses these addresses too.** A shopper's complaint, or any message about an order, is emailed to the store's **Orders** address's forward-to mailbox; an enquiry goes to its **Support** one. With neither, it goes to the platform default inbox. Register both so the hub inbox is only the fallback.
 - **Routing rules are created in Cloudflare, not here.** A registered address receives nothing until its rule sends it to the inbound-email Worker.
 - **The platform default inbox is a setting on the Worker** (`INBOUND_DEFAULT_FORWARD`), not a control on this page. Like any forward-to mailbox, it must be verified in Cloudflare before mail can reach it.
