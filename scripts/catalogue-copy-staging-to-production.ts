@@ -377,6 +377,43 @@ function delegate(client: PrismaClient, model: string): Delegate {
   return (client as unknown as Record<string, Delegate>)[model];
 }
 
+/**
+ * True for a dropped connection (undici's "fetch failed" with ECONNRESET and the like), which is
+ * worth retrying. An HTTP error status is NOT: storage reports those as its own messages.
+ */
+export function isNetworkError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const code = (error as { cause?: { code?: unknown } }).cause?.code;
+  return (
+    error.message === "fetch failed" ||
+    (typeof code === "string" &&
+      /^(ECONNRESET|ETIMEDOUT|ECONNREFUSED|EPIPE|EAI_AGAIN|UND_ERR_)/.test(code))
+  );
+}
+
+/**
+ * Retries a storage call on a dropped connection, with backoff. R2 reset 47 of 250 HEAD requests on
+ * 2026-11-12 while the same check an hour earlier had none. The final error names the object.
+ */
+export async function withRetry<T>(
+  label: string,
+  fn: () => Promise<T>,
+  attempts = 5,
+  delayMs = 500,
+): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (!isNetworkError(error) || attempt >= attempts) {
+        const why = error instanceof Error ? error.message : String(error);
+        throw new Error(`${label}: ${why} (attempt ${attempt} of ${attempts})`, { cause: error });
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs * 2 ** (attempt - 1)));
+    }
+  }
+}
+
 async function inBatches<T>(items: readonly T[], size: number, fn: (item: T) => Promise<void>) {
   for (let i = 0; i < items.length; i += size) await Promise.all(items.slice(i, i + size).map(fn));
 }
@@ -539,9 +576,9 @@ async function main() {
     const toCopy: { key: string; contentType: string }[] = [];
     const missingEverywhere: string[] = [];
     if (!f.skipImages) {
-      await inBatches(keys, 8, async (key) => {
-        if (await destStorage.headObject(key)) return;
-        const head = await sourceStorage.headObject(key);
+      await inBatches(keys, 4, async (key) => {
+        if (await withRetry(`HEAD destination ${key}`, () => destStorage.headObject(key))) return;
+        const head = await withRetry(`HEAD source ${key}`, () => sourceStorage.headObject(key));
         if (!head) missingEverywhere.push(key);
         else toCopy.push({ key, contentType: head.contentType ?? "application/octet-stream" });
       });
@@ -609,10 +646,12 @@ async function main() {
 
     // 1. Objects first, so no row ever points at something absent.
     let copied = 0;
-    await inBatches(toCopy, 8, async ({ key, contentType }) => {
-      const bytes = await sourceStorage.getObject(key);
+    await inBatches(toCopy, 4, async ({ key, contentType }) => {
+      const bytes = await withRetry(`GET source ${key}`, () => sourceStorage.getObject(key));
       if (!bytes) throw new Error(`object vanished from source: ${key}`);
-      await destStorage.putObject(key, bytes, contentType);
+      await withRetry(`PUT destination ${key}`, () =>
+        destStorage.putObject(key, bytes, contentType),
+      );
       copied++;
     });
     console.log(`\nimage objects copied: ${copied}`);
