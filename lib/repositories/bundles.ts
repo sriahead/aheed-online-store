@@ -32,6 +32,8 @@ export interface BundleWithItems {
   tagline: string | null;
   imageKey: string | null;
   altText: string | null;
+  /** #1535 — the photo was AI-generated and nobody has approved it yet. Optional for test fixtures. */
+  imageNeedsReview?: boolean;
   isActive: boolean;
   sortOrder: number;
   items: BundleItemInput[];
@@ -44,6 +46,9 @@ export interface BundleAdminRow {
   isActive: boolean;
   sortOrder: number;
   itemCount: number;
+  /** #1535 — the list's "No photo" / "Photo needs review" labels. */
+  hasImage: boolean;
+  imageNeedsReview: boolean;
 }
 
 /**
@@ -130,6 +135,7 @@ export async function listActiveBundles(prisma: Db, vendorId: string): Promise<B
     tagline: row.tagline,
     imageKey: row.imageKey,
     altText: row.altText,
+    imageNeedsReview: row.imageNeedsReview,
     isActive: row.isActive,
     sortOrder: row.sortOrder,
     items: row.items.map(toItemInput),
@@ -162,6 +168,7 @@ export async function getBundleWithItems(
     tagline: row.tagline,
     imageKey: row.imageKey,
     altText: row.altText,
+    imageNeedsReview: row.imageNeedsReview,
     isActive: row.isActive,
     sortOrder: row.sortOrder,
     items: row.items.map(toItemInput),
@@ -191,6 +198,7 @@ export async function getActiveBundleBySlug(
     tagline: row.tagline,
     imageKey: row.imageKey,
     altText: row.altText,
+    imageNeedsReview: row.imageNeedsReview,
     isActive: row.isActive,
     sortOrder: row.sortOrder,
     items: row.items.map(toItemInput),
@@ -208,6 +216,8 @@ export async function listBundlesForAdmin(prisma: Db, vendorId: string): Promise
       name: true,
       isActive: true,
       sortOrder: true,
+      imageKey: true,
+      imageNeedsReview: true,
       _count: { select: { items: true } },
     },
   });
@@ -219,6 +229,8 @@ export async function listBundlesForAdmin(prisma: Db, vendorId: string): Promise
     isActive: row.isActive,
     sortOrder: row.sortOrder,
     itemCount: row._count.items,
+    hasImage: row.imageKey !== null,
+    imageNeedsReview: row.imageKey !== null && row.imageNeedsReview,
   }));
 }
 
@@ -376,11 +388,78 @@ export async function setBundleImage(
   bundleId: string,
   imageKey: string,
   altText: string,
+  needsReview = false,
 ): Promise<BundleWriteResult> {
   const updated = await prisma.bundle.updateMany({
     where: { id: bundleId, vendorId },
-    data: { imageKey, altText },
+    data: { imageKey, altText, imageNeedsReview: needsReview },
   });
   if (updated.count === 0) return { ok: false, error: "That bundle no longer exists." };
   return { ok: true, id: bundleId };
+}
+
+/**
+ * #1535 — take the photo off a bundle. The object stays in storage: keys are immutable and an
+ * orphaned object costs nothing, while deleting one a cached page still points at would break it.
+ */
+export async function clearBundleImage(
+  prisma: DbWs,
+  vendorId: string,
+  bundleId: string,
+): Promise<BundleWriteResult> {
+  const updated = await prisma.bundle.updateMany({
+    where: { id: bundleId, vendorId },
+    data: { imageKey: null, altText: null, imageNeedsReview: false },
+  });
+  if (updated.count === 0) return { ok: false, error: "That bundle no longer exists." };
+  return { ok: true, id: bundleId };
+}
+
+/** #1535 — a person has looked at the generated photo and kept it. */
+export async function approveBundleImage(
+  prisma: DbWs,
+  vendorId: string,
+  bundleId: string,
+): Promise<BundleWriteResult> {
+  const updated = await prisma.bundle.updateMany({
+    where: { id: bundleId, vendorId, imageKey: { not: null } },
+    data: { imageNeedsReview: false },
+  });
+  if (updated.count === 0) return { ok: false, error: "That bundle has no photo to approve." };
+  return { ok: true, id: bundleId };
+}
+
+export interface BundleNeedingImage {
+  id: string;
+  name: string;
+  items: { name: string; quantity: number }[];
+}
+
+/**
+ * #1535 — bundles with no photo, live ones first, for the "Fill missing bundle photos" button.
+ * `limit` is the caller's batch size: every row is a paid image generation.
+ */
+export async function listBundlesWithoutImages(
+  prisma: Db,
+  vendorId: string,
+  limit: number,
+): Promise<BundleNeedingImage[]> {
+  const rows = await prisma.bundle.findMany({
+    where: { vendorId, imageKey: null },
+    orderBy: [{ isActive: "desc" }, { sortOrder: "asc" }, { name: "asc" }],
+    take: limit,
+    select: {
+      id: true,
+      name: true,
+      items: {
+        orderBy: [{ sortOrder: "asc" }, { productId: "asc" }],
+        select: { quantity: true, product: { select: { name: true } } },
+      },
+    },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    items: row.items.map((item) => ({ name: item.product.name, quantity: item.quantity })),
+  }));
 }

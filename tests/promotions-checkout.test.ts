@@ -15,6 +15,7 @@ function mockPromo(overrides: Partial<PromotionRow> = {}): PromotionRow {
     callToActionText: null,
     imageKey: null,
     altText: null,
+    imageNeedsReview: false,
     linkUrl: null,
     priority: 10,
     isActive: true,

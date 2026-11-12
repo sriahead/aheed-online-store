@@ -34,7 +34,8 @@ export type AiFeature =
   | "NET_CONTENT"
   | "PRODUCT_IMAGE"
   | "CAMPAIGN_IMAGE"
-  | "PRICING_REVIEW";
+  | "PRICING_REVIEW"
+  | "BUNDLE_IMAGE";
 
 /** #1029 — every metered feature, in the order the staff AI page lists them. */
 export const AI_FEATURES: readonly AiFeature[] = [
@@ -43,6 +44,7 @@ export const AI_FEATURES: readonly AiFeature[] = [
   "NET_CONTENT",
   "PRODUCT_IMAGE",
   "CAMPAIGN_IMAGE",
+  "BUNDLE_IMAGE",
   "PRICING_REVIEW",
 ];
 

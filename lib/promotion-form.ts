@@ -27,6 +27,8 @@ export interface PromotionFormValues {
   productId: string | null;
   imageKey: string | null;
   altText: string | null;
+  /** #1535 — only ever true alongside an image. */
+  imageNeedsReview: boolean;
 }
 
 export interface PromotionFormState {
@@ -63,6 +65,7 @@ export const PROMOTION_FIELDS = [
   "productId",
   "imageKey",
   "altText",
+  "imageNeedsReview",
 ] as const;
 
 function text(raw: RawForm, field: string): string {
@@ -257,6 +260,7 @@ export function parsePromotionForm(
   const isActive = raw["isActive"] === "true" || raw["isActive"] === "on";
   const imageKey = optionalText(raw, "imageKey");
   const altText = optionalText(raw, "altText");
+  const imageNeedsReview = imageKey !== null && raw["imageNeedsReview"] === "true";
 
   return {
     ok: true,
@@ -279,6 +283,7 @@ export function parsePromotionForm(
       productId,
       imageKey,
       altText,
+      imageNeedsReview,
     },
   };
 }

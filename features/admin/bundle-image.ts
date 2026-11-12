@@ -10,7 +10,12 @@ import {
   type UploadTicket,
 } from "@/lib/product-image";
 import { buildBundleImageKey, isBundleImageKey } from "@/lib/bundle-image";
-import { getBundleForVendor, saveBundleImageForVendor } from "@/lib/bundles-service";
+import {
+  approveBundleImageForVendor,
+  clearBundleImageForVendor,
+  getBundleForVendor,
+  saveBundleImageForVendor,
+} from "@/lib/bundles-service";
 
 /**
  * Bundle image upload actions (P8.5c, #347) — mirroring
@@ -101,5 +106,33 @@ export async function attachBundleImage(
   revalidatePath("/staff/bundles");
   revalidatePath(`/staff/bundles/${bundleId}`);
   revalidatePath("/categories");
+  return { ok: true, value: undefined };
+}
+
+function revalidateBundle(bundleId: string): void {
+  revalidatePath("/staff/bundles");
+  revalidatePath(`/staff/bundles/${bundleId}`);
+  revalidatePath("/categories");
+}
+
+/** #1535 — take the photo off a bundle; the bundle then shows its plain card. */
+export async function removeBundleImage(bundleId: string): Promise<ImageActionResult<void>> {
+  const auth = await requireVendorRole("STAFF", "ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  const result = await clearBundleImageForVendor(auth.vendorId, bundleId);
+  if (!result.ok) return { ok: false, error: result.error };
+  revalidateBundle(bundleId);
+  return { ok: true, value: undefined };
+}
+
+/** #1535 — keep an AI-generated photo: clears its "Needs review" flag. */
+export async function approveBundleImage(bundleId: string): Promise<ImageActionResult<void>> {
+  const auth = await requireVendorRole("STAFF", "ADMIN");
+  if (!auth.ok) return { ok: false, error: refusal(auth.status) };
+
+  const result = await approveBundleImageForVendor(auth.vendorId, bundleId);
+  if (!result.ok) return { ok: false, error: result.error };
+  revalidateBundle(bundleId);
   return { ok: true, value: undefined };
 }

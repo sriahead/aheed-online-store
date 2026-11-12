@@ -36,3 +36,13 @@ export function isBundleImageKey(key: string, bundleId: string): boolean {
 
   return UUID_PATTERN.test(file.slice(0, -SUFFIX.length));
 }
+
+/**
+ * #1535 — `bundles/{bundleId}/{uuid}.png` for an AI-generated photo. Workers AI returns PNG and the
+ * Worker cannot re-encode it, so the key carries its real extension (the #364 rule for product
+ * keys). Deliberately NOT accepted by `isBundleImageKey`: that check guards the browser upload
+ * path, which only ever sends WebP.
+ */
+export function buildGeneratedBundleImageKey(bundleId: string): string {
+  return `bundles/${bundleId}/${crypto.randomUUID()}.png`;
+}
