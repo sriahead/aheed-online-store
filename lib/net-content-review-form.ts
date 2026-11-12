@@ -20,6 +20,21 @@ export const initialNetContentReviewState: NetContentReviewState = { error: null
 export function describeStaffNetContentRun(
   result: StaffNetContentRunResult,
 ): NetContentReviewState {
+  const state = describeModelRun(result);
+  if (!result.ruled) return state;
+  // #697 — the free rule step's count leads, whatever the model step then did.
+  const ruled = `Read ${result.ruled} pack size(s) from product names and per-kg prices, without AI; they are in the queue below.`;
+  if (result.kind === "nothing-eligible") {
+    return { error: null, notice: `${ruled} No other products were waiting for the AI.` };
+  }
+  // The form shows an error OR a notice, so a model-step refusal is folded into the notice rather
+  // than hiding the rule step's real progress.
+  return state.error
+    ? { error: null, notice: `${ruled} The AI step did not run: ${state.error}` }
+    : { error: null, notice: `${ruled} ${state.notice ?? ""}`.trim() };
+}
+
+function describeModelRun(result: StaffNetContentRunResult): NetContentReviewState {
   switch (result.kind) {
     case "unpriced-model":
       return {

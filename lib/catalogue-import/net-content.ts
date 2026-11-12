@@ -19,6 +19,42 @@ export interface ExtractedNetContent {
  * fractional values in coarser units (e.g. 1.5kg) convert to integer in finer units (1500g).
  */
 export function extractDetailedNetContent(text: string): ExtractedNetContent | null {
+  const found = extractNetContentCandidate(text);
+  if (!found || found.confidence !== "HIGH") return found;
+  // #697 — text that names a weight without fixing it is never HIGH: a wrong pack size shows a wrong
+  // price per kg, which is a Price Marking Order exposure. Seen on real lines: "Tilapia 500–800g"
+  // read as 800g, "Tilapia 800g+" as 800g, and "Prawns – 400g (Pack of 2)" as 400g.
+  return isAmbiguousNetContentText(text, found) ? { ...found, confidence: "LOW" } : found;
+}
+
+// The lower bound may not follow a digit, "/" or ".": "31/40 – 400g" is a size grade, not 40–400g.
+const AMOUNT_UNIT = String.raw`(?<![\d/.])(\d+(?:\.\d+)?)\s*(kg|g|ml|l|ltr)?`;
+/** "500–800g", "1.1-1.2kg", "1100 – 1200g": a lower and an upper bound, the lower smaller. */
+const RANGE = new RegExp(
+  String.raw`${AMOUNT_UNIT}\s*[–—-]\s*(\d+(?:\.\d+)?)\s*(kg|g|ml|l|ltr)(?!\p{L})`,
+  "iu",
+);
+/** "800g+" (a minimum) or "200G+50%" (a bonus fill). */
+const PLUS = /\d(?:\.\d+)?\s*(?:kg|g|ml|l|ltr)\s*\+/i;
+/** "(Pack of 2)", "pack of 3": a count beside a single weight leaves the total unclear. */
+const PACK_OF = /\bpack\s+of\s+\d+/i;
+
+const TO_BASE: Record<string, number> = { g: 1, kg: 1000, ml: 1, l: 1000, ltr: 1000 };
+
+function isAmbiguousNetContentText(text: string, found: ExtractedNetContent): boolean {
+  if (PLUS.test(text)) return true;
+  const range = RANGE.exec(text);
+  if (range) {
+    const upperUnit = range[4].toLowerCase();
+    const lowerUnit = (range[2] ?? upperUnit).toLowerCase();
+    // "Prawns 13/15 – 1kg" is a size grade then a weight, not a range: 15 is not below 1kg.
+    if (Number(range[1]) * TO_BASE[lowerUnit] < Number(range[3]) * TO_BASE[upperUnit]) return true;
+  }
+  // A real multipack ("4 x 400g") already multiplied; "400g (Pack of 2)" did not.
+  return PACK_OF.test(text) && found.packCount === undefined && found.unit !== "EACH";
+}
+
+function extractNetContentCandidate(text: string): ExtractedNetContent | null {
   if (!text || typeof text !== "string") return null;
   const trimmed = text.trim();
   if (trimmed === "") return null;

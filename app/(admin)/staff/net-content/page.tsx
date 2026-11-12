@@ -88,8 +88,8 @@ export default async function StaffNetContentPage() {
     <PageContainer width="wide">
       <h1 className="mb-1 text-2xl font-semibold text-primary">Net content review</h1>
       <p className="mb-6 text-sm text-primary-muted">
-        AI suggestions for each product&apos;s pack size. Nothing changes on a product until you
-        accept or correct it here — shoppers&apos; price per kg or litre is worked out from this
+        Suggested pack sizes, read by fixed rules or by the AI. Nothing changes on a product until
+        you accept or correct it here — shoppers&apos; price per kg or litre is worked out from this
         value, so check it against the packaging.
       </p>
 
