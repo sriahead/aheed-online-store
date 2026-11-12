@@ -117,6 +117,10 @@ const ALLOWED = new Map<string, string>([
     "The address IS the vendor key (#1217), exactly as a request host is for VendorDomain: workers/inbound-email receives mail for an address and must learn which vendor owns it, so there is no vendor to scope by yet. Returns the one row for that exact address. Its only caller is /api/inbound-email/resolve, which is authenticated by INBOUND_EMAIL_TOKEN — never reachable from unauthenticated user input.",
   ],
   [
+    "inbound-address.ts:isRegisteredForwardTo",
+    "Asks whether an ADDRESS is any store's saved forward-to mailbox (#1546), so staging's email allowlist can accept it; there is no vendor to scope by. Returns a boolean only, never a row. Its only caller is lib/email.ts, in allowlist mode, after EMAIL_ALLOWED_RECIPIENTS has refused the recipient.",
+  ],
+  [
     "platform-admin.ts:getPlatformOverviewMetrics",
     "Platform-admin-wide metrics (#1269): aggregates platform-wide tenant counts, catalogue totals, and active users for platform administration overview (/staff/platform/settings). Gated strictly on requirePlatformAdmin() server-side.",
   ],

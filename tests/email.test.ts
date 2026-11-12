@@ -23,6 +23,12 @@ vi.mock("@opennextjs/cloudflare", () => ({
   },
 }));
 
+// #1546 — allowlist mode looks up saved forward-to mailboxes; none here, and no database.
+vi.mock("@/lib/db", () => ({ getPrisma: () => ({}) }));
+vi.mock("@/lib/repositories/inbound-address", () => ({
+  isRegisteredForwardTo: async () => false,
+}));
+
 const originalEnv = { ...process.env };
 
 function fakeBinding() {

@@ -4,8 +4,8 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.12.0"
-updated: 2026-11-10
+version: "1.14.0"
+updated: 2026-11-12
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
 tags: ["admin", "platform", "technical", "multi-tenancy"]
@@ -153,7 +153,7 @@ reload to see them.
 - **Send a test email.** Press **Send test email**. It always goes to your own signed-in address, and the page says whether it was sent, skipped by the recipient policy, or failed, with the reason.
 - **Check the limits.** A table shows Cloudflare's published email limits, with a link to Cloudflare's limits page.
 - **Set up order alerts.** The **Order alerts** card sends the store's staff a short Telegram message whenever a customer gets in touch about an order. To add a recipient, leave **Channel** on Telegram, type the chat's numeric **Chat ID**, and press **Add recipient**. A store can have several recipients, for example a staff group and the owner's own chat. Press **Send test alert** next to a recipient to check that the bot can reach that chat; the card says whether the test was sent, skipped or failed, with the reason. Press **Remove** to stop alerts to that chat. The card also shows **Telegram bot token: Set** or **Not set**.
-- **Know what triggers an alert.** An email to one of the store's receiving addresses alerts when it is order-related: it was sent to an **Orders** address, or its subject names one of the store's order numbers. A **Contact us** message alerts when it is a complaint, or when the shopper picked one of their own orders. An enquiry with no order does not alert.
+- **Know what triggers an alert.** An email to one of the store's receiving addresses alerts when it is order-related: it was sent to an **Orders** address, or its subject names one of the store's order numbers. Every **Contact us** message alerts (`#1548`), and its first line says whether it is a **Complaint** or an **Enquiry**.
 - **Know what an alert says.** Five lines: the store name, the order number (or "not given"), the sender's name, the subject, and whether it came by email or the contact form. Alerts from staging start with `[STAGING]`. The message itself, the customer's email address and their phone number are never sent.
 - **Order notifications to the owner (`#1435`).** The same Telegram recipients, plus the store's mailbox, also hear about every paid-order event.
   - **The events:** a new paid order, *Out for delivery*, *Ready for collection*, *Delivered*, *Collected* and *Cancelled*.
@@ -175,7 +175,7 @@ reload to see them.
 - **Store admins cannot open this page**; they see a "Platform admin only" panel.
 - **An address can belong to only one store.** Adding one that is already registered is refused.
 - **A forward-to mailbox must not itself be a receiving address**, because mail would loop. That is refused too.
-- **On staging**, the test email only arrives if your address is on the environment's allowlist; otherwise the page reports "Skipped by recipient policy".
+- **On staging**, mail only goes to allowed addresses. Your test email is always allowed, and so is every forward-to mailbox listed under Receiving addresses, for as long as its receiving address exists (the card says so). Any other address must be on the environment's allowlist; otherwise the page reports "Skipped by recipient policy".
 - **The storefront Contact us form uses these addresses too.** A shopper's complaint, or any message about an order, is emailed to the store's **Orders** address's forward-to mailbox; an enquiry goes to its **Support** one. With neither, it goes to the platform default inbox. Register both so the hub inbox is only the fallback.
 - **Routing rules are created in Cloudflare, not here.** A registered address receives nothing until its rule sends it to the inbound-email Worker.
 - **The platform default inbox is a setting on the Worker** (`INBOUND_DEFAULT_FORWARD`), not a control on this page. Like any forward-to mailbox, it must be verified in Cloudflare before mail can reach it.

@@ -19,3 +19,10 @@ export const DESTINATIONS_UNAVAILABLE_SHORT: Record<DestinationUnavailableReason
   forbidden: "token lacks Email Routing Addresses Read",
   error: "Cloudflare could not be reached",
 };
+
+/**
+ * #1546 — shown under Receiving addresses in allowlist mode (staging), because the email policy
+ * accepts a saved forward-to mailbox without EMAIL_ALLOWED_RECIPIENTS.
+ */
+export const ALLOWLIST_FORWARD_NOTE =
+  "Staging only mails allowed addresses. Each forward-to mailbox below counts as allowed while its receiving address exists, and the test email always reaches your own address.";

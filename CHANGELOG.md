@@ -6,6 +6,20 @@ every branch merges.
 
 ## [Unreleased]
 
+### Changed
+
+- **Every Contact us message alerts the store on Telegram (#1548, 2026-11-12)**
+  - **Why.** On Aheed staging, an enquiry reached `/staff/enquiries` and the forward-to email but sent no Telegram alert, because only complaints and messages naming the shopper's own order alerted (#1390 R12). The owner chose to be alerted for every message.
+  - `lib/contact/submit.ts` now alerts on every successful submission. Honeypot, invalid, rate-limited, order-not-found and no-recipient submissions still never alert. The brief gains `contactType`, so the first line reads `Complaint: <store>` or `Enquiry: <store>`. Email alerts and the Client Setup test alert keep `Order inquiry:`. There is still no message body, email address or phone in an alert. No migration.
+  - Docs: env-setup 1.39.0 (Telegram sanity check steps 6 and 8), platform admin guide 1.14.0.
+  - Spec: `specs/2026-11-12-telegram-every-enquiry/`. Tests: `tests/contact-form.test.ts`, `tests/order-alert.test.ts`.
+
+- **Staging email reaches Client Setup's own addresses (#1546, 2026-11-12)**
+  - **Why.** On staging, Send test email was refused ("recipient is not on EMAIL_ALLOWED_RECIPIENTS"), and so was mail to a forward-to mailbox a platform admin had just saved. The Worker cannot edit that secret itself.
+  - In allowlist mode, `lib/email.ts` now also accepts two more recipients. One is a mailbox saved as any receiving address's forward-to, looked up by `isRegisteredForwardTo`; removing the address withdraws it. The other is Client Setup's test email to the signed-in admin (`recipientIsSignedInAdmin`, which only that service may set). Everyone else still needs the secret. A failed lookup keeps the skip. Production (open mode) is unchanged and looks nothing up. No migration.
+  - The Receiving addresses card says so on staging. Docs: env-setup 1.38.0, platform admin guide 1.13.0.
+  - Spec: `specs/2026-11-12-staging-allowlist-client-setup/`. Tests: `tests/email-allowlist-client-setup.test.ts`.
+
 ### Documentation
 
 - **Roadmap catch-up (2026-11-12).** `specs/roadmap.md` 1.197.0 adds the 20 missing change-log rows. They cover 12 slices (10–12 Nov) and their promotions (PRs #1498–#1543), so `sdd:audit` is clean again. Documentation only.

@@ -68,13 +68,37 @@ function createAdapter(
   }
 }
 
+/**
+ * #1546 — allowlist mode's second chance for a recipient EMAIL_ALLOWED_RECIPIENTS refused: Client
+ * Setup's test email to the signed-in admin, or a mailbox a store saved as a receiving address's
+ * forward-to (so removing the address withdraws it). The Worker cannot edit its own secret, so the
+ * policy reads what a platform admin already saved. Fails closed: a lookup error keeps the skip.
+ * Imported lazily so open mode (production) and every caller that never reaches here load no client.
+ */
+async function isAllowedByClientSetup(params: OutgoingEmail): Promise<boolean> {
+  if (params.recipientIsSignedInAdmin) return true;
+  try {
+    const [{ getPrisma }, { isRegisteredForwardTo }] = await Promise.all([
+      import("./db"),
+      import("./repositories/inbound-address"),
+    ]);
+    return await isRegisteredForwardTo(getPrisma(), params.to);
+  } catch (error) {
+    console.error(
+      `email allowlist lookup failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return false;
+  }
+}
+
 export function getPlatformSenderName(): string {
   return readOptional(getPlatformBrandingEnv)?.PLATFORM_NAME ?? DEFAULT_PLATFORM_NAME;
 }
 
 export function getEmailService(): EmailService {
   return {
-    async send({ to, subject: untagged, html, sender, replyTo: replyToOverride }) {
+    async send(params) {
+      const { to, subject: untagged, html, sender, replyTo: replyToOverride } = params;
       // #1409 — first, so the adapter and every log line below see the tagged subject.
       const subject = withEnvironmentTag(untagged, getAppEnvironment());
       let env: EmailEnv;
@@ -91,7 +115,8 @@ export function getEmailService(): EmailService {
           to,
           mode: env.EMAIL_RECIPIENT_MODE,
           allowedRecipients: env.EMAIL_ALLOWED_RECIPIENTS,
-        })
+        }) &&
+        !(await isAllowedByClientSetup(params))
       ) {
         const reason = "recipient is not on EMAIL_ALLOWED_RECIPIENTS (recipient mode is allowlist)";
         console.warn(`email send skipped (${reason}): ${subject}`);
