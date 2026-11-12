@@ -328,10 +328,13 @@ export interface EligiblePromotionalProduct {
  * - Was-price markdown (originalPrice !== null && originalPrice > basePrice)
  * - Active multi-buy offer (priceTier !== null && priceTier.isActive)
  * - Featured status (isFeatured === true)
+ * plus any `includeIds` (the edit page passes the promotion's saved product, so a product whose
+ * offer has since ended still shows as the current choice instead of vanishing from the picker).
  */
 export async function listEligiblePromotionalProducts(
   prisma: ReturnType<typeof getPrisma>,
   vendorId: string,
+  includeIds: readonly string[] = [],
 ): Promise<EligiblePromotionalProduct[]> {
   const rows = await prisma.product.findMany({
     where: {
@@ -340,6 +343,7 @@ export async function listEligiblePromotionalProducts(
         { originalPrice: { not: null } },
         { priceTier: { is: { isActive: true } } },
         { isFeatured: true },
+        ...(includeIds.length > 0 ? [{ id: { in: [...includeIds] } }] : []),
       ],
     },
     select: {

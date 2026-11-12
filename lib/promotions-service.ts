@@ -103,6 +103,7 @@ export type {
  */
 export async function listEligiblePromotionalProductsForAdmin(
   vendorId: string,
+  includeIds: readonly string[] = [],
 ): Promise<EligiblePromotionalProduct[]> {
-  return listEligibleProductsRepo(getPrisma(), vendorId);
+  return listEligibleProductsRepo(getPrisma(), vendorId, includeIds);
 }

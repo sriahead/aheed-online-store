@@ -3864,6 +3864,18 @@ export const DOC_ARTICLES: any[] = [
     "content": "\n# Every live promotion on the landing page; plainer staff search placeholder (plan)\n\nOwner request, 2026-11-12, after the production activation (#1523 follow-up). There were two problems:\n\n- **Only 3 promotions showed.** Production has 7 live promotions, but the landing hero shows 3.\n  `getLivePromotionsForStorefront` (`lib/promotions-service.ts`) defaults to `limit = 3`, and the\n  landing page calls it without an argument. No spec chose 3. `PromotionHero` is already a rotating\n  slideshow with dots, so it handles any count.\n- **The search placeholder named PLU and barcode.** On `/staff/products` it read \"Search by\n  product name, PLU or barcode\". The owner wants the placeholder plainer. Matching is unchanged.\n\n## Scope\n\n- Add `HERO_PROMOTION_LIMIT = 12` and make it the default limit. Promotions still come in priority order.\n- Change the placeholder to \"Search your favourite products…\".\n\n## Not changed\n\n- The repository query, the promotion ordering and the hero component.\n- Multi-buy imagery. Banners are already uploaded in Staff → Promotions → a promotion → \"4. Promotional Banner &\n  Creative\", and product photos on the product's staff page.\n"
   },
   {
+    "id": "specs/2026-11-12-promotion-form-current-target/plan.md",
+    "title": "Promotion edit page keeps its saved bundle, code or product (plan)",
+    "audience": [
+      "dev"
+    ],
+    "visibility": "internal",
+    "category": "spec",
+    "summary": "The promotion edit page always lists the promotion's saved bundle, discount code or product, marked when switched off, so the picker never shows its placeholder for a linked promotion and a save never drops the link.",
+    "lastUpdated": "2026-11-12",
+    "content": "\n# Promotion edit page keeps its saved bundle, code or product (plan)\n\nOwner report, 2026-11-12, with a screenshot. On \"BBQ Chicken Pack: Save £8.48\" the offer type was \"Product\nBundle\", but the bundle picker read \"-- Choose an active bundle --\". The owner also asked whether the dates\nwere missing and wanted other gaps on the page fixed.\n\n## Findings\n\n- `app/(admin)/staff/promotions/[id]/page.tsx` offered only switched-on bundles and only active\n  discount codes. The product list (`listEligiblePromotionalProducts`) had only products currently on offer, and the\n  form's department filter could hide the chosen product too. When the saved target is filtered out,\n  the controlled `<select>` has no matching option: it shows the placeholder, and a save sends an empty id. The\n  BBQ Chicken Pack bundle was switched off in production until today's activation.\n- **Dates.** On staging this promotion's `startsAt`/`endsAt` are null, so blank inputs are correct.\n  Only \"Weekend Meat Sale: 5% OFF\" has dates (4–8 Nov). It is still switched on but has expired. The list\n  page already labels it \"Expired\", and the storefront hides it.\n\n## Scope\n\n- `lib/promotion-target-options.ts` `keepCurrentOption`: the saved bundle or code is added back, marked\n  \"(switched off — turn it on in Bundles)\" or \"(inactive)\".\n- `listEligiblePromotionalProducts(prisma, vendorId, includeIds)`: the edit page passes the saved\n  product id.\n- The form's department filter always keeps the chosen product.\n- A hint under the date fields: blank dates mean the promotion runs until switched off, and times are in the store's local time.\n"
+  },
+  {
     "id": "specs/architecture.md",
     "title": "System Architecture — Merqify Platform",
     "audience": [

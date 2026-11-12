@@ -127,13 +127,16 @@ export function PromotionForm({
     }));
   }, [categories]);
 
-  // Filter eligible promotional products by selected department/sub-department
+  // Filter eligible promotional products by selected department/sub-department. The chosen
+  // product is always kept, so a department filter never blanks the saved choice.
   const filteredProducts = useMemo(() => {
     if (!selectedCategory) return products;
-    return products.filter(
+    const inScope = products.filter(
       (p) => p.categoryId === selectedCategory || p.category.parentId === selectedCategory,
     );
-  }, [products, selectedCategory]);
+    const chosen = products.find((p) => p.id === selectedProduct);
+    return chosen && !inScope.includes(chosen) ? [chosen, ...inScope] : inScope;
+  }, [products, selectedCategory, selectedProduct]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -553,6 +556,10 @@ export function PromotionForm({
                   errorId="promotion-form-error"
                 />
               </div>
+              <p className="-mt-2 text-xs text-primary-muted">
+                Leave both blank to run the promotion until you switch it off. Times are the
+                store&apos;s local time.
+              </p>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
