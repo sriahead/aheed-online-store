@@ -78,10 +78,13 @@ export function PromotionHero({
           const ctaLabel = promotionLabel(promo);
           const bundleTotalPence = promotionBundleTotalPence(promo);
 
+          // No `h-full` on the slide: a fixed height stops a flex item stretching, so when the
+          // hero is stacked (below `lg`) each slide was only as tall as its own copy and a short
+          // one left a bare band under its photo. Stretching makes every slide as tall as the track.
           return (
             <div
               key={promo.id}
-              className={`dept-panel relative flex h-full w-full shrink-0 flex-col justify-center overflow-hidden ${PANEL_TONES[index % PANEL_TONES.length]} p-6 md:p-10`}
+              className={`dept-panel relative flex w-full shrink-0 flex-col justify-center overflow-hidden ${PANEL_TONES[index % PANEL_TONES.length]} p-6 md:p-10`}
               role="group"
               aria-roledescription="slide"
               aria-label={`${index + 1} of ${count}`}
@@ -107,7 +110,7 @@ export function PromotionHero({
                 />
               )}
 
-              <div className="relative z-10 flex flex-col justify-between h-full max-w-lg text-white space-y-4">
+              <div className="relative z-10 flex flex-1 flex-col justify-between max-w-lg text-white space-y-4">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     {promo.badgeText ? (

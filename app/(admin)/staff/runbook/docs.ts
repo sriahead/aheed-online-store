@@ -3876,6 +3876,18 @@ export const DOC_ARTICLES: any[] = [
     "content": "\n# Promotion edit page keeps its saved bundle, code or product (plan)\n\nOwner report, 2026-11-12, with a screenshot. On \"BBQ Chicken Pack: Save £8.48\" the offer type was \"Product\nBundle\", but the bundle picker read \"-- Choose an active bundle --\". The owner also asked whether the dates\nwere missing and wanted other gaps on the page fixed.\n\n## Findings\n\n- `app/(admin)/staff/promotions/[id]/page.tsx` offered only switched-on bundles and only active\n  discount codes. The product list (`listEligiblePromotionalProducts`) had only products currently on offer, and the\n  form's department filter could hide the chosen product too. When the saved target is filtered out,\n  the controlled `<select>` has no matching option: it shows the placeholder, and a save sends an empty id. The\n  BBQ Chicken Pack bundle was switched off in production until today's activation.\n- **Dates.** On staging this promotion's `startsAt`/`endsAt` are null, so blank inputs are correct.\n  Only \"Weekend Meat Sale: 5% OFF\" has dates (4–8 Nov). It is still switched on but has expired. The list\n  page already labels it \"Expired\", and the storefront hides it.\n\n## Scope\n\n- `lib/promotion-target-options.ts` `keepCurrentOption`: the saved bundle or code is added back, marked\n  \"(switched off — turn it on in Bundles)\" or \"(inactive)\".\n- `listEligiblePromotionalProducts(prisma, vendorId, includeIds)`: the edit page passes the saved\n  product id.\n- The form's department filter always keeps the chosen product.\n- A hint under the date fields: blank dates mean the promotion runs until switched off, and times are in the store's local time.\n"
   },
   {
+    "id": "specs/2026-11-12-promotion-hero-slide-fill/plan.md",
+    "title": "Landing promotion slides fill the carousel when stacked (plan)",
+    "audience": [
+      "dev"
+    ],
+    "visibility": "internal",
+    "category": "spec",
+    "summary": "Removes h-full from each promotion hero slide so short slides stretch to the carousel height instead of leaving a bare band under the photo on narrow screens.",
+    "lastUpdated": "2026-11-12",
+    "content": "\n# Landing promotion slides fill the carousel when stacked (plan)\n\nOwner report, 2026-11-12, with a screenshot of production on a narrower window: the \"Fresh Catch Sale\" slide's\nphoto stopped part way down the carousel, with a bare band of panel colour below it.\n\n**Cause.** Below `lg` the hero stacks, so the carousel has only `min-h-[300px]` and no definite height. Each\nslide had `h-full`. A percentage height against an indefinite parent behaves as `auto`, and because it is\nnot literally `auto` it also cancels flex `align-items: stretch`. So each slide was only as tall as its own\ncopy. The track, and the carousel, were as tall as the tallest slide (the one with a bundle price), and\nshorter slides left the difference empty. More live promotions (#1530: 3 → 12) made this far more likely.\n\n**Change.** In `components/layout/PromotionHero.tsx`, the slide drops `h-full` and stretches to the track.\nIts copy column swaps `h-full` for `flex-1`, so the CTA still sits at the bottom. On `lg` the track has a\ndefinite height and the result is the same.\n"
+  },
+  {
     "id": "specs/architecture.md",
     "title": "System Architecture — Merqify Platform",
     "audience": [
