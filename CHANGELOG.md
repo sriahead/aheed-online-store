@@ -22,6 +22,7 @@ every branch merges.
 
 ### Documentation
 
+- **Roadmap (2026-11-12).** `specs/roadmap.md` 1.200.0 records the #1548 promotion (PR #1550). Documentation only.
 - **Roadmap catch-up (2026-11-12).** `specs/roadmap.md` 1.197.0 adds the 20 missing change-log rows. They cover 12 slices (10–12 Nov) and their promotions (PRs #1498–#1543), so `sdd:audit` is clean again. Documentation only.
 
 ### Added
