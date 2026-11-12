@@ -50,10 +50,11 @@ import { NET_CONTENT_MODEL_RATES } from "@/lib/net-content-run";
 import { DEFAULT_NET_CONTENT_MODEL } from "@/lib/net-content-suggester";
 import { describeStaffNetContentRun } from "@/lib/net-content-review-form";
 
+// No pack size in its name and no per-kg label, so the #697 rule step leaves it for the model.
 const product = {
   id: "p1",
-  name: "Rice 5kg",
-  unitLabel: "£8.99 / 5kg",
+  name: "Basmati Rice",
+  unitLabel: "£8.99",
   basePrice: 899,
   images: [],
 };
@@ -95,7 +96,9 @@ describe("runNetContentSuggestionsForVendor", () => {
     mocks.aiEnv.NET_CONTENT_AI_MODEL = "@cf/unpriced/model";
     const result = await runNetContentSuggestionsForVendor("v1");
     expect(result).toEqual({ kind: "unpriced-model", model: "@cf/unpriced/model" });
-    expect(mocks.listEligible).not.toHaveBeenCalled();
+    // Only the free #697 rule step listed products (limit 500); the model's list (10) never ran.
+    expect(mocks.listEligible).toHaveBeenCalledTimes(1);
+    expect(mocks.listEligible.mock.calls[0][3]).toBe(500);
     expect(mocks.createSuggester).not.toHaveBeenCalled();
     expect(mocks.runLoop).not.toHaveBeenCalled();
   });
@@ -230,5 +233,74 @@ describe("describeStaffNetContentRun (R6)", () => {
         "The AI stopped responding. Asked about 3 product(s): 0 suggested, 0 no answer, 3 failed. Try again later.",
       notice: null,
     });
+  });
+});
+
+describe("#697 rule step (no AI)", () => {
+  const sized = {
+    id: "p2",
+    name: "Squid Block – 2kg",
+    unitLabel: "£17.99",
+    basePrice: 1799,
+    images: [],
+  };
+  const perKg = {
+    id: "p3",
+    name: "Barracuda",
+    unitLabel: "£6.49 / kg",
+    basePrice: 649,
+    images: [],
+  };
+  const range = {
+    id: "p4",
+    name: "Tilapia 500–800g",
+    unitLabel: "£10.99",
+    basePrice: 1099,
+    images: [],
+  };
+
+  it("queues a PENDING rule suggestion for each product the rules can read, before the model", async () => {
+    mocks.listEligible.mockResolvedValueOnce([sized, perKg, range, product]);
+    const result = await runNetContentSuggestionsForVendor("v1");
+
+    expect(result).toEqual({ kind: "ran", summary: summary(), ruled: 2 });
+    expect(mocks.createSuggestion).toHaveBeenCalledTimes(2);
+    const [first, second] = mocks.createSuggestion.mock.calls.map((call) => call[2]);
+    expect(first).toMatchObject({
+      productId: "p2",
+      model: "rules (no AI)",
+      productImageId: null,
+      value: { amount: 2, unit: "KILOGRAM", evidenceSource: "NAME", evidenceText: "2kg" },
+    });
+    expect(second).toMatchObject({
+      productId: "p3",
+      value: {
+        amount: 1,
+        unit: "KILOGRAM",
+        evidenceSource: "UNIT_LABEL",
+        unitLabelCheck: "AGREES",
+      },
+    });
+    // The rule step ran first, then the model's own (10-product) list.
+    expect(mocks.listEligible.mock.calls.map((call) => call[3])).toEqual([500, 10]);
+  });
+
+  it("never treats a range as a fixed pack size", async () => {
+    mocks.listEligible.mockResolvedValueOnce([range]);
+    const result = await runNetContentSuggestionsForVendor("v1");
+    expect(mocks.createSuggestion).not.toHaveBeenCalled();
+    expect(result).not.toHaveProperty("ruled");
+  });
+
+  it("leads the message with the rule count, and folds a model refusal into it", () => {
+    expect(describeStaffNetContentRun({ kind: "nothing-eligible", ruled: 3 })).toEqual({
+      error: null,
+      notice:
+        "Read 3 pack size(s) from product names and per-kg prices, without AI; they are in the queue below. No other products were waiting for the AI.",
+    });
+    const refused = describeStaffNetContentRun({ kind: "not-configured", ruled: 1 });
+    expect(refused.error).toBeNull();
+    expect(refused.notice).toContain("Read 1 pack size(s)");
+    expect(refused.notice).toContain("The AI step did not run: The AI isn't set up");
   });
 });

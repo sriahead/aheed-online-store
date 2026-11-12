@@ -8,6 +8,12 @@ every branch merges.
 
 ### Added
 
+- **Pack sizes for the live catalogue: a free rule step before the AI (#697, 2026-11-12)**
+  - **Why.** None of the 73 live products had a net content, so shoppers saw no price per kg and the pack-size filter never appeared.
+  - **Suggest net content** on `/staff/net-content` now first reads, without AI, every pack size that is certain: a single fixed size in the name ("Squid Block – 2kg"), or a per-kg label matching the price ("£6.49 / kg" means 1 kg). Each becomes a PENDING suggestion marked "rules (no AI)" for a person to accept. The AI is then asked only about the rest. `lib/net-content-rules.ts`.
+  - **Fixed.** The pack-size reader called ranges ("Tilapia 500–800g" as 800g), minimums ("800g+") and "400g (Pack of 2)" high-confidence. They are now LOW, so neither the rules nor the catalogue importer trusts them. A wrong pack size shows a wrong price per kg.
+  - Spec: `specs/2026-11-12-net-content-rules/`. Tests: `tests/net-content-rules.test.ts` and `tests/net-content-staff-run.test.ts`.
+
 - **One pagination bar across the app; staff product search moved below the filters (#1538, 2026-11-12)**
   - **Pagination.** `components/ui/Pagination.tsx` replaces six hand-built versions with the Staff Products design. Numbered pages, totals and a Go box appear on Staff Products, Staff Customers (now 1-based `?page=`, with a total) and typed Search. The same chips appear as "Page N" / Previous / Next / First page on category browsing, browse-only Search and both Orders lists. Those lists stay keyset-paged, as the architecture requires (owner decision).
   - **Staff Products.** The search field and its button now sit below **Apply filters**.
