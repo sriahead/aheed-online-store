@@ -50,3 +50,11 @@ architecture exception and a count query per category page.
   `searchFirstPageHref` drops the cursor.
 - **Category:** `categoryPageNumber` comes from the cursor stack's depth.
 - **Docs:** `specs/design-system.md` gains a "Pagination" section (1.27.0).
+
+## Fixes found on staging (2026-11-12, same day)
+
+- **Category page numbers were one low past page 1.** Page 1's empty segment is never written to
+  `back`, so page 2 carries no `back` and the depth is `entries + 2`, not `+ 1`. Covered by a test
+  that walks real Next/Previous hrefs.
+- **A stale search link past the last page read "Page 2 of 1 · Showing 0–0".** An empty ranked page
+  now renders the sequential bar with only "First page".

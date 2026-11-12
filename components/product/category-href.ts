@@ -68,12 +68,14 @@ export function prevCategoryPageHref(slug: string, params: CategoryPageParams): 
 }
 
 /**
- * The 1-based page being viewed: page 1 with no cursor, otherwise one more than the pages stacked
- * behind it in `back`. The keyset list has no total, so this is all the pagination bar can show.
+ * The 1-based page being viewed. Page 1 has no cursor. Past it, `back` holds the cursors of the
+ * pages from 2 onwards that lie behind this one: page 1's empty segment is never written (see
+ * `categoryPageHref`), so page 2 carries no `back` at all, page 3 carries one entry, and so on. The
+ * keyset list has no total, so this is all the pagination bar can show.
  */
 export function categoryPageNumber(params: CategoryPageParams): number {
   if (typeof params.cursor !== "string" || params.cursor === "") return 1;
-  return parseBack(params.back).length + 1;
+  return parseBack(params.back).filter((segment) => segment !== "").length + 2;
 }
 
 /**

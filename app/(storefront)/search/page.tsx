@@ -385,7 +385,16 @@ export default async function SearchPage({
           )}
 
           {rankedTotal !== undefined ? (
-            rankedTotal > 0 && (
+            rankedTotal > 0 &&
+            (items.length === 0 ? (
+              // A stale link past the last page reads an honest empty page (searchProducts); offer
+              // the way back rather than claiming "Page 3 of 1".
+              <Pagination
+                mode="sequential"
+                label="Search result pages"
+                firstHref={searchFirstPageHref(params)}
+              />
+            ) : (
               // A typed search ranks a bounded set, so it knows its total and gets page numbers. Its
               // cursor is an offset into that set (`parseSearchOffset`), so page N is offset
               // (N - 1) × PAGE_SIZE.
@@ -404,7 +413,7 @@ export default async function SearchPage({
                     : searchPageHref(params, String((target - 1) * PAGE_SIZE))
                 }
               />
-            )
+            ))
           ) : (
             // Browsing with no query pages by keyset cursor: next only, plus a way back to the start.
             <Pagination
