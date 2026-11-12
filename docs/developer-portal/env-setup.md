@@ -4,7 +4,7 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.38.0"
+version: "1.39.0"
 updated: 2026-11-12
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
@@ -1316,15 +1316,16 @@ it:
    telegram 400: Bad Request: chat not found" means the bot is not in the group or the ID is wrong.
 6. Run `npx wrangler tail aheed-store-staging --format pretty`. As a guest, send a **Complaint**
    from `/contact`. Expected: the group receives five lines starting
-   `[STAGING] Order inquiry: Aheed Food Centre` and ending `Via: contact form`. The tail prints
+   `[STAGING] Complaint: Aheed Food Centre` and ending `Via: contact form` (an email alert still
+   starts `Order inquiry:`). The tail prints
    `order alert vendorId=<id> channel=TELEGRAM status=sent`, with no subject or name.
 7. Send an email to the store's **Orders** receiving address. Run
    `npx wrangler tail aheed-inbound-email-staging --format pretty` alongside step 6's tail.
    Expected: the email is forwarded as before, and the group receives an alert ending `Via: email`.
    Its `From:` line shows your display name, or `unknown` if your client sends only the address.
    The inbound tail shows no `inbound-email alert call failed`.
-8. An **Enquiry** with no order number sends no alert, and nor does an email to a Support address
-   whose subject names no order.
+8. An **Enquiry** with no order number also alerts, starting `[STAGING] Enquiry: Aheed Food Centre`
+   (`#1548`). An email to a Support address whose subject names no order still sends no alert.
 9. After promotion, set the production token, then repeat 1-7 on `aheed.merqify.com` with
    `aheed-store-production` and `aheed-inbound-email`. A production alert has no tag.
 
