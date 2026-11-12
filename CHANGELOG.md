@@ -8,6 +8,10 @@ every branch merges.
 
 ### Fixed
 
+- **Landing promotion slides fill the carousel on narrower screens (2026-11-12)**
+  - **What was wrong.** Below the large breakpoint the hero stacks. Each slide was only as tall as its own text, so a slide with short copy (e.g. "Fresh Catch Sale") left a bare band under its photo. The owner reported this from production.
+  - **Fix.** Slides no longer pin their height (`h-full` cancelled flex stretching), so every slide is as tall as the carousel. `components/layout/PromotionHero.tsx`; guarded by `tests/promotion-hero-slide-fill.test.ts`. Spec: `specs/2026-11-12-promotion-hero-slide-fill/`.
+
 - **The promotion edit page keeps the promotion's saved bundle, code or product (2026-11-12)**
   - **What was wrong.** The edit page offered only switched-on bundles, active discount codes and products currently on offer. When a promotion's own target was switched off, the picker showed "-- Choose an active bundle --" and saving would have dropped the link. The owner saw this on "BBQ Chicken Pack: Save £8.48".
   - **The fix.** The saved target is always listed, marked "(switched off — turn it on in Bundles)" or "(inactive)" where it applies. A department filter no longer hides the chosen product. Under the date fields, a hint says blank dates run the promotion until it is switched off; that promotion's blank dates were correct, since it has none set.
