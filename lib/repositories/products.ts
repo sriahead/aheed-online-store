@@ -214,6 +214,12 @@ export interface ProductPage {
    */
   directNameMatch: boolean;
   /**
+   * The number of ranked results a search can page through (at most `SEARCH_CANDIDATE_LIMIT`), so
+   * the page can show "Page X of Y" (the shared numbered pagination bar). Set only by
+   * `searchProducts`'s ranked path; absent for the keyset lists, which have no total.
+   */
+  rankedTotal?: number;
+  /**
    * P2.6 slice 3 (#580) — set when the direct search returned candidates but NONE of them matched
    * on name, so the shopper is looking at results that are probably not what they asked for.
    *
@@ -1543,6 +1549,7 @@ export async function searchProducts(
   return {
     items: page.map((p) => (tiers.has(p.id) ? { ...p, tier: tiers.get(p.id) ?? null } : p)),
     nextCursor: nextOffset < ranked.length ? String(nextOffset) : null,
+    rankedTotal: ranked.length,
     truncated,
     directResultCount,
     recovery,

@@ -8,12 +8,19 @@ every branch merges.
 
 ### Added
 
+- **One pagination bar across the app; staff product search moved below the filters (#1538, 2026-11-12)**
+  - **Pagination.** `components/ui/Pagination.tsx` replaces six hand-built versions with the Staff Products design. Numbered pages, totals and a Go box appear on Staff Products, Staff Customers (now 1-based `?page=`, with a total) and typed Search. The same chips appear as "Page N" / Previous / Next / First page on category browsing, browse-only Search and both Orders lists. Those lists stay keyset-paged, as the architecture requires (owner decision).
+  - **Staff Products.** The search field and its button now sit below **Apply filters**.
+  - Pure helpers live in `lib/pagination.ts`. Rules are in `specs/design-system.md` 1.27.0 ("Pagination"), spec in `specs/2026-11-12-shared-pagination/`, tests in `tests/pagination.test.tsx`.
+
 - **Bundle and promotion images get the products' options (#1535, 2026-11-12)**
   - **Bundles.** The photo box has **Auto-Generate with AI** (admins), **Remove photo**, and a "needs review" banner with **Approve photo**. The Bundles list shows "No photo" / "Photo needs review" and, for admins, **Fill missing bundle photos** (10 per click, live first). The AI prompt is built from the bundle's contents and rules out live animals, people and text.
   - **Promotions.** **Generate banner with AI** makes a new photo without touching the wording; the upload is always offered (Replace), and AI banners are flagged until **Approve banner**.
   - **Under the hood.** `imageNeedsReview` on `Bundle` and `Promotion`, and `AiFeature.BUNDLE_IMAGE` (hand-authored migration `20261112120000_bundle_promotion_image_review`). The new routes are `/api/admin/bundle-images/{generate,backfill}` and `/api/admin/promotions/banner-generate`, built on `lib/ai-image-store.ts` and `lib/ai-image-prompts.ts`. Spec: `specs/2026-11-12-bundle-promotion-images/`. Tests: `tests/bundle-promotion-images.test.ts`.
 
 ### Fixed
+
+- **Pagination page numbers after the staging check (#1538, 2026-11-12)**: page 2 of a category read "Page 1" (the cursor stack never stores page 1), and a stale search link past the end read "Page 2 of 1"; it now offers "First page".
 
 - **Landing promotion slides fill the carousel on narrower screens (2026-11-12)**
   - **What was wrong.** Below the large breakpoint the hero stacks. Each slide was only as tall as its own text, so a slide with short copy (e.g. "Fresh Catch Sale") left a bare band under its photo. The owner reported this from production.
