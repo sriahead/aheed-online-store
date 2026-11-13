@@ -6,7 +6,19 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Internal docs site build restored (#1558, 2026-11-13).** Bare `<you>` (#1557) and `<store>` (#1559) placeholders in `docs/developer-portal/notification-matrix.md` were parsed by MDX as unclosed HTML tags, so `deploy-docs-internal` failed on every staging push since `44f88ec5` while the app deploys stayed green. Wrapped in code spans; verified by compiling the assembled MDX (the unfixed file reproduces CI's `Expected a closing tag for <store>` error).
+
 ### Added
+
+- **Sign-up with an existing email now tells the account holder (#1558, 2026-11-13)**
+  - **Why.** Re-registering an address that already had an account showed "check your email for a verification link" and sent nothing (found on AFC staging), leaving a real customer waiting for an email that never came.
+  - **Change.** Better Auth's `onExistingUserSignUp` hook sends that address "You already have an account with <store>", with a sign-in link and a forgot-password link (or "sign in with Google" for a Google-only account). It carries no token and changes nothing.
+  - **Still no enumeration.** The screen and HTTP response stay Better Auth's generic duplicate answer; the register screen now says "Check your email — we've sent a message to <email>", true in both cases. A send failure is swallowed and logged without the address. `/sign-up/email` stays under the per-store auth rate limit.
+  - **Docs.** Notification matrix 1.2.0 (event 17, sanity-check step 6), store admin guide 2.25.0, platform admin guide 1.17.0, shopping guide 1.9.0.
+  - Spec: `specs/2026-11-13-existing-account-signup/`. Tests: `tests/existing-account-signup.test.ts`.
+  - **Follow-up.** Verified on AFC staging (hook ran, generic response, no account created). The subject read "a Aheed", so it now says "You already have an account with <store>".
 
 - **Abandoned checkouts with an admin recovery email, and a notification matrix (#1554, 2026-11-13)**
   - **Why.** The owner wanted to see abandoned checkouts and win some back with a well-judged email, and a single answer to "which email or alert goes out when".
@@ -43,6 +55,7 @@ every branch merges.
 
 ### Documentation
 
+- **Post-ship (2026-11-13).** `specs/roadmap.md` 1.203.0 records the #1552 and #1554 promotion (PR #1556). The notification matrix 1.1.0 gains a sanity-check table with a Last run line. Documentation only.
 - **Roadmap (2026-11-12).** `specs/roadmap.md` 1.200.0 records the #1548 promotion (PR #1550). Documentation only.
 - **Roadmap catch-up (2026-11-12).** `specs/roadmap.md` 1.197.0 adds the 20 missing change-log rows. They cover 12 slices (10–12 Nov) and their promotions (PRs #1498–#1543), so `sdd:audit` is clean again. Documentation only.
 
