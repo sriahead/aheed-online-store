@@ -1,7 +1,9 @@
 import { formatPrice } from "@/components/product/format-price";
 import type { AppEnvironment } from "@/lib/config";
 import { withEnvironmentTag } from "@/lib/email/environment-tag";
-import { escapeHtml } from "@/lib/html-escape";
+import type { EmailBrand } from "@/lib/email/layout/brand";
+import { fallbackBrand } from "@/lib/email/layout/fallback";
+import { finish, type RenderedEmail } from "@/lib/email/templates/compose";
 import type { WebhookOrder } from "@/lib/repositories/orders";
 import { staffOrderHref } from "./links";
 import type { OrderEvent } from "./next-step";
@@ -14,6 +16,7 @@ import { slotLabel } from "./slot";
  * on. The Telegram text carries NO customer name, email, address or product names: Telegram is a
  * third party and a staff group can have many members, so it gets only what is needed to know an
  * order needs attention. The owner email goes to the store's own mailbox and may carry the items.
+ * #1564 R15: the owner emails use the shared layout (store header and footer), not editable.
  */
 
 export const OWNER_TITLE: Record<OrderEvent, string> = {
@@ -63,34 +66,46 @@ export function ownerTelegramText(input: OwnerMessageInput): string {
   return lines.join("\n");
 }
 
+/** #1564 R15 — the footer line on every staff email: who it is for, never a customer reason. */
+export function staffReason(storeName: string): string {
+  return `A notification for the ${storeName} team, sent to your store's orders address.`;
+}
+
 /** The subject is untagged: the email service adds [STAGING]/[DEV] when it sends. */
-export function buildOwnerEmail(input: Omit<OwnerMessageInput, "environment">): {
-  subject: string;
-  html: string;
-} {
+export function buildOwnerEmail(
+  input: Omit<OwnerMessageInput, "environment"> & { brand?: EmailBrand },
+): RenderedEmail {
   const { order, event, storeName, baseUrl } = input;
-  const rows = order.items
-    .map(
-      (item) =>
-        `<tr><td>${item.quantity} × ${escapeHtml(item.productName)}${
-          item.customNote ? `<br><small>Note: ${escapeHtml(item.customNote)}</small>` : ""
-        }</td><td align="right">${formatPrice(item.lineTotalPence)}</td></tr>`,
-    )
-    .join("");
-  const parts = [
-    `<p><strong>${escapeHtml(`${OWNER_TITLE[event]}: ${storeName}`)}</strong></p>`,
-    `<p>${factLines(order).map(escapeHtml).join("<br>")}</p>`,
-    `<table cellpadding="4">${rows}</table>`,
-  ];
-  if (baseUrl) {
-    parts.push(
-      `<p><a href="${escapeHtml(staffOrderHref(baseUrl, order.orderNumber))}">Open in staff panel</a></p>`,
-    );
-  }
-  return {
-    subject: `${OWNER_TITLE[event]}: order ${order.orderNumber} — ${formatPrice(order.totalPence)}`,
-    html: parts.join("\n"),
-  };
+  const brand = input.brand ?? fallbackBrand(storeName, baseUrl);
+  const facts = factLines(order).map((line) => {
+    const i = line.indexOf(": ");
+    return { label: line.slice(0, i), value: line.slice(i + 2) };
+  });
+  const subject = `${OWNER_TITLE[event]}: order ${order.orderNumber} — ${formatPrice(order.totalPence)}`;
+  return finish(
+    subject,
+    {
+      preheader: `${OWNER_TITLE[event]} · ${order.orderNumber} · ${formatPrice(order.totalPence)}`,
+      heading: `${OWNER_TITLE[event]}: ${storeName}`,
+      blocks: [
+        { kind: "facts", rows: facts },
+        {
+          kind: "items",
+          rows: order.items.map((item) => ({
+            label: `${item.quantity} × ${item.productName}`,
+            note: item.customNote,
+            amount: formatPrice(item.lineTotalPence),
+          })),
+          totals: [{ label: "Total", amount: formatPrice(order.totalPence), strong: true }],
+        },
+      ],
+      cta: baseUrl
+        ? { label: "Open in staff panel", href: staffOrderHref(baseUrl, order.orderNumber) }
+        : null,
+      reason: staffReason(storeName),
+    },
+    brand,
+  );
 }
 
 function digestLines(orderNumbers: readonly string[]): string[] {
@@ -119,12 +134,19 @@ export function buildOwnerDigestEmail(
   event: OrderEvent,
   orderNumbers: readonly string[],
   baseUrl: string | null,
-): { subject: string; html: string } {
+  brand?: EmailBrand,
+  storeName = brand?.storeName ?? "",
+): RenderedEmail {
   const subject = digestTitle(event, orderNumbers.length);
-  const items = digestLines(orderNumbers).map((line) => escapeHtml(line));
-  const parts = [`<p><strong>${escapeHtml(subject)}</strong></p>`, `<p>${items.join("<br>")}</p>`];
-  if (baseUrl) {
-    parts.push(`<p><a href="${escapeHtml(`${baseUrl}/staff/orders`)}">Open in staff panel</a></p>`);
-  }
-  return { subject, html: parts.join("\n") };
+  return finish(
+    subject,
+    {
+      preheader: digestLines(orderNumbers).slice(0, 5).join(", "),
+      heading: subject,
+      blocks: [{ kind: "message", text: digestLines(orderNumbers).join("\n") }],
+      cta: baseUrl ? { label: "Open in staff panel", href: `${baseUrl}/staff/orders` } : null,
+      reason: staffReason(storeName || "store"),
+    },
+    brand ?? fallbackBrand(storeName, baseUrl),
+  );
 }

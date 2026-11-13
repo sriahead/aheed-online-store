@@ -111,8 +111,10 @@ export async function processContactSubmission(
     message: input.message,
     submittedAt: deps.now(),
   };
+  // A branding read that fails costs the look, never the message or the acknowledgement.
+  const brand = deps.loadBrand ? await deps.loadBrand().catch(() => undefined) : undefined;
   const subject = contactSubject(message);
-  const html = contactHtml(message);
+  const html = contactHtml(message, brand);
 
   const result = await deps.send({ to: recipient, subject, html, replyTo: input.email });
   if (result.status === "failed") {
@@ -140,8 +142,6 @@ export async function processContactSubmission(
   }
 
   try {
-    // A branding read that fails costs the look, never the acknowledgement.
-    const brand = deps.loadBrand ? await deps.loadBrand().catch(() => undefined) : undefined;
     const key: TemplateKey =
       input.type === "COMPLAINT" ? "contact.complaint_acknowledgement" : "contact.acknowledgement";
     const overrides = deps.loadOverride ? await deps.loadOverride(key).catch(() => null) : null;

@@ -335,21 +335,25 @@ describe("owner email (R17)", () => {
       baseUrl: BASE,
     });
     expect(subject).toBe("Cancelled: order SHO-20261105-ABC123 — £42.50");
+    // #1564 R15: one action link; the others are the store's site (header, footer) and Powered by.
     const links = anchors(html);
-    expect(links).toHaveLength(1);
-    expect(textOf(links[0])).toBe("Open in staff panel");
-    expect(links[0]).toContain(`href="${BASE}/staff/orders/SHO-20261105-ABC123"`);
+    const action = links.filter((a) => textOf(a) === "Open in staff panel");
+    expect(action).toHaveLength(1);
+    expect(action[0]).toContain(`href="${BASE}/staff/orders/SHO-20261105-ABC123"`);
+    for (const other of links.filter((a) => textOf(a) !== "Open in staff panel")) {
+      expect(other).toMatch(new RegExp(`href="(${BASE}|https://merqify\.com)"`));
+    }
     expect(textOf(html)).toContain("Item A");
-    expect(
-      anchors(
-        buildOwnerEmail({
-          order: webhookOrder(),
-          event: "CANCELLED",
-          storeName: STORE,
-          baseUrl: null,
-        }).html,
-      ),
-    ).toHaveLength(0);
+    expect(textOf(html)).toContain("A notification for the Corner Shop team");
+    const noHost = anchors(
+      buildOwnerEmail({
+        order: webhookOrder(),
+        event: "CANCELLED",
+        storeName: STORE,
+        baseUrl: null,
+      }).html,
+    );
+    expect(noHost.filter((a) => textOf(a) === "Open in staff panel")).toHaveLength(0);
   });
 });
 

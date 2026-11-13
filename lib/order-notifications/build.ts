@@ -82,17 +82,19 @@ export function ownerMessages(
 ): NotificationMessage[] {
   const messages: NotificationMessage[] = [];
   if (store.ownerEmail) {
-    const { subject, html } = buildOwnerEmail({
+    const { subject, html, text } = buildOwnerEmail({
       order,
       event,
       storeName: store.sender.name,
       baseUrl: store.baseUrl,
+      brand: store.brand,
     });
     messages.push({
       channel: "EMAIL",
       destination: store.ownerEmail,
       subject,
       body: html,
+      text,
       sender: store.sender,
       replyTo: order.buyerEmail ?? undefined,
       log: { audience: "OWNER", event },
@@ -127,12 +129,19 @@ export function ownerDigestMessages(
   if (orderNumbers.length === 0) return [];
   const messages: NotificationMessage[] = [];
   if (store.ownerEmail) {
-    const { subject, html } = buildOwnerDigestEmail(event, orderNumbers, store.baseUrl);
+    const { subject, html, text } = buildOwnerDigestEmail(
+      event,
+      orderNumbers,
+      store.baseUrl,
+      store.brand,
+      store.sender.name,
+    );
     messages.push({
       channel: "EMAIL",
       destination: store.ownerEmail,
       subject,
       body: html,
+      text,
       sender: store.sender,
       log: { audience: "OWNER", event },
     });

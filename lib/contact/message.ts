@@ -1,5 +1,6 @@
 import type { EmailBrand } from "@/lib/email/layout/brand";
 import { fallbackBrand } from "@/lib/email/layout/fallback";
+import { renderEmail } from "@/lib/email/layout/render";
 import {
   finish,
   orNull,
@@ -42,22 +43,36 @@ export function contactSubject(input: ContactMessageInput): string {
     .join(" · ");
 }
 
-export function contactHtml(input: ContactMessageInput): string {
-  const rows: [string, string][] = [
-    ["Store", input.storeName],
-    ["Type", TYPE_LABEL[input.type]],
-    ["Name", input.name],
-    ["Email", input.email],
-    ["Phone", input.phone || "Not given"],
-    ["Order", input.orderNumber ?? "None"],
-    ["Subject", input.subject],
-    ["Submitted", input.submittedAt.toISOString()],
-  ];
-  const table = rows
-    .map(([label, value]) => `<tr><th align="left">${label}</th><td>${escapeHtml(value)}</td></tr>`)
-    .join("");
-  const message = escapeHtml(input.message).replace(/\r?\n/g, "<br>");
-  return `<p>A shopper sent this through the store's contact form. Reply to answer them directly.</p><table>${table}</table><p>${message}</p>`;
+/**
+ * The message the store's mailbox receives. #1564 R15: in the shared layout with the store's header
+ * and footer. Everything the shopper typed is escaped by the layout; the message keeps its lines.
+ */
+export function contactHtml(input: ContactMessageInput, brand?: EmailBrand): string {
+  const label = TYPE_LABEL[input.type];
+  return renderEmail(
+    {
+      preheader: `${label} from ${input.name}: ${input.subject}`,
+      heading: `${label} from the contact form`,
+      intro:
+        "A shopper sent this through your store's contact form. Reply to this email to answer them directly.",
+      blocks: [
+        {
+          kind: "facts",
+          rows: [
+            { label: "Name", value: input.name },
+            { label: "Email", value: input.email },
+            { label: "Phone", value: input.phone || "Not given" },
+            { label: "Order", value: input.orderNumber ?? "None" },
+            { label: "Subject", value: input.subject },
+            { label: "Submitted", value: input.submittedAt.toISOString() },
+          ],
+        },
+        { kind: "message", text: input.message },
+      ],
+      reason: `A message for the ${input.storeName} team from your store's Contact us form.`,
+    },
+    brand ?? fallbackBrand(input.storeName),
+  ).html;
 }
 
 /**
