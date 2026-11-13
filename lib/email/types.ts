@@ -25,7 +25,8 @@ export interface OutgoingEmail {
   replyTo?: string;
   /**
    * #1546 — `to` is the signed-in platform admin's own address, so allowlist mode sends it without
-   * EMAIL_ALLOWED_RECIPIENTS. Only Client Setup's test email sets it
+   * EMAIL_ALLOWED_RECIPIENTS. Only Client Setup's test email and the Email templates page's Send
+   * test (#1564, the signed-in store admin's own address) set it
    * (tests/email-allowlist-client-setup.test.ts).
    */
   recipientIsSignedInAdmin?: boolean;

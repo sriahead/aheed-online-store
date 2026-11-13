@@ -102,7 +102,7 @@ describe("allowlist mode accepts Client Setup addresses (#1546)", () => {
   });
 });
 
-describe("only Client Setup's test email may claim the signed-in admin exemption (R4)", () => {
+describe("only the two own-address test emails may claim the signed-in admin exemption (R4)", () => {
   function sources(dir: string): string[] {
     return readdirSync(dir).flatMap((name) => {
       const path = join(dir, name);
@@ -113,11 +113,16 @@ describe("only Client Setup's test email may claim the signed-in admin exemption
 
   // A property key (`recipientIsSignedInAdmin: true`) is the only way to claim the exemption. The
   // interface declares it with `?:`, and generated docs only name it.
-  it("only the Client Setup service sets recipientIsSignedInAdmin", () => {
+  // #1564 added the second: the Email templates page's Send test, which goes only to the signed-in
+  // store admin's own address (`sendTestEmailTemplate`). Anything else claiming it is a leak.
+  it("only Client Setup and Email templates set recipientIsSignedInAdmin", () => {
     const setters = ["app", "components", "features", "lib", "workers"]
       .flatMap(sources)
       .filter((path) => /recipientIsSignedInAdmin\s*:/.test(readFileSync(path, "utf8")));
-    expect(setters).toEqual(["lib/client-setup-service.ts"]);
+    expect(setters.sort()).toEqual([
+      "lib/client-setup-service.ts",
+      "lib/email-templates-service.ts",
+    ]);
   });
 });
 

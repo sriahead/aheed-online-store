@@ -72,6 +72,8 @@ export interface ExistingAccountDeps {
   defaultStoreName: string;
   /** #1564 — the store's email look for this request; neutral when absent or failing. */
   resolveBrand?(storeName: string, baseUrl: string): Promise<EmailBrand>;
+  /** #1564 part 2 — the store's saved wording, or null for the defaults. */
+  resolveOverrides?(): Promise<CopyOverrides | null>;
   send(email: OutgoingEmail): Promise<unknown>;
   log(line: string): void;
 }
@@ -96,7 +98,16 @@ export async function notifyExistingAccountSignUp(
     const brand = deps.resolveBrand
       ? await deps.resolveBrand(storeName, baseUrl).catch(() => undefined)
       : undefined;
-    const { subject, html, text } = existingAccountEmail({ storeName, baseUrl, providers, brand });
+    const overrides = deps.resolveOverrides
+      ? await deps.resolveOverrides().catch(() => null)
+      : null;
+    const { subject, html, text } = existingAccountEmail({
+      storeName,
+      baseUrl,
+      providers,
+      brand,
+      overrides,
+    });
     await deps.send({ to: user.email, sender, subject, html, text });
   } catch (error) {
     // No address in the log line (#1435 R16).

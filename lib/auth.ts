@@ -13,6 +13,7 @@ import { recordWarmupActivity } from "./db-warmup/activity";
 import { alertNewRegistrationForRequest } from "./registration-alert-service";
 import { notifyExistingAccountSignUpForRequest } from "./existing-account-signup-service";
 import { getCurrentEmailBrand } from "./email-brand-service";
+import { getCurrentTemplateOverride } from "./email-templates-service";
 import { resetPasswordMessage, verifyEmailMessage } from "./email/templates/account";
 
 /**
@@ -270,8 +271,11 @@ export async function getAuth() {
         const sender = await getCurrentVendorSender();
         const senderName = sender?.name ?? DEFAULT_SENDER_NAME;
         // #1564 — the branded `auth.reset_password` template; Better Auth's URL is unchanged.
-        const brand = await getCurrentEmailBrand(baseURL ?? null, senderName);
-        const message = resetPasswordMessage({ brand, url });
+        const [brand, overrides] = await Promise.all([
+          getCurrentEmailBrand(baseURL ?? null, senderName),
+          getCurrentTemplateOverride("auth.reset_password"),
+        ]);
+        const message = resetPasswordMessage({ brand, url, overrides });
         await email.send({
           to: user.email,
           sender,
@@ -286,8 +290,11 @@ export async function getAuth() {
         const sender = await getCurrentVendorSender();
         const senderName = sender?.name ?? DEFAULT_SENDER_NAME;
         // #1564 — the branded `auth.verify_email` template; Better Auth's URL is unchanged.
-        const brand = await getCurrentEmailBrand(baseURL ?? null, senderName);
-        const message = verifyEmailMessage({ brand, url });
+        const [brand, overrides] = await Promise.all([
+          getCurrentEmailBrand(baseURL ?? null, senderName),
+          getCurrentTemplateOverride("auth.verify_email"),
+        ]);
+        const message = verifyEmailMessage({ brand, url, overrides });
         await email.send({
           to: user.email,
           sender,

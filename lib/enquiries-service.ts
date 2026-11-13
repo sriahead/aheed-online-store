@@ -1,4 +1,5 @@
 import { loadEmailBrand } from "@/lib/email-brand-service";
+import { loadTemplateOverride } from "@/lib/email-templates-service";
 import { enquiryReplyEmail } from "@/lib/email/templates/enquiry";
 import type { EnquiryStatus } from "@prisma/client/wasm";
 import { getPrisma } from "@/lib/db";
@@ -76,7 +77,10 @@ export async function replyToVendorEnquiry(
   ]);
   const storeName = profile?.name ?? sender?.name ?? "Store Support";
   // #1564 — the branded `enquiry.reply` template; the reply text and `Re:` subject are unchanged.
-  const brand = await loadEmailBrand(vendorId, null, storeName);
+  const [brand, overrides] = await Promise.all([
+    loadEmailBrand(vendorId, null, storeName),
+    loadTemplateOverride(vendorId, "enquiry.reply"),
+  ]);
   const message = enquiryReplyEmail({
     brand,
     storeName,
@@ -84,6 +88,7 @@ export async function replyToVendorEnquiry(
     replyText: trimmed,
     originalMessage: enquiry.message,
     orderNumber: enquiry.orderNumber,
+    overrides,
   });
 
   // R9: a customer replying to this reply must reach a mailbox someone reads — the store address

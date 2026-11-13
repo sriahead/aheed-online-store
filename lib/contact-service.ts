@@ -19,6 +19,7 @@ import { fetchVendorProfile } from "@/lib/vendor-service";
 import { processContactSubmission } from "@/lib/contact/submit";
 import { sendOrderAlertForVendor } from "@/lib/order-alert-service";
 import { fallbackBrand } from "@/lib/email/layout/fallback";
+import { loadTemplateOverride } from "@/lib/email-templates-service";
 import {
   loadVendorNotificationContext,
   sendVendorNotifications,
@@ -65,6 +66,7 @@ export async function submitContactForVendor(input: {
     alert: async (brief) => {
       await sendOrderAlertForVendor(vendorId, brief);
     },
+    loadOverride: (key) => loadTemplateOverride(vendorId, key),
     loadBrand: async () =>
       (await loadVendorNotificationContext(vendorId)).brand ?? fallbackBrand(profile.name),
     acknowledge: async ({ to, subject, html, text }) => {

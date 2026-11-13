@@ -38,4 +38,32 @@ Issue #1564. Part 1 built 2026-11-13 in the worktree `E:\GitRepositories\aheed-w
 ## Preview for sign-off (R9)
 
 Rendered from AFC staging's real Aheed branding and three real product names, published privately
-at https://claude.ai/artifact/Btb9o4eFg4LpNXUNEzCYEk. Owner sign-off: pending.
+at https://claude.ai/artifact/Btb9o4eFg4LpNXUNEzCYEk. **Owner approved 2026-11-13** ("APPROVED"); part 1
+merged to staging in #1565 (`d09092f5`), `deploy-staging` green including `deploy-afc`.
+
+## Part 2 — what changed
+
+Branch `feature/1564-email-templates-editor` from `origin/staging` at `d09092f5`.
+
+- `prisma/schema.prisma` + `prisma/migrations/20261113180000_email_template_override/` (hand-authored
+  from `prisma migrate diff` against staging's schema; one table, read before committing).
+- `lib/email/templates/validate.ts` (R12), `lib/email/templates/samples.ts` (shared by the preview
+  script, the editor preview and Send test), `lib/repositories/email-templates.ts`,
+  `lib/email-templates-service.ts` (`loadTemplateOverrides` never rejects; page functions).
+- Senders: `StoreContext.overrides` (order and basket emails), `ContactDeps.loadOverride`,
+  `getCurrentTemplateOverride` for verify/reset/existing-account, `loadTemplateOverride` for the
+  staff reply.
+- `app/(admin)/staff/email-templates/` (list, `[key]` editor, `actions.ts`, `TemplateEditor.tsx`),
+  registered in `nav-items.ts`, the feature catalogue, the Neon migration plan (`copy`) and the
+  page-container list.
+
+## Part 2 decisions
+
+- **Preview rendered on the server** by the same builders that send, via a debounced Server Action:
+  the layout imports `lib/storage`, which must not reach a client bundle, and a client-side copy
+  could drift from what is sent.
+- **The preview iframe is `sandbox=""`**: an admin's text is escaped anyway, but the sandbox also
+  disables the sample links so nobody clicks into a sample order.
+- **Send test uses `recipientIsSignedInAdmin`**: it only ever goes to the signed-in admin's own
+  address, which is exactly what that flag means, so it works on staging's allowlist.
+- **All-blank save deletes the row** so "Edited" always means a real edit.

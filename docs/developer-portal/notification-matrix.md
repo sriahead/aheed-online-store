@@ -4,7 +4,7 @@ title: "Notification matrix — which email or alert is sent when"
 audience: [dev, platform-admin, store-admin, staff]
 type: doc
 status: approved
-version: "1.3.0"
+version: "1.4.0"
 updated: 2026-11-13
 visibility: internal
 summary: Every customer email, owner email and Telegram alert the platform sends — the event that triggers it, who receives it, what stops a duplicate, and the code that sends it. The one place to answer "will anyone be told when X happens?".
@@ -98,6 +98,10 @@ address and site, why the email was sent, and "Powered by Merqify".
 - **Wording lives in templates** (`lib/email/templates/registry.ts`): 14 keys, each with its
   placeholders, default subject, preview line, heading, intro, button label, reassurance and
   sign-off. Next-step sentences, items, totals, links and legal lines are locked.
+- **Editable per store** (`#1564` part 2): store admins change those seven fields at
+  `/staff/email-templates` (`EmailTemplateOverride`, one row per store per template; blank means
+  default). Senders read the overrides at render time and fall back to the defaults if the read
+  fails; queued retries keep what was rendered.
 - **Preview:** `npm run email:preview -- --vars <secrets file> --vendor <slug> --out <file>` renders
   every template with the store's real branding into one page. Nothing is sent.
 - "Powered by" is always Merqify, never `PLATFORM_NAME`: the dedicated cells set that to the
