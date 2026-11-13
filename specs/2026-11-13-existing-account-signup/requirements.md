@@ -9,7 +9,7 @@ R1. Better Auth's `emailAndPassword.onExistingUserSignUp` hook is wired in `lib/
     marketing-consent record.
 R2. The hook sends one email to the existing account's address, from the current store's sender
     (the same `getCurrentVendorSender()` identity as the verification and reset emails). Subject:
-    `You already have a <store> account`. The `[STAGING]`/`[DEV]` tag comes from the email service as
+    `You already have an account with <store>`. The `[STAGING]`/`[DEV]` tag comes from the email service as
     for every other email, and the staging recipient allowlist applies unchanged.
 R3. The body says someone (probably them) tried to create an account with this address, that they
     already have one, and gives:

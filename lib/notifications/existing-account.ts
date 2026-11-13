@@ -25,7 +25,7 @@ export function existingAccountEmail(input: {
   const offerReset = hasPassword || !hasGoogle;
 
   const lines = [
-    `<p>Someone, probably you, tried to create a ${store} account with this email address. You already have an account, so nothing new was created.</p>`,
+    `<p>Someone, probably you, tried to create an account with ${store} using this email address. You already have an account, so nothing new was created.</p>`,
     `<p><a href="${base}/login">Sign in to ${store}</a></p>`,
   ];
   if (hasGoogle) lines.push(`<p>You can sign in with Google using this address.</p>`);
@@ -38,7 +38,7 @@ export function existingAccountEmail(input: {
     `<p>If this wasn't you, you can ignore this email. Nothing has changed on your account.</p>`,
   );
 
-  return { subject: `You already have a ${input.storeName} account`, html: lines.join("\n") };
+  return { subject: `You already have an account with ${input.storeName}`, html: lines.join("\n") };
 }
 
 export interface ExistingAccountDeps {

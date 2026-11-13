@@ -10,10 +10,11 @@ every branch merges.
 
 - **Sign-up with an existing email now tells the account holder (#1558, 2026-11-13)**
   - **Why.** Re-registering an address that already had an account showed "check your email for a verification link" and sent nothing (found on AFC staging), leaving a real customer waiting for an email that never came.
-  - **Change.** Better Auth's `onExistingUserSignUp` hook sends that address "You already have a <store> account", with a sign-in link and a forgot-password link (or "sign in with Google" for a Google-only account). It carries no token and changes nothing.
+  - **Change.** Better Auth's `onExistingUserSignUp` hook sends that address "You already have an account with <store>", with a sign-in link and a forgot-password link (or "sign in with Google" for a Google-only account). It carries no token and changes nothing.
   - **Still no enumeration.** The screen and HTTP response stay Better Auth's generic duplicate answer; the register screen now says "Check your email — we've sent a message to <email>", true in both cases. A send failure is swallowed and logged without the address. `/sign-up/email` stays under the per-store auth rate limit.
   - **Docs.** Notification matrix 1.2.0 (event 17, sanity-check step 6), store admin guide 2.25.0, platform admin guide 1.17.0, shopping guide 1.9.0.
   - Spec: `specs/2026-11-13-existing-account-signup/`. Tests: `tests/existing-account-signup.test.ts`.
+  - **Follow-up.** Verified on AFC staging (hook ran, generic response, no account created). The subject read "a Aheed", so it now says "You already have an account with <store>".
 
 - **Abandoned checkouts with an admin recovery email, and a notification matrix (#1554, 2026-11-13)**
   - **Why.** The owner wanted to see abandoned checkouts and win some back with a well-judged email, and a single answer to "which email or alert goes out when".

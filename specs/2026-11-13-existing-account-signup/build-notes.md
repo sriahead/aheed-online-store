@@ -24,6 +24,18 @@ Issue #1558. Built 2026-11-13 in the worktree `E:\GitRepositories\aheed-wt-1558`
   (`runInBackgroundOrAwait`, no background runner configured). A new sign-up also sends an email
   inside the request, so the timing difference is small; accepted in the plan.
 
-## Not yet verified
+## Staging check (R8), 2026-11-13
 
-- R8, live on AFC staging after deploy.
+After `#1559` deployed (`deploy-staging` incl. `deploy-afc` green), a `POST /api/auth/sign-up/email`
+for an existing AFC staging account (`sriahead@gmail.com`, created 2026-08-08) while tailing
+`afc-store-staging`:
+
+- HTTP 200 with Better Auth's generic body (a synthetic user and id): nothing revealed.
+- The Worker logged `email send skipped (recipient is not on EMAIL_ALLOWED_RECIPIENTS …):
+  [STAGING] You already have a Aheed Food Centre account`: the hook ran and built the email; the
+  staging allowlist held it, as designed for a non-allowlisted address.
+- The database still holds only the original row; no `New account` alert fired.
+
+The log exposed "a Aheed" in the subject. Follow-up fix: subject is now `You already have an account
+with <store>` and the body says "create an account with <store>", correct for any store name.
+Delivery to a real inbox needs an allowlisted, already-registered address (owner test).
