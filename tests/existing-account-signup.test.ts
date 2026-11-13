@@ -25,7 +25,7 @@ describe("#1558 existingAccountEmail", () => {
     expect(html).toContain(`href="${BASE}/login"`);
     expect(html).toContain(`href="${BASE}/forgot-password"`);
     expect(html).not.toContain("Google");
-    expect(html).toContain("If this wasn't you");
+    expect(html).toContain("Didn&#39;t try to create an account?");
   });
 
   it("R3: Google-only account is pointed at Google, not a password reset", () => {

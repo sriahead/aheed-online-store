@@ -378,7 +378,7 @@ describe("processContactSubmission acknowledgement (#1552 R3, R4)", () => {
       const email = ackMock(d).mock.calls[0][0] as { to: string; subject: string; html: string };
       expect(email.to).toBe("sam@example.com");
       expect(email.subject).toBe(
-        `We've received your ${type === "COMPLAINT" ? "complaint" : "message"} — Corner Shop`,
+        `We've received your ${type === "COMPLAINT" ? "complaint" : "message"}`,
       );
       for (const typed of ["Sam Shopper", "Missing items", "Two items were missing"]) {
         expect(email.html).not.toContain(typed);
@@ -393,8 +393,10 @@ describe("processContactSubmission acknowledgement (#1552 R3, R4)", () => {
       type: "ENQUIRY",
       orderNumber: "AH-1042",
     });
-    expect(html).toContain("about order AH-1042");
+    expect(html).toContain("Order number");
+    expect(html).toContain("AH-1042");
     expect(html).toContain("Corner &lt;b&gt;Shop&lt;/b&gt;");
+    expect(html).not.toContain("<b>Shop</b>");
   });
 
   it.each([

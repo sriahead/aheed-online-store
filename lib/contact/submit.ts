@@ -7,6 +7,7 @@ import {
   parseContactFields,
   type ContactFormState,
 } from "@/features/contact/validate-contact";
+import type { EmailBrand } from "@/lib/email/layout/brand";
 import { acknowledgementEmail, contactHtml, contactSubject } from "./message";
 import { resolveContactRecipient, type RecipientAddress } from "./recipient";
 
@@ -42,7 +43,9 @@ export interface ContactDeps {
   /** #1390 — alert the store's staff. Expected never to reject, but guarded anyway. */
   alert(brief: OrderAlertBrief): Promise<void>;
   /** #1552 — email the shopper their acknowledgement. Expected never to reject, but guarded. */
-  acknowledge(email: { to: string; subject: string; html: string }): Promise<void>;
+  acknowledge(email: { to: string; subject: string; html: string; text: string }): Promise<void>;
+  /** #1564 — the store's email look; a neutral one when absent. */
+  loadBrand?(): Promise<EmailBrand>;
   vendorId: string;
   now(): Date;
 }
@@ -133,10 +136,15 @@ export async function processContactSubmission(
   }
 
   try {
-    await deps.acknowledge({
-      to: input.email,
-      ...acknowledgementEmail({ storeName: deps.storeName, type: input.type, orderNumber }),
+    // A branding read that fails costs the look, never the acknowledgement.
+    const brand = deps.loadBrand ? await deps.loadBrand().catch(() => undefined) : undefined;
+    const { subject, html, text } = acknowledgementEmail({
+      storeName: deps.storeName,
+      type: input.type,
+      orderNumber,
+      brand,
     });
+    await deps.acknowledge({ to: input.email, subject, html, text });
   } catch {
     deps.logError(`contact form: acknowledgement failed for vendor ${deps.vendorId}`);
   }

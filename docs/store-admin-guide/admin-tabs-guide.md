@@ -4,7 +4,7 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.25.0"
+version: "2.26.0"
 updated: 2026-11-13
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
@@ -52,6 +52,12 @@ The full table, with duplicate guards and code locations, is the
 | A Contact us message arrives | "We've received your message" | Yes | "Enquiry" or "Complaint" |
 | Someone creates an account | Verification email | No | "New account" |
 | Someone signs up with an email that already has an account | "You already have an account" (sign in or reset password); the screen never says the account exists | No | No |
+
+**How the customer emails look.** Every customer email uses your store's mark, name and brand
+colour, shows the key facts (order number, slot) in a highlighted panel, has one clear button, and
+ends with your address and a small "Powered by Merqify" line. Each one also has a plain-text
+version for mail apps that prefer it. Your mark and colours come from your branding settings, so
+updating them updates the emails too.
 
 **Your email** goes to the forward-to of your **Orders** receiving address (else **Support**).
 **Telegram** goes to the chats in **Order alerts**. Both are set by your platform admin in Client

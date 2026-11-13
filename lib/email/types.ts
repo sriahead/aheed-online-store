@@ -14,6 +14,8 @@ export interface OutgoingEmail {
   to: string;
   subject: string;
   html: string;
+  /** #1564 R4 — the plain-text part; derived from `html` by `send` when absent. */
+  text?: string;
   /** The vendor the mail is sent on behalf of. Omitted means the platform itself. */
   sender?: EmailSender;
   /**
@@ -36,6 +38,7 @@ export interface ResolvedEmail {
   to: string;
   subject: string;
   html: string;
+  text: string;
 }
 
 export type EmailSendResult =
@@ -54,6 +57,7 @@ export interface SendEmailBinding {
     to: string;
     subject: string;
     html: string;
+    text?: string;
     replyTo?: string;
   }): Promise<unknown>;
 }

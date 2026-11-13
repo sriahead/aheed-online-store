@@ -9,6 +9,7 @@ import {
 } from "./config";
 import { createCloudflareAdapter } from "./email/cloudflare";
 import { withEnvironmentTag } from "./email/environment-tag";
+import { htmlToText } from "./email/layout/text";
 import { createLogAdapter } from "./email/log";
 import { isRecipientAllowed, resolveSender } from "./email/policy";
 import { createResendAdapter } from "./email/resend";
@@ -99,6 +100,8 @@ export function getEmailService(): EmailService {
   return {
     async send(params) {
       const { to, subject: untagged, html, sender, replyTo: replyToOverride } = params;
+      // #1564 R4 — every email carries a plain-text part; a caller without one gets it derived.
+      const text = params.text?.trim() ? params.text : htmlToText(html);
       // #1409 — first, so the adapter and every log line below see the tagged subject.
       const subject = withEnvironmentTag(untagged, getAppEnvironment());
       let env: EmailEnv;
@@ -146,7 +149,7 @@ export function getEmailService(): EmailService {
       const from = resolved.from;
       const replyTo = replyToOverride?.trim() ? replyToOverride.trim() : resolved.replyTo;
 
-      const result = await adapter.deliver({ from, replyTo, to, subject, html });
+      const result = await adapter.deliver({ from, replyTo, to, subject, html, text });
       if (result.status === "failed") {
         console.error(`email send failed via ${adapter.name}: ${result.reason}`);
       } else if (result.status === "skipped") {

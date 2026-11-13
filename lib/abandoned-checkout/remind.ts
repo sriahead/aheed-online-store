@@ -1,6 +1,7 @@
 import type { NotificationMessage } from "@/lib/notifications/dispatch";
 import type { AbandonedCheckoutRow } from "@/lib/repositories/abandoned-checkouts";
 import { customerOrderHref } from "@/lib/order-notifications/links";
+import type { EmailBrand } from "@/lib/email/layout/brand";
 import { buildRecoveryEmail, type RecoveryCode } from "./email";
 import {
   isOfferableCode,
@@ -36,6 +37,7 @@ export interface RemindDeps {
   loadStore(): Promise<{
     sender: { name: string; email: string };
     baseUrl: string | null;
+    brand?: EmailBrand;
   }>;
   send(messages: readonly NotificationMessage[]): Promise<void>;
   now(): Date;
@@ -90,8 +92,9 @@ export async function sendAbandonedCheckoutReminder(
   }
 
   const store = await deps.loadStore();
-  const { subject, html } = buildRecoveryEmail({
+  const { subject, html, text } = buildRecoveryEmail({
     storeName: store.sender.name,
+    brand: store.brand,
     firstName: firstName(row.customerName),
     items: row.items,
     totalPence: row.totalPence,
@@ -106,6 +109,7 @@ export async function sendAbandonedCheckoutReminder(
       destination: row.email as string,
       subject,
       body: html,
+      text,
       sender: store.sender,
       log: { audience: "CUSTOMER", event: "ABANDONED_CHECKOUT_REMINDER" },
     },

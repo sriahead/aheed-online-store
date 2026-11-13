@@ -12,6 +12,16 @@ every branch merges.
 
 ### Added
 
+- **Branded email design system, part 1 of 3 (#1564, 2026-11-13)**
+  - **Why.** Every customer email was a few bare paragraphs with no layout, logo, preview line or plain-text part. The owner asked for one premium, consistent, trustworthy design across all notifications.
+  - **Layout.** `lib/email/layout/` renders every customer email from structured content: hidden preview line, the store's mark and name, heading, key-facts panel, items and totals, one table-cell button (Outlook-safe), reassurance, sign-off, and a footer with the store's address and site, why the email was sent, and "Powered by Merqify" (https://merqify.com). 600px, mobile-first, inline CSS, dark-mode aware.
+  - **Branding from the store's data** (ADR-004): `senderName`, the PNG mark, `brandGreenDark` (contrast-checked, else neutral) and `brandCream`, `VendorLocation`. Footer attribution is fixed to Merqify because the AFC cells set `PLATFORM_NAME` to the store's name.
+  - **Plain text everywhere.** `OutgoingEmail.text`; both adapters send it; `send` derives it from the HTML when absent, so outbox retries carry one too.
+  - **14 templates** (`lib/email/templates/registry.ts`): seven order events, verify email, reset password, existing account, contact and complaint acknowledgements, staff reply, basket reminder. Rewritten subjects (no store-name suffix; the From name is the store), preview lines, intros, reassurance and sign-offs. Locked: next-step sentences (shared with the order tracker), items, totals, every link, the marketing consent and opt-out lines. Staff replies keep the staff text verbatim and `Re:` threading.
+  - **Preview.** `npm run email:preview` renders every template with a store's real branding for sign-off.
+  - **Unchanged.** URLs, Better Auth flows, dispatch, dedupe, outbox, `[STAGING]` tagging. No migration.
+  - Docs: notification matrix 1.3.0, store admin guide 2.26.0. Spec: `specs/2026-11-13-email-design-system/`. Tests: `tests/email-layout.test.ts`, `tests/email-templates.test.ts`, and updated order, contact, basket, account and email-port tests.
+
 - **Sign-up with an existing email now tells the account holder (#1558, 2026-11-13)**
   - **Why.** Re-registering an address that already had an account showed "check your email for a verification link" and sent nothing (found on AFC staging), leaving a real customer waiting for an email that never came.
   - **Change.** Better Auth's `onExistingUserSignUp` hook sends that address "You already have an account with <store>", with a sign-in link and a forgot-password link (or "sign in with Google" for a Google-only account). It carries no token and changes nothing.

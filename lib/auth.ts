@@ -12,6 +12,8 @@ import { recordHandledErrorEvent } from "./error-events-service";
 import { recordWarmupActivity } from "./db-warmup/activity";
 import { alertNewRegistrationForRequest } from "./registration-alert-service";
 import { notifyExistingAccountSignUpForRequest } from "./existing-account-signup-service";
+import { getCurrentEmailBrand } from "./email-brand-service";
+import { resetPasswordMessage, verifyEmailMessage } from "./email/templates/account";
 
 /**
  * Hide `$transaction` from the client handed to Better Auth's Prisma adapter
@@ -267,11 +269,15 @@ export async function getAuth() {
         // vendor's own once its domain is verified, else the platform's with Reply-To (#1217).
         const sender = await getCurrentVendorSender();
         const senderName = sender?.name ?? DEFAULT_SENDER_NAME;
+        // #1564 — the branded `auth.reset_password` template; Better Auth's URL is unchanged.
+        const brand = await getCurrentEmailBrand(baseURL ?? null, senderName);
+        const message = resetPasswordMessage({ brand, url });
         await email.send({
           to: user.email,
           sender,
-          subject: `Reset your ${senderName} password`,
-          html: `<p>Click <a href="${url}">here</a> to reset your password. If you didn't request this, ignore this email.</p>`,
+          subject: message.subject,
+          html: message.html,
+          text: message.text,
         });
       },
     },
@@ -279,11 +285,15 @@ export async function getAuth() {
       sendVerificationEmail: async ({ user, url }) => {
         const sender = await getCurrentVendorSender();
         const senderName = sender?.name ?? DEFAULT_SENDER_NAME;
+        // #1564 — the branded `auth.verify_email` template; Better Auth's URL is unchanged.
+        const brand = await getCurrentEmailBrand(baseURL ?? null, senderName);
+        const message = verifyEmailMessage({ brand, url });
         await email.send({
           to: user.email,
           sender,
-          subject: `Verify your ${senderName} email`,
-          html: `<p>Click <a href="${url}">here</a> to verify your email.</p>`,
+          subject: message.subject,
+          html: message.html,
+          text: message.text,
         });
       },
     },

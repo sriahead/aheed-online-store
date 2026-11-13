@@ -1,3 +1,8 @@
+import {
+  DEFAULT_PLATFORM_NAME,
+  DEFAULT_PLATFORM_TAGLINE,
+  DEFAULT_PLATFORM_URL,
+} from "./platform-defaults";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { z } from "zod";
 
@@ -196,8 +201,7 @@ export function getAppEnvironment(): AppEnvironment {
 // is Merqify (the operator, not a vendor), so unset or blank falls back to the platform's own name
 // and tagline in every environment, local included. wrangler.toml's per-environment `[vars]` sets
 // both explicitly; a value there overrides the default.
-export const DEFAULT_PLATFORM_NAME = "Merqify";
-export const DEFAULT_PLATFORM_TAGLINE = "Your Merchandise, Digitised Quickly";
+export { DEFAULT_PLATFORM_NAME, DEFAULT_PLATFORM_TAGLINE, DEFAULT_PLATFORM_URL };
 
 const orDefault = (fallback: string) =>
   z
