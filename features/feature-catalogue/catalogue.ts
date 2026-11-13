@@ -395,6 +395,14 @@ export const ADMIN: RoleCatalogue = {
           status: "live",
         },
         {
+          name: "Abandoned checkouts",
+          what: "Lists checkouts that expired before payment and sends one consent-gated reminder email, optionally with a code.",
+          value: "Wins back some lost baskets without spamming anyone.",
+          demo: "Open Abandoned checkouts and send a reminder to an opted-in customer.",
+          route: "/staff/abandoned-checkouts",
+          status: "live",
+        },
+        {
           name: "Help Centre answers",
           what: "Edits the store's own answers shown on the Help Centre.",
           value: "Answers the questions this store's shoppers really ask.",

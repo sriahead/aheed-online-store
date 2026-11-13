@@ -4,7 +4,7 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.15.0"
+version: "1.16.0"
 updated: 2026-11-13
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
@@ -162,6 +162,8 @@ reload to see them.
   - **A bulk status change** sends one summary per status ("Out for delivery: 12 orders") instead of a message per order.
   - **A store with no receiving address and no Telegram recipient** gets no owner notifications. Customers still get their emails.
   - **A message that fails to send** is retried by the scheduler every 15 minutes for up to 24 hours. **Send test alert** checks the Telegram side.
+- **Know what each store is sent (`#1554`).** The [notification matrix](../developer-portal/notification-matrix.md) lists every customer email, owner email and Telegram alert, what triggers it and what stops a duplicate. Abandoned-checkout reminders are the one **marketing** email: a store admin sends them from `/staff/abandoned-checkouts`, only to opted-in, signed-in customers.
+- **Platform error alerts.** Set the Worker secret `PLATFORM_ALERT_TELEGRAM_CHAT_ID` on each cell (for example `npx wrangler secret put PLATFORM_ALERT_TELEGRAM_CHAT_ID --env afc-production`) to a chat that cell's bot is in. An error-rate breach then posts there, at most once an hour (`#1552`). Unset, the breach is only logged.
 - **Find a group's chat ID.** Add the platform bot to the staff's Telegram group. In the group, send `/start@<bot username>`: by default a bot only sees commands addressed to it, so a plain message leaves `getUpdates` empty (`{"ok":true,"result":[]}`). Then open `https://api.telegram.org/bot<token>/getUpdates` in a browser, with the bot's token in place of `<token>`, and read `chat.id` from the newest message. A group's ID starts with `-`. A chat with one person works too: that person sends the bot any message first.
 
 **Important fields and filters:** The store picker (one button per store); the guide's step status (Done, Not done, Check in Cloudflare, Action on this page); Sender name and Sender email; each receiving address with its purpose (Orders or Support), grouped by its forward-to mailbox; the sending status (Provider, Platform sender, Recipients, Store domain, Mail goes out as, Default forward-to, Verified mailboxes); each order-alert recipient (channel and chat ID) and the Telegram bot token line.
