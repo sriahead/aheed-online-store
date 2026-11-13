@@ -18,6 +18,7 @@ every branch merges.
   - **Still no enumeration.** The screen and HTTP response stay Better Auth's generic duplicate answer; the register screen now says "Check your email — we've sent a message to <email>", true in both cases. A send failure is swallowed and logged without the address. `/sign-up/email` stays under the per-store auth rate limit.
   - **Docs.** Notification matrix 1.2.0 (event 17, sanity-check step 6), store admin guide 2.25.0, platform admin guide 1.17.0, shopping guide 1.9.0.
   - Spec: `specs/2026-11-13-existing-account-signup/`. Tests: `tests/existing-account-signup.test.ts`.
+  - **Shipped.** Promoted to production 2026-11-13 (PR #1561, `12d6f670`).
   - **Follow-up.** Verified on AFC staging (hook ran, generic response, no account created). The subject read "a Aheed", so it now says "You already have an account with <store>".
 
 - **Abandoned checkouts with an admin recovery email, and a notification matrix (#1554, 2026-11-13)**
