@@ -13,7 +13,7 @@ const BASE = "https://shop.example";
 describe("#1558 existingAccountEmail", () => {
   it("R2: subject names the store", () => {
     const email = existingAccountEmail({ storeName: "Corner Shop", baseUrl: BASE, providers: [] });
-    expect(email.subject).toBe("You already have a Corner Shop account");
+    expect(email.subject).toBe("You already have an account with Corner Shop");
   });
 
   it("R3/R4: password account gets absolute sign-in and forgot-password links, no Google line", () => {
@@ -84,14 +84,14 @@ describe("#1558 notifyExistingAccountSignUp", () => {
     const sent = d.send.mock.calls[0][0];
     expect(sent.to).toBe("holder@example.com");
     expect(sent.sender).toEqual({ name: "Corner Shop", email: "shop@example.com" });
-    expect(sent.subject).toBe("You already have a Corner Shop account");
+    expect(sent.subject).toBe("You already have an account with Corner Shop");
     expect(d.loadProviders).toHaveBeenCalledWith("u1");
   });
 
   it("R2: no store resolved falls back to the platform name", async () => {
     const d = deps({ resolveSender: vi.fn(async () => undefined) });
     await notifyExistingAccountSignUp(USER, BASE, d);
-    expect(d.send.mock.calls[0][0].subject).toBe("You already have a Platform account");
+    expect(d.send.mock.calls[0][0].subject).toBe("You already have an account with Platform");
   });
 
   it.each([
