@@ -4,7 +4,7 @@ title: "Notification matrix — which email or alert is sent when"
 audience: [dev, platform-admin, store-admin, staff]
 type: doc
 status: approved
-version: "1.2.0"
+version: "1.2.1"
 updated: 2026-11-13
 visibility: internal
 summary: Every customer email, owner email and Telegram alert the platform sends — the event that triggers it, who receives it, what stops a duplicate, and the code that sends it. The one place to answer "will anyone be told when X happens?".
@@ -110,7 +110,9 @@ Run on staging first, from an address on `EMAIL_ALLOWED_RECIPIENTS`, while taili
 | 5. With `PLATFORM_ALERT_TELEGRAM_CHAT_ID` set, wait for an error-rate breach | One "Error rate alert" in that chat, then nothing more for an hour. |
 | 6. Register again with an allowlisted address that already has an account (`#1558`) | The screen says "Check your email"; the inbox gets "`[STAGING] You already have an account with <store>`"; no account is created and no "New account" alert fires. |
 
-**Last run:** 2026-11-13, Aheed staging. Step 1 passed (`status=sent` for both lines). Step 3: the
-route answers (307 to login when signed out). Steps 2, 4 and 5 not yet run: no test sign-up, no
-abandoned checkouts on AFC staging, chat id not yet set.
-
+**Last run:** 2026-11-13, AFC staging (`#1558`). Step 1 passed earlier on Aheed staging
+(`status=sent` for both lines). Step 2 passed: a new sign-up logged `event=REGISTRATION status=sent`
+(Telegram accepted the alert). Step 3: the route answers (307 to login when signed out). Step 5:
+chat id set on staging and production 2026-11-13, no breach yet. Step 6 passed: the owner received
+the email at an allowlisted address; no account created, no alert. Step 4 not yet run (no abandoned
+checkouts on AFC staging).

@@ -4,7 +4,7 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.203.0"
+version: "1.204.0"
 updated: 2026-11-13
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P12, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, onboarding P11, Merqify move P12.
@@ -1423,3 +1423,5 @@ is unrelated guest-cart retention, and no correctly-numbered issue for this exis
 | 2026-11-13 | **Abandoned checkouts + notification matrix (`#1554`)** merged to staging (`specs/2026-11-13-abandoned-checkouts/`). Admin page, one consent-gated recovery email per checkout (optional code), matrix in every operator guide. One additive migration. | Staging merge |
 | 2026-11-13 | **Notification gaps (`#1552`)** promoted to production (PR #1556, `41477113`; `specs/2026-11-13-notification-gaps/`). Live-checked on Aheed staging (acknowledgement `status=sent`). The error-rate alert needs `PLATFORM_ALERT_TELEGRAM_CHAT_ID` per cell. | Promotion |
 | 2026-11-13 | **Abandoned checkouts + notification matrix (`#1554`)** promoted to production (PR #1556, `41477113`; `specs/2026-11-13-abandoned-checkouts/`). Migration applied on staging and AFC staging; production page answers (307 to login when signed out). | Promotion |
+| 2026-11-13 | **Existing-email sign-up tells the account holder (`#1558`)** merged to staging (PRs #1559, #1560; `specs/2026-11-13-existing-account-signup/`). Better Auth `onExistingUserSignUp` sends "You already have an account with `<store>`"; screen and response stay neutral. No migration. | Staging merge |
+| 2026-11-13 | **Existing-email sign-up tells the account holder (`#1558`)** promoted to production (PR #1561, `12d6f670`; `specs/2026-11-13-existing-account-signup/`). Verified on AFC staging (email received at an allowlisted address, no account created, new sign-up still alerts). PR #1562 also fixed the internal docs build broken by bare MDX placeholders. | Promotion |
