@@ -4,8 +4,8 @@ title: "Environment Setup — Secrets & Config (staging / production / dev)"
 audience: [dev]
 type: doc
 status: approved
-version: "1.39.0"
-updated: 2026-11-12
+version: "1.40.0"
+updated: 2026-11-13
 visibility: internal
 summary: How to configure all required secrets/env vars for an environment with one command (scripts/configure-env.mjs), plus DB isolation, the reference-database bootstrap, per-vendor host/branding/auth-cookie setup, and the local-only per-developer dev tier.
 tags: [runbook, secrets, config, cloudflare, github, ops]
@@ -1007,6 +1007,7 @@ sender name and address, and the receiving addresses with the mailbox each forwa
 | `INBOUND_DEFAULT_FORWARD` | `wrangler.toml` `[vars]` (both envs) | The platform default inbox (`#1399`). It prefills **Forward to** when a receiving address is added in Client Setup, and stays editable. Unset means no prefill; a value that is not an email address prefills nothing, and Client Setup's status card shows "Invalid". |
 | `APP_ENV` | `wrangler.toml` `[vars]` (both envs) | Names the deployment (`#1409`): `staging` or `production`. Every outgoing subject, and the footer's `mailto:` subjects, gets `[STAGING] ` or `[DEV] `; production is untouched. **Anything else, unset included, means development**, so a forgotten value shows `[DEV]` rather than passing for production. |
 | `TELEGRAM_BOT_TOKEN` | Worker secret on the app only, optional (`#1390`) | The platform bot's token for order alerts (Client Setup, **Order alerts**). Unset means every alert is skipped and logged as skipped; nothing else changes. `configure-env` pushes it when present; the inbound-email Worker does not need it. |
+| `PLATFORM_ALERT_TELEGRAM_CHAT_ID` | Worker secret on the app only, optional (`#1552`) | The Telegram chat that hears about an **error-rate breach** (`/api/jobs/check-error-rate`, at most one message an hour). Use a chat the cell's own bot is in: for the AFC cells, the "AFC Orders & Alerts" channel `-1003925079524`. Unset keeps the log-only `error-rate alert:` line. `configure-env` pushes it when present. |
 
 **The contact form (`#1409`).** Each storefront has a **Contact us** page (`/contact`) for complaints
 and enquiries; the footer links to it. A message is emailed to the store's Client Setup receiving

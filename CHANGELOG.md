@@ -6,6 +6,17 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Notification gaps: payment failed, contact acknowledgement, new account and error-rate alerts (#1552, 2026-11-13)**
+  - **Why.** The owner asked for a full email + Telegram notification set. Order confirmation, every status change, retries and de-duplication were already live (#1435, #1390, #1548); these were the four gaps.
+  - **Payment failed.** `checkout.session.async_payment_failed` sends the new order event `PAYMENT_FAILED` through `notifyOrderEvent`: a customer email ("no money has been taken") and the owner's email and Telegram. Only when this delivery cancelled the order, so a Stripe retry sends nothing. An expired checkout sends nothing.
+  - **Contact acknowledgement.** Every successful Contact us message emails the shopper a fixed acknowledgement from the store's sender, via `dispatchNotifications` (failures queue for the retry job). It echoes none of the shopper's text, so the form cannot relay a stranger's words.
+  - **New account.** Better Auth's `user.create.after` hook sends the store's Telegram recipients `New account: <store>`, the method and the time. No name or email.
+  - **Error rate.** `/api/jobs/check-error-rate` sends a breach to the new optional `PLATFORM_ALERT_TELEGRAM_CHAT_ID`, at most once an hour (KV key `error-rate:last-alert-at`). Unset keeps today's log-only line (#437).
+  - No migration, no new table. Refunds stay out of scope: no refund flow exists (#606).
+  - Docs: env-setup 1.40.0, platform admin guide 1.15.0. Spec: `specs/2026-11-13-notification-gaps/`. Tests: `tests/notification-gaps.test.ts`, `tests/stripe-webhook-payment-failed.test.ts`, `tests/contact-form.test.ts`.
+
 ### Changed
 
 - **Every Contact us message alerts the store on Telegram (#1548, 2026-11-12)**

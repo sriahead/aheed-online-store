@@ -170,6 +170,15 @@ export function getTelegramBotToken(): TelegramBotToken {
   return raw === "" ? { status: "unset" } : { status: "set", token: raw };
 }
 
+// #1552 — the Telegram chat for platform alerts (the error-rate breach, #437). Optional and read
+// like the bot token above: unset or blank means log-only, never an error. Never throws.
+export type PlatformAlertChat = { status: "set"; chatId: string } | { status: "unset" };
+
+export function getPlatformAlertChatId(): PlatformAlertChat {
+  const raw = (readEnv("PLATFORM_ALERT_TELEGRAM_CHAT_ID") ?? "").trim();
+  return raw === "" ? { status: "unset" } : { status: "set", chatId: raw };
+}
+
 // #1409 — which deployment this is. NODE_ENV is "production" on both Workers (see
 // EMAIL_RECIPIENT_MODE above), so wrangler.toml `[vars]` names it. Anything but "production" or
 // "staging", unset included, is development: a forgotten var then tags mail [DEV] rather than

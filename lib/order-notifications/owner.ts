@@ -23,6 +23,7 @@ export const OWNER_TITLE: Record<OrderEvent, string> = {
   READY_FOR_COLLECTION: "Ready for collection",
   COLLECTED: "Collected",
   CANCELLED: "Cancelled",
+  PAYMENT_FAILED: "Payment failed",
 };
 
 /** At most this many order numbers in a bulk digest; the rest become `+<n> more`. */

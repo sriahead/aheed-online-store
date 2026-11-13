@@ -80,6 +80,8 @@ const OPTIONAL_WORKER_SECRETS = [
   "STRIPE_WEBHOOK_SECRET",
   "UK_LOCATION_REF_DATABASE_URL",
   "TELEGRAM_BOT_TOKEN",
+  // #1552 — the platform alert chat for the error-rate breach; unset means log-only.
+  "PLATFORM_ALERT_TELEGRAM_CHAT_ID",
 ];
 
 // #1323 — the reference database's DIRECT url, used by sync-reference-data.yml and the reference

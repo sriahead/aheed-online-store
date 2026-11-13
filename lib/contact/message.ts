@@ -50,3 +50,32 @@ export function contactHtml(input: ContactMessageInput): string {
   const message = escapeHtml(input.message).replace(/\r?\n/g, "<br>");
   return `<p>A shopper sent this through the store's contact form. Reply to answer them directly.</p><table>${table}</table><p>${message}</p>`;
 }
+
+/**
+ * #1552 R3 — the shopper's "we've received it" email. Fixed wording on purpose: the form accepts any
+ * address, so nothing the submitter typed (name, subject, message) is echoed back, or the form would
+ * relay a stranger's text to whoever they name. Only the store name and an order number the
+ * repository already proved is the shopper's own appear.
+ */
+export function acknowledgementEmail(input: {
+  storeName: string;
+  type: ContactType;
+  orderNumber: string | null;
+}): { subject: string; html: string } {
+  const noun = input.type === "COMPLAINT" ? "complaint" : "message";
+  const store = escapeHtml(input.storeName);
+  const paragraphs = [
+    `<p><strong>Thanks for getting in touch with ${store}.</strong></p>`,
+    `<p>We've received your ${noun}${
+      input.orderNumber ? ` about order ${escapeHtml(input.orderNumber)}` : ""
+    } and a member of our team will reply to this email address as soon as we can.</p>`,
+    input.type === "COMPLAINT"
+      ? `<p>We're sorry something wasn't right. We read every complaint and will do our best to put it right.</p>`
+      : "",
+    `<p>If you didn't contact ${store}, you can ignore this email.</p>`,
+  ];
+  return {
+    subject: `We've received your ${noun} — ${input.storeName}`,
+    html: paragraphs.filter(Boolean).join("\n"),
+  };
+}

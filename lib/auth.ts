@@ -10,6 +10,7 @@ import { recordSignUpMarketingConsent } from "./marketing-consent-signup";
 import { recordMarketingConsent } from "./repositories/marketing-consent";
 import { recordHandledErrorEvent } from "./error-events-service";
 import { recordWarmupActivity } from "./db-warmup/activity";
+import { alertNewRegistrationForRequest } from "./registration-alert-service";
 
 /**
  * Hide `$transaction` from the client handed to Better Auth's Prisma adapter
@@ -245,6 +246,8 @@ export async function getAuth() {
                 }),
               reportError: recordHandledErrorEvent,
             });
+            // #1552 — the store's Telegram recipients hear about every new account. Never rejects.
+            await alertNewRegistrationForRequest(context?.path);
           },
         },
       },

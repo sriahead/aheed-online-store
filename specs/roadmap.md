@@ -4,8 +4,8 @@ title: Roadmap
 audience: [dev]
 type: doc
 status: approved
-version: "1.200.0"
-updated: 2026-11-12
+version: "1.201.0"
+updated: 2026-11-13
 visibility: internal
 summary: Master backlog and phase sequencing (M0, P0-P12, including the inserted P2.5, P2.6 and P8.5) for the Aheed Online Store, plus the running change log of roadmap revisions and phase closures. P8 is historical; launch work is P9, post-launch P10, onboarding P11, Merqify move P12.
 tags: [roadmap, phases, backlog]
@@ -1419,3 +1419,4 @@ is unrelated guest-cart retention, and no correctly-numbered issue for this exis
 | 2026-11-12 | **Every Contact us message alerts on Telegram (`#1548`)** merged to staging (PR #1549; `specs/2026-11-12-telegram-every-enquiry/`). Enquiries alert too, not only complaints and order messages; the heading names the type. No migration. | Staging merge |
 | 2026-11-12 | **Roadmap catch-up rows** (staging PR #1544, `b71a23f`) promoted (promotion **PR #1545**, merge `97087c2`, `staging -> main`). Documentation only. | Promotion (catch-up row) |
 | 2026-11-12 | **Every Contact us message alerts on Telegram (`#1548`)** promoted to production (PR #1550, `8d756228`; `specs/2026-11-12-telegram-every-enquiry/`). Live-checked on Aheed staging (`status=sent`); production needs a Telegram recipient in Client Setup. The same promotion carried `#1546` (staging-only allowlist path). | Promotion |
+| 2026-11-13 | **Notification gaps (`#1552`)** merged to staging (`specs/2026-11-13-notification-gaps/`). Payment failed (customer email + owner alert, async failures only), a contact acknowledgement email, a New account Telegram alert, and an hourly-capped error-rate Telegram alert to `PLATFORM_ALERT_TELEGRAM_CHAT_ID`. No migration. | Staging merge |

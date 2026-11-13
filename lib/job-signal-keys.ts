@@ -50,6 +50,12 @@ export const ERROR_SIGNAL_WINDOW_MS = 20 * 60 * 1000;
  */
 export const ERROR_SIGNAL_THROTTLE_MS = 5 * 60 * 1000;
 
+/** #1552 — when the error-rate Telegram alert last went out, as an ISO instant. */
+export const ERROR_RATE_ALERT_LAST_AT_KEY = "error-rate:last-alert-at";
+
+/** #1552 — at most one error-rate alert per hour: a sustained breach must not page every tick. */
+export const ERROR_RATE_ALERT_COOLDOWN_MS = 60 * 60 * 1000;
+
 /**
  * How far ahead a new checkout marks the sweep due: the 35-minute Checkout
  * Session lifetime (`CHECKOUT_SESSION_TTL_MS`) plus a 5-minute margin, so the

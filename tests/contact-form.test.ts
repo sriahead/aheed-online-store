@@ -5,7 +5,7 @@ import {
   readContactFields,
 } from "@/features/contact/validate-contact";
 import { resolveContactRecipient, type RecipientAddress } from "@/lib/contact/recipient";
-import { contactHtml, contactSubject } from "@/lib/contact/message";
+import { acknowledgementEmail, contactHtml, contactSubject } from "@/lib/contact/message";
 import { CONTACT_COPY, processContactSubmission, type ContactDeps } from "@/lib/contact/submit";
 import type { EmailSendResult } from "@/lib/email";
 
@@ -52,6 +52,7 @@ function deps(overrides: Partial<ContactDeps> = {}) {
     markPending: vi.fn(async () => {}),
     logError: vi.fn(),
     alert: vi.fn(async () => {}),
+    acknowledge: vi.fn(async () => {}),
     now: () => new Date("2026-11-03T12:00:00.000Z"),
     ...overrides,
   };
@@ -361,5 +362,58 @@ describe("processContactSubmission order alert (#1390 R12, #1548)", () => {
     expect(logged).toHaveLength(1);
     expect(logged[0]).not.toContain("Missing items");
     expect(logged[0]).not.toContain("Sam Shopper");
+  });
+});
+
+describe("processContactSubmission acknowledgement (#1552 R3, R4)", () => {
+  const ackMock = (d: ContactDeps) => d.acknowledge as ReturnType<typeof vi.fn>;
+
+  it.each(["COMPLAINT", "ENQUIRY"] as const)(
+    "a successful %s acknowledges the shopper once, echoing none of their text",
+    async (type) => {
+      const d = deps();
+      const state = await processContactSubmission({ ...VALID, type }, d);
+      expect(state.status).toBe("success");
+      expect(ackMock(d)).toHaveBeenCalledTimes(1);
+      const email = ackMock(d).mock.calls[0][0] as { to: string; subject: string; html: string };
+      expect(email.to).toBe("sam@example.com");
+      expect(email.subject).toBe(
+        `We've received your ${type === "COMPLAINT" ? "complaint" : "message"} — Corner Shop`,
+      );
+      for (const typed of ["Sam Shopper", "Missing items", "Two items were missing"]) {
+        expect(email.html).not.toContain(typed);
+        expect(email.subject).not.toContain(typed);
+      }
+    },
+  );
+
+  it("names a verified order number", () => {
+    const { html } = acknowledgementEmail({
+      storeName: "Corner <b>Shop</b>",
+      type: "ENQUIRY",
+      orderNumber: "AH-1042",
+    });
+    expect(html).toContain("about order AH-1042");
+    expect(html).toContain("Corner &lt;b&gt;Shop&lt;/b&gt;");
+  });
+
+  it.each([
+    ["honeypot", { ...VALID, website: "spam.example" }, {}],
+    ["invalid input", { ...VALID, message: "short" }, {}],
+    ["rate limited", VALID, { checkRateLimit: vi.fn(async () => ({ allowed: false })) }],
+    ["order not found", { ...VALID, orderId: "AH-1042" }, {}],
+    ["no recipient", VALID, { listAddresses: vi.fn(async () => []) }],
+  ] as const)("%s: no acknowledgement", async (_label, fields, overrides) => {
+    const d = deps(overrides as Partial<ContactDeps>);
+    await processContactSubmission({ ...fields }, d);
+    expect(ackMock(d)).not.toHaveBeenCalled();
+  });
+
+  it("a rejecting acknowledgement still succeeds and logs nothing personal", async () => {
+    const d = deps({ acknowledge: vi.fn(async () => Promise.reject(new Error("smtp down"))) });
+    const state = await processContactSubmission(VALID, d);
+    expect(state.status).toBe("success");
+    const logged = (d.logError as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[0]));
+    expect(logged).toEqual(["contact form: acknowledgement failed for vendor vendor-1"]);
   });
 });
