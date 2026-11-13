@@ -123,6 +123,7 @@ const RESOLVED: ResolvedEmail = {
   to: "customer@example.com",
   subject: "Order confirmed",
   html: "<p>thanks</p>",
+  text: "thanks",
 };
 
 describe("cloudflare adapter (R3)", () => {
@@ -134,6 +135,7 @@ describe("cloudflare adapter (R3)", () => {
       to: "customer@example.com",
       subject: "Order confirmed",
       html: "<p>thanks</p>",
+      text: "thanks",
       replyTo: "help@shop.test",
     });
   });
@@ -165,6 +167,7 @@ describe("resend adapter (R4)", () => {
       to: "customer@example.com",
       subject: "Order confirmed",
       html: "<p>thanks</p>",
+      text: "thanks",
       reply_to: "help@shop.test",
     });
   });
@@ -308,6 +311,18 @@ describe("failures never throw (R7)", () => {
 });
 
 describe("#1409 environment tag and replyTo override", () => {
+  it("#1564 R4: a message without text gets one derived from its HTML; given text is kept", async () => {
+    const binding = fakeBinding();
+    cfEnv.current = { EMAIL: binding };
+    await send({
+      ...MESSAGE,
+      html: '<p>Hello <a href="https://x.test/a?b=1&amp;c=2">there</a></p>',
+    });
+    expect(binding.send.mock.calls[0][0].text).toBe("Hello there (https://x.test/a?b=1&c=2)");
+    await send({ ...MESSAGE, html: "<p>ignored</p>", text: "Hand written" });
+    expect(binding.send.mock.calls[1][0].text).toBe("Hand written");
+  });
+
   it("R4: unset APP_ENV tags the subject [DEV] before delivery", async () => {
     const binding = fakeBinding();
     cfEnv.current = { EMAIL: binding };

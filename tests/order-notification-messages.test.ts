@@ -48,16 +48,29 @@ describe("slotLabel", () => {
   });
 });
 
-describe("customer email subject (R11)", () => {
+describe("customer email subject (R11, #1564 R7)", () => {
   it.each([
-    ["CONFIRMED", "is confirmed"],
-    ["OUT_FOR_DELIVERY", "is on its way"],
-    ["DELIVERED", "has been delivered"],
-    ["READY_FOR_COLLECTION", "is ready to collect"],
-    ["COLLECTED", "has been collected"],
-    ["CANCELLED", "has been cancelled"],
-  ] as const)("%s → %s", (event, phrase) => {
-    expect(customer(event).subject).toBe(`Order SHO-20261105-ABC123 ${phrase} — ${STORE}`);
+    ["CONFIRMED", "Order SHO-20261105-ABC123 is confirmed"],
+    ["OUT_FOR_DELIVERY", "Your order SHO-20261105-ABC123 is on its way"],
+    ["DELIVERED", "Order SHO-20261105-ABC123 has been delivered"],
+    ["READY_FOR_COLLECTION", "Order SHO-20261105-ABC123 is ready to collect"],
+    ["COLLECTED", "Thanks for collecting order SHO-20261105-ABC123"],
+    ["CANCELLED", "Order SHO-20261105-ABC123 has been cancelled"],
+    ["PAYMENT_FAILED", "Your payment for order SHO-20261105-ABC123 didn't go through"],
+  ] as const)(
+    "%s → %s, with no store-name suffix (the From name is the store)",
+    (event, subject) => {
+      expect(customer(event).subject).toBe(subject);
+    },
+  );
+
+  it("every event has a preheader and a plain-text part naming the order", () => {
+    for (const event of ORDER_EVENTS) {
+      const email = customer(event);
+      expect(email.preheader.length).toBeGreaterThan(10);
+      expect(email.text).toContain("SHO-20261105-ABC123");
+      expect(email.text).not.toMatch(/<[a-z]/i);
+    }
   });
 });
 
@@ -168,19 +181,26 @@ describe("order details, savings, points and the link (R13)", () => {
       { userId: null, confirmationToken: null },
       `${BASE}/orders/lookup?orderNumber=SHO-20261105-ABC123`,
     ],
-  ])("one 'View your order' link for %s", (_label, overrides, href) => {
+  ])("one 'View your order' link for %s, and no other order link", (_label, overrides, href) => {
     for (const event of ORDER_EVENTS) {
       const links = anchors(customer(event, overrides).html);
-      expect(links).toHaveLength(1);
-      expect(links[0]).toContain(`href="${href}"`);
-      expect(textOf(links[0])).toBe("View your order");
+      const cta = links.filter((a) => textOf(a) === "View your order");
+      expect(cta).toHaveLength(1);
+      expect(cta[0]).toContain(`href="${href}"`);
+      // #1564: the only other links are the store's site (header, footer) and Powered by.
+      for (const other of links.filter((a) => textOf(a) !== "View your order")) {
+        expect(other).toMatch(new RegExp(`href="(${BASE}|https://merqify\.com)"`));
+      }
     }
     expect(customerOrderHref(BASE, webhookOrder(overrides))).toBe(href);
   });
 
-  it("no canonical host means no link at all", () => {
-    for (const event of ORDER_EVENTS)
-      expect(anchors(customer(event, {}, null).html)).toHaveLength(0);
+  it("no canonical host means no order link and no store-site link", () => {
+    for (const event of ORDER_EVENTS) {
+      const links = anchors(customer(event, {}, null).html);
+      expect(links).toHaveLength(1);
+      expect(links[0]).toContain('href="https://merqify.com"');
+    }
   });
 
   it("canonicalBaseUrl takes the lowest canonical host, or none", () => {

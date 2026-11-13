@@ -1,3 +1,12 @@
+import type { EmailBrand } from "@/lib/email/layout/brand";
+import { fallbackBrand } from "@/lib/email/layout/fallback";
+import {
+  finish,
+  orNull,
+  templateCopy,
+  type CopyOverrides,
+  type RenderedEmail,
+} from "@/lib/email/templates/compose";
 import { escapeHtml } from "@/lib/html-escape";
 import type { ContactType } from "./recipient";
 
@@ -61,21 +70,29 @@ export function acknowledgementEmail(input: {
   storeName: string;
   type: ContactType;
   orderNumber: string | null;
-}): { subject: string; html: string } {
-  const noun = input.type === "COMPLAINT" ? "complaint" : "message";
-  const store = escapeHtml(input.storeName);
-  const paragraphs = [
-    `<p><strong>Thanks for getting in touch with ${store}.</strong></p>`,
-    `<p>We've received your ${noun}${
-      input.orderNumber ? ` about order ${escapeHtml(input.orderNumber)}` : ""
-    } and a member of our team will reply to this email address as soon as we can.</p>`,
-    input.type === "COMPLAINT"
-      ? `<p>We're sorry something wasn't right. We read every complaint and will do our best to put it right.</p>`
-      : "",
-    `<p>If you didn't contact ${store}, you can ignore this email.</p>`,
-  ];
-  return {
-    subject: `We've received your ${noun} — ${input.storeName}`,
-    html: paragraphs.filter(Boolean).join("\n"),
-  };
+  /** #1564 — the store's look; neutral when absent. */
+  brand?: EmailBrand;
+  overrides?: CopyOverrides | null;
+}): RenderedEmail {
+  const brand = input.brand ?? fallbackBrand(input.storeName);
+  const { copy, reason } = templateCopy(
+    input.type === "COMPLAINT" ? "contact.complaint_acknowledgement" : "contact.acknowledgement",
+    { storeName: input.storeName },
+    input.overrides,
+  );
+  return finish(
+    copy.subject,
+    {
+      preheader: copy.preheader,
+      heading: copy.heading,
+      intro: orNull(copy.intro),
+      blocks: input.orderNumber
+        ? [{ kind: "facts", rows: [{ label: "Order number", value: input.orderNumber }] }]
+        : [],
+      reassurance: orNull(copy.reassurance),
+      signOff: orNull(copy.signOff),
+      reason,
+    },
+    brand,
+  );
 }

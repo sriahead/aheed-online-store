@@ -25,6 +25,11 @@ export interface NotificationMessage {
   body: string;
   /** EMAIL only. Untagged: the email service adds [STAGING]/[DEV]. Never logged. */
   subject?: string;
+  /**
+   * #1564 — EMAIL only: the plain-text part. Not stored in the outbox; a retry derives it from the
+   * HTML. Never logged.
+   */
+  text?: string;
   replyTo?: string;
   /** EMAIL only: the vendor's sender. Not stored — the retry job resolves it again by vendor. */
   sender?: EmailSender;
@@ -78,6 +83,7 @@ async function sendOne(deps: DispatchDeps, message: NotificationMessage): Promis
         to: message.destination,
         subject: message.subject ?? "",
         html: message.body,
+        text: message.text,
         sender: message.sender,
         replyTo: message.replyTo,
       });

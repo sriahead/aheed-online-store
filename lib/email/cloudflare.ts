@@ -19,6 +19,7 @@ export function createCloudflareAdapter(binding: SendEmailBinding | undefined): 
           to: message.to,
           subject: message.subject,
           html: message.html,
+          text: message.text,
           ...(message.replyTo ? { replyTo: message.replyTo } : {}),
         });
         return { status: "sent" };

@@ -24,6 +24,7 @@ export function createResendAdapter(apiKey: string | undefined): EmailAdapter {
             to: message.to,
             subject: message.subject,
             html: message.html,
+            text: message.text,
             ...(message.replyTo ? { reply_to: message.replyTo } : {}),
           }),
         });

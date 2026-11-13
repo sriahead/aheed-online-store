@@ -4,7 +4,7 @@ title: "Notification matrix — which email or alert is sent when"
 audience: [dev, platform-admin, store-admin, staff]
 type: doc
 status: approved
-version: "1.2.1"
+version: "1.3.0"
 updated: 2026-11-13
 visibility: internal
 summary: Every customer email, owner email and Telegram alert the platform sends — the event that triggers it, who receives it, what stops a duplicate, and the code that sends it. The one place to answer "will anyone be told when X happens?".
@@ -82,6 +82,27 @@ automatic abandoned-cart email.
   and truthful loss framing. It **never** uses a countdown, an invented deadline, "only N left" or
   claims about other shoppers, all of which are banned by the CPRs and the DMCC Act 2024.
 
+## How customer emails look (`#1564`)
+
+Every customer email is rendered by one layout (`lib/email/layout/render.ts`) from structured
+content, so they share one design: the store's mark and name at the top, a heading, the key facts
+(order number, slot) in a panel, one button, a reassurance line, and a footer with the store's
+address and site, why the email was sent, and "Powered by Merqify".
+
+- **Branding is the store's own data**: name, square mark (PNG), dark brand colour for the button
+  and accent, cream for the background, `VendorLocation` for the address. A colour white text
+  cannot sit on falls back to a neutral dark. The full logo is not used: it is WebP, which Outlook
+  desktop cannot show.
+- **Every email has a plain-text part.** Templates write their own; anything else (an outbox retry)
+  gets one derived from the HTML in `getEmailService().send`.
+- **Wording lives in templates** (`lib/email/templates/registry.ts`): 14 keys, each with its
+  placeholders, default subject, preview line, heading, intro, button label, reassurance and
+  sign-off. Next-step sentences, items, totals, links and legal lines are locked.
+- **Preview:** `npm run email:preview -- --vars <secrets file> --vendor <slug> --out <file>` renders
+  every template with the store's real branding into one page. Nothing is sent.
+- "Powered by" is always Merqify, never `PLATFORM_NAME`: the dedicated cells set that to the
+  store's own name.
+
 ## Code map
 
 | Event | Sent from |
@@ -95,6 +116,7 @@ automatic abandoned-cart email.
 | 15 | `lib/notifications/error-rate-alert.ts`, `app/api/jobs/check-error-rate/route.ts` |
 | 17 | `lib/notifications/existing-account.ts` via `lib/existing-account-signup-service.ts`; Better Auth `onExistingUserSignUp` in `lib/auth.ts` (`#1558`) |
 | All dispatch | `lib/notifications/dispatch.ts` (send first, queue on failure) |
+| Customer email design | `lib/email/layout/`, `lib/email/templates/`, branding via `lib/email-brand-service.ts` (`#1564`) |
 
 ## Sanity check after a change (`#1552`, `#1554`, `#1558`)
 

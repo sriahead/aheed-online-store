@@ -1,5 +1,6 @@
 import { getPrisma } from "@/lib/db";
 import { getEmailService } from "@/lib/email";
+import { getCurrentEmailBrand } from "@/lib/email-brand-service";
 import { notifyExistingAccountSignUp } from "@/lib/notifications/existing-account";
 import { getAccountProviders } from "@/lib/repositories/data-rights";
 import { DEFAULT_SENDER_NAME } from "@/lib/repositories/vendor";
@@ -14,6 +15,7 @@ export async function notifyExistingAccountSignUpForRequest(
     loadProviders: (userId) => getAccountProviders(getPrisma(), userId),
     resolveSender: getCurrentVendorSender,
     defaultStoreName: DEFAULT_SENDER_NAME,
+    resolveBrand: (storeName, siteUrl) => getCurrentEmailBrand(siteUrl, storeName),
     send: (email) => getEmailService().send(email),
     log: (line) => console.error(line),
   });

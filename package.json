@@ -7,6 +7,7 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "postbuild": "tsx scripts/check-client-syntax.ts",
+    "email:preview": "tsx scripts/email-preview.ts",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && wrangler deploy",
     "cf-typegen": "wrangler types",

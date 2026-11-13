@@ -47,7 +47,7 @@ describe("PAYMENT_FAILED copy (R1)", () => {
       storeName: "Corner Shop",
       baseUrl: "https://s.test",
     });
-    expect(subject).toMatch(/^Order \S+ was cancelled: payment didn't go through — Corner Shop$/);
+    expect(subject).toMatch(/^Your payment for order \S+ didn't go through$/);
     expect(html).toContain("Your payment didn&#39;t go through");
     expect(html).toContain("No money has been taken");
   });
