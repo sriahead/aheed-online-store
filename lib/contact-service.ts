@@ -18,6 +18,7 @@ import { findOrderForUser, listOrdersForUser } from "@/lib/repositories/orders";
 import { fetchVendorProfile } from "@/lib/vendor-service";
 import { processContactSubmission } from "@/lib/contact/submit";
 import { sendOrderAlertForVendor } from "@/lib/order-alert-service";
+import { sendVendorNotifications } from "@/lib/order-notifications-service";
 import { parseContactFields, type ContactFormState } from "@/features/contact/validate-contact";
 
 /**
@@ -59,6 +60,18 @@ export async function submitContactForVendor(input: {
     logError: (message) => console.error(message),
     alert: async (brief) => {
       await sendOrderAlertForVendor(vendorId, brief);
+    },
+    acknowledge: async ({ to, subject, html }) => {
+      await sendVendorNotifications(vendorId, [
+        {
+          channel: "EMAIL",
+          destination: to,
+          subject,
+          body: html,
+          sender: { name: profile.senderName, email: profile.senderEmail },
+          log: { audience: "CUSTOMER", event: "CONTACT_ACKNOWLEDGEMENT" },
+        },
+      ]);
     },
     now: () => new Date(),
   });

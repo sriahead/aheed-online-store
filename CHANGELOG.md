@@ -6,6 +6,27 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **Abandoned checkouts with an admin recovery email, and a notification matrix (#1554, 2026-11-13)**
+  - **Why.** The owner wanted to see abandoned checkouts and win some back with a well-judged email, and a single answer to "which email or alert goes out when".
+  - **Page.** `/staff/abandoned-checkouts` (store admins) lists the last 30 days' checkouts that expired before payment, using the existing cancelled orders, so nothing new is tracked.
+  - **Reminder.** **Send reminder** emails one recovery message per checkout, ever, within 7 days. It is only offered for signed-in customers with effective marketing consent (PECR; owner decision). An optional active discount code can be attached.
+  - **Duplicates.** The new `AbandonedCheckoutReminder` row (unique `orderId`) is claimed before sending, so a double click or a second admin cannot send twice. Failed sends retry for 24 hours.
+  - **The email.** Built on endowment, goal-gradient, cognitive ease, reciprocity, truthful loss framing and real anchoring. It never uses countdowns, invented deadlines or scarcity claims (CPRs, DMCC Act 2024), and always carries a Stop marketing emails link.
+  - **Notification matrix.** New KMS page `docs/developer-portal/notification-matrix.md`. Summaries were added to the store admin guide 2.24.0, staff playbook 2.22.0, platform admin guide 1.16.0, shopper guide 1.8.0 and onboarding guide 2.1.0.
+  - **Migration.** One hand-authored migration (`20261113120000_abandoned_checkout_reminder`), purely additive.
+  - Spec: `specs/2026-11-13-abandoned-checkouts/`. Tests: `tests/abandoned-checkout.test.ts`.
+
+- **Notification gaps: payment failed, contact acknowledgement, new account and error-rate alerts (#1552, 2026-11-13)**
+  - **Why.** The owner asked for a full email + Telegram notification set. Order confirmation, every status change, retries and de-duplication were already live (#1435, #1390, #1548); these were the four gaps.
+  - **Payment failed.** `checkout.session.async_payment_failed` sends the new order event `PAYMENT_FAILED` through `notifyOrderEvent`: a customer email ("no money has been taken") and the owner's email and Telegram. Only when this delivery cancelled the order, so a Stripe retry sends nothing. An expired checkout sends nothing.
+  - **Contact acknowledgement.** Every successful Contact us message emails the shopper a fixed acknowledgement from the store's sender, via `dispatchNotifications` (failures queue for the retry job). It echoes none of the shopper's text, so the form cannot relay a stranger's words.
+  - **New account.** Better Auth's `user.create.after` hook sends the store's Telegram recipients `New account: <store>`, the method and the time. No name or email.
+  - **Error rate.** `/api/jobs/check-error-rate` sends a breach to the new optional `PLATFORM_ALERT_TELEGRAM_CHAT_ID`, at most once an hour (KV key `error-rate:last-alert-at`). Unset keeps today's log-only line (#437).
+  - No migration, no new table. Refunds stay out of scope: no refund flow exists (#606).
+  - Docs: env-setup 1.40.0, platform admin guide 1.15.0. Spec: `specs/2026-11-13-notification-gaps/`. Tests: `tests/notification-gaps.test.ts`, `tests/stripe-webhook-payment-failed.test.ts`, `tests/contact-form.test.ts`.
+
 ### Changed
 
 - **Every Contact us message alerts the store on Telegram (#1548, 2026-11-12)**
@@ -22,6 +43,7 @@ every branch merges.
 
 ### Documentation
 
+- **Roadmap (2026-11-12).** `specs/roadmap.md` 1.200.0 records the #1548 promotion (PR #1550). Documentation only.
 - **Roadmap catch-up (2026-11-12).** `specs/roadmap.md` 1.197.0 adds the 20 missing change-log rows. They cover 12 slices (10–12 Nov) and their promotions (PRs #1498–#1543), so `sdd:audit` is clean again. Documentation only.
 
 ### Added

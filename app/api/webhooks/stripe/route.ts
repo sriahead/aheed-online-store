@@ -124,7 +124,15 @@ export async function POST(req: Request) {
           ? "Checkout session expired; stock released."
           : "Payment failed; stock released.",
       );
-      if (!failed.ok) reportRefusal(failed.reason, event, event.orderNumber);
+      if (!failed.ok) {
+        reportRefusal(failed.reason, event, event.orderNumber);
+      } else if (event.type === "checkout.session.async_payment_failed") {
+        // #1552 — only a real payment failure tells the shopper and the store. An expired session
+        // is every abandoned checkout and stays silent. `ok` means THIS delivery cancelled the
+        // order, so a Stripe retry sends nothing.
+        const order = await orders.findOrder(event.orderNumber);
+        if (order) await notifyOrderEvent(order, "PAYMENT_FAILED");
+      }
       break;
     }
 

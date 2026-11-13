@@ -7,7 +7,7 @@ import {
   parseContactFields,
   type ContactFormState,
 } from "@/features/contact/validate-contact";
-import { contactHtml, contactSubject } from "./message";
+import { acknowledgementEmail, contactHtml, contactSubject } from "./message";
 import { resolveContactRecipient, type RecipientAddress } from "./recipient";
 
 /**
@@ -21,6 +21,9 @@ import { resolveContactRecipient, type RecipientAddress } from "./recipient";
  * #1390 R12, widened by #1548 — after the send (or the outbox enqueue), every successful submission
  * alerts the store's staff, its brief naming the contact type. Awaited, because a Worker may cancel an unawaited promise once
  * the response is sent; a failed alert is logged and never changes what the shopper sees.
+ *
+ * #1552 — then the shopper gets a fixed acknowledgement email (`acknowledgementEmail`), on the same
+ * terms: awaited, and a failure never changes their result.
  */
 
 export interface ContactDeps {
@@ -38,6 +41,8 @@ export interface ContactDeps {
   logError(message: string): void;
   /** #1390 — alert the store's staff. Expected never to reject, but guarded anyway. */
   alert(brief: OrderAlertBrief): Promise<void>;
+  /** #1552 — email the shopper their acknowledgement. Expected never to reject, but guarded. */
+  acknowledge(email: { to: string; subject: string; html: string }): Promise<void>;
   vendorId: string;
   now(): Date;
 }
@@ -125,6 +130,15 @@ export async function processContactSubmission(
     });
   } catch {
     deps.logError(`contact form: order alert failed for vendor ${deps.vendorId}`);
+  }
+
+  try {
+    await deps.acknowledge({
+      to: input.email,
+      ...acknowledgementEmail({ storeName: deps.storeName, type: input.type, orderNumber }),
+    });
+  } catch {
+    deps.logError(`contact form: acknowledgement failed for vendor ${deps.vendorId}`);
   }
   return succeeded(input.email);
 }

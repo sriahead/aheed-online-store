@@ -5,6 +5,8 @@ import {
   DB_WARMUP_LAST_PING_KEY,
   DB_WARMUP_SCHEDULE_KEY,
   ERROR_EVENTS_LAST_AT_KEY,
+  ERROR_RATE_ALERT_COOLDOWN_MS,
+  ERROR_RATE_ALERT_LAST_AT_KEY,
   ERROR_SIGNAL_THROTTLE_MS,
   JOB_SIGNALS_BINDING,
   NOTIFICATION_OUTBOX_PENDING_KEY,
@@ -121,6 +123,24 @@ export async function markErrorEvent(now: Date): Promise<void> {
   } catch (error) {
     logFailure("mark", ERROR_EVENTS_LAST_AT_KEY, error);
   }
+}
+
+/**
+ * #1552 — whether the error-rate alert may go out now, recording it when it may. False only when a
+ * successful read shows an alert inside the cooldown; no binding, or a failing KV, says yes, because
+ * a missed alert is worse than a repeated one (the job runs at most every 15 minutes).
+ */
+export async function claimErrorRateAlert(now: Date): Promise<boolean> {
+  const store = resolveStore();
+  if (!store) return true;
+  try {
+    const stored = parseStored(await store.get(ERROR_RATE_ALERT_LAST_AT_KEY));
+    if (stored !== null && stored > now.getTime() - ERROR_RATE_ALERT_COOLDOWN_MS) return false;
+    await store.put(ERROR_RATE_ALERT_LAST_AT_KEY, now.toISOString());
+  } catch (error) {
+    logFailure("claim", ERROR_RATE_ALERT_LAST_AT_KEY, error);
+  }
+  return true;
 }
 
 /**

@@ -1,4 +1,13 @@
-import { getJobsEnv, readOptional } from "@/lib/config";
+import {
+  getAppEnvironment,
+  getJobsEnv,
+  getPlatformAlertChatId,
+  getTelegramBotToken,
+  readOptional,
+} from "@/lib/config";
+import { claimErrorRateAlert } from "@/lib/job-signals";
+import { sendErrorRateAlert } from "@/lib/notifications/error-rate-alert";
+import { telegramAdapter } from "@/lib/order-alert/channels";
 import { timingSafeEqual } from "@/lib/stripe-webhook";
 import { getErrorRateService } from "@/lib/error-rate-service";
 
@@ -25,6 +34,10 @@ export const dynamic = "force-dynamic";
  * log line and returned in the response body, which `workers/scheduler` already
  * logs verbatim for every job on every tick — no new mechanism, and nothing that
  * pretends to a reliability it does not have.
+ *
+ * #1552 — and, when `PLATFORM_ALERT_TELEGRAM_CHAT_ID` is set, a Telegram message to that chat, at
+ * most once an hour (`claimErrorRateAlert`). Telegram needs no verified email domain, which is what
+ * kept the channel open. Unset keeps the log-only behaviour above.
  */
 
 const JOB_TOKEN_HEADER = "x-job-token";
@@ -64,6 +77,14 @@ export async function POST(request: Request) {
     console.error(
       `${ALERT_PREFIX} count=${summary.count} threshold=${summary.threshold} windowMs=${summary.windowMs} since=${summary.since}`,
     );
+    await sendErrorRateAlert(summary, new URL(request.url).origin, {
+      chat: getPlatformAlertChatId(),
+      environment: getAppEnvironment(),
+      claim: claimErrorRateAlert,
+      send: (chatId, text) => telegramAdapter(getTelegramBotToken()).send(chatId, text),
+      now: () => new Date(),
+      log: (line) => console.error(line),
+    });
   }
 
   return Response.json(summary, { status: 200 });

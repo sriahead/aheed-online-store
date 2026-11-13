@@ -4,8 +4,8 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.23.0"
-updated: 2026-11-10
+version: "2.24.0"
+updated: 2026-11-13
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
 tags: ["admin", "guide", "ui", "configuration", "vendor", "payments", "team"]
@@ -34,6 +34,27 @@ The menu is grouped. You see six groups beside **Overview**: **Orders & Fulfilme
   immediately when they sign in with Google or email — but the system does not send them an automatic
   onboarding email, so let them know directly once you have granted access.
 
+
+
+## Which emails and alerts are sent, and when
+
+The full table, with duplicate guards and code locations, is the
+[notification matrix](../developer-portal/notification-matrix.md). In short:
+
+| When this happens | The customer gets | You get (email) | You get (Telegram) |
+| --- | --- | --- | --- |
+| An order is paid | Confirmation | "New order" | "New order" |
+| Out for delivery, ready to collect, delivered, collected | An update for each | Yes | Yes |
+| You cancel an order | Cancellation (charge not yet refunded) | Yes | Yes |
+| A payment fails | "No money has been taken" | "Payment failed" | Yes |
+| A checkout expires | Nothing automatic | No | No |
+| You press **Send reminder** on an abandoned checkout | "Your basket is waiting" (marketing, opted-in only) | No | No |
+| A Contact us message arrives | "We've received your message" | Yes | "Enquiry" or "Complaint" |
+| Someone creates an account | Verification email | No | "New account" |
+
+**Your email** goes to the forward-to of your **Orders** receiving address (else **Support**).
+**Telegram** goes to the chats in **Order alerts**. Both are set by your platform admin in Client
+Setup. Without them you get nothing, even though the customer still gets their emails.
 
 ## Discount codes — `/staff/discounts`
 
@@ -542,6 +563,44 @@ not what you do with it once you have read it. There is no control here to edit 
 or adjust their points.
 
 **What happens after changes are saved:** Nothing is editable from this page.
+
+
+## Abandoned checkouts — `/staff/abandoned-checkouts`
+
+**Purpose:** See the checkouts that expired before the customer paid, and win some of them back
+with one honest reminder email (`#1554`).
+
+**Who can access:** Store admins only
+
+**What you can do:** Read the list of the last 30 days' abandoned checkouts (when it expired, the
+order number, guest or customer, whether they agreed to marketing, items and total). For a checkout
+that qualifies, choose an active discount code or **No discount code**, then press **Send reminder**.
+
+**Typical workflow:** Look in once a day. Remind the opted-in customers from the last few days,
+adding a code only when the basket is worth it: a code on every reminder teaches customers to
+abandon their checkout to get one.
+
+**Important fields and filters:** A checkout can be reminded only when all of these hold. If not,
+the row says why instead of showing the button:
+
+- the customer was **signed in** (guests never agreed to marketing);
+- their newest marketing choice is **yes** and their email is **verified**;
+- it expired **within the last 7 days**;
+- it has **not been reminded before** (one reminder per checkout, ever).
+
+**Common mistakes and limitations:**
+- This is a **marketing** email, so the consent rule is the law (PECR), not a preference. Do not try
+  to reach guests or non-opted-in customers some other way.
+- The email lists the customer's own items, the real total and the code if you chose one, with one
+  **Return to your basket** button and a **Stop marketing emails** link. It never uses countdowns,
+  invented deadlines or "only 2 left" claims, which UK law bans.
+- The items are not held: stock was released when the checkout expired, and the email says so.
+- Only checkouts that **expired** appear. A customer who pressed Cancel, or whose payment failed, is
+  not listed (a failed payment has its own automatic email).
+
+**What happens after changes are saved:** The email is sent straight away from your store's
+sender. The row then shows when it went, who sent it and any code. If the email provider is down, the
+email is retried automatically for up to 24 hours. The reminder cannot be sent a second time.
 
 
 ## Team & Access — `/staff/team`

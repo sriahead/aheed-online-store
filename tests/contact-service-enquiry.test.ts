@@ -28,6 +28,7 @@ vi.mock("@/lib/vendor-service", () => ({
   fetchVendorProfile: vi.fn(async () => ({ name: "Test Store" })),
 }));
 vi.mock("@/lib/order-alert-service", () => ({ sendOrderAlertForVendor: vi.fn() }));
+vi.mock("@/lib/order-notifications-service", () => ({ sendVendorNotifications: vi.fn() }));
 
 const FIELDS = {
   name: "Ada Shopper",

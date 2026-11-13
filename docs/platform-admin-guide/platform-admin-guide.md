@@ -4,8 +4,8 @@ title: "Platform & Technical Admin Guide"
 audience: [platform-admin]
 type: guide
 status: approved
-version: "1.14.0"
-updated: 2026-11-12
+version: "1.16.0"
+updated: 2026-11-13
 visibility: internal
 summary: "A guide for Platform Administrators managing the multi-tenant infrastructure, onboarding new vendors, and configuring global platform settings."
 tags: ["admin", "platform", "technical", "multi-tenancy"]
@@ -153,7 +153,7 @@ reload to see them.
 - **Send a test email.** Press **Send test email**. It always goes to your own signed-in address, and the page says whether it was sent, skipped by the recipient policy, or failed, with the reason.
 - **Check the limits.** A table shows Cloudflare's published email limits, with a link to Cloudflare's limits page.
 - **Set up order alerts.** The **Order alerts** card sends the store's staff a short Telegram message whenever a customer gets in touch about an order. To add a recipient, leave **Channel** on Telegram, type the chat's numeric **Chat ID**, and press **Add recipient**. A store can have several recipients, for example a staff group and the owner's own chat. Press **Send test alert** next to a recipient to check that the bot can reach that chat; the card says whether the test was sent, skipped or failed, with the reason. Press **Remove** to stop alerts to that chat. The card also shows **Telegram bot token: Set** or **Not set**.
-- **Know what triggers an alert.** An email to one of the store's receiving addresses alerts when it is order-related: it was sent to an **Orders** address, or its subject names one of the store's order numbers. Every **Contact us** message alerts (`#1548`), and its first line says whether it is a **Complaint** or an **Enquiry**.
+- **Know what triggers an alert.** An email to one of the store's receiving addresses alerts when it is order-related: it was sent to an **Orders** address, or its subject names one of the store's order numbers. Every **Contact us** message alerts (`#1548`), and its first line says whether it is a **Complaint** or an **Enquiry**. The shopper also gets a short "we've received your message" email that repeats none of what they typed (`#1552`). A new customer account alerts as **New account** (method and time only, no name or email), and an asynchronous payment that fails alerts as **Payment failed**, with an email to the shopper. An abandoned checkout that simply expires alerts nobody (`#1552`).
 - **Know what an alert says.** Five lines: the store name, the order number (or "not given"), the sender's name, the subject, and whether it came by email or the contact form. Alerts from staging start with `[STAGING]`. The message itself, the customer's email address and their phone number are never sent.
 - **Order notifications to the owner (`#1435`).** The same Telegram recipients, plus the store's mailbox, also hear about every paid-order event.
   - **The events:** a new paid order, *Out for delivery*, *Ready for collection*, *Delivered*, *Collected* and *Cancelled*.
@@ -162,6 +162,8 @@ reload to see them.
   - **A bulk status change** sends one summary per status ("Out for delivery: 12 orders") instead of a message per order.
   - **A store with no receiving address and no Telegram recipient** gets no owner notifications. Customers still get their emails.
   - **A message that fails to send** is retried by the scheduler every 15 minutes for up to 24 hours. **Send test alert** checks the Telegram side.
+- **Know what each store is sent (`#1554`).** The [notification matrix](../developer-portal/notification-matrix.md) lists every customer email, owner email and Telegram alert, what triggers it and what stops a duplicate. Abandoned-checkout reminders are the one **marketing** email: a store admin sends them from `/staff/abandoned-checkouts`, only to opted-in, signed-in customers.
+- **Platform error alerts.** Set the Worker secret `PLATFORM_ALERT_TELEGRAM_CHAT_ID` on each cell (for example `npx wrangler secret put PLATFORM_ALERT_TELEGRAM_CHAT_ID --env afc-production`) to a chat that cell's bot is in. An error-rate breach then posts there, at most once an hour (`#1552`). Unset, the breach is only logged.
 - **Find a group's chat ID.** Add the platform bot to the staff's Telegram group. In the group, send `/start@<bot username>`: by default a bot only sees commands addressed to it, so a plain message leaves `getUpdates` empty (`{"ok":true,"result":[]}`). Then open `https://api.telegram.org/bot<token>/getUpdates` in a browser, with the bot's token in place of `<token>`, and read `chat.id` from the newest message. A group's ID starts with `-`. A chat with one person works too: that person sends the bot any message first.
 
 **Important fields and filters:** The store picker (one button per store); the guide's step status (Done, Not done, Check in Cloudflare, Action on this page); Sender name and Sender email; each receiving address with its purpose (Orders or Support), grouped by its forward-to mailbox; the sending status (Provider, Platform sender, Recipients, Store domain, Mail goes out as, Default forward-to, Verified mailboxes); each order-alert recipient (channel and chat ID) and the Telegram bot token line.

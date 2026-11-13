@@ -3,7 +3,11 @@ import { getAppEnvironment, getTelegramBotToken } from "@/lib/config";
 import { getEmailService } from "@/lib/email";
 import { clearNotificationOutboxPending, markNotificationOutboxPending } from "@/lib/job-signals";
 import { telegramAdapter } from "@/lib/order-alert/channels";
-import type { DispatchDeps } from "@/lib/notifications/dispatch";
+import {
+  dispatchNotifications,
+  type DispatchDeps,
+  type NotificationMessage,
+} from "@/lib/notifications/dispatch";
 import { runNotificationOutbox } from "@/lib/notifications/outbox";
 import { resolveOwnerEmail, type StoreContext } from "@/lib/order-notifications/build";
 import { canonicalBaseUrl } from "@/lib/order-notifications/links";
@@ -67,6 +71,22 @@ function getOrderNotifier(): OrderNotifier {
     dispatch: dispatchDeps(prisma),
     log: (line) => console.error(line),
   });
+}
+
+/**
+ * #1552 — the same dispatcher for a store's non-order messages (the contact acknowledgement, the
+ * registration alert): send first, queue a failure for the retry job, never reject.
+ */
+export async function sendVendorNotifications(
+  vendorId: string,
+  messages: readonly NotificationMessage[],
+): Promise<void> {
+  await dispatchNotifications(dispatchDeps(getPrisma()), vendorId, messages);
+}
+
+/** #1552 — the store's sender, canonical base URL and Telegram recipients, for those messages. */
+export async function loadVendorNotificationContext(vendorId: string): Promise<StoreContext> {
+  return loadStore(getPrisma(), vendorId);
 }
 
 export async function notifyOrderEvent(order: WebhookOrder, status: string): Promise<void> {
