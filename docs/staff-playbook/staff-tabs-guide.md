@@ -4,8 +4,8 @@ title: "Staff Daily Operations Playbook"
 audience: [staff]
 type: runbook
 status: approved
-version: "2.21.0"
-updated: "2026-11-12"
+version: "2.22.0"
+updated: "2026-11-13"
 visibility: internal
 summary: "How to use every page in the Staff Panel: picking and dispatching orders, managing catalogue products, categories, brands, filters, bundles, promotions, inventory, search dictionary, customer feedback, enquiries & inbox, and runbooks. One section per menu item."
 tags: ["staff", "guide", "ui", "fulfillment", "inventory", "catalogue", "synonyms", "feedback", "enquiries", "inbox"]
@@ -37,6 +37,25 @@ act on them, and gives you a card for each page you can reach.
 
 If a card is missing that a colleague has, that is because their account is a store admin and yours
 is staff. That is normal and not a fault.
+
+## What the customer is told, and when
+
+So you know what a customer has already heard before you speak to them (`#1554`). The full table is
+the [notification matrix](../developer-portal/notification-matrix.md).
+
+| What happened | What the customer gets |
+| --- | --- |
+| They paid | A confirmation email, with their slot |
+| You mark an order **Out for delivery** or **Ready for collection** | An email for each |
+| You mark it **Delivered** or **Collected** | A final email, with any points earned |
+| You cancel it | A cancellation email saying the charge has not been refunded yet, so expect a call or reply |
+| Their payment failed | An email saying no money was taken |
+| They sent a **Contact us** message | An automatic "we've received your message" email, which promises only that someone will reply |
+| Their checkout expired | Nothing, unless a store admin sends a reminder from **Abandoned checkouts** |
+
+Every status change you make also tells the store owner, by email and on Telegram, so there is no
+need to message them separately. **Changing many orders at once** sends each customer their own
+email and the owner one summary.
 
 ## Live Inventory & Availability — `/staff/inventory`
 

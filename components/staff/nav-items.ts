@@ -219,6 +219,15 @@ export const STAFF_NAV_GROUPS: readonly StaffNavGroup[] = [
         tone: "accent",
       },
       {
+        href: "/staff/abandoned-checkouts",
+        label: "Abandoned checkouts",
+        description:
+          "Checkouts that expired before payment, with one reminder email for opted-in customers.",
+        icon: "shopping-cart",
+        tier: "admin",
+        tone: "accent",
+      },
+      {
         href: "/staff/enquiries",
         label: "Enquiries & Inbox",
         description:

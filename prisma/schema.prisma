@@ -105,6 +105,7 @@ model User {
   feedbackModerated   CustomerFeedback[]           @relation("FeedbackModerator")
   netContentReviews   NetContentSuggestion[]       @relation("NetContentReviewer")
   favourites          Favourite[]
+  remindersSent       AbandonedCheckoutReminder[]
 }
 
 model Session {
@@ -231,6 +232,7 @@ model Vendor {
   hoursOverrides            VendorHoursOverride[]
   paymentBadges             VendorPaymentBadge[]
   categoryAssets            CategoryAsset[]
+  abandonedReminders        AbandonedCheckoutReminder[]
 }
 
 // P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
@@ -1742,6 +1744,7 @@ model Order {
   discountUse          DiscountRedemption?
   bindingRefusals      PaymentBindingRefusal[]
   reconciliation       PaymentReconciliation?
+  abandonedReminder    AbandonedCheckoutReminder?
 
   @@index([vendorId, createdAt])
   @@index([vendorId, status, createdAt])
@@ -2585,4 +2588,23 @@ model VendorPaymentBadge {
   method   PaymentBadgeMethod
 
   @@unique([vendorId, method])
+}
+
+// #1554 - the one recovery email a store admin may send for an abandoned checkout (an order the
+// checkout-session expiry cancelled before payment). `orderId` is unique, so a checkout can be
+// reminded at most once, ever: the row is claimed BEFORE the email is sent. `discountCode` is a
+// snapshot of the code text the email carried, not a foreign key: the record is what was sent, and
+// a later edit or deactivation of the code must not rewrite it.
+model AbandonedCheckoutReminder {
+  id           String   @id @default(uuid())
+  vendorId     String
+  vendor       Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  orderId      String   @unique
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sentByUserId String?
+  sentBy       User?    @relation(fields: [sentByUserId], references: [id], onDelete: SetNull)
+  discountCode String?
+  sentAt       DateTime @default(now())
+
+  @@index([vendorId, sentAt])
 }

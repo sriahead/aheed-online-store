@@ -4,8 +4,8 @@ title: "Client Onboarding & Store Launch Readiness"
 audience: [store-admin, platform-admin, staff]
 type: guide
 status: approved
-version: "2.0.0"
-updated: 2026-11-08
+version: "2.1.0"
+updated: 2026-11-13
 visibility: internal
 summary: "Step-by-step onboarding guide, practical operational workflows, brand management, visual asset curation, catalogue publishing rules, and pre-launch audit checklists for store operators and new staff."
 tags: [onboarding, store-setup, launch-readiness, checklist, store-admin, staff, brands, catalogue, publishing]
@@ -191,6 +191,24 @@ Build customer trust and curate discovery content:
 1. During busy trading rushes, open `/staff/inventory`.
 2. Toggle items out of stock with one click if depleted from the shop floor.
 3. Use quick increment/decrement buttons (`+1`, `-1`, `+10`) to reconcile shelf stock without opening the full product form.
+
+### Emails and alerts you trigger (`#1554`)
+Every order status you set emails the customer and tells the owner (email and Telegram), so you do
+not need to message either yourself. The full list of what is sent, to whom and when is the
+[notification matrix](../developer-portal/notification-matrix.md). For a new starter, the three to
+remember:
+
+1. **Moving an order** (out for delivery, ready, delivered, collected, cancelled) sends the
+   customer an email straight away. Only press it when it is true.
+2. **Contact us** messages get an automatic "we've received it" email. The customer is waiting for
+   a real reply from `/staff/enquiries`.
+3. **Abandoned checkouts** (`/staff/abandoned-checkouts`, store admins only) are never emailed
+   automatically. An admin may send one reminder to an opted-in customer within 7 days.
+
+### Before go-live: check the notifications reach someone
+1. In Client Setup, the store has an **Orders** receiving address with a working forward-to mailbox.
+2. **Order alerts** lists the staff Telegram chat, and **Send test alert** says "Sent".
+3. A test contact message produces the acknowledgement email and a Telegram "Enquiry" alert.
 
 ---
 
