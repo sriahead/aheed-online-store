@@ -116,9 +116,10 @@ export function RegisterForm({
           <Icon name="check" className="h-6 w-6" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold text-primary">Verify your email</h2>
+          <h2 className="text-xl font-semibold text-primary">Check your email</h2>
+          {/* #1558 — neutral: true for a new account and for an address already registered. */}
           <p className="text-sm text-primary">
-            Check <strong>{email}</strong> for a verification link before signing in.
+            We&apos;ve sent a message to <strong>{email}</strong>. Open it to continue.
           </p>
         </div>
 

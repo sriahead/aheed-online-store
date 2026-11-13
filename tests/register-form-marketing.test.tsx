@@ -73,7 +73,7 @@ describe("RegisterForm marketing consent", () => {
     render(<RegisterForm marketingStatement={null} next="/checkout" />);
     fillAndSubmit();
     await waitFor(() => {
-      expect(screen.getByText(/verify your email/i)).toBeTruthy();
+      expect(screen.getByText(/check your email/i)).toBeTruthy();
       expect(screen.getByText("a@example.com")).toBeTruthy();
     });
     const returnLink = screen.getByRole("link", {
