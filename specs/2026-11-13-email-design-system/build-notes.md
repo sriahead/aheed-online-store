@@ -67,3 +67,19 @@ Branch `feature/1564-email-templates-editor` from `origin/staging` at `d09092f5`
 - **Send test uses `recipientIsSignedInAdmin`**: it only ever goes to the signed-in admin's own
   address, which is exactly what that flag means, so it works on staging's allowlist.
 - **All-blank save deletes the row** so "Edited" always means a real edit.
+
+## Part 3 — what changed
+
+Branch `feature/1564-staff-emails` from `origin/staging` at `36702668` (part 2 merged in #1566).
+
+- `lib/order-notifications/owner.ts`: `buildOwnerEmail` and `buildOwnerDigestEmail` on the layout
+  (optional `brand`), `staffReason`; `build.ts` passes `store.brand` and carries `text`.
+- `lib/contact/message.ts`: `contactHtml(input, brand?)` on the layout; `submit.ts` loads the brand
+  once, before the store's message, and reuses it for the acknowledgement.
+- `lib/client-setup-service.ts`: the test email in the store's design, with the canonical host.
+
+## Part 3 decisions
+
+- Subjects of staff emails are unchanged: staff filter and search their mailbox by them.
+- The forwarded contact message keeps every field and the message's own line breaks; the layout
+  escapes all of it (the shopper typed it).

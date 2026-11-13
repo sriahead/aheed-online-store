@@ -12,6 +12,11 @@ every branch merges.
 
 ### Added
 
+- **Store and admin emails in the new design, part 3 of 3 (#1564, 2026-11-13)**
+  - The owner order email and bulk digest, the Contact us message forwarded to the store, and the Client Setup test email now use the shared layout: store header, facts panel, one "Open in staff panel" button, and a staff footer line instead of a customer reason. Not editable. Inbound mail forwarded to the store is untouched.
+  - Plain text for all of them (the owner emails write their own; the forwarded contact message's is derived on send).
+  - Tests: owner-email link test updated (one action link; the others are the store site and Powered by), new layout cases in `tests/email-template-overrides.test.ts`.
+
 - **Editable email templates, part 2 of 3 (#1564, 2026-11-13)**
   - **Why.** The owner wanted store admins to edit every customer email's wording themselves (decisions: wording fields, store admins).
   - **Page.** `/staff/email-templates` (admin tier): the 14 customer emails with Default/Edited status; an editor per email with a live preview rendered by the sending code, **Send test** to the admin's own address, and **Reset to default** (two clicks, no browser dialog).

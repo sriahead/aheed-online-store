@@ -98,3 +98,48 @@ describe("senders honour saved wording (R13)", () => {
     expect(message?.subject).toBe("Order SHO-20261105-ABC123 is confirmed");
   });
 });
+
+describe("store and admin emails use the layout (R15)", () => {
+  it("the owner email and digest carry the store header, footer and staff reason", async () => {
+    const { buildOwnerEmail, buildOwnerDigestEmail } =
+      await import("@/lib/order-notifications/owner");
+    const brand = fallbackBrand("Corner Shop", "https://shop.example");
+    const owner = buildOwnerEmail({
+      order: webhookOrder(),
+      event: "CONFIRMED",
+      storeName: "Corner Shop",
+      baseUrl: "https://shop.example",
+      brand,
+    });
+    expect(owner.html).toContain("Powered by");
+    expect(owner.text).toContain("Open in staff panel: https://shop.example/staff/orders/");
+    expect(owner.text).toContain("A notification for the Corner Shop team");
+    const digest = buildOwnerDigestEmail(
+      "DELIVERED",
+      ["A-1", "A-2"],
+      "https://shop.example",
+      brand,
+    );
+    expect(digest.subject).toBe("Delivered: 2 orders");
+    expect(digest.text).toContain("A-1\nA-2");
+  });
+
+  it("the contact message to the store escapes everything the shopper typed", async () => {
+    const { contactHtml } = await import("@/lib/contact/message");
+    const html = contactHtml({
+      storeName: "Corner Shop",
+      type: "COMPLAINT",
+      name: "<b>Sam</b>",
+      email: "sam@example.com",
+      phone: "",
+      orderNumber: null,
+      subject: "<script>x</script>",
+      message: "Line one\nLine two",
+      submittedAt: new Date("2026-11-13T10:00:00.000Z"),
+    });
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("<b>Sam</b>");
+    expect(html).toContain("Line one\nLine two");
+    expect(html).toContain("Complaint from the contact form");
+  });
+});

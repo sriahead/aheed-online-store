@@ -15,6 +15,9 @@ import {
   type EmailSendResult,
 } from "@/lib/email";
 import { emailDomain, parseEmailList, resolveSender } from "@/lib/email/policy";
+import { loadEmailBrand } from "@/lib/email-brand-service";
+import { renderEmail } from "@/lib/email/layout/render";
+import { canonicalBaseUrl } from "@/lib/order-notifications/links";
 import { readDestinationAddresses, type DestinationsResult } from "@/lib/email/destinations";
 import { fetchPlatformVendors } from "@/lib/platform-admin-service";
 import {
@@ -199,12 +202,28 @@ export async function sendClientSetupTestEmail(
   vendorId: string,
   to: string,
 ): Promise<EmailSendResult> {
-  const profile = await fetchVendorProfile(getPrisma(), vendorId);
+  const prisma = getPrisma();
+  const [profile, hosts] = await Promise.all([
+    fetchVendorProfile(prisma, vendorId),
+    listVendorHosts(prisma, vendorId).catch(() => []),
+  ]);
+  // #1564 R15 — in the store's own email design, so the test also shows how customers see it.
+  const brand = await loadEmailBrand(vendorId, canonicalBaseUrl(hosts), profile.senderName);
+  const { html, text } = renderEmail(
+    {
+      preheader: "If this arrived, outgoing email works for this store.",
+      heading: "Test email from Client Setup",
+      intro: `This is a test email sent from the Client Setup dashboard. If it arrived, ${profile.senderName}'s outgoing email works in this environment, in the store's own design.`,
+      reason: `Sent to you because you pressed Send test email in Client Setup for ${profile.senderName}.`,
+    },
+    brand,
+  );
   return getEmailService().send({
     to,
     sender: { name: profile.senderName, email: profile.senderEmail },
     subject: `${profile.senderName} — test email from Client Setup`,
-    html: `<p>This is a test email sent from the Client Setup dashboard.</p><p>If it arrived, ${profile.senderName}'s outgoing email works in this environment.</p>`,
+    html,
+    text,
     // #1546 — sendTestEmailAction passes the signed-in platform admin's own address.
     recipientIsSignedInAdmin: true,
   });
