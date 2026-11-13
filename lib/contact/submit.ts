@@ -8,6 +8,8 @@ import {
   type ContactFormState,
 } from "@/features/contact/validate-contact";
 import type { EmailBrand } from "@/lib/email/layout/brand";
+import type { CopyOverrides } from "@/lib/email/templates/compose";
+import type { TemplateKey } from "@/lib/email/templates/registry";
 import { acknowledgementEmail, contactHtml, contactSubject } from "./message";
 import { resolveContactRecipient, type RecipientAddress } from "./recipient";
 
@@ -46,6 +48,8 @@ export interface ContactDeps {
   acknowledge(email: { to: string; subject: string; html: string; text: string }): Promise<void>;
   /** #1564 — the store's email look; a neutral one when absent. */
   loadBrand?(): Promise<EmailBrand>;
+  /** #1564 part 2 — the store's saved wording for one template, or null for the defaults. */
+  loadOverride?(key: TemplateKey): Promise<CopyOverrides | null>;
   vendorId: string;
   now(): Date;
 }
@@ -138,11 +142,15 @@ export async function processContactSubmission(
   try {
     // A branding read that fails costs the look, never the acknowledgement.
     const brand = deps.loadBrand ? await deps.loadBrand().catch(() => undefined) : undefined;
+    const key: TemplateKey =
+      input.type === "COMPLAINT" ? "contact.complaint_acknowledgement" : "contact.acknowledgement";
+    const overrides = deps.loadOverride ? await deps.loadOverride(key).catch(() => null) : null;
     const { subject, html, text } = acknowledgementEmail({
       storeName: deps.storeName,
       type: input.type,
       orderNumber,
       brand,
+      overrides,
     });
     await deps.acknowledge({ to: input.email, subject, html, text });
   } catch {

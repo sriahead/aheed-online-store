@@ -2,6 +2,7 @@ import { getPrisma } from "@/lib/db";
 import { getAppEnvironment, getTelegramBotToken } from "@/lib/config";
 import { getEmailService } from "@/lib/email";
 import { buildEmailBrand } from "@/lib/email-brand-service";
+import { loadTemplateOverrides } from "@/lib/email-templates-service";
 import { clearNotificationOutboxPending, markNotificationOutboxPending } from "@/lib/job-signals";
 import { telegramAdapter } from "@/lib/order-alert/channels";
 import {
@@ -61,6 +62,8 @@ async function loadStore(
     listOrderAlertRecipients(prisma, vendorId).catch(() => []),
     getVendorLocation(prisma, vendorId).catch(() => null),
   ]);
+  // #1564 part 2 — never rejects; a failed read means the default wording.
+  const overrides = await loadTemplateOverrides(vendorId);
   const baseUrl = canonicalBaseUrl(hosts);
   return {
     vendorId,
@@ -71,6 +74,7 @@ async function loadStore(
     environment: getAppEnvironment(),
     // #1564 — the customer emails' look, from the profile already read plus the location.
     brand: buildEmailBrand(profile, location, baseUrl),
+    overrides,
   };
 }
 

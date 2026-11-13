@@ -12,6 +12,14 @@ every branch merges.
 
 ### Added
 
+- **Editable email templates, part 2 of 3 (#1564, 2026-11-13)**
+  - **Why.** The owner wanted store admins to edit every customer email's wording themselves (decisions: wording fields, store admins).
+  - **Page.** `/staff/email-templates` (admin tier): the 14 customer emails with Default/Edited status; an editor per email with a live preview rendered by the sending code, **Send test** to the admin's own address, and **Reset to default** (two clicks, no browser dialog).
+  - **Rules.** Seven fields per email (subject, preview line, heading, intro, button, reassurance, sign-off; the staff reply only the last two). Unknown or malformed placeholders, unbalanced braces, line breaks in one-line fields and over-long values are refused with the reason. Text only: the layout escapes everything; `**bold**` is the one markup.
+  - **Sending.** Order, account, contact, staff-reply and basket emails read the store's overrides at render time; a failed read uses the defaults and never blocks the email.
+  - **Storage.** `EmailTemplateOverride` (one row per store per template, nullable fields, `updatedByUserId`), one hand-authored additive migration `20261113180000_email_template_override`. Saving all-blank removes the row.
+  - Docs: store admin guide 2.27.0 (new page section), notification matrix 1.4.0. Tests: `tests/email-template-overrides.test.ts`, contact-form wording cases.
+
 - **Branded email design system, part 1 of 3 (#1564, 2026-11-13)**
   - **Why.** Every customer email was a few bare paragraphs with no layout, logo, preview line or plain-text part. The owner asked for one premium, consistent, trustworthy design across all notifications.
   - **Layout.** `lib/email/layout/` renders every customer email from structured content: hidden preview line, the store's mark and name, heading, key-facts panel, items and totals, one table-cell button (Outlook-safe), reassurance, sign-off, and a footer with the store's address and site, why the email was sent, and "Powered by Merqify" (https://merqify.com). 600px, mobile-first, inline CSS, dark-mode aware.

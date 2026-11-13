@@ -13,16 +13,9 @@ import { neon } from "@neondatabase/serverless";
 import { emailBrandFrom, type EmailBrand } from "../lib/email/layout/brand";
 import { fallbackBrand } from "../lib/email/layout/fallback";
 import { DEFAULT_PLATFORM_NAME, DEFAULT_PLATFORM_URL } from "../lib/platform-defaults";
-import { verifyEmailMessage, resetPasswordMessage } from "../lib/email/templates/account";
-import { enquiryReplyEmail } from "../lib/email/templates/enquiry";
-import type { RenderedEmail } from "../lib/email/templates/compose";
-import { buildCustomerEmail } from "../lib/order-notifications/customer-email";
-import { ORDER_EVENTS, type OrderEvent } from "../lib/order-notifications/next-step";
-import { existingAccountEmail } from "../lib/notifications/existing-account";
-import { acknowledgementEmail } from "../lib/contact/message";
-import { buildRecoveryEmail } from "../lib/abandoned-checkout/email";
 import { escapeHtml } from "../lib/html-escape";
-import type { WebhookOrder } from "../lib/repositories/orders";
+import { TEMPLATE_KEYS } from "../lib/email/templates/registry";
+import { renderSample } from "../lib/email/templates/samples";
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -95,133 +88,14 @@ async function loadStore(): Promise<{ brand: EmailBrand; products: string[] }> {
   return { brand, products: products.map((p) => String(p.name)) };
 }
 
-function sampleOrder(event: OrderEvent, products: string[]): WebhookOrder {
-  const names = products.length === 3 ? products : ["Item one", "Item two", "Item three"];
-  const collection = event === "READY_FOR_COLLECTION" || event === "COLLECTED";
-  return {
-    id: "o-preview",
-    vendorId: "v-preview",
-    orderNumber: "AFC-20261113-7KQ2",
-    status: event === "PAYMENT_FAILED" ? "CANCELLED" : event,
-    totalPence: 3897,
-    subtotalPence: 3897,
-    discountPence: event === "CONFIRMED" ? 250 : 0,
-    deliveryFeePence: collection ? 0 : 250,
-    buyerEmail: "customer@example.com",
-    userId: "u-preview",
-    isExpress: false,
-    discountCode: event === "CONFIRMED" ? { code: "WELCOME5", amountPence: 250 } : null,
-    pointsEarned: event === "CONFIRMED" || event === "DELIVERED" ? 38 : null,
-    items: [
-      {
-        productName: names[0],
-        unitPricePence: 1299,
-        quantity: 1,
-        lineTotalPence: 1299,
-        customNote: null,
-      },
-      {
-        productName: names[1],
-        unitPricePence: 899,
-        quantity: 2,
-        lineTotalPence: 1798,
-        customNote: "Please pack separately",
-      },
-      {
-        productName: names[2],
-        unitPricePence: 800,
-        quantity: 1,
-        lineTotalPence: 800,
-        customNote: null,
-      },
-    ],
-    fulfilmentMethod: collection ? "COLLECTION" : "DELIVERY",
-    fulfilmentDate: new Date("2026-11-14T00:00:00.000Z"),
-    fulfilmentSlot: { startTime: "10:00", endTime: "12:00" },
-    confirmationToken: null,
-  } as unknown as WebhookOrder;
-}
-
 async function main() {
   const out = arg("out") ?? "email-preview.html";
   const { brand, products } = await loadStore();
   const store = brand.storeName;
-  const base = brand.siteUrl ?? "https://shop.example";
-  const emails: { key: string; email: RenderedEmail }[] = [];
-
-  for (const event of ORDER_EVENTS) {
-    emails.push({
-      key: `order.${event.toLowerCase()}`,
-      email: buildCustomerEmail({
-        order: sampleOrder(event, products),
-        event,
-        storeName: store,
-        baseUrl: base,
-        brand,
-      }),
-    });
-  }
-  emails.push({
-    key: "auth.verify_email",
-    email: verifyEmailMessage({ brand, url: `${base}/api/auth/verify-email?token=SAMPLE` }),
-  });
-  emails.push({
-    key: "auth.reset_password",
-    email: resetPasswordMessage({ brand, url: `${base}/reset-password/SAMPLE` }),
-  });
-  emails.push({
-    key: "auth.existing_account",
-    email: existingAccountEmail({
-      storeName: store,
-      baseUrl: base,
-      providers: ["credential", "google"],
-      brand,
-    }),
-  });
-  emails.push({
-    key: "contact.acknowledgement",
-    email: acknowledgementEmail({ storeName: store, type: "ENQUIRY", orderNumber: null, brand }),
-  });
-  emails.push({
-    key: "contact.complaint_acknowledgement",
-    email: acknowledgementEmail({
-      storeName: store,
-      type: "COMPLAINT",
-      orderNumber: "AFC-20261113-7KQ2",
-      brand,
-    }),
-  });
-  emails.push({
-    key: "enquiry.reply",
-    email: enquiryReplyEmail({
-      brand,
-      storeName: store,
-      originalSubject: "Question about my delivery",
-      replyText:
-        "Hi,\n\nThanks for your message. Your order is booked for Saturday between 10:00 and 12:00, and our driver will call when they're nearby.\n\nBest wishes",
-      originalMessage: "Hello, can you tell me when my order will arrive?",
-      orderNumber: "AFC-20261113-7KQ2",
-    }),
-  });
-  emails.push({
-    key: "marketing.abandoned_checkout",
-    email: buildRecoveryEmail({
-      storeName: store,
-      firstName: "Sam",
-      items: sampleOrder("CONFIRMED", products).items,
-      totalPence: 3897,
-      orderHref: `${base}/account/orders/AFC-20261113-7KQ2`,
-      preferencesHref: `${base}/account/data`,
-      code: {
-        code: "THANKYOU10",
-        kind: "PERCENTAGE",
-        value: 1000,
-        minSubtotalPence: 2000,
-        endsAt: null,
-      },
-      brand,
-    }),
-  });
+  const emails = TEMPLATE_KEYS.map((key) => ({
+    key,
+    email: renderSample(key, brand, null, products),
+  }));
 
   const cards = emails
     .map(

@@ -106,6 +106,7 @@ model User {
   netContentReviews   NetContentSuggestion[]       @relation("NetContentReviewer")
   favourites          Favourite[]
   remindersSent       AbandonedCheckoutReminder[]
+  emailTemplatesEdited EmailTemplateOverride[]
 }
 
 model Session {
@@ -233,6 +234,7 @@ model Vendor {
   paymentBadges             VendorPaymentBadge[]
   categoryAssets            CategoryAsset[]
   abandonedReminders        AbandonedCheckoutReminder[]
+  emailTemplateOverrides    EmailTemplateOverride[]
 }
 
 // P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
@@ -2607,4 +2609,27 @@ model AbandonedCheckoutReminder {
   sentAt       DateTime @default(now())
 
   @@index([vendorId, sentAt])
+}
+
+// #1564 part 2 - a store's edited wording for one customer email template. One row per store per
+// template key (`lib/email/templates/registry.ts`); each field null means the platform default.
+// Text only: the layout escapes every value, so no field can carry HTML.
+model EmailTemplateOverride {
+  id              String   @id @default(uuid())
+  vendorId        String
+  vendor          Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  templateKey     String
+  subject         String?
+  preheader       String?
+  heading         String?
+  intro           String?
+  ctaLabel        String?
+  reassurance     String?
+  signOff         String?
+  updatedByUserId String?
+  updatedBy       User?    @relation(fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@unique([vendorId, templateKey])
 }
