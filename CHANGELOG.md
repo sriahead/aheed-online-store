@@ -43,6 +43,7 @@ every branch merges.
 
 ### Documentation
 
+- **Post-ship (2026-11-13).** `specs/roadmap.md` 1.203.0 records the #1552 and #1554 promotion (PR #1556). The notification matrix 1.1.0 gains a sanity-check table with a Last run line. Documentation only.
 - **Roadmap (2026-11-12).** `specs/roadmap.md` 1.200.0 records the #1548 promotion (PR #1550). Documentation only.
 - **Roadmap catch-up (2026-11-12).** `specs/roadmap.md` 1.197.0 adds the 20 missing change-log rows. They cover 12 slices (10–12 Nov) and their promotions (PRs #1498–#1543), so `sdd:audit` is clean again. Documentation only.
 

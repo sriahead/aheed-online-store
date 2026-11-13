@@ -4,7 +4,7 @@ title: "Notification matrix — which email or alert is sent when"
 audience: [dev, platform-admin, store-admin, staff]
 type: doc
 status: approved
-version: "1.0.0"
+version: "1.1.0"
 updated: 2026-11-13
 visibility: internal
 summary: Every customer email, owner email and Telegram alert the platform sends — the event that triggers it, who receives it, what stops a duplicate, and the code that sends it. The one place to answer "will anyone be told when X happens?".
@@ -93,3 +93,21 @@ automatic abandoned-cart email.
 | 13 | `lib/notifications/registration.ts`, hook in `lib/auth.ts` |
 | 15 | `lib/notifications/error-rate-alert.ts`, `app/api/jobs/check-error-rate/route.ts` |
 | All dispatch | `lib/notifications/dispatch.ts` (send first, queue on failure) |
+
+## Sanity check after a change (`#1552`, `#1554`)
+
+Run on staging first, from an address on `EMAIL_ALLOWED_RECIPIENTS`, while tailing the app Worker
+(`npx wrangler tail afc-store-staging`, with `CLOUDFLARE_ACCOUNT_ID` set to the Merqify account).
+
+| Step | Expected |
+| --- | --- |
+| 1. Send a **Contact us** enquiry | The page says sent; the log shows `order alert … channel=TELEGRAM status=sent` and `notification … event=CONTACT_ACKNOWLEDGEMENT status=sent`; the inbox gets "We've received your message"; Telegram shows `[STAGING] Enquiry: <store>`. |
+| 2. Create an account | Telegram shows `[STAGING] New account: <store>` with method and time, and no name or email. |
+| 3. Open `/staff/abandoned-checkouts` as a store admin | The list loads; staff accounts see "Admins only". |
+| 4. On an eligible row, press **Send reminder** | The row changes to "Sent … by <you>"; the log shows `event=ABANDONED_CHECKOUT_REMINDER status=sent`; pressing it again is impossible. |
+| 5. With `PLATFORM_ALERT_TELEGRAM_CHAT_ID` set, wait for an error-rate breach | One "Error rate alert" in that chat, then nothing more for an hour. |
+
+**Last run:** 2026-11-13, Aheed staging. Step 1 passed (`status=sent` for both lines). Step 3: the
+route answers (307 to login when signed out). Steps 2, 4 and 5 not yet run: no test sign-up, no
+abandoned checkouts on AFC staging, chat id not yet set.
+
