@@ -30,6 +30,7 @@ const SUBJECT_PHRASE: Record<OrderEvent, string> = {
   READY_FOR_COLLECTION: "is ready to collect",
   COLLECTED: "has been collected",
   CANCELLED: "has been cancelled",
+  PAYMENT_FAILED: "was cancelled: payment didn't go through",
 };
 
 const HEADING: Record<OrderEvent, string> = {
@@ -39,6 +40,7 @@ const HEADING: Record<OrderEvent, string> = {
   READY_FOR_COLLECTION: "Your order is ready to collect.",
   COLLECTED: "Your order has been collected. Thank you for shopping with us.",
   CANCELLED: "Your order has been cancelled.",
+  PAYMENT_FAILED: "Your payment didn't go through, so this order has been cancelled.",
 };
 
 /** Events whose email names the points earned: the confirmation and the two final steps. */

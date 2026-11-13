@@ -17,6 +17,8 @@ export const ORDER_EVENTS = [
   "READY_FOR_COLLECTION",
   "COLLECTED",
   "CANCELLED",
+  // #1552 — not an order status: the webhook names it for an async payment failure.
+  "PAYMENT_FAILED",
 ] as const;
 
 export type OrderEvent = (typeof ORDER_EVENTS)[number];
@@ -33,6 +35,10 @@ export function isOrderEvent(status: string): status is OrderEvent {
  */
 export const CANCELLED_NEXT_STEP =
   "We're sorry — we've had to cancel this order and any points or discount code you used have been put back on your account. No payment has been returned yet, so please reply to this email and we'll sort that out with you directly.";
+
+/** #1552 — an async payment method failed, so `failPayment` cancelled the order and released stock. */
+export const PAYMENT_FAILED_NEXT_STEP =
+  "No money has been taken and the items have been released. You're welcome to place the order again whenever you're ready.";
 
 const DONE =
   "Nothing else to do. If anything isn't right, reply to this email and we'll put it right.";
@@ -57,6 +63,8 @@ export function nextStepText(
       return DONE;
     case "CANCELLED":
       return CANCELLED_NEXT_STEP;
+    case "PAYMENT_FAILED":
+      return PAYMENT_FAILED_NEXT_STEP;
     default:
       return null;
   }
