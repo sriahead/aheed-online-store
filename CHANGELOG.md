@@ -6,6 +6,10 @@ every branch merges.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Internal docs site build restored (#1558, 2026-11-13).** Bare `<you>` (#1557) and `<store>` (#1559) placeholders in `docs/developer-portal/notification-matrix.md` were parsed by MDX as unclosed HTML tags, so `deploy-docs-internal` failed on every staging push since `44f88ec5` while the app deploys stayed green. Wrapped in code spans; verified by compiling the assembled MDX (the unfixed file reproduces CI's `Expected a closing tag for <store>` error).
+
 ### Added
 
 - **Sign-up with an existing email now tells the account holder (#1558, 2026-11-13)**

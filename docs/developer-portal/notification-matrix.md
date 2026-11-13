@@ -37,7 +37,7 @@ need, and link here for the rest. When you add or change a notification, update 
 | 14 | **Password reset** requested | Yes: reset link | No | No | Transactional |
 | 15 | **Error-rate breach** (scheduled check) | No | No | Yes, to the platform alert chat, at most hourly | Operational |
 | 16 | **Staff "Resend confirmation email"** | Yes: the confirmation again | No | No | Transactional |
-| 17 | **Sign-up with an email that already has an account** | Yes: "You already have an account with <store>", with sign-in and forgot-password (or Google) links; the screen stays neutral | No | No | Transactional |
+| 17 | **Sign-up with an email that already has an account** | Yes: "You already have an account with `<store>`", with sign-in and forgot-password (or Google) links; the screen stays neutral | No | No | Transactional |
 
 Not sent today: **refunds** (there is no refund flow, `#606`), a **welcome email**, and any
 automatic abandoned-cart email.
@@ -106,9 +106,9 @@ Run on staging first, from an address on `EMAIL_ALLOWED_RECIPIENTS`, while taili
 | 1. Send a **Contact us** enquiry | The page says sent; the log shows `order alert … channel=TELEGRAM status=sent` and `notification … event=CONTACT_ACKNOWLEDGEMENT status=sent`; the inbox gets "We've received your message"; Telegram shows `[STAGING] Enquiry: <store>`. |
 | 2. Create an account | Telegram shows `[STAGING] New account: <store>` with method and time, and no name or email. |
 | 3. Open `/staff/abandoned-checkouts` as a store admin | The list loads; staff accounts see "Admins only". |
-| 4. On an eligible row, press **Send reminder** | The row changes to "Sent … by <you>"; the log shows `event=ABANDONED_CHECKOUT_REMINDER status=sent`; pressing it again is impossible. |
+| 4. On an eligible row, press **Send reminder** | The row changes to "Sent … by `<you>`"; the log shows `event=ABANDONED_CHECKOUT_REMINDER status=sent`; pressing it again is impossible. |
 | 5. With `PLATFORM_ALERT_TELEGRAM_CHAT_ID` set, wait for an error-rate breach | One "Error rate alert" in that chat, then nothing more for an hour. |
-| 6. Register again with an allowlisted address that already has an account (`#1558`) | The screen says "Check your email"; the inbox gets "[STAGING] You already have an account with <store>"; no account is created and no "New account" alert fires. |
+| 6. Register again with an allowlisted address that already has an account (`#1558`) | The screen says "Check your email"; the inbox gets "`[STAGING] You already have an account with <store>`"; no account is created and no "New account" alert fires. |
 
 **Last run:** 2026-11-13, Aheed staging. Step 1 passed (`status=sent` for both lines). Step 3: the
 route answers (307 to login when signed out). Steps 2, 4 and 5 not yet run: no test sign-up, no
