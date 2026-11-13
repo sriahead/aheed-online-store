@@ -113,7 +113,7 @@ describe("RegisterForm password validation and controls", () => {
       email: "sarah@example.com",
       password: "StrongPass123!",
     });
-    await waitFor(() => expect(screen.getByText(/verify your email/i)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/check your email/i)).toBeTruthy());
     expect(screen.getByText("sarah@example.com")).toBeTruthy();
 
     const resendBtn = screen.getByRole("button", { name: /resend verification email/i });

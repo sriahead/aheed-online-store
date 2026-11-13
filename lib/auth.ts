@@ -11,6 +11,7 @@ import { recordMarketingConsent } from "./repositories/marketing-consent";
 import { recordHandledErrorEvent } from "./error-events-service";
 import { recordWarmupActivity } from "./db-warmup/activity";
 import { alertNewRegistrationForRequest } from "./registration-alert-service";
+import { notifyExistingAccountSignUpForRequest } from "./existing-account-signup-service";
 
 /**
  * Hide `$transaction` from the client handed to Better Auth's Prisma adapter
@@ -171,13 +172,14 @@ export async function getAuth() {
   const origin = await resolveAuthOrigin();
 
   const wrappedDb = authDb(getPrisma());
+  const baseURL = origin.baseURL === "https://" ? env.BETTER_AUTH_URL : origin.baseURL;
 
   const auth = betterAuth({
     database: prismaAdapter(wrappedDb, { provider: "postgresql" }),
     secret: env.BETTER_AUTH_SECRET,
     // Derived per request from the host; BETTER_AUTH_URL is only a fallback when
     // no host header is present (resolveAuthOrigin yields an empty host → "https://").
-    baseURL: origin.baseURL === "https://" ? env.BETTER_AUTH_URL : origin.baseURL,
+    baseURL,
     trustedOrigins: origin.trustedOrigins,
     ...(origin.crossSubDomainCookies
       ? { advanced: { crossSubDomainCookies: origin.crossSubDomainCookies } }
@@ -255,6 +257,11 @@ export async function getAuth() {
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
+      // #1558 — a sign-up with a registered address gets Better Auth's generic response (no
+      // enumeration); only the inbox owner is told they already have an account. Never rejects.
+      onExistingUserSignUp: async ({ user }) => {
+        await notifyExistingAccountSignUpForRequest(user, baseURL);
+      },
       sendResetPassword: async ({ user, url }) => {
         // Sender identity is the resolved vendor's (ADR-004 slice 4). The From address is the
         // vendor's own once its domain is verified, else the platform's with Reply-To (#1217).

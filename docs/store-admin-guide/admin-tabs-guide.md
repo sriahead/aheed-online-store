@@ -4,7 +4,7 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.24.0"
+version: "2.25.0"
 updated: 2026-11-13
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
@@ -51,6 +51,7 @@ The full table, with duplicate guards and code locations, is the
 | You press **Send reminder** on an abandoned checkout | "Your basket is waiting" (marketing, opted-in only) | No | No |
 | A Contact us message arrives | "We've received your message" | Yes | "Enquiry" or "Complaint" |
 | Someone creates an account | Verification email | No | "New account" |
+| Someone signs up with an email that already has an account | "You already have an account" (sign in or reset password); the screen never says the account exists | No | No |
 
 **Your email** goes to the forward-to of your **Orders** receiving address (else **Support**).
 **Telegram** goes to the chats in **Order alerts**. Both are set by your platform admin in Client
