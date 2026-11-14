@@ -1,17 +1,3 @@
----
-id: 2026-11-14-configurable-branding-requirements
-title: "Configurable platform branding terminology in Client Setup (requirements)"
-audience: [dev]
-type: spec
-status: approved
-version: "1.0.0"
-updated: 2026-11-14
-visibility: internal
-summary: "Requirements and acceptance criteria for configurable platform branding terminology across Client Setup, Stripe Checkout, storefront footer, emails, and credits."
-tags: [branding, client-setup, platform-admin, stripe, payments, footer]
-related: [architecture]
----
-
 # Configurable platform branding terminology in Client Setup (requirements)
 
 ## Requirements

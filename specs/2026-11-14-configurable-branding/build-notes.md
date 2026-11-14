@@ -1,17 +1,3 @@
----
-id: 2026-11-14-configurable-branding-build-notes
-title: "Configurable platform branding terminology in Client Setup (build notes)"
-audience: [dev]
-type: spec
-status: approved
-version: "1.0.0"
-updated: 2026-11-14
-visibility: internal
-summary: "Build notes for configurable platform branding terminology in Client Setup, Stripe Checkout, storefront footer, and emails."
-tags: [branding, client-setup, platform-admin, stripe, payments, footer]
-related: [architecture]
----
-
 # Configurable platform branding terminology in Client Setup (build notes)
 
 Branch `feature/1585-configurable-branding`, issue #1585.

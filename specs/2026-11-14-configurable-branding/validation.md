@@ -1,17 +1,3 @@
----
-id: 2026-11-14-configurable-branding-validation
-title: "Configurable platform branding terminology in Client Setup (validation)"
-audience: [dev]
-type: spec
-status: approved
-version: "1.0.0"
-updated: 2026-11-14
-visibility: internal
-summary: "Validation criteria and automated test plan for configurable platform branding terminology."
-tags: [branding, client-setup, platform-admin, stripe, payments, footer]
-related: [architecture]
----
-
 # Configurable platform branding terminology in Client Setup (validation)
 
 ## Validation Matrix
