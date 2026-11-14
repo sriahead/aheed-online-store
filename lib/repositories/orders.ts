@@ -612,14 +612,19 @@ export async function placeOrder(
       // submit safe (the second finds CART_EMPTY).
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
 
-      // Dynamic vendor branding: fetch the vendor business name from Vendor / VendorBranding
+      // Dynamic vendor branding & configurable platform branding terminology (#1585)
       const vendor = tx.vendor
         ? await tx.vendor.findUnique({
             where: { id: vendorId },
-            select: { name: true, branding: { select: { name: true } } },
+            select: {
+              name: true,
+              branding: { select: { name: true } },
+              config: { select: { platformBrandingTerminology: true } },
+            },
           })
         : null;
       const vendorDisplayName = vendor?.branding?.name?.trim() || vendor?.name?.trim() || undefined;
+      const brandingTerminology = vendor?.config?.platformBrandingTerminology?.trim() || undefined;
 
       return {
         orderId: order.id,
@@ -631,6 +636,7 @@ export async function placeOrder(
         totalPence: totals.totalPence,
         currency: CURRENCY,
         vendorDisplayName,
+        brandingTerminology,
       };
     },
     {
@@ -651,6 +657,7 @@ export async function placeOrder(
       currency: created.currency,
       vendorId,
       vendorName: created.vendorDisplayName,
+      brandingTerminology: created.brandingTerminology,
       applicationContext: input.applicationContext ?? "ShopLocal",
       returnOrigin: input.returnOrigin,
       confirmationToken: created.confirmationToken,

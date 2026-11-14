@@ -19,6 +19,8 @@ export interface EmailBrand {
   siteUrl: string | null;
   platformName: string;
   platformUrl: string;
+  /** #1585 — platform branding terminology ("Levelled Up by Merqify"). */
+  platformBrandingTerminology?: string;
 }
 
 export const FALLBACK_PRIMARY = "#111827";
@@ -72,6 +74,8 @@ export function emailBrandFrom(input: {
   siteUrl: string | null;
   platformName: string;
   platformUrl: string;
+  /** #1585 — platform branding terminology ("Levelled Up by Merqify"). */
+  platformBrandingTerminology?: string;
 }): EmailBrand {
   const loc = input.location;
   const address = loc
@@ -92,5 +96,6 @@ export function emailBrandFrom(input: {
     siteUrl: input.siteUrl ? input.siteUrl.replace(/\/+$/, "") : null,
     platformName: input.platformName,
     platformUrl: input.platformUrl,
+    platformBrandingTerminology: input.platformBrandingTerminology?.trim() || undefined,
   };
 }

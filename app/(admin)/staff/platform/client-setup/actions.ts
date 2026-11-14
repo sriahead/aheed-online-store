@@ -6,6 +6,7 @@ import {
   addInboundAddress,
   listClientSetupVendors,
   removeInboundAddress,
+  savePlatformBranding,
   saveVendorSender,
   sendClientSetupTestEmail,
 } from "@/lib/client-setup-service";
@@ -19,6 +20,7 @@ import {
   inboundAddressSchema,
   orderAlertRecipientIdSchema,
   orderAlertRecipientSchema,
+  platformBrandingFormSchema,
   removeInboundAddressSchema,
   senderSchema,
   testEmailSchema,
@@ -221,5 +223,40 @@ export async function sendTestOrderAlertAction(
     return refusal(`Failed: ${result.reason}.`);
   } catch {
     return refusal("Sending the test alert failed. Try again in a moment.");
+  }
+}
+
+/**
+ * #1585 — updates platform branding terminology for the selected store or across all client stores.
+ */
+export async function savePlatformBrandingAction(
+  _prev: ClientSetupFormState,
+  formData: FormData,
+): Promise<ClientSetupFormState> {
+  if (!(await platformAdminEmail())) return refusal("Platform admin only.");
+  const parsed = platformBrandingFormSchema.safeParse({
+    vendorId: formData.get("vendorId"),
+    platformBrandingTerminology: formData.get("platformBrandingTerminology") ?? undefined,
+    applyToAll: formData.get("applyToAll") === "on" || formData.get("applyToAll") === "true",
+  });
+  if (!parsed.success) return refusal(firstIssue(parsed.error));
+  try {
+    if (!(await knownVendor(parsed.data.vendorId))) return refusal("That store no longer exists.");
+    const terminology = parsed.data.platformBrandingTerminology?.trim() || null;
+    const result = await savePlatformBranding(
+      parsed.data.vendorId,
+      terminology,
+      parsed.data.applyToAll,
+    );
+    if (!result.success) return refusal("This store has no configuration row yet.");
+    revalidatePath(PAGE);
+    return {
+      ok: true,
+      message: parsed.data.applyToAll
+        ? `Platform branding updated across ${result.count} store${result.count === 1 ? "" : "s"}.`
+        : "Platform branding saved for this store.",
+    };
+  } catch {
+    return refusal("Saving platform branding failed. Try again in a moment.");
   }
 }

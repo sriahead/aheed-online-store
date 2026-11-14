@@ -111,6 +111,17 @@ describe("renderEmail (R1, R3)", () => {
     expect(html).toContain('Powered by <a href="https://merqify.com"');
   });
 
+  it("renders configurable platform branding terminology when provided (#1585)", () => {
+    const branded = renderEmail(content, {
+      ...brand,
+      platformBrandingTerminology: "Levelled Up by Merqify",
+    });
+    expect(branded.html).toContain(
+      '<a href="https://merqify.com" target="_blank" style="color:#6b7280;text-decoration:underline;">Levelled Up by Merqify</a>',
+    );
+    expect(branded.text).toContain("Levelled Up by Merqify (https://merqify.com)");
+  });
+
   it("bold markup only becomes <strong> after escaping", () => {
     expect(html).toContain("Order <strong>AB-1</strong> is confirmed.");
     const evil = renderEmail({ ...content, intro: "**<img src=x onerror=1>**" }, brand).html;

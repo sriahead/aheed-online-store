@@ -5,6 +5,7 @@ import { orderPaymentBadges, type PaymentBadgeMethodName } from "@/lib/payment-b
 import type { HoursOverrideRow, WeeklyHoursRow } from "@/lib/footer-hours";
 import { calendarDayToUtcMidnight } from "@/lib/local-datetime";
 import { DEFAULT_LOW_STOCK_THRESHOLD } from "@/lib/low-stock";
+import { DEFAULT_PLATFORM_BRANDING_TERMINOLOGY } from "@/lib/platform-defaults";
 
 /**
  * Re-exported so the app/UI/feature layers can type a prop against the real
@@ -172,6 +173,11 @@ export interface VendorProfile {
   paymentBadges: PaymentBadgeMethodName[];
   /** #1023's gate, reused by the footer's Rewards link. */
   loyaltyEnabled: boolean;
+  /**
+   * #1585 — platform branding terminology ("Levelled Up by Merqify"), set from Client Setup.
+   * Defaults to DEFAULT_PLATFORM_BRANDING_TERMINOLOGY when unset or null in database.
+   */
+  platformBrandingTerminology: string;
 }
 
 // Fallbacks = the Aheed defaults already in design-system/tokens/tokens.css, so a
@@ -264,6 +270,7 @@ export async function fetchVendorProfile(
           registeredOffice: true,
           openingHoursNote: true,
           showSecureCheckoutNote: true,
+          platformBrandingTerminology: true,
         },
       },
       location: {
@@ -379,6 +386,8 @@ export async function fetchVendorProfile(
     })),
     paymentBadges: orderPaymentBadges((vendor?.paymentBadges ?? []).map((b) => b.method)),
     loyaltyEnabled: vendor?.config?.loyaltyEnabled ?? false,
+    platformBrandingTerminology:
+      vendor?.config?.platformBrandingTerminology?.trim() || DEFAULT_PLATFORM_BRANDING_TERMINOLOGY,
   };
 }
 
@@ -1015,4 +1024,38 @@ export async function setLowStockDefault(
     });
     return { previous, moved: moved.count };
   });
+}
+
+/**
+ * #1585 — the vendor's platform branding terminology ("Levelled Up by Merqify"), set from the
+ * platform admin's Client Setup dashboard. Nullable; null falls back to the default platform branding.
+ */
+export async function updateVendorPlatformBranding(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  platformBrandingTerminology: string | null,
+): Promise<boolean> {
+  const existing = await prisma.vendorConfig.findUnique({
+    where: { vendorId },
+    select: { vendorId: true },
+  });
+  if (!existing) return false;
+  await prisma.vendorConfig.update({
+    where: { vendorId },
+    data: { platformBrandingTerminology: platformBrandingTerminology?.trim() || null },
+  });
+  return true;
+}
+
+/**
+ * #1585 — batch update the platform branding terminology across all client stores in Client Setup.
+ */
+export async function applyPlatformBrandingToAllVendors(
+  prisma: ReturnType<typeof getPrisma>,
+  platformBrandingTerminology: string | null,
+): Promise<number> {
+  const result = await prisma.vendorConfig.updateMany({
+    data: { platformBrandingTerminology: platformBrandingTerminology?.trim() || null },
+  });
+  return result.count;
 }

@@ -52,6 +52,16 @@ export const orderAlertRecipientIdSchema = z.object({
   id: z.string().min(1),
 });
 
+// #1585 — platform branding terminology configured via Client Setup
+export const platformBrandingFormSchema = z.object({
+  vendorId: z.string().min(1),
+  platformBrandingTerminology: z
+    .string()
+    .max(120, "Platform branding terminology must be 120 characters or fewer.")
+    .optional(),
+  applyToAll: z.preprocess((v) => v === "true" || v === "on" || v === true, z.boolean()),
+});
+
 export function firstIssue(error: z.ZodError): string {
   return error.issues[0]?.message ?? "Check the form and try again.";
 }
