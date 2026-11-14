@@ -19,7 +19,12 @@ export async function generateMetadata() {
     const profile = await getCurrentVendorProfile();
     if (profile) {
       const description = profile.tagline ?? `Local delivery across ${profile.localityName}.`;
+      const canonicalHost = profile.canonicalHost || "www.aheedfoodcentre.co.uk";
       return {
+        metadataBase: new URL(`https://${canonicalHost}`),
+        alternates: {
+          canonical: "/",
+        },
         title: profile.tagline ? `${profile.name} — ${profile.tagline}` : profile.name,
         description,
         // #1069 — favicon, apple-touch icon and Open Graph image from the vendor's square mark.
@@ -31,6 +36,10 @@ export async function generateMetadata() {
     /* fall through to the platform default */
   }
   return {
+    metadataBase: new URL("https://www.aheedfoodcentre.co.uk"),
+    alternates: {
+      canonical: "/",
+    },
     title: "Aheed Online Store",
     description: "A multi-vendor online store with local delivery.",
   };

@@ -43,6 +43,8 @@ export interface VendorProfile {
   /** Vendor slug — used to derive the order-number prefix (P3b). */
   slug: string;
   name: string;
+  /** Primary canonical host for SEO and indexing (#1591). */
+  canonicalHost: string | null;
   tagline: string | null;
   logoStorageKey: string | null;
   /** #1069 — the square mark's `512.png` key; see `lib/vendor-mark.ts`. */
@@ -302,13 +304,21 @@ export async function fetchVendorProfile(
       vendorExpressSchedules: {
         select: { dayOfWeek: true, openTime: true, closeTime: true },
       },
+      domains: {
+        where: { isCanonical: true },
+        select: { host: true },
+        orderBy: { host: "asc" },
+        take: 1,
+      },
     },
   });
 
   const b = vendor?.branding;
+  const canonicalDomain = vendor?.domains?.[0]?.host ?? null;
   return {
     slug: vendor?.slug ?? "",
     name: b?.name ?? vendor?.name ?? DEFAULT_SENDER_NAME,
+    canonicalHost: canonicalDomain,
     tagline: b?.tagline ?? null,
     logoStorageKey: b?.logoStorageKey ?? null,
     markStorageKey: b?.markStorageKey ?? null,

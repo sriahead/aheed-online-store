@@ -34,6 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `Privacy Policy — ${vendorName}`,
     description: `UK GDPR and PECR privacy policy explaining how ${vendorName} protects your personal data.`,
+    alternates: { canonical: "/privacy" },
   };
 }
 

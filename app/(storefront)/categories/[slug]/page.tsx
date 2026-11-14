@@ -60,7 +60,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     ]);
     if (!host || !category || !profile) return {};
 
-    return buildCategoryMetadata({ host, slug, name: category.name, vendorName: profile.name });
+    return buildCategoryMetadata({
+      host,
+      canonicalHost: profile.canonicalHost,
+      slug,
+      name: category.name,
+      vendorName: profile.name,
+    });
   } catch {
     return {};
   }

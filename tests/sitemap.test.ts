@@ -92,6 +92,14 @@ describe("app/sitemap.ts (#955)", () => {
     expect(urls.some((url) => url.includes("nocaped.com"))).toBe(false);
   });
 
+  it("returns empty sitemap on decommissioned nocaped.com host (#1591)", async () => {
+    mockHost.mockReturnValue("aheedfoodcentre.nocaped.com");
+    mockProductSlugs.mockResolvedValue(["item-a"]);
+
+    const urls = await run();
+    expect(urls).toEqual([]);
+  });
+
   it("excludes signed-in, transactional and developer paths (R11)", async () => {
     mockProductSlugs.mockResolvedValue(["item-a"]);
     mockCategories.mockResolvedValue([{ slug: "dept-one" }]);
