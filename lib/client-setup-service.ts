@@ -29,7 +29,14 @@ import {
   type InboundAddressPurposeValue,
   type InboundAddressRow,
 } from "@/lib/repositories/inbound-address";
-import { fetchVendorProfile, listVendorHosts, updateVendorSender } from "@/lib/repositories/vendor";
+import {
+  fetchVendorProfile,
+  listVendorHosts,
+  updateVendorSender,
+  updateVendorPlatformBranding,
+  applyPlatformBrandingToAllVendors,
+} from "@/lib/repositories/vendor";
+import { DEFAULT_PLATFORM_BRANDING_TERMINOLOGY } from "@/lib/platform-defaults";
 import type { ClientSetupFacts } from "@/lib/client-setup/sections";
 import { forwardTargetsVerified } from "@/lib/client-setup/inbound-groups";
 import {
@@ -227,4 +234,39 @@ export async function sendClientSetupTestEmail(
     // #1546 — sendTestEmailAction passes the signed-in platform admin's own address.
     recipientIsSignedInAdmin: true,
   });
+}
+
+/** #1585 — platform branding section data for Client Setup */
+export interface BrandingSectionData {
+  platformBrandingTerminology: string;
+  customTerminology: string | null;
+  defaultTerminology: string;
+}
+
+export async function getBrandingSectionData(vendorId: string): Promise<BrandingSectionData> {
+  const prisma = getPrisma();
+  const profile = await fetchVendorProfile(prisma, vendorId);
+  const config = await prisma.vendorConfig.findUnique({
+    where: { vendorId },
+    select: { platformBrandingTerminology: true },
+  });
+  return {
+    platformBrandingTerminology: profile.platformBrandingTerminology,
+    customTerminology: config?.platformBrandingTerminology ?? null,
+    defaultTerminology: DEFAULT_PLATFORM_BRANDING_TERMINOLOGY,
+  };
+}
+
+export async function savePlatformBranding(
+  vendorId: string,
+  terminology: string | null,
+  applyToAll: boolean,
+): Promise<{ success: boolean; count: number }> {
+  const prisma = getPrisma();
+  if (applyToAll) {
+    const count = await applyPlatformBrandingToAllVendors(prisma, terminology);
+    return { success: true, count };
+  }
+  const success = await updateVendorPlatformBranding(prisma, vendorId, terminology);
+  return { success, count: success ? 1 : 0 };
 }

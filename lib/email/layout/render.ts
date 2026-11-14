@@ -173,7 +173,10 @@ function footer(content: EmailContent, brand: EmailBrand): string {
           : ""
       }</p>`
     : "";
-  return `<p class="em-muted" style="margin:0;${small}">${lines.join("<br>")}</p><p class="em-muted" style="margin:12px 0 0;${small}">${escapeHtml(content.reason)}</p>${note}<p class="em-muted" style="margin:16px 0 0;${small}">Powered by <a href="${escapeHtml(brand.platformUrl)}" target="_blank" style="color:${MUTED};text-decoration:underline;">${escapeHtml(brand.platformName)}</a></p>`;
+  const platformCredit = brand.platformBrandingTerminology
+    ? `<a href="${escapeHtml(brand.platformUrl)}" target="_blank" style="color:${MUTED};text-decoration:underline;">${escapeHtml(brand.platformBrandingTerminology)}</a>`
+    : `Powered by <a href="${escapeHtml(brand.platformUrl)}" target="_blank" style="color:${MUTED};text-decoration:underline;">${escapeHtml(brand.platformName)}</a>`;
+  return `<p class="em-muted" style="margin:0;${small}">${lines.join("<br>")}</p><p class="em-muted" style="margin:12px 0 0;${small}">${escapeHtml(content.reason)}</p>${note}<p class="em-muted" style="margin:16px 0 0;${small}">${platformCredit}</p>`;
 }
 
 /** R1 — the HTML and plain-text parts of one email. */
@@ -266,7 +269,9 @@ ${body.join("\n")}
     content.footerNote
       ? `${content.footerNote.text}${content.footerNote.link ? ` ${content.footerNote.link.label}: ${content.footerNote.link.href}` : ""}`
       : null,
-    `Powered by ${brand.platformName} (${brand.platformUrl})`,
+    brand.platformBrandingTerminology
+      ? `${brand.platformBrandingTerminology} (${brand.platformUrl})`
+      : `Powered by ${brand.platformName} (${brand.platformUrl})`,
   ]
     .filter((part): part is string => part !== null)
     .join("\n\n")

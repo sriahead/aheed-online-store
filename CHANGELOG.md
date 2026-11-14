@@ -12,6 +12,15 @@ every branch merges.
 
 ### Added
 
+- **Configurable platform branding terminology in Client Setup (#1585, 2026-11-14)**
+  - Platform administrators can dynamically configure the ecosystem branding terminology (defaulting to "Levelled Up by Merqify") from `/staff/platform/client-setup` per store or batch-applied across all client stores in one action.
+  - Terminology dynamically propagates to:
+    - **Stripe Checkout**: Line-item description uses the configured terminology (or platform default) alongside the dynamic vendor header.
+    - **Storefront Footer**: Platform attribution line displays the branding terminology linked to `https://merqify.com`.
+    - **Transactional Email Footers**: HTML and plain-text email footers render the branding terminology with its link.
+    - **Third-Party Credits & Licences** (`/icon-credits`): Generated icons section renders the branding terminology.
+  - Added nullable `VendorConfig.platformBrandingTerminology` column with fallback to `DEFAULT_PLATFORM_BRANDING_TERMINOLOGY = "Levelled Up by Merqify"`. Spec: `specs/2026-11-14-configurable-branding/`.
+
 - **Dynamic vendor branding and Merqify ecosystem identity on Stripe Checkout (#1580, 2026-11-14)**
   - Customers on hosted Stripe Checkout dynamically see the vendor's human business name (e.g. "Aheed Food Centre", "SriMart Electronics") at the top header via `branding_settings.display_name`.
   - Supporting identity formatted cleanly as "Merqify Ecosystem" on line item description under the order header; redundant custom submit text duplicate occurrences removed to keep the checkout experience focused.

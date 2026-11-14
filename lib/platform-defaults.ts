@@ -7,3 +7,5 @@ export const DEFAULT_PLATFORM_NAME = "Merqify";
 export const DEFAULT_PLATFORM_TAGLINE = "Your Merchandise, Digitised Quickly";
 /** #1564 R3 — where the "Powered by" footer link in every email points. */
 export const DEFAULT_PLATFORM_URL = "https://merqify.com";
+/** #1585 — the platform's ecosystem branding terminology across Stripe Checkout, footer, and emails. */
+export const DEFAULT_PLATFORM_BRANDING_TERMINOLOGY = "Levelled Up by Merqify";

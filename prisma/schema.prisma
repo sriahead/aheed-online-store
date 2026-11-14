@@ -699,6 +699,9 @@ model VendorConfig {
   registeredOffice            String?
   openingHoursNote            String? // line under the opening hours
   showSecureCheckoutNote      Boolean            @default(false) // "Secure checkout powered by Stripe"
+  // #1585 — configurable platform branding terminology ("Levelled Up by Merqify").
+  // Nullable; null falls back to DEFAULT_PLATFORM_BRANDING_TERMINOLOGY in lib/platform-defaults.ts.
+  platformBrandingTerminology String?
   // P3a — delivery rules are vendor data, never constants (the AI Studio mockup hardcoded a
   // £30 threshold). Prisma-level defaults mean a newly-inserted vendor is valid without the
   // seed supplying values. P3a reads only the threshold (cart banner); applying the fee and

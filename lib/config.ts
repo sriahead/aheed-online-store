@@ -2,6 +2,7 @@ import {
   DEFAULT_PLATFORM_NAME,
   DEFAULT_PLATFORM_TAGLINE,
   DEFAULT_PLATFORM_URL,
+  DEFAULT_PLATFORM_BRANDING_TERMINOLOGY,
 } from "./platform-defaults";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { z } from "zod";
@@ -201,7 +202,12 @@ export function getAppEnvironment(): AppEnvironment {
 // is Merqify (the operator, not a vendor), so unset or blank falls back to the platform's own name
 // and tagline in every environment, local included. wrangler.toml's per-environment `[vars]` sets
 // both explicitly; a value there overrides the default.
-export { DEFAULT_PLATFORM_NAME, DEFAULT_PLATFORM_TAGLINE, DEFAULT_PLATFORM_URL };
+export {
+  DEFAULT_PLATFORM_NAME,
+  DEFAULT_PLATFORM_TAGLINE,
+  DEFAULT_PLATFORM_URL,
+  DEFAULT_PLATFORM_BRANDING_TERMINOLOGY,
+};
 
 const orDefault = (fallback: string) =>
   z
@@ -212,6 +218,7 @@ const orDefault = (fallback: string) =>
 const platformBrandingSchema = z.object({
   PLATFORM_NAME: orDefault(DEFAULT_PLATFORM_NAME),
   PLATFORM_TAGLINE: orDefault(DEFAULT_PLATFORM_TAGLINE),
+  PLATFORM_BRANDING_TERMINOLOGY: orDefault(DEFAULT_PLATFORM_BRANDING_TERMINOLOGY),
 });
 
 export type PlatformBrandingEnv = z.infer<typeof platformBrandingSchema>;
@@ -220,6 +227,7 @@ export function getPlatformBrandingEnv(): PlatformBrandingEnv {
   return platformBrandingSchema.parse({
     PLATFORM_NAME: readEnv("PLATFORM_NAME"),
     PLATFORM_TAGLINE: readEnv("PLATFORM_TAGLINE"),
+    PLATFORM_BRANDING_TERMINOLOGY: readEnv("PLATFORM_BRANDING_TERMINOLOGY"),
   });
 }
 

@@ -1,4 +1,5 @@
 import { getPaymentEnv } from "./config";
+import { DEFAULT_PLATFORM_BRANDING_TERMINOLOGY } from "./platform-defaults";
 
 /**
  * PaymentService port (P3b, #96) with the real Stripe adapter (P3c, #99).
@@ -44,6 +45,11 @@ export interface CreatePaymentInput {
    * dynamic branding: branding_settings.display_name, line items, and custom_text.
    */
   vendorName?: string;
+  /**
+   * #1585 — platform branding terminology configured via Client Setup (defaulting to
+   * DEFAULT_PLATFORM_BRANDING_TERMINOLOGY = "Levelled Up by Merqify").
+   */
+  brandingTerminology?: string;
   /**
    * Application / platform context (e.g. "ShopLocal", "Merqify Club", "Merqify Services", etc.).
    * Merqify Core shared infrastructure parameter, carried in metadata for traceability.
@@ -192,17 +198,22 @@ export function createStripePaymentService(secretKey: string): PaymentService {
         "line_items[0][price_data][product_data][name]": input.vendorName
           ? `Order ${input.orderNumber} · ${input.vendorName}`
           : `Order ${input.orderNumber}`,
-        "line_items[0][price_data][product_data][description]": "Merqify Ecosystem",
+        "line_items[0][price_data][product_data][description]":
+          input.brandingTerminology?.trim() || DEFAULT_PLATFORM_BRANDING_TERMINOLOGY,
       });
 
       // Dynamic vendor branding & Merqify Ecosystem identity:
       // - Header displays the vendor's human business name via branding_settings.display_name
-      // - Line item description carries the single clean ecosystem attribution ("Merqify Ecosystem")
+      // - Line item description carries the configured ecosystem attribution (default "Levelled Up by Merqify")
       // - Redundant custom_text occurrences removed to keep checkout clean and focused
       // - Stripe's native "Powered by Stripe" attribution remains intact in the checkout footer
       if (input.vendorName) {
         body.set("metadata[vendorName]", input.vendorName);
         body.set("branding_settings[display_name]", input.vendorName);
+      }
+
+      if (input.brandingTerminology?.trim()) {
+        body.set("metadata[brandingTerminology]", input.brandingTerminology.trim());
       }
 
       if (input.applicationContext) {
