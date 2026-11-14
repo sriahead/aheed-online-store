@@ -5,7 +5,7 @@ audience: [store-admin, staff, platform-admin]
 type: doc
 status: approved
 version: "1.0.0"
-updated: 2026-10-25
+updated: 2026-11-14
 visibility: internal
 summary: "Platform terminology definitions, monetary conventions (integer pence), status indicator meanings, and recent feature release milestones."
 tags: [glossary, release-notes, changelog, terminology]
@@ -47,9 +47,18 @@ Throughout the documentation and administrative panels, features carry status ta
 - Added vendor-scoped onboarding readiness audit at `/staff/onboarding`.
 - Standardized navigation hierarchy across PanelNav and Overview Hub (`#1177`).
 - Implemented comprehensive Client Help & Documentation Centre inside KMS.
+- Stock and price file import at `/staff/products/import` (`#1578`): store admins upload their own list,
+  review each line (update, create hidden, or skip) and apply; undo, and Import settings for columns,
+  naming rules and brand spellings. Replaces the earlier bulk importer.
+- Products page (`#1572`): brand filter and Brand A–Z sort, a Low stock quick view, and a store-wide
+  low-stock number (default 3) that store admins can change.
+- Clean product names (`#1573`): Title Case, brand first, sizes as g/kg/ml/L, and word order by
+  category; new filters such as Form for spices.
+- Stripe Checkout shows the store's own branding (`#1580`, `#1585`).
 
 ### Phases 6–9: Operations & Storefront Enhancements
-- Added bulk spreadsheet inventory importer (`/staff/products/import`).
+- Added bulk spreadsheet inventory importer (`/staff/products/import`; replaced in Phase 10 by the
+  stock and price file import, `#1578`).
 - Integrated dynamic vendor FAQs (`/staff/faqs`) and storefront Help Centre (`/help`).
 - Implemented Workers AI daily budget governance (`/staff/ai-usage`).
 - Expanded delivery area configuration with postcode outcode prefixes and per-zone fees.

@@ -12,6 +12,8 @@ every branch merges.
 
 ### Added
 
+- **Post-ship docs for #1570, #1572, #1573, #1578, #1580, #1585 (2026-11-14).** Roadmap staging and promotion rows (promotion #1590, `ce4400b4`), and release notes in the Client Help Centre for the stock import screen, products-page brand and low-stock tools, clean names and Stripe branding.
+
 - **Storefront footer branding highlight and tagline cleanup (2026-11-14)**
   - Removed trailing vendor/platform tagline (`· Independent Quality Groceries`) from the platform branding attribution line in `StorefrontFooter.tsx`.
   - Highlighted the platform branding terminology (`Levelled Up by Merqify`) as a prominent pill badge with an emerald status indicator and high-contrast styling.
