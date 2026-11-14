@@ -1,0 +1,39 @@
+{
+  "notes": "Rice (category slugs containing rice). Name order: brand, grain length, variety, 'Rice', size: 'Daawat Extra Long Basmati Rice – 5kg'. Filters: Variety and Grain, set only when the name says so.",
+  "spelling": { "basmathi": "basmati", "sela": "sella", "masuri": "masoori", "massori": "masoori" },
+  "categoryRules": [
+    {
+      "categories": ["rice"],
+      "wordOrder": {
+        "leading": ["extra long grain", "extra long", "long grain"],
+        "trailing": ["rice"]
+      }
+    }
+  ],
+  "derivedAttributes": [
+    {
+      "name": "Variety",
+      "categories": ["rice"],
+      "options": {
+        "Sona Masoori": ["sona masoori", "sona"],
+        "Sella": ["sella"],
+        "Basmati": ["basmati"],
+        "Jasmine": ["jasmine"],
+        "Ponni": ["ponni"],
+        "Matta": ["matta", "rosematta"],
+        "Idli": ["idli"],
+        "Brown": ["brown"]
+      }
+    },
+    {
+      "name": "Grain",
+      "categories": ["rice"],
+      "options": {
+        "Extra Long": ["extra long"],
+        "Long": ["long grain", "long"],
+        "Short": ["short grain", "short"],
+        "Broken": ["broken"]
+      }
+    }
+  ]
+}

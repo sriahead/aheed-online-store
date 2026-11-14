@@ -8,7 +8,8 @@ import {
   type CatalogueProduct,
   type Confidence,
 } from "./match";
-import type { NormalisedRow } from "./normalise";
+import { leadingBrand, type NormalisedRow } from "./normalise";
+import { withTillWords } from "./naming";
 import type { StockImportProfile } from "./profile";
 
 /**
@@ -30,6 +31,10 @@ export interface PlanLine {
   otherSizes: CatalogueProduct[];
   changes: FieldChange[];
   kept: KeptField[];
+  /** #1573 — till words kept in the clean name because the list's name dropped them. */
+  tillWords: string[];
+  /** #1573 — the row as the list named it, before any till words (apply's fallback). */
+  listRow: NormalisedRow;
 }
 
 export interface PlanLookups {
@@ -66,6 +71,11 @@ export function buildPlan(
   knownBrands: readonly string[],
   lookups: PlanLookups,
   options: MergeOptions,
+  /**
+   * #1573 — product id → the name the till gave it, for products an earlier run renamed
+   * (`--previous-run`). Absent ids use the product's current name.
+   */
+  tillNames: ReadonlyMap<string, string> = new Map(),
 ): PlanLine[] {
   const ctx = wordContext(profile);
   const index = buildIndex(catalogue, profile, knownBrands, ctx);
@@ -81,6 +91,8 @@ export function buildPlan(
       otherSizes: [],
       changes: [],
       kept: [],
+      tillWords: [],
+      listRow: row,
     };
     const dupKey = duplicateKey(row, profile);
     const first = seen.get(dupKey);
@@ -130,6 +142,19 @@ export function buildPlan(
 
   for (const line of lines) {
     if (line.target && (line.decision === "UPDATE" || line.decision === "REVIEW")) {
+      // #1573 — till words only for a confident match: on a REVIEW line the "till name" may be a
+      // different product ("Seasoning" is not yet "Chicken Seasoning"; that is the owner's call).
+      if (line.decision === "UPDATE") {
+        const till = withTillWords(
+          line.row,
+          line.target,
+          tillNames.get(line.target.id) ?? line.target.name,
+          profile,
+          knownBrands,
+        );
+        line.row = till.row;
+        line.tillWords = till.kept;
+      }
       const { changes, kept } = computeChanges(
         line.row,
         line.target,
@@ -142,6 +167,50 @@ export function buildPlan(
     }
   }
   return lines;
+}
+
+/**
+ * #1573 — possible duplicates already in the catalogue: for each product a line updates, every OTHER
+ * catalogue product with the same brand, the same words (synonyms folded) and the same size. They are
+ * listed for a person, never merged.
+ */
+export function catalogueDuplicates(
+  lines: readonly PlanLine[],
+  catalogue: readonly CatalogueProduct[],
+  profile: StockImportProfile,
+  knownBrands: readonly string[],
+): { product: CatalogueProduct; others: CatalogueProduct[] }[] {
+  const ctx = wordContext(profile);
+  const keyOf = (p: CatalogueProduct) => {
+    const lead = leadingBrand(
+      p.name,
+      profile,
+      p.brandName ? [...knownBrands, p.brandName] : knownBrands,
+    );
+    const brand = (p.brandName ?? lead?.brand ?? "").toLowerCase();
+    const words = matchWords(lead?.rest ?? p.name, ctx)
+      .sort()
+      .join(" ");
+    const size =
+      p.netContentAmount !== null && p.netContentUnit !== null
+        ? JSON.stringify(toBaseAmount({ amount: p.netContentAmount, unit: p.netContentUnit }))
+        : "?";
+    return `${brand}|${words}|${size}`;
+  };
+  const byKey = new Map<string, CatalogueProduct[]>();
+  for (const p of catalogue) {
+    const key = keyOf(p);
+    byKey.set(key, [...(byKey.get(key) ?? []), p]);
+  }
+  const out: { product: CatalogueProduct; others: CatalogueProduct[] }[] = [];
+  const seen = new Set<string>();
+  for (const line of lines) {
+    if (!line.target || seen.has(line.target.id)) continue;
+    seen.add(line.target.id);
+    const others = (byKey.get(keyOf(line.target)) ?? []).filter((p) => p.id !== line.target!.id);
+    if (others.length > 0) out.push({ product: line.target, others });
+  }
+  return out;
 }
 
 export interface PlanCounts {

@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { deriveUnitPricePenceForSort } from "../components/product/unit-price";
@@ -11,6 +11,7 @@ import type { CatalogueProduct } from "../lib/stock-import/match";
 import { normaliseFile, type NormalisedRow, type RowIssue } from "../lib/stock-import/normalise";
 import {
   buildPlan,
+  catalogueDuplicates,
   categoryName,
   countPlan,
   DECISIONS,
@@ -20,7 +21,12 @@ import {
   type PlanLookups,
 } from "../lib/stock-import/plan";
 import { computeChanges, unitLabelFor, type MergeOptions } from "../lib/stock-import/merge";
-import { parseProfile, type StockImportProfile } from "../lib/stock-import/profile";
+import {
+  applyPresets,
+  parseProfile,
+  stockImportPresetSchema,
+  type StockImportProfile,
+} from "../lib/stock-import/profile";
 import { readVar } from "./aheed-data-inventory";
 import { readSourceGrid, readWorkbookSheets, writeWorkbook } from "./lib/read-spreadsheet";
 
@@ -31,6 +37,10 @@ import { readSourceGrid, readWorkbookSheets, writeWorkbook } from "./lib/read-sp
  *   PLAN (read-only — writes the review sheet and a report, never the database):
  *   npx tsx scripts/stock-import.ts plan <file.xlsx> [<file2> …] --profile <profile.json> \
  *       --secrets <secrets file> --url-key <KEY> [--out <dir>] [--overwrite-edited] [--update-live-prices]
+ *       [--previous-run <earlier run>/plan.json]
+ *
+ *   --previous-run (#1573): the till names an earlier run replaced, so a re-run can still keep till
+ *   words the price list dropped (lib/stock-import/naming.ts). Pass it to apply as well.
  *
  *   DECIDE (record review decisions from JSON; see `decide` below):
  *   npx tsx scripts/stock-import.ts decide <decisions.json> --review <dir>/review.xlsx
@@ -56,6 +66,7 @@ interface Flags {
   out?: string;
   review?: string;
   confirmHost?: string;
+  previousRun?: string;
   production: boolean;
   options: MergeOptions;
 }
@@ -68,6 +79,7 @@ function parseFlags(argv: string[]): Flags {
     "--out",
     "--review",
     "--confirm-host",
+    "--previous-run",
   ]);
   const files: string[] = [];
   const values: Record<string, string> = {};
@@ -84,6 +96,7 @@ function parseFlags(argv: string[]): Flags {
     out: values["--out"],
     review: values["--review"],
     confirmHost: values["--confirm-host"],
+    previousRun: values["--previous-run"],
     production: argv.includes("--production"),
     options: {
       overwriteEdited: argv.includes("--overwrite-edited"),
@@ -94,6 +107,45 @@ function parseFlags(argv: string[]): Flags {
 
 function sha256(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
+/** #1573 — the presets a profile names, from `../presets/` beside its profiles folder. */
+function presetPaths(profilePath: string, profile: StockImportProfile): string[] {
+  return profile.presets.map((name) => join(dirname(profilePath), "..", "presets", `${name}.json`));
+}
+
+function loadProfile(profilePath: string): StockImportProfile {
+  const profile = parseProfile(JSON.parse(readFileSync(profilePath, "utf8")));
+  const presets = presetPaths(profilePath, profile).map((path) =>
+    stockImportPresetSchema.parse(JSON.parse(readFileSync(path, "utf8"))),
+  );
+  return applyPresets(profile, presets);
+}
+
+/** #1573 — product id → the till name an earlier run's plan replaced. */
+function loadTillNames(path: string | undefined): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!path) return out;
+  const earlier = JSON.parse(readFileSync(path, "utf8")) as {
+    lines: { target: { id: string } | null; changes: { field: string; from: string }[] }[];
+  };
+  for (const line of earlier.lines) {
+    const rename = line.changes?.find((c) => c.field === "name");
+    if (line.target && rename?.from && !out.has(line.target.id))
+      out.set(line.target.id, rename.from);
+  }
+  return out;
+}
+
+/** Everything a plan depends on besides the database, hashed into the Run sheet. */
+function runInputs(f: Flags, profile: StockImportProfile): [string, string][] {
+  const profilePath = f.profile as string;
+  const out: [string, string][] = [["profile sha256", sha256(profilePath)]];
+  for (const path of presetPaths(profilePath, profile))
+    out.push([`preset ${basename(path)} sha256`, sha256(path)]);
+  if (f.previousRun) out.push(["previous run sha256", sha256(f.previousRun)]);
+  for (const file of f.files) out.push([`source ${basename(file)} sha256`, sha256(file)]);
+  return out;
 }
 
 const pounds = (p: number | null | undefined) => (p == null ? "" : formatPrice(p));
@@ -214,6 +266,7 @@ const REVIEW_HEADER = [
   "Also sold as",
   "Changes",
   "Kept",
+  "Till words kept",
   "Issues",
 ];
 
@@ -239,6 +292,7 @@ function reviewRows(lines: PlanLine[], lookups: PlanLookups): (string | number)[
     l.otherSizes.map((p) => p.name).join("; "),
     l.changes.map((c) => `${c.field}: ${c.from || "—"} → ${c.to}`).join("\n"),
     l.kept.map((k) => `${k.field} (${k.reason})`).join("; "),
+    l.tillWords.join(", "),
     l.row.issues.map((i) => `${i.severity}: ${i.message}`).join("; "),
   ]);
 }
@@ -285,16 +339,34 @@ async function plan(f: Flags, profile: StockImportProfile) {
     const knownBrands = store.brands.map((b) => b.name);
     const { rows, fileIssues } = readRows(f.files, profile, knownBrands);
     const lookups = lookupsFor(profile, store);
-    const lines = buildPlan(rows, store.catalogue, profile, knownBrands, lookups, f.options);
+    const tillNames = loadTillNames(f.previousRun);
+    const lines = buildPlan(
+      rows,
+      store.catalogue,
+      profile,
+      knownBrands,
+      lookups,
+      f.options,
+      tillNames,
+    );
     const dir = runDir(f, profile.vendorSlug);
 
     const extra = masterDataNotes(lines, lookups, store, profile);
+    extra.push(...duplicateNotes(lines, store.catalogue, profile, knownBrands));
+    const kept = lines.filter((l) => l.tillWords.length > 0);
+    if (kept.length > 0) {
+      extra.push("", `**Till words kept** (the list's name was shorter): ${kept.length} lines`);
+      for (const l of kept)
+        extra.push(`- ${l.row.key}: ${l.row.displayName} (kept: ${l.tillWords.join(", ")})`);
+    }
     for (const fi of fileIssues) extra.push(`- **${fi.file}**: ${fi.issue.message}`);
     writeWorkbook(join(dir, "review.xlsx"), [
       {
         name: "Review",
         rows: [REVIEW_HEADER, ...reviewRows(lines, lookups)],
-        widths: [24, 10, 38, 10, 10, 40, 34, 40, 10, 18, 8, 8, 40, 10, 10, 8, 40, 30, 50, 30, 40],
+        widths: [
+          24, 10, 38, 10, 10, 40, 34, 40, 10, 18, 8, 8, 40, 10, 10, 8, 40, 30, 50, 30, 20, 40,
+        ],
       },
       {
         name: "Run",
@@ -303,8 +375,7 @@ async function plan(f: Flags, profile: StockImportProfile) {
           ["vendor", profile.vendorSlug],
           ["database host", host],
           ["planned at", new Date().toISOString()],
-          ["profile sha256", sha256(f.profile as string)],
-          ...f.files.map((file) => [`source ${basename(file)} sha256`, sha256(file)]),
+          ...runInputs(f, profile),
           ["decisions", DECISIONS.join(", ")],
           [
             "how to review",
@@ -324,6 +395,25 @@ async function plan(f: Flags, profile: StockImportProfile) {
   } finally {
     await client.$disconnect();
   }
+}
+
+/** #1573 — possible duplicates already in the catalogue, for the plan report. Never merged. */
+function duplicateNotes(
+  lines: PlanLine[],
+  catalogue: CatalogueProduct[],
+  profile: StockImportProfile,
+  knownBrands: string[],
+): string[] {
+  const found = catalogueDuplicates(lines, catalogue, profile, knownBrands);
+  if (found.length === 0) return [];
+  return [
+    "",
+    `**Possible duplicates already in the catalogue** (same brand, words and size; check, never merged): ${found.length}`,
+    ...found.map(
+      (d) =>
+        `- ${d.product.name} (${d.product.plu ?? "no PLU"}) ↔ ${d.others.map((o) => `${o.name} (${o.plu ?? "no PLU"})`).join("; ")}`,
+    ),
+  ];
 }
 
 function masterDataNotes(
@@ -368,8 +458,8 @@ interface ReviewDecision {
 
 function readReview(
   path: string,
+  inputs: [string, string][],
   files: string[],
-  profilePath: string,
 ): Map<string, ReviewDecision> {
   const sheets = readWorkbookSheets(path);
   const run = sheets.get("Run");
@@ -383,8 +473,16 @@ function readReview(
     if (expected !== sha256(file))
       throw new Error(`REFUSED: ${basename(file)} changed since the plan — plan again`);
   }
-  if (meta.get("profile sha256") !== sha256(profilePath)) {
-    throw new Error("REFUSED: the profile changed since the plan — plan again");
+  // #1573 — the profile, each preset and the previous run, like the sources: any change means the
+  // reviewed sheet no longer describes what apply would write.
+  for (const [key, hash] of inputs) {
+    if (key.startsWith("source ")) continue;
+    if (meta.get(key) !== hash)
+      throw new Error(`REFUSED: ${key.replace(" sha256", "")} changed since the plan — plan again`);
+  }
+  for (const key of meta.keys()) {
+    if (/^(preset .*|previous run) sha256$/.test(key) && !inputs.some(([k]) => k === key))
+      throw new Error(`REFUSED: the plan used ${key.replace(" sha256", "")}; pass the same inputs`);
   }
   const header = review[0];
   const at = (name: string) => header.indexOf(name);
@@ -476,7 +574,7 @@ async function apply(f: Flags, profile: StockImportProfile) {
   if (/production/i.test(f.secrets ?? "") && !f.production) {
     throw new Error("REFUSED: a production secrets file also needs --production (staging first)");
   }
-  const decisions = readReview(f.review, f.files, f.profile as string);
+  const decisions = readReview(f.review, runInputs(f, profile), f.files);
   const batchId = `stock-import-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}`;
   const dir = runDir({ ...f, out: join(f.review, "..", `apply-${batchId}`) }, profile.vendorSlug);
   const outcomes: ApplyOutcome[] = [];
@@ -488,7 +586,15 @@ async function apply(f: Flags, profile: StockImportProfile) {
     const knownBrands = store.brands.map((b) => b.name);
     const { rows } = readRows(f.files, profile, knownBrands);
     const lookups = lookupsFor(profile, store);
-    const fresh = buildPlan(rows, store.catalogue, profile, knownBrands, lookups, f.options);
+    const fresh = buildPlan(
+      rows,
+      store.catalogue,
+      profile,
+      knownBrands,
+      lookups,
+      f.options,
+      loadTillNames(f.previousRun),
+    );
     const byId = new Map(store.catalogue.map((c) => [c.id, c]));
 
     // The reviewed decision wins; a CREATE whose product now exists by that exact name (a re-run)
@@ -586,7 +692,10 @@ async function apply(f: Flags, profile: StockImportProfile) {
 
     for (const w of work) {
       const { line } = w;
-      const row = line.row;
+      // #1573 — till words belong to the product the plan matched; a reviewer who picked another
+      // product (or chose CREATE) gets the list's own name.
+      const row =
+        w.target && line.target && w.target.id === line.target.id ? line.row : line.listRow;
       if (w.decision !== "UPDATE" && w.decision !== "CREATE") {
         outcomes.push({
           key: row.key,
@@ -944,7 +1053,7 @@ async function main() {
   if (!["plan", "apply"].includes(f.command) || f.files.length === 0 || !f.profile) {
     throw new Error("usage: see the header of scripts/stock-import.ts");
   }
-  const profile = parseProfile(JSON.parse(readFileSync(f.profile, "utf8")));
+  const profile = loadProfile(f.profile);
   if (f.command === "plan") await plan(f, profile);
   else await apply(f, profile);
 }

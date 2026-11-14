@@ -1,6 +1,7 @@
 {
   "notes": "Copy to <vendor-slug>.json. Columns are header texts (headerRow auto) or letters A, B, C (headerRow none). Every key is described in .claude/skills/stock-import/SKILL.md. Remove the optional columns a store's sheet does not have.",
   "vendorSlug": "your-store-slug",
+  "presets": ["general"],
   "headerRow": "auto",
   "columns": {
     "name": "Product",
@@ -18,8 +19,13 @@
     "promotion": "Promotion",
     "vat": "VAT",
     "origin": "Origin",
-    "flags": { "isHalal": "Halal", "isVegetarian": "Vegetarian" },
-    "attributes": { "Colour": "Colour" }
+    "flags": {
+      "isHalal": "Halal",
+      "isVegetarian": "Vegetarian"
+    },
+    "attributes": {
+      "Colour": "Colour"
+    }
   },
   "defaultCategory": "default",
   "sectionCategories": {},
@@ -33,6 +39,13 @@
   "conflictingForms": [],
   "preserveWords": [],
   "nameTemplate": "{brand} {name} – {size}",
+  "wordOrder": {
+    "leading": [],
+    "trailing": []
+  },
+  "categoryRules": [],
+  "keepTillWords": true,
+  "noiseWords": [],
   "renameMatched": true,
   "moveMatchedToCategory": true,
   "derivedAttributes": []

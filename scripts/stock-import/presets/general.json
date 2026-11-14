@@ -1,0 +1,38 @@
+{
+  "notes": "Any grocery store. Till clutter that is never a product word, brand-style words kept as written, and Flavour for snacks, sauces, pickles, drinks, biscuits and noodles. Dietary labels (halal, vegetarian, vegan, gluten free) are NEVER derived from names: they come only from a column the store filled in.",
+  "noiseWords": ["pkt", "packet", "pkts", "new", "offer", "promo", "pm", "x"],
+  "preserveWords": ["BBQ", "UK", "XL", "MSG"],
+  "derivedAttributes": [
+    {
+      "name": "Flavour",
+      "categories": [
+        "snack",
+        "crisp",
+        "nimko",
+        "sauce",
+        "pickle",
+        "chutney",
+        "drink",
+        "juice",
+        "biscuit",
+        "noodle"
+      ],
+      "options": {
+        "Salt & Vinegar": ["salt & vinegar", "salt and vinegar"],
+        "Sweet Chilli": ["sweet chilli"],
+        "Mango": ["mango"],
+        "Lemon": ["lemon"],
+        "Lime": ["lime"],
+        "Mint": ["mint"],
+        "Garlic": ["garlic"],
+        "Tamarind": ["tamarind", "imli"],
+        "Masala": ["masala"],
+        "Chilli": ["chilli", "chili"],
+        "Orange": ["orange"],
+        "Strawberry": ["strawberry"],
+        "Chocolate": ["chocolate"],
+        "Plain": ["plain", "salted", "ready salted"]
+      }
+    }
+  ]
+}

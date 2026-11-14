@@ -10,6 +10,27 @@ import { z } from "zod";
 
 const column = z.string().min(1);
 
+/**
+ * #1573 — category slugs a rule applies to, as case-insensitive SUBSTRINGS of the row's category
+ * slug ("rice" matches "rice-basmati" and "basmati-rice"), so a preset written once fits any store's
+ * own slugs. Absent or empty means every category.
+ */
+const categoryScope = z.array(z.string().min(1)).optional();
+
+/**
+ * #1573 — word order inside the clean name (after the brand, before the size). `leading` phrases
+ * (longest first) move to the front: "Chilli Powder Extra Hot" → "Extra Hot Chilli Powder".
+ * `trailing` words move to the end, in the order listed: "Whole Cloves" → "Cloves Whole". Nothing is
+ * added or removed, only moved.
+ */
+const wordOrder = z
+  .object({
+    leading: z.array(z.string().min(1)).default([]),
+    trailing: z.array(z.string().min(1)).default([]),
+  })
+  .strict();
+export type WordOrder = z.infer<typeof wordOrder>;
+
 const FLAG_KEYS = ["isHalal", "isVegetarian", "isOrganic", "isGlutenFree", "isFresh"] as const;
 export type FlagKey = (typeof FLAG_KEYS)[number];
 export { FLAG_KEYS };
@@ -19,6 +40,11 @@ export const stockImportProfileSchema = z
     /** Free text for the next person: where the files come from, what was decided. */
     notes: z.string().optional(),
     vendorSlug: z.string().min(1),
+    /**
+     * #1573 — shared rule sets from `scripts/stock-import/presets/<name>.json` (spices, rice, fish,
+     * general), merged under this profile by `applyPresets`: the profile's own values win.
+     */
+    presets: z.array(z.string().min(1)).default([]),
     /** "auto": the first row containing the name column's header text; "none": no header row. */
     headerRow: z.union([z.literal("auto"), z.literal("none")]).default("auto"),
     columns: z
@@ -83,6 +109,31 @@ export const stockImportProfileSchema = z
     preserveWords: z.array(z.string()).default([]),
     /** `{brand}`, `{name}` and `{size}`; parts that are empty are dropped with their separator. */
     nameTemplate: z.string().default("{brand} {name} – {size}"),
+    /** #1573 — the default word order; a category rule can replace it. */
+    wordOrder: wordOrder.default({ leading: [], trailing: [] }),
+    /**
+     * #1573 — per-category naming: the first rule whose `categories` match the row's category slug
+     * supplies its `nameTemplate` and/or `wordOrder` in place of the defaults.
+     */
+    categoryRules: z
+      .array(
+        z
+          .object({
+            categories: z.array(z.string().min(1)).min(1),
+            nameTemplate: z.string().optional(),
+            wordOrder: wordOrder.optional(),
+          })
+          .strict(),
+      )
+      .default([]),
+    /**
+     * #1573 — keep a matched till product's extra descriptive words. When the till name has every
+     * word of the clean name plus more ("Black Onion Seeds" vs "Black Seeds"), the till's wording is
+     * used, so an import never makes a name less specific. `noiseWords` are till clutter that never
+     * counts as a descriptive word ("pkt", "new").
+     */
+    keepTillWords: z.boolean().default(true),
+    noiseWords: z.array(z.string()).default([]),
     /** Owner decision (#1570): a matched product takes the clean name. */
     renameMatched: z.boolean().default(true),
     /** Move a matched product into the row's category. */
@@ -94,6 +145,8 @@ export const stockImportProfileSchema = z
           .object({
             name: z.string().min(1),
             options: z.record(z.string().min(1), z.array(z.string().min(1)).min(1)),
+            /** #1573 — only rows in these categories (slug substrings); absent means every row. */
+            categories: categoryScope,
           })
           .strict(),
       )
@@ -105,4 +158,63 @@ export type StockImportProfile = z.infer<typeof stockImportProfileSchema>;
 
 export function parseProfile(json: unknown): StockImportProfile {
   return stockImportProfileSchema.parse(json);
+}
+
+/**
+ * #1573 — a preset is a partial profile holding only shared rules (no store columns or brands).
+ */
+export const stockImportPresetSchema = stockImportProfileSchema
+  .pick({
+    notes: true,
+    spelling: true,
+    synonyms: true,
+    ignoreWords: true,
+    formWords: true,
+    conflictingForms: true,
+    preserveWords: true,
+    noiseWords: true,
+    categoryRules: true,
+    derivedAttributes: true,
+  })
+  .partial()
+  .strict();
+export type StockImportPreset = z.infer<typeof stockImportPresetSchema>;
+
+const unique = <T>(items: T[]) => [...new Set(items)];
+
+/** True when a category-scoped rule applies to `categorySlug` (see `categoryScope`). */
+export function inCategory(scope: readonly string[] | undefined, categorySlug: string): boolean {
+  if (!scope || scope.length === 0) return true;
+  const slug = categorySlug.toLowerCase();
+  return scope.some((part) => slug.includes(part.toLowerCase()));
+}
+
+/**
+ * #1573 — merge presets UNDER a profile. Lists are joined (profile first), records are merged with
+ * the profile's keys winning, category rules and derived attributes keep the profile's first (the
+ * first matching rule wins, and an attribute the profile defines replaces the preset's).
+ */
+export function applyPresets(
+  profile: StockImportProfile,
+  presets: readonly StockImportPreset[],
+): StockImportProfile {
+  const out = { ...profile };
+  // The profile's own attribute rules replace a preset's of the same name; presets may still add
+  // several same-named rules for different categories.
+  const own = new Set(profile.derivedAttributes.map((a) => a.name.toLowerCase()));
+  for (const preset of presets) {
+    out.spelling = { ...(preset.spelling ?? {}), ...out.spelling };
+    out.synonyms = [...out.synonyms, ...(preset.synonyms ?? [])];
+    out.ignoreWords = unique([...out.ignoreWords, ...(preset.ignoreWords ?? [])]);
+    out.formWords = unique([...out.formWords, ...(preset.formWords ?? [])]);
+    out.conflictingForms = [...out.conflictingForms, ...(preset.conflictingForms ?? [])];
+    out.preserveWords = unique([...out.preserveWords, ...(preset.preserveWords ?? [])]);
+    out.noiseWords = unique([...out.noiseWords, ...(preset.noiseWords ?? [])]);
+    out.categoryRules = [...out.categoryRules, ...(preset.categoryRules ?? [])];
+    out.derivedAttributes = [
+      ...out.derivedAttributes,
+      ...(preset.derivedAttributes ?? []).filter((a) => !own.has(a.name.toLowerCase())),
+    ];
+  }
+  return out;
 }

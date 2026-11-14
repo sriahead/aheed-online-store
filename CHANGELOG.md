@@ -12,6 +12,12 @@ every branch merges.
 
 ### Added
 
+- **Grocery naming standard and category-specific filters for the stock import (#1573, 2026-11-14)**
+  - Clean names: Title Case with brand styling kept, sizes as g/kg/ml/L, and word order by category (spices: heat and colour first, form last; rice: grain length first, "Rice" last; fish: Fresh/Frozen last). Words are moved, never invented.
+  - A confident match keeps the till's extra words when the price list is terser ("Black Seeds" → "TRS Black Onion Seeds", "Dalchini" → "TRS Cinnamon Sticks", "Keema" → "Shan Keema Curry Mix"); `--previous-run` recovers till names an earlier run replaced.
+  - Presets `general`, `spices`, `rice`, `fish` (`scripts/stock-import/presets/`) for any store: Form; Variety and Grain; Species, Storage, Cut and Grade; Flavour, each only in its own categories. Dietary labels are never derived.
+  - The plan report lists possible duplicates already in the catalogue and every till-word name; apply refuses if a preset or the previous-run file changed. Skill updated. Spec: `specs/2026-11-14-grocery-naming-standard/`.
+
 - **Staff products: brand filter and sort, low stock, store-wide low-stock number (#1572, 2026-11-14)**
   - `/staff/products` gains a **Brand** filter (with **No brand**), a **Brand A–Z** sort (unbranded last), and a **Low stock** worklist in Needs attention and the Quick views: tracked, at least one left, at or below the product's own number. Rows show a Low stock label, "Low at N" and the price per kg / litre / 100 g.
   - `VendorConfig.lowStockThreshold` (default 3, additive migration `20261114110000_vendor_low_stock_threshold`) is the store-wide default, set by store admins above the list. Saving moves every product still on the old number in one transaction; products with their own number keep it.
