@@ -2,6 +2,7 @@ import { reimportedProductState } from "@/lib/catalogue-import-policy";
 import type { ProductRestriction, StockMode } from "@/lib/cart-rules";
 import { slugify } from "@/lib/catalogue-form";
 import type { NetContentUnit } from "@/components/product/unit-price";
+import { readLowStockDefault, type LowStockDefaultReader } from "@/lib/repositories/vendor";
 import { isUniqueViolation } from "./errors";
 import type { ImportPlan, PlannedProduct } from "./plan";
 
@@ -61,6 +62,8 @@ export type InventoryWriteRow = {
   productId: string;
   quantity: 0;
   stockMode: StockMode;
+  /** #1572 — the store-wide default; omitted when the client cannot read it (the column default). */
+  lowStockThreshold?: number;
 };
 export type AuditWriteRow = {
   id: string;
@@ -92,6 +95,8 @@ export interface ImportTx {
   };
   inventory: { createMany(args: { data: InventoryWriteRow[] }): Promise<unknown> };
   productRestrictionAuditLog: { createMany(args: { data: AuditWriteRow[] }): Promise<unknown> };
+  /** #1572 — reads the store-wide low-stock default. Optional so narrow test doubles still fit. */
+  vendorConfig?: LowStockDefaultReader["vendorConfig"];
   brand?: {
     create(args: {
       data: { id: string; vendorId: string; name: string; slug: string };
@@ -549,6 +554,11 @@ export async function applyPlan(
             }
           }
 
+          // #1572 — every new stock record starts at the store-wide low-stock default.
+          const lowStockDefault = tx.vendorConfig
+            ? await readLowStockDefault({ vendorConfig: tx.vendorConfig }, vendorId)
+            : undefined;
+
           for (const batch of chunk(toCreate, BATCH)) {
             await tx.product.createMany({
               data: batch.map(({ planned, id }) => {
@@ -582,6 +592,7 @@ export async function applyPlan(
                 productId: id,
                 quantity: 0 as const,
                 stockMode: planned.stockMode,
+                ...(lowStockDefault === undefined ? {} : { lowStockThreshold: lowStockDefault }),
               })),
             });
             const audited = batch.filter(({ planned }) => planned.restriction !== null);

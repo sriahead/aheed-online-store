@@ -4,6 +4,7 @@ import { DEFAULT_PRODUCT_GRID_DENSITY, type ProductGridDensity } from "@/lib/pro
 import { orderPaymentBadges, type PaymentBadgeMethodName } from "@/lib/payment-badges";
 import type { HoursOverrideRow, WeeklyHoursRow } from "@/lib/footer-hours";
 import { calendarDayToUtcMidnight } from "@/lib/local-datetime";
+import { DEFAULT_LOW_STOCK_THRESHOLD } from "@/lib/low-stock";
 
 /**
  * Re-exported so the app/UI/feature layers can type a prop against the real
@@ -958,5 +959,60 @@ export async function listVendorHosts(
     where: { vendorId },
     select: { host: true, isCanonical: true },
     orderBy: { host: "asc" },
+  });
+}
+
+/**
+ * #1572 — the one read of the store-wide low-stock default, structural so an interactive
+ * transaction (`tx`), either real client, and the spreadsheet import's narrowed client type can all
+ * pass it. A store with no config row reads the schema default.
+ */
+export interface LowStockDefaultReader {
+  vendorConfig: {
+    findUnique(args: {
+      where: { vendorId: string };
+      select: { lowStockThreshold: true };
+    }): PromiseLike<{ lowStockThreshold: number } | null>;
+  };
+}
+
+export async function readLowStockDefault(
+  db: LowStockDefaultReader,
+  vendorId: string,
+): Promise<number> {
+  const row = await db.vendorConfig.findUnique({
+    where: { vendorId },
+    select: { lowStockThreshold: true },
+  });
+  return row?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
+}
+
+/**
+ * #1572 — change the store-wide low-stock default, and move every product still on the OLD default
+ * to the new one, so "the default" means the same thing before and after. A product with its own
+ * number keeps it. One interactive transaction over the WebSocket client: the inventory change is
+ * an `updateMany`, which crashes over `getPrisma()` (#382).
+ *
+ * Returns how many products moved, or null for a store with no config row (nothing written).
+ */
+export async function setLowStockDefault(
+  prismaWs: ReturnType<typeof getPrismaWs>,
+  vendorId: string,
+  value: number,
+): Promise<{ previous: number; moved: number } | null> {
+  return prismaWs.$transaction(async (tx) => {
+    const existing = await tx.vendorConfig.findUnique({
+      where: { vendorId },
+      select: { lowStockThreshold: true },
+    });
+    if (!existing) return null;
+    const previous = existing.lowStockThreshold;
+    if (previous === value) return { previous, moved: 0 };
+    await tx.vendorConfig.update({ where: { vendorId }, data: { lowStockThreshold: value } });
+    const moved = await tx.inventory.updateMany({
+      where: { vendorId, lowStockThreshold: previous },
+      data: { lowStockThreshold: value },
+    });
+    return { previous, moved: moved.count };
   });
 }

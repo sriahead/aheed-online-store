@@ -15,7 +15,12 @@ import {
 import { createProductForVendor, updateProductForVendor } from "@/lib/products-service";
 import type { CatalogueWriteResult } from "@/lib/repositories/products";
 import { createCategoryForVendor, updateCategoryForVendor } from "@/lib/categories-service";
-import { fetchVendorProfile } from "@/lib/vendor-service";
+import { fetchVendorProfile, saveLowStockDefault } from "@/lib/vendor-service";
+import {
+  lowStockSavedMessage,
+  parseLowStockThreshold,
+  type LowStockDefaultState,
+} from "@/lib/low-stock";
 import { applyProductLabelSettings, labelSettingsFromProfile } from "@/lib/product-label-settings";
 import { readAttributeValues } from "@/lib/product-attribute-form";
 
@@ -151,4 +156,38 @@ export async function saveCategory(
   if (categoryId === "") redirect(`/staff/categories/${result.id}`);
 
   return { error: null, field: null, saved: true };
+}
+
+/**
+ * #1572 — the store-wide low-stock default. ADMIN only (a store policy, like prices): STAFF see the
+ * number on /staff/products but not the control, and this refuses them anyway because an action is
+ * a public endpoint. Products still on the old default move with it; see `setLowStockDefault`.
+ */
+export async function saveLowStockDefaultAction(
+  _prev: LowStockDefaultState,
+  form: FormData,
+): Promise<LowStockDefaultState> {
+  const auth = await requireVendorRole("ADMIN");
+  if (!auth.ok) {
+    return {
+      error:
+        auth.status === 401
+          ? "Please sign in as a store admin to change the low-stock default."
+          : "Only a store admin can change the low-stock default.",
+      message: null,
+    };
+  }
+  const parsed = parseLowStockThreshold(form.get("lowStockThreshold"));
+  if (!parsed.ok) return { error: parsed.error, message: null };
+
+  const result = await saveLowStockDefault(auth.vendorId, parsed.value);
+  if (result === null) {
+    return { error: "This store has no settings record yet, so nothing was saved.", message: null };
+  }
+  revalidatePath("/staff/products");
+  revalidatePath("/staff/inventory");
+  return {
+    error: null,
+    message: lowStockSavedMessage(result.previous, parsed.value, result.moved),
+  };
 }

@@ -477,14 +477,29 @@ tracked never removes a restriction or makes a product visible.
 
 **Finding products in a large catalogue:** The search box has its own row at the top. It finds a
 product by any part of its **name**, its **PLU** (the till number on a shelf label or POS printout),
-or its **barcode**. Below it, the filters narrow the list by status, category, restriction, stock and
-**Needs attention**, and **Sort** orders it by newest (the default), name, or price either way. Press
-**Apply filters** to use them, or **Clear all** to start again. The **Quick views** under the filters
-open the three worklists in one click, and a second click turns one off:
+or its **barcode**. Below it, the filters narrow the list by status, category, **brand**, restriction,
+stock and **Needs attention**, and **Sort** orders it by newest (the default), name, **brand**, or
+price either way. The brand filter has a **No brand** choice for products that still need one, and
+the brand sort puts products with no brand last. Press **Apply filters** to use them, or **Clear
+all** to start again. The **Quick views** under the filters open the four worklists in one click, and
+a second click turns one off:
 
 - **Price needed (£0):** products with no price yet. They cannot go on sale until they have one.
 - **Ready to switch on:** hidden products that have a price and no restriction.
 - **No photo:** products shoppers would see without a picture.
+- **Low stock:** tracked products with at least one left but no more than their low-stock number.
+  A product with none left is out of stock, not low.
+
+**What each row shows:** the name, any labels (Hidden, Price needed, restriction, **Out of stock**,
+**Low stock**, Stock unknown), the category, brand, pack size and PLU, the price with any offer, the
+**price per kg, litre or 100 g** when the pack size is known, and how stock is kept. A tracked product
+also shows its low-stock number ("Tracked · Low at 3").
+
+**Low-stock alert (store admins):** The box above the list sets the store-wide low-stock number. A
+new product, an import and a first stock count all start at it. Change it and press **Save default**:
+every product still on the old number moves to the new one, and the message says how many moved. A
+product you gave its own number on its page keeps it. Staff accounts see the number but cannot
+change it.
 
 The page bar sits **above and below** the list. It shows the page you are on, how many pages there
 are, and which products are showing out of how many ("Page 3 of 63 · Showing 51–75 of 1,560

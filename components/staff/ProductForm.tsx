@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { DEFAULT_LOW_STOCK_THRESHOLD } from "@/lib/low-stock";
 import Link from "next/link";
 import { saveProduct } from "@/features/admin/catalogue";
 import { initialCatalogueState, toCategoryOptionGroups } from "@/lib/catalogue-form";
@@ -64,6 +65,11 @@ export interface ProductFormProps {
    * Required, like `labels`: which filters a vendor has is vendor data, never a default.
    */
   attributes: AttributeDefinition[];
+  /**
+   * #1572 — the store-wide low-stock default, the starting value for a NEW product. An existing
+   * product shows its own number. Optional: absent means the schema default (3).
+   */
+  defaultLowStockThreshold?: number;
 }
 
 export function ProductForm({
@@ -73,6 +79,7 @@ export function ProductForm({
   imageUrls,
   labels,
   attributes,
+  defaultLowStockThreshold = DEFAULT_LOW_STOCK_THRESHOLD,
 }: ProductFormProps) {
   const anyLabel =
     labels.halal || labels.fresh || labels.organic || labels.vegetarian || labels.glutenFree;
@@ -386,7 +393,7 @@ export function ProductForm({
                 min={0}
                 step={1}
                 required
-                defaultValue={product?.lowStockThreshold ?? 3}
+                defaultValue={product?.lowStockThreshold ?? defaultLowStockThreshold}
                 {...fieldProps("lowStockThreshold")}
               />
             </div>
