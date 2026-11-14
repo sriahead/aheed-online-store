@@ -8,8 +8,8 @@ Branch `feature/1580-dynamic-vendor-branding`, built from `origin/staging` `c205
   - Extended `CreatePaymentInput` with `vendorName?: string` and `applicationContext?: string`.
   - Pinned `Stripe-Version: 2025-09-30.clover` on session create and session retrieve.
   - Implemented `branding_settings[display_name]` for dynamic vendor display name at the top of hosted Stripe Checkout.
-  - Added `line_items[0][price_data][product_data][description] = "Part of the Merqify Ecosystem"` and formatted line item product name with the vendor name.
-  - Added `custom_text[submit][message]` and `custom_text[after_submit][message]` reinforcing purchasing context without claiming Merqify is the payment processor.
+  - Added `line_items[0][price_data][product_data][description] = "Merqify Ecosystem"` and formatted line item product name with the vendor name.
+  - Removed duplicate `custom_text` occurrences to eliminate redundant checkout copy.
   - Preserved Stripe's native `"Powered by Stripe"` footer attribution.
 - **`lib/repositories/orders.ts`:**
   - Added `applicationContext?: string` to `PlaceOrderInput` (defaults to `"ShopLocal"`).

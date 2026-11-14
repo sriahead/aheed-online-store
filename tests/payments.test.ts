@@ -200,7 +200,7 @@ describe("Stripe adapter — dynamic vendor branding & Merqify ecosystem identit
     return new URLSearchParams(init.body as string);
   }
 
-  it("sets dynamic vendor display name and Merqify ecosystem messaging when vendorName is provided", async () => {
+  it("sets dynamic vendor display name and Merqify ecosystem description when vendorName is provided", async () => {
     const fetchMock = mockStripeOk();
     await createStripePaymentService("sk_test_123").createPayment({
       ...INPUT,
@@ -212,21 +212,17 @@ describe("Stripe adapter — dynamic vendor branding & Merqify ecosystem identit
     // Header display name
     expect(body.get("branding_settings[display_name]")).toBe("Aheed Food Centre");
 
-    // Line items branding & order identity
+    // Line items branding & order identity with single clean ecosystem description
     expect(body.get("line_items[0][price_data][product_data][name]")).toBe(
       `Order ${INPUT.orderNumber} · Aheed Food Centre`,
     );
     expect(body.get("line_items[0][price_data][product_data][description]")).toBe(
-      "Part of the Merqify Ecosystem",
+      "Merqify Ecosystem",
     );
 
-    // Custom submit & after-submit messages
-    expect(body.get("custom_text[submit][message]")).toBe(
-      "You are purchasing from Aheed Food Centre. Part of the Merqify Ecosystem.",
-    );
-    expect(body.get("custom_text[after_submit][message]")).toBe(
-      "Thank you for your order with Aheed Food Centre. Part of the Merqify Ecosystem.",
-    );
+    // Duplicate custom_text occurrences removed to avoid repetitive checkout copy
+    expect(body.get("custom_text[submit][message]")).toBeNull();
+    expect(body.get("custom_text[after_submit][message]")).toBeNull();
 
     // Metadata traceability
     expect(body.get("metadata[vendorName]")).toBe("Aheed Food Centre");
@@ -247,9 +243,10 @@ describe("Stripe adapter — dynamic vendor branding & Merqify ecosystem identit
     expect(body.get("line_items[0][price_data][product_data][name]")).toBe(
       `Order ${INPUT.orderNumber} · SriMart Electronics`,
     );
-    expect(body.get("custom_text[submit][message]")).toBe(
-      "You are purchasing from SriMart Electronics. Part of the Merqify Ecosystem.",
+    expect(body.get("line_items[0][price_data][product_data][description]")).toBe(
+      "Merqify Ecosystem",
     );
+    expect(body.get("custom_text[submit][message]")).toBeNull();
     expect(body.get("metadata[vendorId]")).toBe("v-srimart");
     expect(body.get("metadata[vendorName]")).toBe("SriMart Electronics");
     expect(body.get("metadata[applicationContext]")).toBe("Merqify Services");
@@ -266,9 +263,9 @@ describe("Stripe adapter — dynamic vendor branding & Merqify ecosystem identit
       `Order ${INPUT.orderNumber}`,
     );
     expect(body.get("line_items[0][price_data][product_data][description]")).toBe(
-      "Part of the Merqify Ecosystem",
+      "Merqify Ecosystem",
     );
-    expect(body.get("custom_text[submit][message]")).toBe("Part of the Merqify Ecosystem.");
+    expect(body.get("custom_text[submit][message]")).toBeNull();
     expect(body.get("custom_text[after_submit][message]")).toBeNull();
     expect(body.get("metadata[vendorName]")).toBeNull();
   });
@@ -295,9 +292,10 @@ describe("Stripe adapter — dynamic vendor branding & Merqify ecosystem identit
       const body = bodyOf(fetchMock);
       expect(body.get("metadata[applicationContext]")).toBe(app);
       expect(body.get("branding_settings[display_name]")).toBe("Community Hub");
-      expect(body.get("custom_text[submit][message]")).toBe(
-        "You are purchasing from Community Hub. Part of the Merqify Ecosystem.",
+      expect(body.get("line_items[0][price_data][product_data][description]")).toBe(
+        "Merqify Ecosystem",
       );
+      expect(body.get("custom_text[submit][message]")).toBeNull();
     }
   });
 });

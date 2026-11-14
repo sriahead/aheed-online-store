@@ -6,11 +6,8 @@ R1. **Dynamic Vendor Display Name**
     When creating a Stripe Checkout Session via `PaymentService.createPayment`, if `vendorName` is provided, the request payload sets `branding_settings[display_name] = input.vendorName`. When `vendorName` is omitted or empty, `branding_settings[display_name]` is not sent, falling back gracefully to the account default.
 
 R2. **Merqify Ecosystem Messaging**
-    - `line_items[0][price_data][product_data][description]` is set to `"Part of the Merqify Ecosystem"`.
-    - If `vendorName` is provided:
-      - `custom_text[submit][message]` is set to `"You are purchasing from ${input.vendorName}. Part of the Merqify Ecosystem."`.
-      - `custom_text[after_submit][message]` is set to `"Thank you for your order with ${input.vendorName}. Part of the Merqify Ecosystem."`.
-    - If `vendorName` is omitted, `custom_text[submit][message]` is set to `"Part of the Merqify Ecosystem."`.
+    - `line_items[0][price_data][product_data][description]` is set to `"Merqify Ecosystem"`.
+    - Duplicate occurrences in `custom_text[submit][message]` and `custom_text[after_submit][message]` are omitted to avoid repetitive checkout copy and keep the customer experience focused and concise.
     - At no point does copy claim or imply that Merqify is the payment processor.
 
 R3. **Order & Vendor Line Item Identity**
