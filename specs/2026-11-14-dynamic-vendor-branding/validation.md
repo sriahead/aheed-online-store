@@ -4,7 +4,7 @@
 
 | Req | Testing Area | How to verify |
 |---|---|---|
-| R1, R2, R3 | Unit | `tests/payments.test.ts` asserts `branding_settings[display_name]`, `line_items[0][price_data][product_data][name]`, `line_items[0][price_data][product_data][description]`, and `custom_text` messages match approved format when `vendorName` is passed. |
+| R1, R2, R3 | Unit | `tests/payments.test.ts` asserts `branding_settings[display_name]`, `line_items[0][price_data][product_data][name]`, `line_items[0][price_data][product_data][description]` ("Merqify Ecosystem"), and no duplicate `custom_text` messages match approved format when `vendorName` is passed. |
 | R1, R2, R3 | Unit | `tests/payments.test.ts` verifies independent vendors (e.g. `Aheed Food Centre`, `SriMart Electronics`) reflect their respective branding without cross-vendor leakage. |
 | R1, R2, R3 | Unit | `tests/payments.test.ts` asserts clean fallback when `vendorName` is omitted. |
 | R4 | Unit | `tests/payments.test.ts` asserts request headers carry `Stripe-Version: 2025-09-30.clover` on session create and retrieve. |

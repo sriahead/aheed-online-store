@@ -192,27 +192,17 @@ export function createStripePaymentService(secretKey: string): PaymentService {
         "line_items[0][price_data][product_data][name]": input.vendorName
           ? `Order ${input.orderNumber} · ${input.vendorName}`
           : `Order ${input.orderNumber}`,
-        "line_items[0][price_data][product_data][description]": "Part of the Merqify Ecosystem",
+        "line_items[0][price_data][product_data][description]": "Merqify Ecosystem",
       });
 
       // Dynamic vendor branding & Merqify Ecosystem identity:
       // - Header displays the vendor's human business name via branding_settings.display_name
-      // - Line items identify the order and vendor, with description as "Part of the Merqify Ecosystem"
-      // - Custom text reinforces purchasing context without claiming Merqify is the payment processor
+      // - Line item description carries the single clean ecosystem attribution ("Merqify Ecosystem")
+      // - Redundant custom_text occurrences removed to keep checkout clean and focused
       // - Stripe's native "Powered by Stripe" attribution remains intact in the checkout footer
       if (input.vendorName) {
         body.set("metadata[vendorName]", input.vendorName);
         body.set("branding_settings[display_name]", input.vendorName);
-        body.set(
-          "custom_text[submit][message]",
-          `You are purchasing from ${input.vendorName}. Part of the Merqify Ecosystem.`,
-        );
-        body.set(
-          "custom_text[after_submit][message]",
-          `Thank you for your order with ${input.vendorName}. Part of the Merqify Ecosystem.`,
-        );
-      } else {
-        body.set("custom_text[submit][message]", "Part of the Merqify Ecosystem.");
       }
 
       if (input.applicationContext) {

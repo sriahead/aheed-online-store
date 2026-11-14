@@ -14,7 +14,7 @@ every branch merges.
 
 - **Dynamic vendor branding and Merqify ecosystem identity on Stripe Checkout (#1580, 2026-11-14)**
   - Customers on hosted Stripe Checkout dynamically see the vendor's human business name (e.g. "Aheed Food Centre", "SriMart Electronics") at the top header via `branding_settings.display_name`.
-  - Supporting identity formatted as "Part of the Merqify Ecosystem" on line items and checkout custom submit text (`custom_text[submit][message]`), without claiming Merqify is the payment processor.
+  - Supporting identity formatted cleanly as "Merqify Ecosystem" on line item description under the order header; redundant custom submit text duplicate occurrences removed to keep the checkout experience focused.
   - Sourced dynamically from database `Vendor` and `VendorBranding` models within `placeOrder`.
   - Generic Merqify Core infrastructure in `lib/payments.ts` supports all current and future Merqify applications (`ShopLocal`, `Merqify Club`, `Merqify Services`, `Merqify Bookings`, `Merqify Events`, etc.) via `applicationContext`.
   - Zero database migrations, preserving current single-account settlement while maintaining full compatibility with future Stripe Connect. Spec: `specs/2026-11-14-dynamic-vendor-branding/`.
