@@ -218,3 +218,57 @@ describe("apply guards", () => {
     });
   });
 });
+
+describe("settings brands (#1578)", () => {
+  it("keeps a brand with no other spellings by storing a row for its own name", async () => {
+    const created: { alias: string; brandId: string }[][] = [];
+    const tx = new Proxy(
+      {},
+      {
+        get: (_t, model: string) =>
+          model === "stockImportSettings"
+            ? { upsert: vi.fn().mockResolvedValue({ id: "s1", updatedAt: new Date(0) }) }
+            : model === "stockImportSynonymGroup"
+              ? { deleteMany: vi.fn(), create: vi.fn().mockResolvedValue({ id: "g" }) }
+              : {
+                  deleteMany: vi.fn(),
+                  createMany: vi.fn((args: { data: never[] }) => {
+                    if (model === "stockImportBrandAlias") created.push(args.data);
+                  }),
+                },
+      },
+    );
+    const db = {
+      brand: {
+        findMany: vi.fn().mockResolvedValue([
+          { id: "b-shan", name: "Shan", slug: "shan" },
+          { id: "b-trs", name: "TRS", slug: "trs" },
+        ]),
+      },
+      category: { findMany: vi.fn().mockResolvedValue([{ id: "c1", slug: "spices-masalas" }]) },
+      $transaction: (fn: (t: unknown) => unknown) => fn(tx),
+    };
+    const { saveImportSettings } = await import("@/lib/repositories/stock-import");
+    const { initialSettings } = await import("@/lib/stock-import/settings-form");
+    const base = initialSettings({
+      headerRow: "NONE",
+      columns: { name: "A" },
+      defaultCategorySlug: "spices-masalas",
+      presets: [],
+    });
+    if (!base.ok) throw new Error(base.error);
+    const result = await saveImportSettings(db as never, "v1", {
+      ...base.value,
+      brandAliases: [
+        { brand: "Shan", aliases: [] },
+        { brand: "TRS", aliases: ["tra"] },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    expect(created[0].map((r) => [r.brandId, r.alias])).toEqual([
+      ["b-shan", "shan"],
+      ["b-trs", "trs"],
+      ["b-trs", "tra"],
+    ]);
+  });
+});

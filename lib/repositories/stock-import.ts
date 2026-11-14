@@ -593,7 +593,10 @@ export async function readImportSettings(
       notes: s.notes,
       brandAliases: [...byBrand.entries()]
         .filter(([id]) => brandName.has(id))
-        .map(([id, list]) => ({ brand: brandName.get(id) as string, aliases: list.sort() }))
+        .map(([id, list]) => {
+          const brand = brandName.get(id) as string;
+          return { brand, aliases: list.filter((a) => a !== brand.toLowerCase()).sort() };
+        })
         .sort((a, b) => a.brand.localeCompare(b.brand)),
       spelling: Object.fromEntries(spellings.map((r) => [r.wrong, r.replacement])),
       synonyms: groups.map((g) => g.words.map((w) => w.word)).filter((g) => g.length >= 2),
@@ -649,9 +652,12 @@ export async function saveImportSettings(
       ok: false,
       error: `These categories do not exist: ${[...new Set(missingCategories)].join(", ")}`,
     };
+  // #1578 — every listed brand keeps a row for its own name, so a brand with no other spellings
+  // stays in the profile's brand list (it outranks longer store brands such as "LAZIZA ACHAR
+  // GOSHT" when naming); readImportSettings hides that row again.
   const aliasSeen = new Set<string>();
   const aliasRows = data.brandAliases.flatMap((b) =>
-    b.aliases
+    [b.brand, ...b.aliases]
       .map((a) => a.trim().toLowerCase())
       .filter((a) => a && !aliasSeen.has(a) && aliasSeen.add(a))
       .map((alias) => ({ vendorId, brandId: brandId(b.brand) as string, alias })),
