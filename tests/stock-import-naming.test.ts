@@ -20,9 +20,9 @@ import {
 /** #1573 — grocery naming standard, presets, till words and duplicate candidates. */
 
 const readJson = (path: string) => JSON.parse(readFileSync(path, "utf8"));
-const presetNames = readdirSync("scripts/stock-import/presets").map((f) => f.replace(".json", ""));
+const presetNames = readdirSync("lib/stock-import/presets").map((f) => f.replace(".json", ""));
 const preset = (name: string) =>
-  stockImportPresetSchema.parse(readJson(`scripts/stock-import/presets/${name}.json`));
+  stockImportPresetSchema.parse(readJson(`lib/stock-import/presets/${name}.json`));
 const own = parseProfile(readJson("scripts/stock-import/profiles/aheed-food-centre.json"));
 const aheed = applyPresets(own, own.presets.map(preset));
 
@@ -235,8 +235,13 @@ describe("till words", () => {
   });
 
   it("apply takes till words from the product an UPDATE writes, matched or reviewed", () => {
+    // #1578 — the CLI and the staff screen both apply through applyLine.
+    const repo = readFileSync("lib/repositories/stock-import.ts", "utf8");
+    expect(repo).toContain('work.decision === "UPDATE" && work.target\n      ? withTillWords(');
     const script = readFileSync("scripts/stock-import.ts", "utf8");
-    expect(script).toContain('w.decision === "UPDATE" && w.target\n          ? withTillWords(');
+    expect(script).toContain(
+      "await applyLine(asWs(p), vendorId, ctx, {\n          row: line.listRow,",
+    );
   });
 
   it("uses the name an earlier run replaced", () => {

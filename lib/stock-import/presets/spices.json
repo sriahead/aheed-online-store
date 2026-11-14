@@ -39,5 +39,41 @@
         "Spice Mix": ["masala", "mix", "seasoning"]
       }
     }
+  ],
+  "synonyms": [
+    ["jeera", "cumin"],
+    ["dhania", "coriander", "dhaniya"],
+    ["haldi", "turmeric"],
+    ["methi", "fenugreek"],
+    ["elaichi", "cardamom", "cardamon"],
+    ["ajwain", "carom", "ajwan", "lovage"],
+    ["dalchini", "cinnamon", "cassia"],
+    ["tenderiser", "tenderizer"],
+    ["chaat", "chat"],
+    ["aniseed", "anise"],
+    ["powder", "ground"],
+    ["behari", "bihari"],
+    ["chargha", "charga"]
+  ],
+  "ignoreWords": ["curry"],
+  "formWords": [
+    "whole",
+    "powder",
+    "ground",
+    "coarse",
+    "crushed",
+    "seeds",
+    "seed",
+    "leaves",
+    "black",
+    "white",
+    "hulled",
+    "natural"
+  ],
+  "conflictingForms": [
+    ["whole", "powder", "coarse", "crushed", "paste"],
+    ["seed", "leaf", "powder", "paste"],
+    ["hot", "mild"],
+    ["black", "white", "green", "red", "brown"]
   ]
 }

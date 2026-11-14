@@ -106,10 +106,16 @@ During busy trading hours, store staff can update inventory without opening full
 
 ---
 
-## 6. Bulk Excel Import (`/staff/products/import`)
+## 6. Stock and price file import (`/staff/products/import`)
 
-When loading large catalogues:
-1. Download the standard `.xlsx` template from `/staff/products/import`.
-2. Populate required columns: `Product Name`, `Category`, `Price (£)`.
-3. Optional columns: `Subcategory`, `Brand`, `Barcode`, `Stock Level`, `Unit / Net Content`.
-4. Review pre-flight validation errors (duplicate barcodes, non-numeric prices) before committing.
+Store admins upload their own price or stock list (Excel or CSV, up to 2,000 rows); no template is
+needed (#1578).
+
+1. The first time, pick which column is the product name, size, price, PLU, barcode, brand and
+   category, and the naming rules that fit what you sell. Change these later under **Import settings**.
+2. Every row is matched against your products and shown on a review screen: **Needs a decision**,
+   **New products**, **Updates**, **Unchanged**, **Skipped**.
+3. Decide uncertain lines (Update a product, Create new, or Skip), then press **Apply**. New products
+   are created hidden; live prices and staff-edited fields are kept.
+4. **Undo this import** removes products it created that nobody has touched and puts changed fields
+   back.

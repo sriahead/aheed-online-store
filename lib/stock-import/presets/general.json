@@ -34,5 +34,15 @@
         "Plain": ["plain", "salted", "ready salted"]
       }
     }
+  ],
+  "synonyms": [
+    ["chilli", "chili", "chillies"],
+    ["leaf", "leaves"],
+    ["dal", "daal", "dhal"],
+    ["kabab", "kebab"],
+    ["biryani", "biriyani"],
+    ["pilau", "pulao", "pilaf"],
+    ["keema", "qeema", "kima"],
+    ["korma", "qorma"]
   ]
 }

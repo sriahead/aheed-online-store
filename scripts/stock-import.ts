@@ -1,13 +1,19 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { basename, join } from "node:path";
+import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
-import { deriveUnitPricePenceForSort } from "../components/product/unit-price";
 import { formatPrice } from "../components/product/format-price";
-import { slugify } from "../lib/catalogue-form";
-import { readLowStockDefault } from "../lib/repositories/vendor";
-import type { CatalogueProduct } from "../lib/stock-import/match";
+import type { getPrismaWs } from "../lib/db";
+import {
+  applyLine,
+  createImportRun,
+  ensureMasterData,
+  loadImportStore,
+  saveImportSettings,
+  type ImportProduct,
+  type ImportStore,
+} from "../lib/repositories/stock-import";
 import { normaliseFile, type NormalisedRow, type RowIssue } from "../lib/stock-import/normalise";
 import {
   buildPlan,
@@ -15,19 +21,16 @@ import {
   categoryName,
   countPlan,
   DECISIONS,
-  targetsFor,
   type Decision,
   type PlanLine,
   type PlanLookups,
 } from "../lib/stock-import/plan";
-import { computeChanges, unitLabelFor, type MergeOptions } from "../lib/stock-import/merge";
-import { withTillWords } from "../lib/stock-import/naming";
-import {
-  applyPresets,
-  parseProfile,
-  stockImportPresetSchema,
-  type StockImportProfile,
-} from "../lib/stock-import/profile";
+import type { CatalogueProduct } from "../lib/stock-import/match";
+import type { MergeOptions } from "../lib/stock-import/merge";
+import { loadPresets } from "../lib/stock-import/presets";
+import { applyPresets, parseProfile, type StockImportProfile } from "../lib/stock-import/profile";
+import { buildLookups } from "../lib/stock-import/run-lines";
+import { settingsFromProfile } from "../lib/stock-import/settings";
 import { readVar } from "./aheed-data-inventory";
 import { readSourceGrid, readWorkbookSheets, writeWorkbook } from "./lib/read-spreadsheet";
 
@@ -50,6 +53,17 @@ import { readSourceGrid, readWorkbookSheets, writeWorkbook } from "./lib/read-sp
  *   npx tsx scripts/stock-import.ts apply <files…> --profile <p> --secrets <s> --url-key <KEY> \
  *       --review <dir>/review.xlsx --confirm-host <db host> [--production] [same flags as plan]
  *
+ *   #1578 — the staff screen (/staff/products/import) runs the same apply code from the database:
+ *
+ *   SETTINGS-PUSH (a JSON profile becomes the store's import settings, as the screen edits them):
+ *   npx tsx scripts/stock-import.ts settings-push --profile <p> --secrets <s> --url-key <KEY> \
+ *       --confirm-host <db host>
+ *
+ *   TO-SCREEN (plan the files as a run on the screen; review-sheet SKIP lines with a note become
+ *   held questions there; nothing is applied):
+ *   npx tsx scripts/stock-import.ts to-screen <files…> --secrets <s> --url-key <KEY> \
+ *       --review <dir>/review.xlsx --vendor <slug> --confirm-host <db host>
+ *
  * NOTHING IT WRITES IS LIVE. A created product is hidden with stock UNKNOWN; a created category,
  * price tier, bundle or promotion is inactive; an existing product's `isActive`, `restriction` and
  * slug are never written; a live product's price changes only with --update-live-prices. The store
@@ -68,6 +82,7 @@ interface Flags {
   review?: string;
   confirmHost?: string;
   previousRun?: string;
+  vendor?: string;
   production: boolean;
   options: MergeOptions;
 }
@@ -81,6 +96,7 @@ function parseFlags(argv: string[]): Flags {
     "--review",
     "--confirm-host",
     "--previous-run",
+    "--vendor",
   ]);
   const files: string[] = [];
   const values: Record<string, string> = {};
@@ -98,6 +114,7 @@ function parseFlags(argv: string[]): Flags {
     review: values["--review"],
     confirmHost: values["--confirm-host"],
     previousRun: values["--previous-run"],
+    vendor: values["--vendor"],
     production: argv.includes("--production"),
     options: {
       overwriteEdited: argv.includes("--overwrite-edited"),
@@ -110,17 +127,15 @@ function sha256(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
-/** #1573 — the presets a profile names, from `../presets/` beside its profiles folder. */
-function presetPaths(profilePath: string, profile: StockImportProfile): string[] {
-  return profile.presets.map((name) => join(dirname(profilePath), "..", "presets", `${name}.json`));
+/** The profile as written (presets not merged), for `settings-push`. */
+function readProfileFile(profilePath: string): StockImportProfile {
+  return parseProfile(JSON.parse(readFileSync(profilePath, "utf8")));
 }
 
+/** #1573/#1578 — the profile with its presets (`lib/stock-import/presets/`) merged under it. */
 function loadProfile(profilePath: string): StockImportProfile {
-  const profile = parseProfile(JSON.parse(readFileSync(profilePath, "utf8")));
-  const presets = presetPaths(profilePath, profile).map((path) =>
-    stockImportPresetSchema.parse(JSON.parse(readFileSync(path, "utf8"))),
-  );
-  return applyPresets(profile, presets);
+  const profile = readProfileFile(profilePath);
+  return applyPresets(profile, loadPresets(profile.presets));
 }
 
 /** #1573 — product id → the till name an earlier run's plan replaced. */
@@ -142,8 +157,13 @@ function loadTillNames(path: string | undefined): Map<string, string> {
 function runInputs(f: Flags, profile: StockImportProfile): [string, string][] {
   const profilePath = f.profile as string;
   const out: [string, string][] = [["profile sha256", sha256(profilePath)]];
-  for (const path of presetPaths(profilePath, profile))
-    out.push([`preset ${basename(path)} sha256`, sha256(path)]);
+  for (const [name, preset] of profile.presets.map(
+    (n, i) => [n, loadPresets(profile.presets)[i]] as const,
+  ))
+    out.push([
+      `preset ${name}.json sha256`,
+      createHash("sha256").update(JSON.stringify(preset)).digest("hex"),
+    ]);
   if (f.previousRun) out.push(["previous run sha256", sha256(f.previousRun)]);
   for (const file of f.files) out.push([`source ${basename(file)} sha256`, sha256(file)]);
   return out;
@@ -151,83 +171,22 @@ function runInputs(f: Flags, profile: StockImportProfile): [string, string][] {
 
 const pounds = (p: number | null | undefined) => (p == null ? "" : formatPrice(p));
 
-interface Store {
-  vendorId: string;
-  catalogue: CatalogueProduct[];
-  brands: { id: string; name: string; slug: string }[];
-  categories: { id: string; slug: string; name: string; isActive: boolean }[];
-}
+type Ws = ReturnType<typeof getPrismaWs>;
+/** The CLI's Node client, typed as the runtime client the shared repository takes. */
+const asWs = (p: PrismaClient) => p as unknown as Ws;
 
-async function loadStore(p: PrismaClient, vendorSlug: string): Promise<Store> {
+async function vendorIdFor(p: PrismaClient, vendorSlug: string): Promise<string> {
   const vendor = await p.vendor.findUnique({ where: { slug: vendorSlug }, select: { id: true } });
   if (!vendor) throw new Error(`vendor "${vendorSlug}" not found in this database`);
-  const vendorId = vendor.id;
-  const [brands, categories, products] = await Promise.all([
-    p.brand.findMany({ where: { vendorId }, select: { id: true, name: true, slug: true } }),
-    p.category.findMany({
-      where: { vendorId },
-      select: { id: true, slug: true, name: true, isActive: true },
-    }),
-    p.product.findMany({
-      where: { vendorId },
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        plu: true,
-        barcode: true,
-        brandId: true,
-        brand: { select: { name: true } },
-        categoryId: true,
-        category: { select: { slug: true, name: true } },
-        basePrice: true,
-        originalPrice: true,
-        unitLabel: true,
-        netContentAmount: true,
-        netContentUnit: true,
-        description: true,
-        isActive: true,
-        vatRate: true,
-        origin: true,
-        isHalal: true,
-        isVegetarian: true,
-        isOrganic: true,
-        isGlutenFree: true,
-        isFresh: true,
-        manuallyEditedFields: true,
-      },
-    }),
-  ]);
-  const catalogue: CatalogueProduct[] = products.map(({ brand, category, ...rest }) => ({
-    ...rest,
-    brandName: brand?.name ?? null,
-    categorySlug: category.slug,
-    categoryName: category.name,
-  }));
-  return { vendorId, catalogue, brands, categories };
+  return vendor.id;
 }
 
-/** Profile brands first (aliases included), then every brand already in the store. */
-function brandLookup(profile: StockImportProfile, store: Store): Map<string, string> {
-  const ids = new Map<string, string>();
-  for (const b of store.brands) {
-    ids.set(b.name.toLowerCase(), b.id);
-    ids.set(b.slug, b.id);
-  }
-  for (const b of profile.brands) {
-    const id = [b.name, ...b.aliases]
-      .map((n) => ids.get(n.toLowerCase()) ?? ids.get(slugify(n)))
-      .find(Boolean);
-    if (id) ids.set(b.name.toLowerCase(), id);
-  }
-  return ids;
+async function loadStore(p: PrismaClient, vendorSlug: string): Promise<ImportStore> {
+  return loadImportStore(asWs(p), await vendorIdFor(p, vendorSlug));
 }
 
-function lookupsFor(profile: StockImportProfile, store: Store): PlanLookups {
-  return {
-    brandIds: brandLookup(profile, store),
-    categories: new Map(store.categories.map((c) => [c.slug, { id: c.id, name: c.name }])),
-  };
+function lookupsFor(profile: StockImportProfile, store: ImportStore) {
+  return buildLookups(profile, store.brands, store.categories);
 }
 
 function readRows(files: string[], profile: StockImportProfile, knownBrands: string[]) {
@@ -420,7 +379,7 @@ function duplicateNotes(
 function masterDataNotes(
   lines: PlanLine[],
   lookups: PlanLookups,
-  store: Store,
+  store: ImportStore,
   profile: StockImportProfile,
 ): string[] {
   const used = lines.filter((l) => ["UPDATE", "CREATE", "REVIEW"].includes(l.decision));
@@ -625,95 +584,33 @@ async function apply(f: Flags, profile: StockImportProfile) {
     }
     const writing = work.filter((w) => w.decision === "UPDATE" || w.decision === "CREATE");
 
-    // Master data first, reused before created (R9).
-    for (const name of new Set(
-      writing.map((w) => w.line.row.brand).filter((b): b is string => !!b),
-    )) {
-      if (lookups.brandIds.has(name.toLowerCase())) continue;
-      const created = await p.brand.create({
-        data: { vendorId, name, slug: slugify(name) },
-        select: { id: true },
-      });
-      lookups.brandIds.set(name.toLowerCase(), created.id);
-      masterCreated.push(`brand ${name}`);
-    }
-    for (const w of writing) {
-      const cat = w.line.row.category;
-      if (lookups.categories.has(cat.slug)) continue;
-      if (!("newName" in cat))
-        throw new Error(`category slug "${cat.slug}" (from the profile) does not exist`);
-      const created = await p.category.create({
-        data: { vendorId, slug: cat.slug, name: cat.newName, parentId: null, isActive: false },
-        select: { id: true },
-      });
-      lookups.categories.set(cat.slug, { id: created.id, name: cat.newName });
-      masterCreated.push(`category ${cat.newName} (inactive)`);
-    }
-    const attributeIds = new Map<string, { id: string; options: Map<string, string> }>();
-    const attributeNames = new Set(writing.flatMap((w) => Object.keys(w.line.row.attributes)));
-    for (const name of attributeNames) {
-      const slug = slugify(name);
-      let attr = await p.vendorAttribute.findUnique({
-        where: { vendorId_slug: { vendorId, slug } },
-        select: { id: true, options: { select: { id: true, slug: true } } },
-      });
-      if (!attr) {
-        attr = await p.vendorAttribute.create({
-          data: { vendorId, name, slug, kind: "LIST" },
-          select: { id: true, options: { select: { id: true, slug: true } } },
-        });
-        masterCreated.push(`attribute ${name}`);
-      }
-      attributeIds.set(name, {
-        id: attr.id,
-        options: new Map(attr.options.map((o) => [o.slug, o.id])),
-      });
-    }
-    for (const w of writing) {
-      for (const [name, option] of Object.entries(w.line.row.attributes)) {
-        const attr = attributeIds.get(name) as { id: string; options: Map<string, string> };
-        const slug = slugify(option);
-        if (attr.options.has(slug)) continue;
-        const created = await p.vendorAttributeOption.create({
-          data: { attributeId: attr.id, name: option, slug, sortOrder: attr.options.size },
-          select: { id: true },
-        });
-        attr.options.set(slug, created.id);
-        masterCreated.push(`option ${name}: ${option}`);
-      }
-    }
-
-    const slugs = new Set(store.catalogue.map((c) => c.slug));
-    const uniqueSlug = (name: string) => {
-      const base = slugify(name).slice(0, 90) || "product";
-      let slug = base;
-      for (let n = 2; slugs.has(slug); n++) slug = `${base}-${n}`;
-      slugs.add(slug);
-      return slug;
+    // Master data first, reused before created (R9) — the shared code the staff screen uses (#1578).
+    const master = await ensureMasterData(
+      asWs(p),
+      vendorId,
+      writing.map((w) => w.line.listRow),
+      lookups,
+    );
+    masterCreated.push(...master.created);
+    const ctx = {
+      batchId,
+      profile,
+      knownBrands,
+      lookups,
+      attributeIds: master.attributeIds,
+      options: f.options,
+      tillNames,
+      slugs: new Set(store.catalogue.map((c) => c.slug)),
     };
 
     for (const w of work) {
       const { line } = w;
-      // #1573 — an UPDATE takes till words from the product it updates, whether the plan matched
-      // it or a reviewer confirmed it. A till-word name can make the next run's match uncertain
-      // ("Black Seeds" is as close to "Black Sesame Seeds" as to "Black Onion Seeds"), and building
-      // from the list's name then would undo the rename. A CREATE gets the list's own name.
-      const row =
-        w.decision === "UPDATE" && w.target
-          ? withTillWords(
-              line.listRow,
-              w.target,
-              tillNames.get(w.target.id) ?? w.target.name,
-              profile,
-              knownBrands,
-            ).row
-          : line.listRow;
       if (w.decision !== "UPDATE" && w.decision !== "CREATE") {
         outcomes.push({
-          key: row.key,
+          key: line.row.key,
           action: "skipped",
           productId: null,
-          name: row.displayName,
+          name: line.listRow.displayName,
           detail:
             w.decision === "REVIEW"
               ? "undecided (REVIEW)"
@@ -722,149 +619,28 @@ async function apply(f: Flags, profile: StockImportProfile) {
         continue;
       }
       try {
-        const targets = targetsFor(row, lookups);
-        const categoryId = targets.categoryId as string;
-        if (w.decision === "UPDATE") {
-          const target = w.target as CatalogueProduct;
-          const { changes, kept } = computeChanges(row, target, targets, profile, f.options);
-          const data: Prisma.ProductUncheckedUpdateInput = {};
-          let price = target.basePrice;
-          let net =
-            target.netContentAmount !== null && target.netContentUnit !== null
-              ? { amount: target.netContentAmount, unit: target.netContentUnit }
-              : null;
-          for (const c of changes) {
-            switch (c.field) {
-              case "name":
-                data.name = row.displayName;
-                break;
-              case "basePrice":
-                data.basePrice = price = row.pricePence as number;
-                break;
-              case "originalPrice":
-                data.originalPrice = row.wasPricePence;
-                break;
-              case "netContent":
-                net = row.netContent;
-                data.netContentAmount = net?.amount ?? null;
-                data.netContentUnit = net?.unit ?? null;
-                break;
-              case "unitLabel":
-                data.unitLabel = unitLabelFor(row.pricePence as number);
-                break;
-              case "brandId":
-                data.brandId =
-                  targets.brandId ?? lookups.brandIds.get((row.brand as string).toLowerCase());
-                break;
-              case "categoryId":
-                data.categoryId = categoryId;
-                break;
-              case "plu":
-                data.plu = row.plu;
-                break;
-              case "barcode":
-                data.barcode = row.barcode;
-                break;
-              case "description":
-                data.description = row.description as string;
-                break;
-              case "origin":
-                data.origin = row.origin;
-                break;
-              case "vatRate":
-                data.vatRate = row.vatRate as number;
-                break;
-              default:
-                data[c.field] = row.flags[c.field] as boolean;
-            }
-          }
-          if ("basePrice" in data || "netContentAmount" in data)
-            data.unitPricePencePerBaseUnit = deriveUnitPricePenceForSort(price, net);
-          const extras = await p.$transaction(async (tx) => {
-            if (Object.keys(data).length > 0)
-              await tx.product.update({ where: { id: target.id, vendorId }, data });
-            return writeExtras(tx, vendorId, target.id, target.slug, row, attributeIds);
-          });
-          const parts = [
-            ...changes.map((c) => `${c.field}: ${c.from || "—"} → ${c.to}`),
-            ...extras,
-          ];
-          if (kept.length)
-            parts.push(`kept ${kept.map((k) => `${k.field} (${k.reason})`).join(", ")}`);
-          if (w.note) parts.push(`note: ${w.note}`);
-          outcomes.push({
-            key: row.key,
-            action: changes.length || extras.length ? "updated" : "unchanged",
-            productId: target.id,
-            name: row.displayName,
-            detail: parts.join("; "),
-          });
-        } else {
-          const id = randomUUID();
-          const slug = uniqueSlug(row.displayName);
-          const extras = await p.$transaction(async (tx) => {
-            await tx.product.create({
-              data: {
-                id,
-                vendorId,
-                slug,
-                name: row.displayName,
-                description: row.description ?? "",
-                categoryId,
-                basePrice: row.pricePence as number,
-                originalPrice: row.wasPricePence,
-                unitLabel: unitLabelFor(row.pricePence as number),
-                netContentAmount: row.netContent?.amount ?? null,
-                netContentUnit: row.netContent?.unit ?? null,
-                unitPricePencePerBaseUnit: deriveUnitPricePenceForSort(
-                  row.pricePence as number,
-                  row.netContent,
-                ),
-                isActive: false,
-                brandId:
-                  targets.brandId ??
-                  (row.brand ? lookups.brandIds.get(row.brand.toLowerCase()) : null) ??
-                  null,
-                plu: row.plu,
-                barcode: row.barcode,
-                origin: row.origin,
-                ...(row.vatRate !== null ? { vatRate: row.vatRate } : {}),
-                ...row.flags,
-                importBatchId: batchId,
-                importSourceRow: row.rowNumber,
-              },
-            });
-            await tx.inventory.create({
-              data: {
-                vendorId,
-                productId: id,
-                quantity: 0,
-                stockMode: "UNKNOWN",
-                // #1572 — the store-wide low-stock default.
-                lowStockThreshold: await readLowStockDefault(tx, vendorId),
-              },
-            });
-            return writeExtras(tx, vendorId, id, slug, row, attributeIds);
-          });
-          store.catalogue.push({ id, slug, name: row.displayName } as CatalogueProduct);
-          outcomes.push({
-            key: row.key,
-            action: "created",
-            productId: id,
-            name: row.displayName,
-            detail: [
-              `hidden, ${pounds(row.pricePence)}`,
-              ...extras,
-              ...(w.note ? [`note: ${w.note}`] : []),
-            ].join("; "),
-          });
-        }
+        // #1573 — applyLine adds the target's till words to an UPDATE itself.
+        const outcome = await applyLine(asWs(p), vendorId, ctx, {
+          row: line.listRow,
+          decision: w.decision,
+          target: w.target as ImportProduct | null,
+          note: w.note,
+        });
+        if (outcome.action === "created")
+          store.catalogue.push({ id: outcome.productId, name: outcome.name } as ImportProduct);
+        outcomes.push({
+          key: line.row.key,
+          action: outcome.action,
+          productId: outcome.productId,
+          name: outcome.name,
+          detail: outcome.detail,
+        });
       } catch (e) {
         outcomes.push({
-          key: row.key,
+          key: line.row.key,
           action: "failed",
           productId: null,
-          name: row.displayName,
+          name: line.listRow.displayName,
           detail: e instanceof Error ? e.message.split("\n").slice(-1)[0] : String(e),
         });
       }
@@ -884,100 +660,6 @@ async function apply(f: Flags, profile: StockImportProfile) {
   }
 }
 
-type Tx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
-
-/** Attributes and offers (R9, R12). Existing values are kept; everything new is inactive. */
-async function writeExtras(
-  tx: Tx,
-  vendorId: string,
-  productId: string,
-  slug: string,
-  row: NormalisedRow,
-  attributeIds: Map<string, { id: string; options: Map<string, string> }>,
-): Promise<string[]> {
-  const notes: string[] = [];
-  for (const [name, option] of Object.entries(row.attributes)) {
-    const attr = attributeIds.get(name);
-    if (!attr) continue;
-    const optionId = attr.options.get(slugify(option)) as string;
-    const existing = await tx.productAttributeValue.findUnique({
-      where: { productId_attributeId: { productId, attributeId: attr.id } },
-      select: { optionId: true },
-    });
-    if (!existing) {
-      await tx.productAttributeValue.create({
-        data: { vendorId, productId, attributeId: attr.id, optionId },
-      });
-      notes.push(`${name}: ${option}`);
-    } else if (existing.optionId !== optionId) {
-      notes.push(`kept existing ${name}`);
-    }
-  }
-  if (row.multiBuy) {
-    const tier = await tx.productPriceTier.findUnique({
-      where: { productId },
-      select: { id: true },
-    });
-    if (!tier) {
-      await tx.productPriceTier.create({
-        data: {
-          vendorId,
-          productId,
-          groupQuantity: row.multiBuy.quantity,
-          groupPricePence: row.multiBuy.pricePence,
-          isActive: false,
-        },
-      });
-      notes.push(
-        `multi-buy ${row.multiBuy.quantity} for ${pounds(row.multiBuy.pricePence)} (inactive)`,
-      );
-    }
-  }
-  if (row.bundle) {
-    const bundleSlug = slugify(row.bundle.name);
-    let bundle = await tx.bundle.findUnique({
-      where: { vendorId_slug: { vendorId, slug: bundleSlug } },
-      select: { id: true },
-    });
-    if (!bundle) {
-      bundle = await tx.bundle.create({
-        data: { vendorId, slug: bundleSlug, name: row.bundle.name, isActive: false },
-        select: { id: true },
-      });
-      notes.push(`bundle ${row.bundle.name} created (inactive)`);
-    }
-    const item = await tx.bundleItem.findUnique({
-      where: { bundleId_productId: { bundleId: bundle.id, productId } },
-      select: { id: true },
-    });
-    if (!item) {
-      await tx.bundleItem.create({
-        data: { bundleId: bundle.id, productId, quantity: row.bundle.quantity },
-      });
-      notes.push(`in bundle ${row.bundle.name} ×${row.bundle.quantity}`);
-    }
-  }
-  if (row.promotion) {
-    const promo = await tx.promotion.findFirst({
-      where: { vendorId, productId, headline: row.promotion },
-      select: { id: true },
-    });
-    if (!promo) {
-      await tx.promotion.create({
-        data: {
-          vendorId,
-          productId,
-          headline: row.promotion,
-          linkUrl: `/products/${slug}`,
-          isActive: false,
-        },
-      });
-      notes.push(`promotion "${row.promotion}" (inactive)`);
-    }
-  }
-  return notes;
-}
-
 interface Verification {
   checked: number;
   createdHidden: number;
@@ -991,7 +673,7 @@ async function readBack(
   p: PrismaClient,
   vendorId: string,
   outcomes: ApplyOutcome[],
-  store: Store,
+  store: ImportStore,
 ): Promise<Verification> {
   const ids = outcomes
     .filter((o) => o.productId && o.action !== "skipped")
@@ -1056,12 +738,87 @@ function applyMarkdown(
   ].join("\n");
 }
 
+/** A write command's guard: the exact host, and --production for a production secrets file. */
+async function connectForWrite(f: Flags) {
+  const { client, host } = await connect(f);
+  console.log(`database host: ${host}`);
+  if (f.confirmHost !== host) {
+    await client.$disconnect();
+    throw new Error(`needs --confirm-host ${host} (got ${f.confirmHost ?? "nothing"})`);
+  }
+  if (/production/i.test(f.secrets ?? "") && !f.production) {
+    await client.$disconnect();
+    throw new Error("REFUSED: a production secrets file also needs --production (staging first)");
+  }
+  return client;
+}
+
+/** #1578 — a JSON profile becomes the store's import settings (what the staff screen edits). */
+async function settingsPush(f: Flags) {
+  if (!f.profile) throw new Error("settings-push needs --profile");
+  const profile = readProfileFile(f.profile);
+  const { settings, notCarried } = settingsFromProfile(profile);
+  const p = await connectForWrite(f);
+  try {
+    const vendorId = await vendorIdFor(p, profile.vendorSlug);
+    const saved = await saveImportSettings(asWs(p), vendorId, settings);
+    if (!saved.ok) throw new Error(saved.error);
+    console.log(
+      `settings saved for ${profile.vendorSlug} (version ${saved.version.toISOString()})`,
+    );
+    if (notCarried.length)
+      console.log(`NOT carried (move them into a preset): ${notCarried.join(", ")}`);
+  } finally {
+    await p.$disconnect();
+  }
+}
+
+/**
+ * #1578 — plan files as runs on the staff screen. A review-sheet line decided SKIP with a note
+ * becomes a held question there, for the store to decide. Nothing is applied.
+ */
+async function toScreen(f: Flags) {
+  if (!f.vendor) throw new Error("to-screen needs --vendor <slug>");
+  const held = new Map<string, { decision: "HOLD"; question: string }>();
+  if (f.review) {
+    const review = readWorkbookSheets(f.review).get("Review");
+    if (!review) throw new Error(`${f.review} has no Review sheet`);
+    const at = (name: string) => review[0].indexOf(name);
+    for (const r of review.slice(1)) {
+      const note = at("Review note") >= 0 ? (r[at("Review note")] ?? "").trim() : "";
+      if (r[at("Decision")]?.trim().toUpperCase() === "SKIP" && note)
+        held.set(r[at("Key")].trim(), { decision: "HOLD", question: note });
+    }
+  }
+  const p = await connectForWrite(f);
+  try {
+    const vendorId = await vendorIdFor(p, f.vendor);
+    for (const file of f.files) {
+      const source = readSourceGrid(file);
+      const created = await createImportRun(asWs(p), vendorId, {
+        fileName: basename(file),
+        fileSha256: sha256(file),
+        grid: source.grid,
+        userId: null,
+        decisions: held,
+      });
+      if (!created.ok) throw new Error(`${basename(file)}: ${created.error}`);
+      console.log(`${basename(file)} → /staff/products/import/${created.runId}`);
+    }
+    console.log(`held questions carried: ${held.size}`);
+  } finally {
+    await p.$disconnect();
+  }
+}
+
 async function main() {
   const f = parseFlags(process.argv.slice(2));
   if (f.command === "decide") {
     decide(f, f.files[0]);
     return;
   }
+  if (f.command === "settings-push") return settingsPush(f);
+  if (f.command === "to-screen") return toScreen(f);
   if (!["plan", "apply"].includes(f.command) || f.files.length === 0 || !f.profile) {
     throw new Error("usage: see the header of scripts/stock-import.ts");
   }
