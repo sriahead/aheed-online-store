@@ -4,13 +4,21 @@ import { buildIndex, matchRow, wordContext, type CatalogueProduct } from "@/lib/
 import { computeChanges } from "@/lib/stock-import/merge";
 import { normaliseFile, parseMultiBuy, splitForms } from "@/lib/stock-import/normalise";
 import { buildPlan, countPlan } from "@/lib/stock-import/plan";
-import { parseProfile, type StockImportProfile } from "@/lib/stock-import/profile";
+import {
+  applyPresets,
+  parseProfile,
+  stockImportPresetSchema,
+  type StockImportProfile,
+} from "@/lib/stock-import/profile";
 
 /** #1570 — the stock import's pure core: profile, normalise, match, merge, plan. */
 
-const aheed = parseProfile(
-  JSON.parse(readFileSync("scripts/stock-import/profiles/aheed-food-centre.json", "utf8")),
-);
+const readJson = (path: string) => JSON.parse(readFileSync(path, "utf8"));
+const preset = (name: string) =>
+  stockImportPresetSchema.parse(readJson(`scripts/stock-import/presets/${name}.json`));
+const aheedOwn = parseProfile(readJson("scripts/stock-import/profiles/aheed-food-centre.json"));
+/** #1573 — the profile as the script loads it: its presets merged underneath. */
+const aheed = applyPresets(aheedOwn, aheedOwn.presets.map(preset));
 
 function product(over: Partial<CatalogueProduct>): CatalogueProduct {
   return {

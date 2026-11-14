@@ -1,22 +1,62 @@
 {
-  "notes": "Aheed Food Centre. Owner price lists: product name (brand first), size, price; no header row; a row with only a name is a section heading. First run 2026-11-14 (#1570): spices list and Shan list. Owner decisions: clean names on matched till products; 'x / y' form rows split in two.",
+  "notes": "Aheed Food Centre. Owner price lists: product name (brand first), size, price; no header row; a row with only a name is a section heading. First run 2026-11-14 (#1570): spices list and Shan list. Owner decisions: clean names on matched till products; 'x / y' form rows split in two. #1573 (2026-11-14): presets general, spices, rice and fish supply the naming order and the Form, Variety, Grain, Species, Storage, Cut, Grade and Flavour filters; till words the list drops are kept.",
   "vendorSlug": "aheed-food-centre",
+  "presets": ["general", "spices", "rice", "fish"],
   "headerRow": "none",
-  "columns": { "name": "A", "size": "B", "price": "C" },
+  "columns": {
+    "name": "A",
+    "size": "B",
+    "price": "C"
+  },
   "defaultCategory": "spices-masalas",
-  "sectionCategories": { "spices": "spices-masalas" },
+  "sectionCategories": {
+    "spices": "spices-masalas"
+  },
   "categoryMap": {},
-  "files": [{ "match": "shan", "brand": "Shan", "category": "spices-masalas" }],
+  "files": [
+    {
+      "match": "shan",
+      "brand": "Shan",
+      "category": "spices-masalas"
+    }
+  ],
   "brands": [
-    { "name": "TRS", "aliases": ["tra", "t.r.s"] },
-    { "name": "Rajah", "aliases": [] },
-    { "name": "Shan", "aliases": [] },
-    { "name": "Heera", "aliases": [] },
-    { "name": "Lotus", "aliases": [] },
-    { "name": "Natco", "aliases": [] },
-    { "name": "Niru", "aliases": [] },
-    { "name": "Kasturi", "aliases": [] },
-    { "name": "Diamond", "aliases": ["diamon"] }
+    {
+      "name": "TRS",
+      "aliases": ["tra", "t.r.s"]
+    },
+    {
+      "name": "Rajah",
+      "aliases": []
+    },
+    {
+      "name": "Shan",
+      "aliases": []
+    },
+    {
+      "name": "Heera",
+      "aliases": []
+    },
+    {
+      "name": "Lotus",
+      "aliases": []
+    },
+    {
+      "name": "Natco",
+      "aliases": []
+    },
+    {
+      "name": "Niru",
+      "aliases": []
+    },
+    {
+      "name": "Kasturi",
+      "aliases": []
+    },
+    {
+      "name": "Diamond",
+      "aliases": ["diamon"]
+    }
   ],
   "spelling": {
     "powdee": "powder",
@@ -76,17 +116,5 @@
   "nameTemplate": "{brand} {name} – {size}",
   "renameMatched": true,
   "moveMatchedToCategory": true,
-  "derivedAttributes": [
-    {
-      "name": "Form",
-      "options": {
-        "Whole": ["whole"],
-        "Powder": ["powder", "ground"],
-        "Crushed": ["crushed", "coarse"],
-        "Seeds": ["seeds", "seed"],
-        "Leaves": ["leaves"],
-        "Spice Mix": ["masala", "mix", "seasoning"]
-      }
-    }
-  ]
+  "derivedAttributes": []
 }

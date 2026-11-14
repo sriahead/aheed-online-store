@@ -1,13 +1,15 @@
 ---
 name: stock-import
-description: Stock Data Import & Update Manager. Use when a store sends a stock or price spreadsheet (.xlsx, .xls, .csv) to load or refresh products, brands, categories, attributes or offers (was price, multi-buy, bundles, promotions) for any vendor. It analyses the file, extends the store's profile, plans against the live catalogue, has uncertain matches reviewed, applies to staging with everything hidden, verifies and reports.
+description: Stock Data Import & Update Manager. Use when a store sends a stock or price spreadsheet (.xlsx, .xls, .csv) to load or refresh products, brands, categories, attributes or offers (was price, multi-buy, bundles, promotions) for any vendor, or asks to standardise product names and filters. It analyses the file, extends the store's profile and presets, plans against the live catalogue, has uncertain matches reviewed, applies to staging with everything hidden, verifies and reports.
 ---
 
-# Stock Data Import & Update Manager (#1570)
+# Stock Data Import & Update Manager (#1570, #1573)
 
 One reviewed path for every store's spreadsheet. Code: `scripts/stock-import.ts` (CLI) over
-`lib/stock-import/` (pure, tested in `tests/stock-import.test.ts`). Store settings:
-`scripts/stock-import/profiles/<vendor-slug>.json`. Spec: `specs/2026-11-14-stock-data-import/`.
+`lib/stock-import/` (pure, tested in `tests/stock-import.test.ts` and
+`tests/stock-import-naming.test.ts`). Store settings: `scripts/stock-import/profiles/<vendor-slug>.json`;
+shared rule sets: `scripts/stock-import/presets/` (`general`, `spices`, `rice`, `fish`). Specs:
+`specs/2026-11-14-stock-data-import/`, `specs/2026-11-14-grocery-naming-standard/`.
 
 ## Never
 
@@ -23,7 +25,32 @@ One reviewed path for every store's spreadsheet. Code: `scripts/stock-import.ts`
   staging: staging first, owner checks it, then production (`--production`). Production DB commands
   go to the user as a `! <command>` when auto mode blocks them.
 - **Never overwrite** a field staff edited by hand (`manuallyEditedFields`) unless the owner asks
-  (`--overwrite-edited`), an existing PLU, or a value the sheet leaves blank.
+  (`--overwrite-edited`), an existing PLU, or a value the sheet leaves blank. Stock, VAT and barcodes
+  change only when the sheet has that column.
+- **Never invent a product detail.** A name may only reorder words and keep words the till already
+  had; a filter value only comes from a word in the name or a column; dietary labels (halal,
+  vegetarian, vegan, gluten free, organic) only from a column the store filled in.
+- **Never merge** products of a different brand, variant, form or size. Possible duplicates are
+  listed in the report for a person.
+
+## Naming standard (#1573)
+
+Every clean name is `{brand} {name} – {size}` unless a category rule says otherwise:
+
+- **Title Case**, brand written as the store writes it (`brands[].name`, `preserveWords`: TRS, BBQ).
+- **Sizes** as `g`, `kg`, `ml`, `L` (`100grm`, `1 Kilo`, `250 mls`, `2 Litres` are normalised).
+- **Word order by category** (`categoryRules[].wordOrder`): heat and colour first, form last for
+  spices (`TRS Extra Hot Chilli Powder – 100g`, `TRS Black Sesame Seeds`, `TRS Cloves Whole`); grain
+  length first and "Rice" last for rice (`Extra Long Basmati Rice`); Fresh/Frozen last for fish
+  (`Rohu Steaks Frozen`). Words are moved, never added or removed.
+- **Till words kept** (`keepTillWords`): when the till name has every word of the list's name plus
+  more, its wording is used (`Black Seeds` → `Black Onion Seeds`, `Dalchini` → `Cinnamon Sticks`,
+  `Keema` → `Keema Curry Mix`). Only on a confident (UPDATE) match. `noiseWords` (`pkt`, `new`) never
+  count. If an earlier run already replaced the till names, pass its plan as `--previous-run`.
+- **Filters by category** (`derivedAttributes[].categories`, slug substrings): Spices → Form; Rice →
+  Variety, Grain; Fish → Species, Storage (Fresh/Frozen), Cut, Grade; snacks, sauces, pickles,
+  drinks, biscuits, noodles → Flavour. Existing filters and options are reused; new ones created.
+- A name staff corrected by hand is never replaced.
 
 ## Steps
 
@@ -36,7 +63,10 @@ One reviewed path for every store's spreadsheet. Code: `scripts/stock-import.ts`
    (`secrets/afc-staging.vars` → `AFC_DIRECT_URL` for an AFC cell; `secrets/staging.vars` →
    `DIRECT_URL` for the shared staging). Check the brands and categories that exist and how the
    store's existing products are named, so the profile reuses them.
-3. **Write or extend the profile.** Copy `_template.json` for a new store. Keys:
+3. **Write or extend the profile.** Copy `_template.json` for a new store and list the presets that
+   fit what it sells (`presets`: `general` always; `spices`, `rice`, `fish` as needed). A preset is
+   merged under the profile and the profile's own values win; add a preset for a new kind of product
+   rather than putting shared rules in one store's profile. Keys:
    - `headerRow` `auto` (columns by header text) or `none` (columns by letter A, B, C).
    - `columns`: `name` (required), `size`, `price`, `plu`, `barcode`, `brand`, `category`,
      `description`, `wasPrice`, `multiBuy`, `bundle`, `bundleQuantity`, `promotion`, `vat`, `origin`,
@@ -48,8 +78,10 @@ One reviewed path for every store's spreadsheet. Code: `scripts/stock-import.ts`
    - `brands` (canonical name + aliases), `spelling` (whole-word fixes), `synonyms` (match-only
      equivalents such as jeera = cumin), `ignoreWords`, `formWords` (which "x / y" rows split),
      `conflictingForms` (seeds vs leaves, hot vs mild: never the same product), `preserveWords`.
-   - `nameTemplate` (`{brand} {name} – {size}`), `renameMatched`, `moveMatchedToCategory`,
-     `derivedAttributes` (an attribute filled from words in the name, e.g. Form: Whole/Powder).
+   - `nameTemplate` (`{brand} {name} – {size}`), `wordOrder` (`leading`, `trailing`),
+     `categoryRules` (`categories` slug substrings → `nameTemplate` and/or `wordOrder`),
+     `keepTillWords`, `noiseWords`, `renameMatched`, `moveMatchedToCategory`, `derivedAttributes`
+     (an attribute filled from words in the name, optionally only in `categories`).
    Ask the owner only real forks (rename matched products? split two-form rows?) and record the
    answers in the profile's `notes`.
 4. **Plan** (read-only; writes `review.xlsx`, `plan-report.md`, `plan.json`):
@@ -59,8 +91,15 @@ One reviewed path for every store's spreadsheet. Code: `scripts/stock-import.ts`
      --secrets secrets/<env>.vars --url-key <KEY> --out .import-reports/stock-import/<slug>-<date>
    ```
 
-   Read every line. A wrong suggestion usually means a profile gap (a spelling, a synonym, a
-   conflicting form, a brand alias): fix the profile and plan again rather than overriding by hand.
+   Read every line, the **Till words kept** and **Possible duplicates already in the catalogue**
+   sections of `plan-report.md`, and the "Till words kept" column. A wrong suggestion usually means a
+   profile gap (a spelling, a synonym, a conflicting form, a brand alias, a word-order rule): fix the
+   profile or preset and plan again rather than overriding by hand.
+
+   **Re-running a list after an earlier run.** Carry over only the earlier decisions for lines that
+   are still REVIEW or CREATE: a line that now matches its own earlier-created product as UPDATE must
+   not get the old CREATE back (its name may have changed, so the re-run guard would not see it and a
+   duplicate would be created). Point an old CREATE at the product it created (UPDATE + its id).
 5. **Review the uncertain lines.** For each REVIEW line decide UPDATE (with the product), CREATE or
    SKIP. Rule: UPDATE only when sure it is the same product and size; CREATE (hidden) when unsure,
    noting the possible duplicate; SKIP when the row itself is ambiguous ("Rajah Seasoning" — which?)
@@ -73,8 +112,8 @@ One reviewed path for every store's spreadsheet. Code: `scripts/stock-import.ts`
    ```
 
    The owner can instead edit the Decision and Target product id columns in `review.xlsx`.
-6. **Apply to staging** (needs the exact database host; refuses if a source file or the profile
-   changed since the plan):
+6. **Apply to staging** (needs the exact database host; refuses if a source file, the profile, a
+   preset or the `--previous-run` file changed since the plan; pass the same `--previous-run`):
 
    ```bash
    npx tsx scripts/stock-import.ts apply <same files> --profile <p> --secrets secrets/<env>.vars \

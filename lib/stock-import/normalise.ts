@@ -5,7 +5,13 @@ import {
   formatNetContentDisplay,
 } from "@/lib/catalogue-import/net-content";
 import { parsePricePence } from "@/lib/catalogue-import/price";
-import { FLAG_KEYS, type FlagKey, type StockImportProfile } from "./profile";
+import {
+  FLAG_KEYS,
+  inCategory,
+  type FlagKey,
+  type StockImportProfile,
+  type WordOrder,
+} from "./profile";
 
 /**
  * #1570 R1, R3–R5 — one spreadsheet grid to normalised product rows. Pure: no database, no
@@ -93,6 +99,7 @@ export function normaliseSizeText(text: string): string {
     .replace(/(\d)\s*(?:grms?|gms?|grams?|gr)\b/gi, "$1g")
     .replace(/(\d)\s*(?:kgs?|kilos?)\b/gi, "$1kg")
     .replace(/(\d)\s*(?:ltrs?|litres?|liters?)\b/gi, "$1l")
+    .replace(/(\d)\s*(?:mls|millilitres?|milliliters?)\b/gi, "$1ml")
     .trim();
 }
 
@@ -200,6 +207,54 @@ export function leadingBrand(
   return null;
 }
 
+/**
+ * #1573 — the naming rule for a category: the first category rule that matches supplies its template
+ * and word order, the profile's defaults fill the rest.
+ */
+export function namingFor(
+  profile: StockImportProfile,
+  categorySlug: string,
+): { nameTemplate: string; wordOrder: WordOrder } {
+  const rule = profile.categoryRules.find((r) => inCategory(r.categories, categorySlug));
+  return {
+    nameTemplate: rule?.nameTemplate ?? profile.nameTemplate,
+    wordOrder: rule?.wordOrder ?? profile.wordOrder,
+  };
+}
+
+/**
+ * #1573 — move `leading` phrases to the front and `trailing` words to the end of a name, keeping
+ * every word and the written case. Whole words only; the longest leading phrase is tried first, so
+ * "Extra Hot" moves as one phrase before "Hot" is considered.
+ */
+export function orderWords(name: string, order: WordOrder): string {
+  let words = name.split(/\s+/).filter(Boolean);
+  const take = (phrase: string): string[] | null => {
+    const target = phrase.toLowerCase().split(/\s+/);
+    for (let i = 0; i + target.length <= words.length; i++) {
+      if (target.every((t, k) => words[i + k].toLowerCase() === t)) {
+        const found = words.slice(i, i + target.length);
+        words = [...words.slice(0, i), ...words.slice(i + target.length)];
+        return found;
+      }
+    }
+    return null;
+  };
+  const front: string[] = [];
+  for (const phrase of [...order.leading].sort((a, b) => b.length - a.length)) {
+    const found = take(phrase);
+    if (found) front.push(...found);
+  }
+  const back: string[] = [];
+  for (const word of order.trailing) {
+    const found = take(word);
+    if (found) back.push(...found);
+  }
+  // A name made only of moved words stays as written.
+  if (words.length === 0) return name;
+  return [...front, ...words, ...back].join(" ");
+}
+
 export function composeName(
   template: string,
   parts: { brand: string | null; name: string; size: string | null },
@@ -273,10 +328,11 @@ function categoryFor(
   return { slug: profile.defaultCategory };
 }
 
-function deriveAttributes(
+export function deriveAttributes(
   profile: StockImportProfile,
   name: string,
   given: Record<string, string>,
+  categorySlug: string,
 ) {
   const words = new Set(
     lower(name)
@@ -286,6 +342,8 @@ function deriveAttributes(
   const out = { ...given };
   for (const rule of profile.derivedAttributes) {
     if (out[rule.name]) continue;
+    // #1573 — a rice attribute is never derived for a spice, whatever its words say.
+    if (!inCategory(rule.categories, categorySlug)) continue;
     for (const [option, triggers] of Object.entries(rule.options)) {
       if (
         triggers.some((t) =>
@@ -466,8 +524,9 @@ export function normaliseFile(
 
     const category = categoryFor(profile, col.get(raw, cols.category), section, defaults?.category);
     const variants = splitForms(rest, profile.formWords);
+    const naming = namingFor(profile, category.slug);
     variants.forEach((variant, v) => {
-      const coreName = titleCase(variant, profile);
+      const coreName = orderWords(titleCase(variant, profile), naming.wordOrder);
       rows.push({
         key: `${file.fileName}#${rowNumber}${variants.length > 1 ? String.fromCharCode(97 + v) : ""}`,
         fileName: file.fileName,
@@ -476,7 +535,7 @@ export function normaliseFile(
         section,
         brand,
         coreName,
-        displayName: composeName(profile.nameTemplate, {
+        displayName: composeName(naming.nameTemplate, {
           brand,
           name: coreName,
           size: size?.label ?? null,
@@ -495,7 +554,7 @@ export function normaliseFile(
         vatRate,
         origin: col.get(raw, cols.origin) || null,
         flags,
-        attributes: deriveAttributes(profile, coreName, givenAttributes),
+        attributes: deriveAttributes(profile, coreName, givenAttributes, category.slug),
         issues: [...issues],
       });
     });
