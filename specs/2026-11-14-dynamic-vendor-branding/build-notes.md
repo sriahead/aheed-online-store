@@ -1,6 +1,6 @@
 # Dynamic vendor branding and Merqify ecosystem identity on Stripe Checkout (build notes)
 
-Branch `docs/1482-1491-session-handoff`.
+Branch `feature/1580-dynamic-vendor-branding`, built from `origin/staging` `c205dd08`. Issue #1580.
 
 ## What changed and why
 
