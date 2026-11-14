@@ -25,6 +25,7 @@ every branch merges.
   - Import settings per store in relational tables (migration `20261114150000_staff_stock_import`, 13 `StockImport*` models) with a settings screen; a settings change requires "Refresh plan". The CLI applies through the same `applyLine`, gains `settings-push` and `to-screen`; presets moved to `lib/stock-import/presets/` and took the generic rules from Aheed's profile (plans unchanged: 150 lines compared). Spec: `specs/2026-11-14-staff-stock-import/`.
   - Fix: a brand with no other spellings stays in the stored settings (it outranks a longer store brand such as "LAZIZA ACHAR GOSHT" when naming), and when two rows claim one product the row that names it best keeps it ("Chicken Masala" no longer takes "Chicken Tikka Masala" from the exact row). Dry run of the three owner lists: only those two Laziza lines change.
   - Aheed's import settings: "shanker" is a spelling of Shankar (brand clean-up 2026-11-14, AFC staging: 146 → 121 brands, 15 Shanker products linked).
+  - Aheed's import settings: TS / T S / T/S / T.S are Tropical Sun and Suryaa is Surya (owner, 2026-11-14; brand clean-up on AFC staging linked 158 products and split AL into its real brands).
 
 - **Grocery naming standard and category-specific filters for the stock import (#1573, 2026-11-14)**
   - Clean names: Title Case with brand styling kept, sizes as g/kg/ml/L, and word order by category (spices: heat and colour first, form last; rice: grain length first, "Rice" last; fish: Fresh/Frozen last). Words are moved, never invented.
