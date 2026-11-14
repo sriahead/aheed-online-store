@@ -12,12 +12,36 @@ every branch merges.
 
 ### Added
 
+- **Store and admin emails in the new design, part 3 of 3 (#1564, 2026-11-13)**
+  - The owner order email and bulk digest, the Contact us message forwarded to the store, and the Client Setup test email now use the shared layout: store header, facts panel, one "Open in staff panel" button, and a staff footer line instead of a customer reason. Not editable. Inbound mail forwarded to the store is untouched.
+  - Plain text for all of them (the owner emails write their own; the forwarded contact message's is derived on send).
+  - Tests: owner-email link test updated (one action link; the others are the store site and Powered by), new layout cases in `tests/email-template-overrides.test.ts`.
+
+- **Editable email templates, part 2 of 3 (#1564, 2026-11-13)**
+  - **Why.** The owner wanted store admins to edit every customer email's wording themselves (decisions: wording fields, store admins).
+  - **Page.** `/staff/email-templates` (admin tier): the 14 customer emails with Default/Edited status; an editor per email with a live preview rendered by the sending code, **Send test** to the admin's own address, and **Reset to default** (two clicks, no browser dialog).
+  - **Rules.** Seven fields per email (subject, preview line, heading, intro, button, reassurance, sign-off; the staff reply only the last two). Unknown or malformed placeholders, unbalanced braces, line breaks in one-line fields and over-long values are refused with the reason. Text only: the layout escapes everything; `**bold**` is the one markup.
+  - **Sending.** Order, account, contact, staff-reply and basket emails read the store's overrides at render time; a failed read uses the defaults and never blocks the email.
+  - **Storage.** `EmailTemplateOverride` (one row per store per template, nullable fields, `updatedByUserId`), one hand-authored additive migration `20261113180000_email_template_override`. Saving all-blank removes the row.
+  - Docs: store admin guide 2.27.0 (new page section), notification matrix 1.4.0. Tests: `tests/email-template-overrides.test.ts`, contact-form wording cases.
+
+- **Branded email design system, part 1 of 3 (#1564, 2026-11-13)**
+  - **Why.** Every customer email was a few bare paragraphs with no layout, logo, preview line or plain-text part. The owner asked for one premium, consistent, trustworthy design across all notifications.
+  - **Layout.** `lib/email/layout/` renders every customer email from structured content: hidden preview line, the store's mark and name, heading, key-facts panel, items and totals, one table-cell button (Outlook-safe), reassurance, sign-off, and a footer with the store's address and site, why the email was sent, and "Powered by Merqify" (https://merqify.com). 600px, mobile-first, inline CSS, dark-mode aware.
+  - **Branding from the store's data** (ADR-004): `senderName`, the PNG mark, `brandGreenDark` (contrast-checked, else neutral) and `brandCream`, `VendorLocation`. Footer attribution is fixed to Merqify because the AFC cells set `PLATFORM_NAME` to the store's name.
+  - **Plain text everywhere.** `OutgoingEmail.text`; both adapters send it; `send` derives it from the HTML when absent, so outbox retries carry one too.
+  - **14 templates** (`lib/email/templates/registry.ts`): seven order events, verify email, reset password, existing account, contact and complaint acknowledgements, staff reply, basket reminder. Rewritten subjects (no store-name suffix; the From name is the store), preview lines, intros, reassurance and sign-offs. Locked: next-step sentences (shared with the order tracker), items, totals, every link, the marketing consent and opt-out lines. Staff replies keep the staff text verbatim and `Re:` threading.
+  - **Preview.** `npm run email:preview` renders every template with a store's real branding for sign-off.
+  - **Unchanged.** URLs, Better Auth flows, dispatch, dedupe, outbox, `[STAGING]` tagging. No migration.
+  - Docs: notification matrix 1.3.0, store admin guide 2.26.0. Spec: `specs/2026-11-13-email-design-system/`. Tests: `tests/email-layout.test.ts`, `tests/email-templates.test.ts`, and updated order, contact, basket, account and email-port tests.
+
 - **Sign-up with an existing email now tells the account holder (#1558, 2026-11-13)**
   - **Why.** Re-registering an address that already had an account showed "check your email for a verification link" and sent nothing (found on AFC staging), leaving a real customer waiting for an email that never came.
   - **Change.** Better Auth's `onExistingUserSignUp` hook sends that address "You already have an account with <store>", with a sign-in link and a forgot-password link (or "sign in with Google" for a Google-only account). It carries no token and changes nothing.
   - **Still no enumeration.** The screen and HTTP response stay Better Auth's generic duplicate answer; the register screen now says "Check your email — we've sent a message to <email>", true in both cases. A send failure is swallowed and logged without the address. `/sign-up/email` stays under the per-store auth rate limit.
   - **Docs.** Notification matrix 1.2.0 (event 17, sanity-check step 6), store admin guide 2.25.0, platform admin guide 1.17.0, shopping guide 1.9.0.
   - Spec: `specs/2026-11-13-existing-account-signup/`. Tests: `tests/existing-account-signup.test.ts`.
+  - **Shipped.** Promoted to production 2026-11-13 (PR #1561, `12d6f670`).
   - **Follow-up.** Verified on AFC staging (hook ran, generic response, no account created). The subject read "a Aheed", so it now says "You already have an account with <store>".
 
 - **Abandoned checkouts with an admin recovery email, and a notification matrix (#1554, 2026-11-13)**

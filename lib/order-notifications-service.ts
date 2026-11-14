@@ -1,6 +1,8 @@
 import { getPrisma } from "@/lib/db";
 import { getAppEnvironment, getTelegramBotToken } from "@/lib/config";
 import { getEmailService } from "@/lib/email";
+import { buildEmailBrand } from "@/lib/email-brand-service";
+import { loadTemplateOverrides } from "@/lib/email-templates-service";
 import { clearNotificationOutboxPending, markNotificationOutboxPending } from "@/lib/job-signals";
 import { telegramAdapter } from "@/lib/order-alert/channels";
 import {
@@ -22,7 +24,12 @@ import {
 } from "@/lib/repositories/notification-outbox";
 import { listOrderAlertRecipients } from "@/lib/repositories/order-alert";
 import type { WebhookOrder } from "@/lib/repositories/orders";
-import { fetchVendorProfile, listAllVendorIds, listVendorHosts } from "@/lib/repositories/vendor";
+import {
+  fetchVendorProfile,
+  getVendorLocation,
+  listAllVendorIds,
+  listVendorHosts,
+} from "@/lib/repositories/vendor";
 
 /**
  * #1435 — the request-scoped half of order notifications: resolves the live Prisma client, the email
@@ -48,19 +55,26 @@ async function loadStore(
   // The profile (the sender) is required, as it always was for the customer email. The other three
   // only add a link or owner recipients, so a failed read degrades to "none" rather than costing
   // the customer their email.
-  const [profile, hosts, addresses, recipients] = await Promise.all([
+  const [profile, hosts, addresses, recipients, location] = await Promise.all([
     fetchVendorProfile(prisma, vendorId),
     listVendorHosts(prisma, vendorId).catch(() => []),
     listInboundAddresses(prisma, vendorId).catch(() => []),
     listOrderAlertRecipients(prisma, vendorId).catch(() => []),
+    getVendorLocation(prisma, vendorId).catch(() => null),
   ]);
+  // #1564 part 2 — never rejects; a failed read means the default wording.
+  const overrides = await loadTemplateOverrides(vendorId);
+  const baseUrl = canonicalBaseUrl(hosts);
   return {
     vendorId,
     sender: { name: profile.senderName, email: profile.senderEmail },
-    baseUrl: canonicalBaseUrl(hosts),
+    baseUrl,
     ownerEmail: resolveOwnerEmail(addresses),
     telegramChatIds: recipients.filter((r) => r.channel === "TELEGRAM").map((r) => r.destination),
     environment: getAppEnvironment(),
+    // #1564 — the customer emails' look, from the profile already read plus the location.
+    brand: buildEmailBrand(profile, location, baseUrl),
+    overrides,
   };
 }
 

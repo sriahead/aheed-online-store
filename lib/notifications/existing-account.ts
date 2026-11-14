@@ -1,4 +1,12 @@
-import { escapeHtml } from "@/lib/html-escape";
+import type { EmailBrand } from "@/lib/email/layout/brand";
+import { fallbackBrand } from "@/lib/email/layout/fallback";
+import {
+  finish,
+  orNull,
+  templateCopy,
+  type CopyOverrides,
+  type RenderedEmail,
+} from "@/lib/email/templates/compose";
 import type { EmailSender, OutgoingEmail } from "@/lib/email/types";
 
 /**
@@ -16,35 +24,56 @@ export function existingAccountEmail(input: {
   storeName: string;
   baseUrl: string;
   providers: readonly string[];
-}): { subject: string; html: string } {
-  const store = escapeHtml(input.storeName);
+  /** #1564 — the store's look; neutral when absent. */
+  brand?: EmailBrand;
+  overrides?: CopyOverrides | null;
+}): RenderedEmail {
   const base = input.baseUrl.replace(/\/+$/, "");
+  const brand = input.brand ?? fallbackBrand(input.storeName, base);
   const hasPassword = input.providers.includes(PASSWORD_PROVIDER);
   const hasGoogle = input.providers.includes(GOOGLE_PROVIDER);
   // Neither recorded is unexpected; offer the password route so the holder is never stuck.
   const offerReset = hasPassword || !hasGoogle;
-
-  const lines = [
-    `<p>Someone, probably you, tried to create an account with ${store} using this email address. You already have an account, so nothing new was created.</p>`,
-    `<p><a href="${base}/login">Sign in to ${store}</a></p>`,
-  ];
-  if (hasGoogle) lines.push(`<p>You can sign in with Google using this address.</p>`);
-  if (offerReset) {
-    lines.push(
-      `<p>Forgotten your password? <a href="${base}/forgot-password">Reset it here</a>.</p>`,
-    );
-  }
-  lines.push(
-    `<p>If this wasn't you, you can ignore this email. Nothing has changed on your account.</p>`,
+  const { copy, reason } = templateCopy(
+    "auth.existing_account",
+    { storeName: input.storeName },
+    input.overrides,
   );
 
-  return { subject: `You already have an account with ${input.storeName}`, html: lines.join("\n") };
+  return finish(
+    copy.subject,
+    {
+      preheader: copy.preheader,
+      heading: copy.heading,
+      intro: orNull(copy.intro),
+      blocks: hasGoogle
+        ? [
+            {
+              kind: "paragraph",
+              text: "You can also sign in with Google using this email address.",
+            },
+          ]
+        : [],
+      cta: { label: copy.ctaLabel || "Sign in to your account", href: `${base}/login` },
+      links: offerReset
+        ? [{ label: "Forgotten your password? Reset it", href: `${base}/forgot-password` }]
+        : [],
+      reassurance: orNull(copy.reassurance),
+      signOff: orNull(copy.signOff),
+      reason,
+    },
+    brand,
+  );
 }
 
 export interface ExistingAccountDeps {
   loadProviders(userId: string): Promise<readonly string[]>;
   resolveSender(): Promise<EmailSender | undefined>;
   defaultStoreName: string;
+  /** #1564 — the store's email look for this request; neutral when absent or failing. */
+  resolveBrand?(storeName: string, baseUrl: string): Promise<EmailBrand>;
+  /** #1564 part 2 — the store's saved wording, or null for the defaults. */
+  resolveOverrides?(): Promise<CopyOverrides | null>;
   send(email: OutgoingEmail): Promise<unknown>;
   log(line: string): void;
 }
@@ -65,12 +94,21 @@ export async function notifyExistingAccountSignUp(
       deps.loadProviders(user.id),
       deps.resolveSender(),
     ]);
-    const { subject, html } = existingAccountEmail({
-      storeName: sender?.name ?? deps.defaultStoreName,
+    const storeName = sender?.name ?? deps.defaultStoreName;
+    const brand = deps.resolveBrand
+      ? await deps.resolveBrand(storeName, baseUrl).catch(() => undefined)
+      : undefined;
+    const overrides = deps.resolveOverrides
+      ? await deps.resolveOverrides().catch(() => null)
+      : null;
+    const { subject, html, text } = existingAccountEmail({
+      storeName,
       baseUrl,
       providers,
+      brand,
+      overrides,
     });
-    await deps.send({ to: user.email, sender, subject, html });
+    await deps.send({ to: user.email, sender, subject, html, text });
   } catch (error) {
     // No address in the log line (#1435 R16).
     deps.log(

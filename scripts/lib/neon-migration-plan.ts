@@ -107,6 +107,7 @@ export const MODEL_PLAN: Record<string, { class: Classification; reason: string 
   DbWarmupConfig: { class: "skip", reason: "per-environment warm-up setting (#1491)" },
   NotificationOutbox: { class: "skip", reason: "failed-send queue, deleted once sent (#1435)" },
   AbandonedCheckoutReminder: { class: "skip", reason: "reminders for skipped test orders (#1554)" },
+  EmailTemplateOverride: { class: "copy", reason: "store email wording (#1564)" },
   DiscountCodeAttempt: { class: "skip", reason: "rate-limit attempts" },
   AuthenticationAttempt: { class: "skip", reason: "rate-limit attempts" },
   CustomerFeedbackAttempt: { class: "skip", reason: "rate-limit attempts" },

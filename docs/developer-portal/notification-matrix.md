@@ -4,7 +4,7 @@ title: "Notification matrix — which email or alert is sent when"
 audience: [dev, platform-admin, store-admin, staff]
 type: doc
 status: approved
-version: "1.2.0"
+version: "1.5.0"
 updated: 2026-11-13
 visibility: internal
 summary: Every customer email, owner email and Telegram alert the platform sends — the event that triggers it, who receives it, what stops a duplicate, and the code that sends it. The one place to answer "will anyone be told when X happens?".
@@ -82,6 +82,34 @@ automatic abandoned-cart email.
   and truthful loss framing. It **never** uses a countdown, an invented deadline, "only N left" or
   claims about other shoppers, all of which are banned by the CPRs and the DMCC Act 2024.
 
+## How customer emails look (`#1564`)
+
+Every customer email is rendered by one layout (`lib/email/layout/render.ts`) from structured
+content, so they share one design: the store's mark and name at the top, a heading, the key facts
+(order number, slot) in a panel, one button, a reassurance line, and a footer with the store's
+address and site, why the email was sent, and "Powered by Merqify".
+
+- **Branding is the store's own data**: name, square mark (PNG), dark brand colour for the button
+  and accent, cream for the background, `VendorLocation` for the address. A colour white text
+  cannot sit on falls back to a neutral dark. The full logo is not used: it is WebP, which Outlook
+  desktop cannot show.
+- **Every email has a plain-text part.** Templates write their own; anything else (an outbox retry)
+  gets one derived from the HTML in `getEmailService().send`.
+- **Wording lives in templates** (`lib/email/templates/registry.ts`): 14 keys, each with its
+  placeholders, default subject, preview line, heading, intro, button label, reassurance and
+  sign-off. Next-step sentences, items, totals, links and legal lines are locked.
+- **Store and admin emails** (`#1564` part 3) use the same layout with a staff footer line: the owner
+  order email and digest, the Contact us message forwarded to the store, and the Client Setup test
+  email. Not editable. Inbound mail forwarded to the store is passed on untouched.
+- **Editable per store** (`#1564` part 2): store admins change those seven fields at
+  `/staff/email-templates` (`EmailTemplateOverride`, one row per store per template; blank means
+  default). Senders read the overrides at render time and fall back to the defaults if the read
+  fails; queued retries keep what was rendered.
+- **Preview:** `npm run email:preview -- --vars <secrets file> --vendor <slug> --out <file>` renders
+  every template with the store's real branding into one page. Nothing is sent.
+- "Powered by" is always Merqify, never `PLATFORM_NAME`: the dedicated cells set that to the
+  store's own name.
+
 ## Code map
 
 | Event | Sent from |
@@ -95,6 +123,7 @@ automatic abandoned-cart email.
 | 15 | `lib/notifications/error-rate-alert.ts`, `app/api/jobs/check-error-rate/route.ts` |
 | 17 | `lib/notifications/existing-account.ts` via `lib/existing-account-signup-service.ts`; Better Auth `onExistingUserSignUp` in `lib/auth.ts` (`#1558`) |
 | All dispatch | `lib/notifications/dispatch.ts` (send first, queue on failure) |
+| Customer email design | `lib/email/layout/`, `lib/email/templates/`, branding via `lib/email-brand-service.ts` (`#1564`) |
 
 ## Sanity check after a change (`#1552`, `#1554`, `#1558`)
 
@@ -110,7 +139,9 @@ Run on staging first, from an address on `EMAIL_ALLOWED_RECIPIENTS`, while taili
 | 5. With `PLATFORM_ALERT_TELEGRAM_CHAT_ID` set, wait for an error-rate breach | One "Error rate alert" in that chat, then nothing more for an hour. |
 | 6. Register again with an allowlisted address that already has an account (`#1558`) | The screen says "Check your email"; the inbox gets "`[STAGING] You already have an account with <store>`"; no account is created and no "New account" alert fires. |
 
-**Last run:** 2026-11-13, Aheed staging. Step 1 passed (`status=sent` for both lines). Step 3: the
-route answers (307 to login when signed out). Steps 2, 4 and 5 not yet run: no test sign-up, no
-abandoned checkouts on AFC staging, chat id not yet set.
-
+**Last run:** 2026-11-13, AFC staging (`#1558`). Step 1 passed earlier on Aheed staging
+(`status=sent` for both lines). Step 2 passed: a new sign-up logged `event=REGISTRATION status=sent`
+(Telegram accepted the alert). Step 3: the route answers (307 to login when signed out). Step 5:
+chat id set on staging and production 2026-11-13, no breach yet. Step 6 passed: the owner received
+the email at an allowlisted address; no account created, no alert. Step 4 not yet run (no abandoned
+checkouts on AFC staging).

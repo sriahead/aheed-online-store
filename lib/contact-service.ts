@@ -18,7 +18,12 @@ import { findOrderForUser, listOrdersForUser } from "@/lib/repositories/orders";
 import { fetchVendorProfile } from "@/lib/vendor-service";
 import { processContactSubmission } from "@/lib/contact/submit";
 import { sendOrderAlertForVendor } from "@/lib/order-alert-service";
-import { sendVendorNotifications } from "@/lib/order-notifications-service";
+import { fallbackBrand } from "@/lib/email/layout/fallback";
+import { loadTemplateOverride } from "@/lib/email-templates-service";
+import {
+  loadVendorNotificationContext,
+  sendVendorNotifications,
+} from "@/lib/order-notifications-service";
 import { parseContactFields, type ContactFormState } from "@/features/contact/validate-contact";
 
 /**
@@ -61,13 +66,17 @@ export async function submitContactForVendor(input: {
     alert: async (brief) => {
       await sendOrderAlertForVendor(vendorId, brief);
     },
-    acknowledge: async ({ to, subject, html }) => {
+    loadOverride: (key) => loadTemplateOverride(vendorId, key),
+    loadBrand: async () =>
+      (await loadVendorNotificationContext(vendorId)).brand ?? fallbackBrand(profile.name),
+    acknowledge: async ({ to, subject, html, text }) => {
       await sendVendorNotifications(vendorId, [
         {
           channel: "EMAIL",
           destination: to,
           subject,
           body: html,
+          text,
           sender: { name: profile.senderName, email: profile.senderEmail },
           log: { audience: "CUSTOMER", event: "CONTACT_ACKNOWLEDGEMENT" },
         },

@@ -4,7 +4,7 @@ title: "Store Admin Management Guide"
 audience: [store-admin]
 type: runbook
 status: approved
-version: "2.25.0"
+version: "2.27.0"
 updated: 2026-11-13
 visibility: internal
 summary: "How to use every owner-only page in the Store Admin Panel: discounts, loyalty, storefront configuration, delivery areas, reports, customers, payment issues, and team access."
@@ -52,6 +52,12 @@ The full table, with duplicate guards and code locations, is the
 | A Contact us message arrives | "We've received your message" | Yes | "Enquiry" or "Complaint" |
 | Someone creates an account | Verification email | No | "New account" |
 | Someone signs up with an email that already has an account | "You already have an account" (sign in or reset password); the screen never says the account exists | No | No |
+
+**How the customer emails look.** Every customer email uses your store's mark, name and brand
+colour, shows the key facts (order number, slot) in a highlighted panel, has one clear button, and
+ends with your address and a small "Powered by Merqify" line. Each one also has a plain-text
+version for mail apps that prefer it. Your mark and colours come from your branding settings, so
+updating them updates the emails too.
 
 **Your email** goes to the forward-to of your **Orders** receiving address (else **Support**).
 **Telegram** goes to the chats in **Order alerts**. Both are set by your platform admin in Client
@@ -603,6 +609,50 @@ the row says why instead of showing the button:
 sender. The row then shows when it went, who sent it and any code. If the email provider is down, the
 email is retried automatically for up to 24 hours. The reminder cannot be sent a second time.
 
+
+## Email templates — `/staff/email-templates`
+
+**Purpose:** Make the emails your customers receive sound like your store, without risking a broken
+email (`#1564`).
+
+**Who can access:** Store admins only
+
+**What you can do:** Open any of the 14 customer emails (order updates, account emails, contact
+replies, the basket reminder). For each, change the **Subject**, **Preview line** (the grey text
+inboxes show after the subject), **Heading**, **Introduction**, **Button label**, **Reassurance
+line** and **Sign-off**. The preview beside the form updates as you type, using sample order
+details. **Save** applies your wording to every email sent from then on. **Send test to …** emails
+the sample to your own address. **Reset to default** (press it twice) goes back to the platform's
+wording.
+
+**Typical workflow:** Read the default first: it is already written to be clear and reassuring.
+Change only what should sound more like you, such as the sign-off or the heading, then send
+yourself a test and check it on your phone.
+
+**Important fields and filters:**
+- A blank field uses the default, shown in grey inside the box.
+- Placeholders such as `{{orderNumber}}` and `{{storeName}}` are filled in for each customer. Each
+  email lists the ones it accepts; a misspelt or unavailable one is refused when you save.
+- Wrap words in `**double asterisks**` to make them bold in the introduction, reassurance and
+  sign-off.
+- The list shows **Default** or **Edited**, with who edited it and when.
+
+**Common mistakes and limitations:**
+- The layout, your logo and colours, the order items and totals, "what happens next", every link
+  and the legal lines (why the email was sent, the marketing opt-out) cannot be changed, so no edit
+  can break a sign-in, reset or order link.
+- Text only: HTML is shown exactly as typed, never run.
+- A staff reply is the message staff write in Enquiries & Inbox; here you can only change its
+  reassurance line and sign-off.
+- Keep transactional emails (orders, account, contact) free of offers and sales talk: the law
+  (PECR) allows marketing only to customers who agreed to it. The basket reminder is the one
+  marketing email.
+- An edit changes future emails only; an email already waiting to retry keeps its wording.
+
+**What happens after changes are saved:** Every email of that kind sent from then on uses your
+wording, filled in for each customer, in your store's design. The list shows the email as **Edited**
+with your name and the date. If your wording can't be read for any reason, the email still goes out
+with the default wording rather than not at all.
 
 ## Team & Access — `/staff/team`
 

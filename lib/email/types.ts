@@ -14,6 +14,8 @@ export interface OutgoingEmail {
   to: string;
   subject: string;
   html: string;
+  /** #1564 R4 — the plain-text part; derived from `html` by `send` when absent. */
+  text?: string;
   /** The vendor the mail is sent on behalf of. Omitted means the platform itself. */
   sender?: EmailSender;
   /**
@@ -23,7 +25,8 @@ export interface OutgoingEmail {
   replyTo?: string;
   /**
    * #1546 — `to` is the signed-in platform admin's own address, so allowlist mode sends it without
-   * EMAIL_ALLOWED_RECIPIENTS. Only Client Setup's test email sets it
+   * EMAIL_ALLOWED_RECIPIENTS. Only Client Setup's test email and the Email templates page's Send
+   * test (#1564, the signed-in store admin's own address) set it
    * (tests/email-allowlist-client-setup.test.ts).
    */
   recipientIsSignedInAdmin?: boolean;
@@ -36,6 +39,7 @@ export interface ResolvedEmail {
   to: string;
   subject: string;
   html: string;
+  text: string;
 }
 
 export type EmailSendResult =
@@ -54,6 +58,7 @@ export interface SendEmailBinding {
     to: string;
     subject: string;
     html: string;
+    text?: string;
     replyTo?: string;
   }): Promise<unknown>;
 }

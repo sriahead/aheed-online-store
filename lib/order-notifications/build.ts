@@ -1,6 +1,9 @@
 import type { AppEnvironment } from "@/lib/config";
 import { resolveContactRecipient, type RecipientAddress } from "@/lib/contact/recipient";
 import type { EmailSender } from "@/lib/email";
+import type { EmailBrand } from "@/lib/email/layout/brand";
+import type { CopyOverrides } from "@/lib/email/templates/compose";
+import { ORDER_TEMPLATE, type TemplateKey } from "@/lib/email/templates/registry";
 import type { NotificationMessage } from "@/lib/notifications/dispatch";
 import type { WebhookOrder } from "@/lib/repositories/orders";
 import { buildCustomerEmail } from "./customer-email";
@@ -26,6 +29,10 @@ export interface StoreContext {
   ownerEmail: string | null;
   telegramChatIds: readonly string[];
   environment: AppEnvironment;
+  /** #1564 — the store's email look; customer emails fall back to a neutral one when absent. */
+  brand?: EmailBrand;
+  /** #1564 part 2 — the store's saved wording by template; absent means the defaults. */
+  overrides?: Partial<Record<TemplateKey, CopyOverrides>>;
 }
 
 /**
@@ -49,17 +56,20 @@ export function customerMessage(
   store: StoreContext,
 ): NotificationMessage | null {
   if (!order.buyerEmail) return null;
-  const { subject, html } = buildCustomerEmail({
+  const { subject, html, text } = buildCustomerEmail({
     order,
     event,
     storeName: store.sender.name,
     baseUrl: store.baseUrl,
+    brand: store.brand,
+    overrides: store.overrides?.[ORDER_TEMPLATE[event]],
   });
   return {
     channel: "EMAIL",
     destination: order.buyerEmail,
     subject,
     body: html,
+    text,
     sender: store.sender,
     log: { audience: "CUSTOMER", event },
   };
@@ -72,17 +82,19 @@ export function ownerMessages(
 ): NotificationMessage[] {
   const messages: NotificationMessage[] = [];
   if (store.ownerEmail) {
-    const { subject, html } = buildOwnerEmail({
+    const { subject, html, text } = buildOwnerEmail({
       order,
       event,
       storeName: store.sender.name,
       baseUrl: store.baseUrl,
+      brand: store.brand,
     });
     messages.push({
       channel: "EMAIL",
       destination: store.ownerEmail,
       subject,
       body: html,
+      text,
       sender: store.sender,
       replyTo: order.buyerEmail ?? undefined,
       log: { audience: "OWNER", event },
@@ -117,12 +129,19 @@ export function ownerDigestMessages(
   if (orderNumbers.length === 0) return [];
   const messages: NotificationMessage[] = [];
   if (store.ownerEmail) {
-    const { subject, html } = buildOwnerDigestEmail(event, orderNumbers, store.baseUrl);
+    const { subject, html, text } = buildOwnerDigestEmail(
+      event,
+      orderNumbers,
+      store.baseUrl,
+      store.brand,
+      store.sender.name,
+    );
     messages.push({
       channel: "EMAIL",
       destination: store.ownerEmail,
       subject,
       body: html,
+      text,
       sender: store.sender,
       log: { audience: "OWNER", event },
     });

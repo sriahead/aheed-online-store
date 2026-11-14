@@ -228,6 +228,15 @@ export const STAFF_NAV_GROUPS: readonly StaffNavGroup[] = [
         tone: "accent",
       },
       {
+        href: "/staff/email-templates",
+        label: "Email templates",
+        description:
+          "Edit the wording of the emails customers receive, with a live preview and a test send.",
+        icon: "mail",
+        tier: "admin",
+        tone: "accent",
+      },
+      {
         href: "/staff/enquiries",
         label: "Enquiries & Inbox",
         description:

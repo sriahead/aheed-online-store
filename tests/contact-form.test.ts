@@ -378,7 +378,7 @@ describe("processContactSubmission acknowledgement (#1552 R3, R4)", () => {
       const email = ackMock(d).mock.calls[0][0] as { to: string; subject: string; html: string };
       expect(email.to).toBe("sam@example.com");
       expect(email.subject).toBe(
-        `We've received your ${type === "COMPLAINT" ? "complaint" : "message"} — Corner Shop`,
+        `We've received your ${type === "COMPLAINT" ? "complaint" : "message"}`,
       );
       for (const typed of ["Sam Shopper", "Missing items", "Two items were missing"]) {
         expect(email.html).not.toContain(typed);
@@ -393,8 +393,10 @@ describe("processContactSubmission acknowledgement (#1552 R3, R4)", () => {
       type: "ENQUIRY",
       orderNumber: "AH-1042",
     });
-    expect(html).toContain("about order AH-1042");
+    expect(html).toContain("Order number");
+    expect(html).toContain("AH-1042");
     expect(html).toContain("Corner &lt;b&gt;Shop&lt;/b&gt;");
+    expect(html).not.toContain("<b>Shop</b>");
   });
 
   it.each([
@@ -415,5 +417,32 @@ describe("processContactSubmission acknowledgement (#1552 R3, R4)", () => {
     expect(state.status).toBe("success");
     const logged = (d.logError as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[0]));
     expect(logged).toEqual(["contact form: acknowledgement failed for vendor vendor-1"]);
+  });
+});
+
+describe("acknowledgement wording (#1564 part 2, R13)", () => {
+  const ackMock = (d: ContactDeps) => d.acknowledge as ReturnType<typeof vi.fn>;
+
+  it("uses the store's saved wording for the right template", async () => {
+    const d = deps({
+      loadOverride: vi.fn(async (key: string) =>
+        key === "contact.complaint_acknowledgement"
+          ? { subject: "Sorry, {{storeName}} is on it" }
+          : null,
+      ),
+    });
+    await processContactSubmission({ ...VALID, type: "COMPLAINT" }, d);
+    const email = ackMock(d).mock.calls[0][0] as { subject: string; text: string };
+    expect(email.subject).toBe("Sorry, Corner Shop is on it");
+    expect(email.text.length).toBeGreaterThan(20);
+  });
+
+  it("a failing wording read falls back to the defaults and still acknowledges", async () => {
+    const d = deps({ loadOverride: vi.fn(async () => Promise.reject(new Error("db down"))) });
+    const state = await processContactSubmission({ ...VALID, type: "ENQUIRY" }, d);
+    expect(state.status).toBe("success");
+    expect((ackMock(d).mock.calls[0][0] as { subject: string }).subject).toBe(
+      "We've received your message",
+    );
   });
 });

@@ -403,6 +403,14 @@ export const ADMIN: RoleCatalogue = {
           status: "live",
         },
         {
+          name: "Email templates",
+          what: "Edits the wording of each customer email (subject, preview line, heading, intro, button, reassurance, sign-off) inside the store's branded design, with a live preview and a test send.",
+          value: "Emails sound like the store, without risking a broken layout or link.",
+          demo: "Open Email templates, change the order confirmation's heading, preview it and send yourself a test.",
+          route: "/staff/email-templates",
+          status: "live",
+        },
+        {
           name: "Help Centre answers",
           what: "Edits the store's own answers shown on the Help Centre.",
           value: "Answers the questions this store's shoppers really ask.",

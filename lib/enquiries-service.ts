@@ -1,3 +1,6 @@
+import { loadEmailBrand } from "@/lib/email-brand-service";
+import { loadTemplateOverride } from "@/lib/email-templates-service";
+import { enquiryReplyEmail } from "@/lib/email/templates/enquiry";
 import type { EnquiryStatus } from "@prisma/client/wasm";
 import { getPrisma } from "@/lib/db";
 import { getCurrentVendorId } from "@/lib/tenant";
@@ -73,20 +76,20 @@ export async function replyToVendorEnquiry(
     getCurrentVendorSender(),
   ]);
   const storeName = profile?.name ?? sender?.name ?? "Store Support";
-  const replySubject = enquiry.subject.toLowerCase().startsWith("re:")
-    ? enquiry.subject
-    : `Re: ${enquiry.subject}`;
-
-  const html = `
-    <div style="font-family:sans-serif;line-height:1.5;color:#111827;">
-      <p style="white-space:pre-wrap;">${escapeHtml(trimmed)}</p>
-      <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;" />
-      <p style="font-size:12px;color:#6b7280;">
-        Sent by ${escapeHtml(storeName)}${enquiry.orderNumber ? ` regarding Order ${escapeHtml(enquiry.orderNumber)}` : ""}
-      </p>
-      <blockquote style="margin:12px 0 0;padding-left:12px;border-left:3px solid #d1d5db;color:#4b5563;font-size:13px;white-space:pre-wrap;">${escapeHtml(enquiry.message)}</blockquote>
-    </div>
-  `.trim();
+  // #1564 — the branded `enquiry.reply` template; the reply text and `Re:` subject are unchanged.
+  const [brand, overrides] = await Promise.all([
+    loadEmailBrand(vendorId, null, storeName),
+    loadTemplateOverride(vendorId, "enquiry.reply"),
+  ]);
+  const message = enquiryReplyEmail({
+    brand,
+    storeName,
+    originalSubject: enquiry.subject,
+    replyText: trimmed,
+    originalMessage: enquiry.message,
+    orderNumber: enquiry.orderNumber,
+    overrides,
+  });
 
   // R9: a customer replying to this reply must reach a mailbox someone reads — the store address
   // they wrote to first, the sender's own address only when there is none.
@@ -94,8 +97,9 @@ export async function replyToVendorEnquiry(
     to: enquiry.senderEmail,
     sender: sender ?? undefined,
     replyTo: enquiry.toAddress ?? sender?.email ?? undefined,
-    subject: replySubject,
-    html,
+    subject: message.subject,
+    html: message.html,
+    text: message.text,
   });
 
   // R10: only a real send is a reply. `skipped` (staging's recipient allow-list, or the log-only

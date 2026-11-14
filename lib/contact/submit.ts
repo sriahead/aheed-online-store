@@ -7,6 +7,9 @@ import {
   parseContactFields,
   type ContactFormState,
 } from "@/features/contact/validate-contact";
+import type { EmailBrand } from "@/lib/email/layout/brand";
+import type { CopyOverrides } from "@/lib/email/templates/compose";
+import type { TemplateKey } from "@/lib/email/templates/registry";
 import { acknowledgementEmail, contactHtml, contactSubject } from "./message";
 import { resolveContactRecipient, type RecipientAddress } from "./recipient";
 
@@ -42,7 +45,11 @@ export interface ContactDeps {
   /** #1390 — alert the store's staff. Expected never to reject, but guarded anyway. */
   alert(brief: OrderAlertBrief): Promise<void>;
   /** #1552 — email the shopper their acknowledgement. Expected never to reject, but guarded. */
-  acknowledge(email: { to: string; subject: string; html: string }): Promise<void>;
+  acknowledge(email: { to: string; subject: string; html: string; text: string }): Promise<void>;
+  /** #1564 — the store's email look; a neutral one when absent. */
+  loadBrand?(): Promise<EmailBrand>;
+  /** #1564 part 2 — the store's saved wording for one template, or null for the defaults. */
+  loadOverride?(key: TemplateKey): Promise<CopyOverrides | null>;
   vendorId: string;
   now(): Date;
 }
@@ -104,8 +111,10 @@ export async function processContactSubmission(
     message: input.message,
     submittedAt: deps.now(),
   };
+  // A branding read that fails costs the look, never the message or the acknowledgement.
+  const brand = deps.loadBrand ? await deps.loadBrand().catch(() => undefined) : undefined;
   const subject = contactSubject(message);
-  const html = contactHtml(message);
+  const html = contactHtml(message, brand);
 
   const result = await deps.send({ to: recipient, subject, html, replyTo: input.email });
   if (result.status === "failed") {
@@ -133,10 +142,17 @@ export async function processContactSubmission(
   }
 
   try {
-    await deps.acknowledge({
-      to: input.email,
-      ...acknowledgementEmail({ storeName: deps.storeName, type: input.type, orderNumber }),
+    const key: TemplateKey =
+      input.type === "COMPLAINT" ? "contact.complaint_acknowledgement" : "contact.acknowledgement";
+    const overrides = deps.loadOverride ? await deps.loadOverride(key).catch(() => null) : null;
+    const { subject, html, text } = acknowledgementEmail({
+      storeName: deps.storeName,
+      type: input.type,
+      orderNumber,
+      brand,
+      overrides,
     });
+    await deps.acknowledge({ to: input.email, subject, html, text });
   } catch {
     deps.logError(`contact form: acknowledgement failed for vendor ${deps.vendorId}`);
   }

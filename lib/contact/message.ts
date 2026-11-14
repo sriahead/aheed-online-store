@@ -1,3 +1,13 @@
+import type { EmailBrand } from "@/lib/email/layout/brand";
+import { fallbackBrand } from "@/lib/email/layout/fallback";
+import { renderEmail } from "@/lib/email/layout/render";
+import {
+  finish,
+  orNull,
+  templateCopy,
+  type CopyOverrides,
+  type RenderedEmail,
+} from "@/lib/email/templates/compose";
 import { escapeHtml } from "@/lib/html-escape";
 import type { ContactType } from "./recipient";
 
@@ -33,22 +43,36 @@ export function contactSubject(input: ContactMessageInput): string {
     .join(" · ");
 }
 
-export function contactHtml(input: ContactMessageInput): string {
-  const rows: [string, string][] = [
-    ["Store", input.storeName],
-    ["Type", TYPE_LABEL[input.type]],
-    ["Name", input.name],
-    ["Email", input.email],
-    ["Phone", input.phone || "Not given"],
-    ["Order", input.orderNumber ?? "None"],
-    ["Subject", input.subject],
-    ["Submitted", input.submittedAt.toISOString()],
-  ];
-  const table = rows
-    .map(([label, value]) => `<tr><th align="left">${label}</th><td>${escapeHtml(value)}</td></tr>`)
-    .join("");
-  const message = escapeHtml(input.message).replace(/\r?\n/g, "<br>");
-  return `<p>A shopper sent this through the store's contact form. Reply to answer them directly.</p><table>${table}</table><p>${message}</p>`;
+/**
+ * The message the store's mailbox receives. #1564 R15: in the shared layout with the store's header
+ * and footer. Everything the shopper typed is escaped by the layout; the message keeps its lines.
+ */
+export function contactHtml(input: ContactMessageInput, brand?: EmailBrand): string {
+  const label = TYPE_LABEL[input.type];
+  return renderEmail(
+    {
+      preheader: `${label} from ${input.name}: ${input.subject}`,
+      heading: `${label} from the contact form`,
+      intro:
+        "A shopper sent this through your store's contact form. Reply to this email to answer them directly.",
+      blocks: [
+        {
+          kind: "facts",
+          rows: [
+            { label: "Name", value: input.name },
+            { label: "Email", value: input.email },
+            { label: "Phone", value: input.phone || "Not given" },
+            { label: "Order", value: input.orderNumber ?? "None" },
+            { label: "Subject", value: input.subject },
+            { label: "Submitted", value: input.submittedAt.toISOString() },
+          ],
+        },
+        { kind: "message", text: input.message },
+      ],
+      reason: `A message for the ${input.storeName} team from your store's Contact us form.`,
+    },
+    brand ?? fallbackBrand(input.storeName),
+  ).html;
 }
 
 /**
@@ -61,21 +85,29 @@ export function acknowledgementEmail(input: {
   storeName: string;
   type: ContactType;
   orderNumber: string | null;
-}): { subject: string; html: string } {
-  const noun = input.type === "COMPLAINT" ? "complaint" : "message";
-  const store = escapeHtml(input.storeName);
-  const paragraphs = [
-    `<p><strong>Thanks for getting in touch with ${store}.</strong></p>`,
-    `<p>We've received your ${noun}${
-      input.orderNumber ? ` about order ${escapeHtml(input.orderNumber)}` : ""
-    } and a member of our team will reply to this email address as soon as we can.</p>`,
-    input.type === "COMPLAINT"
-      ? `<p>We're sorry something wasn't right. We read every complaint and will do our best to put it right.</p>`
-      : "",
-    `<p>If you didn't contact ${store}, you can ignore this email.</p>`,
-  ];
-  return {
-    subject: `We've received your ${noun} — ${input.storeName}`,
-    html: paragraphs.filter(Boolean).join("\n"),
-  };
+  /** #1564 — the store's look; neutral when absent. */
+  brand?: EmailBrand;
+  overrides?: CopyOverrides | null;
+}): RenderedEmail {
+  const brand = input.brand ?? fallbackBrand(input.storeName);
+  const { copy, reason } = templateCopy(
+    input.type === "COMPLAINT" ? "contact.complaint_acknowledgement" : "contact.acknowledgement",
+    { storeName: input.storeName },
+    input.overrides,
+  );
+  return finish(
+    copy.subject,
+    {
+      preheader: copy.preheader,
+      heading: copy.heading,
+      intro: orNull(copy.intro),
+      blocks: input.orderNumber
+        ? [{ kind: "facts", rows: [{ label: "Order number", value: input.orderNumber }] }]
+        : [],
+      reassurance: orNull(copy.reassurance),
+      signOff: orNull(copy.signOff),
+      reason,
+    },
+    brand,
+  );
 }

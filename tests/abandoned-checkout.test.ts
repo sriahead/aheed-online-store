@@ -87,7 +87,7 @@ describe("buildRecoveryEmail (R4)", () => {
 
   it("lists the customer's own items, the real total, one button and the opt-out", () => {
     const { subject, html } = buildRecoveryEmail(input);
-    expect(subject).toBe("Your basket is waiting — Corner Shop");
+    expect(subject).toBe("Your basket is waiting for you");
     expect(html).toContain("Hi Sam,");
     expect(html).toContain("Basmati &lt;Rice&gt;");
     expect(html).toContain("£14.47");
@@ -128,7 +128,7 @@ describe("buildRecoveryEmail (R4)", () => {
       endsAt: new Date("2026-11-20T12:00:00.000Z"),
     };
     const { subject, html } = buildRecoveryEmail({ ...input, code });
-    expect(subject).toBe("Your basket is waiting, with 10% off — Corner Shop");
+    expect(subject).toBe("Your basket is waiting for you (10% off inside)");
     expect(html).toContain("BACK&lt;10&gt;");
     expect(html).toContain("on orders over £20.00, until 20 November");
   });

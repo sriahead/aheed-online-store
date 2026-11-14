@@ -1,5 +1,14 @@
 import { formatPrice } from "@/components/product/format-price";
-import { escapeHtml } from "@/lib/html-escape";
+import type { EmailBrand } from "@/lib/email/layout/brand";
+import { fallbackBrand } from "@/lib/email/layout/fallback";
+import type { EmailBlock } from "@/lib/email/layout/render";
+import {
+  finish,
+  orNull,
+  templateCopy,
+  type CopyOverrides,
+  type RenderedEmail,
+} from "@/lib/email/templates/compose";
 
 /**
  * #1554 — the recovery email for an abandoned checkout. It is MARKETING under PECR, so it only ever
@@ -16,7 +25,9 @@ import { escapeHtml } from "@/lib/html-escape";
  *
  * What it never does, by design and by law (CPRs, DMCC Act 2024): no countdown, no invented
  * deadline, no "only 2 left", no claim about other shoppers. A code's real end date is stated only
- * when the code actually has one. Every vendor- or customer-supplied string is escaped (#1135).
+ * when the code actually has one. Every vendor- or customer-supplied string is escaped by the
+ * layout (#1135). #1564: the wording is the `marketing.abandoned_checkout` template's; the
+ * greeting, items, code, consent reason and opt-out stay locked.
  */
 
 export interface RecoveryCode {
@@ -38,10 +49,10 @@ export interface RecoveryEmailInput {
   /** Where the customer changes their marketing choice, or null without a canonical host. */
   preferencesHref: string | null;
   code: RecoveryCode | null;
+  /** #1564 — the store's look; neutral when absent. */
+  brand?: EmailBrand;
+  overrides?: CopyOverrides | null;
 }
-
-const BUTTON_STYLE =
-  "display:inline-block;padding:12px 20px;border-radius:12px;background:#111827;color:#ffffff;text-decoration:none;font-weight:bold";
 
 export const MAX_ITEMS_SHOWN = 6;
 
@@ -53,7 +64,7 @@ export function codeBenefit(code: RecoveryCode): string {
   return `${formatPrice(code.value)} off`;
 }
 
-function codeParagraph(code: RecoveryCode): string {
+function codeText(code: RecoveryCode): string {
   const conditions: string[] = [];
   if (code.minSubtotalPence > 0) {
     conditions.push(`on orders over ${formatPrice(code.minSubtotalPence)}`);
@@ -66,50 +77,56 @@ function codeParagraph(code: RecoveryCode): string {
     });
     conditions.push(`until ${date}`);
   }
-  const suffix = conditions.length ? ` ${escapeHtml(conditions.join(", "))}` : "";
-  return `<p>As a thank-you for coming back, here's <strong>${escapeHtml(codeBenefit(code))}</strong>${suffix}. Use code <strong>${escapeHtml(code.code)}</strong> at checkout.</p>`;
+  const suffix = conditions.length ? ` ${conditions.join(", ")}` : "";
+  return `As a thank-you for coming back, here's **${codeBenefit(code)}**${suffix}. Use code **${code.code}** at checkout.`;
 }
 
-export function buildRecoveryEmail(input: RecoveryEmailInput): { subject: string; html: string } {
-  const store = escapeHtml(input.storeName);
-  const greeting = input.firstName ? `Hi ${escapeHtml(input.firstName)},` : "Hello,";
+export function buildRecoveryEmail(input: RecoveryEmailInput): RenderedEmail {
+  const brand = input.brand ?? fallbackBrand(input.storeName);
+  const { copy, reason } = templateCopy(
+    "marketing.abandoned_checkout",
+    { storeName: input.storeName },
+    input.overrides,
+  );
   const shown = input.items.slice(0, MAX_ITEMS_SHOWN);
   const more = input.items.length - shown.length;
-  const rows = shown
-    .map(
-      (item) =>
-        `<tr><td>${item.quantity} × ${escapeHtml(item.productName)}</td><td align="right">${formatPrice(item.lineTotalPence)}</td></tr>`,
-    )
-    .join("");
-  const moreRow = more > 0 ? `<tr><td colspan="2">and ${more} more</td></tr>` : "";
-  const total = `<tr><td><strong>Total</strong></td><td align="right"><strong>${formatPrice(input.totalPence)}</strong></td></tr>`;
+  const rows = shown.map((item) => ({
+    label: `${item.quantity} × ${item.productName}`,
+    amount: formatPrice(item.lineTotalPence),
+  }));
+  if (more > 0) rows.push({ label: `and ${more} more`, amount: "" });
 
-  const parts = [
-    `<p>${greeting}</p>`,
-    `<p>You were one step away from finishing your order with ${store}, so we've kept a note of your basket.</p>`,
-    `<table cellpadding="4">${rows}${moreRow}${total}</table>`,
+  const blocks: EmailBlock[] = [
+    {
+      kind: "items",
+      rows,
+      totals: [{ label: "Total", amount: formatPrice(input.totalPence), strong: true }],
+    },
   ];
-  if (input.code) parts.push(codeParagraph(input.code));
-  parts.push(
-    `<p>We haven't held these items for you, so if something is popular it may sell out before you check out.</p>`,
-  );
-  if (input.orderHref) {
-    parts.push(
-      `<p><a href="${escapeHtml(input.orderHref)}" style="${BUTTON_STYLE}">Return to your basket</a></p>`,
-    );
-  }
-  const optOut = input.preferencesHref
-    ? `<a href="${escapeHtml(input.preferencesHref)}">Stop marketing emails</a>.`
-    : "Reply to this email to stop marketing emails.";
-  parts.push(
-    `<p>If you've changed your mind, that's fine: there's nothing you need to do.</p>`,
-    `<p><small>You're getting this because you agreed to hear from ${store}. ${optOut}</small></p>`,
-  );
+  if (input.code)
+    blocks.push({ kind: "callout", title: "A thank-you from us", text: codeText(input.code) });
 
-  return {
-    subject: input.code
-      ? `Your basket is waiting, with ${codeBenefit(input.code)} — ${input.storeName}`
-      : `Your basket is waiting — ${input.storeName}`,
-    html: parts.join("\n"),
-  };
+  const subject = input.code ? `${copy.subject} (${codeBenefit(input.code)} inside)` : copy.subject;
+  return finish(
+    subject,
+    {
+      preheader: copy.preheader,
+      greeting: input.firstName ? `Hi ${input.firstName},` : "Hello,",
+      heading: copy.heading,
+      intro: orNull(copy.intro),
+      blocks,
+      cta:
+        input.orderHref && copy.ctaLabel ? { label: copy.ctaLabel, href: input.orderHref } : null,
+      reassurance: orNull(copy.reassurance),
+      signOff: orNull(copy.signOff),
+      reason,
+      footerNote: input.preferencesHref
+        ? {
+            text: "Don't want these emails?",
+            link: { label: "Stop marketing emails", href: input.preferencesHref },
+          }
+        : { text: "Reply to this email to stop marketing emails." },
+    },
+    brand,
+  );
 }
