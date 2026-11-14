@@ -121,9 +121,8 @@ describe("StorefrontFooter (#1055)", () => {
       />,
     );
     const content = screen.getByRole("contentinfo");
-    expect(content.textContent).toContain(
-      "Levelled Up by Merqify · Your Merchandise, Digitised Quickly",
-    );
+    expect(content.textContent).toContain("Levelled Up by Merqify");
+    expect(content.textContent).not.toContain("Your Merchandise, Digitised Quickly");
     const link = within(content).getByRole("link", { name: "Levelled Up by Merqify" });
     expect(link.getAttribute("href")).toBe("https://merqify.com");
   });
