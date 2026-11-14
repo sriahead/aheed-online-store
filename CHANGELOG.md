@@ -12,6 +12,12 @@ every branch merges.
 
 ### Added
 
+- **Staff products: brand filter and sort, low stock, store-wide low-stock number (#1572, 2026-11-14)**
+  - `/staff/products` gains a **Brand** filter (with **No brand**), a **Brand A–Z** sort (unbranded last), and a **Low stock** worklist in Needs attention and the Quick views: tracked, at least one left, at or below the product's own number. Rows show a Low stock label, "Low at N" and the price per kg / litre / 100 g.
+  - `VendorConfig.lowStockThreshold` (default 3, additive migration `20261114110000_vendor_low_stock_threshold`) is the store-wide default, set by store admins above the list. Saving moves every product still on the old number in one transaction; products with their own number keep it.
+  - Every path that creates a stock record (new product form, quick and bulk stock counts, the spreadsheet import, "mark untracked", `scripts/stock-import.ts`) starts at the store default instead of a literal 3; the inventory page's fallback was 5 and is now 3.
+  - The low-stock filter is a Prisma field reference (no raw SQL), checked on AFC staging over the HTTP adapter against the in-memory rule. Spec: `specs/2026-11-14-staff-products-brand-low-stock/`.
+
 - **Stock Data Import & Update Manager (#1570, 2026-11-14)**
   - A reviewed spreadsheet import for any store: `scripts/stock-import.ts` (`plan` → `review.xlsx` → `decide` → `apply`) over the pure `lib/stock-import/`, driven by the `stock-import` Claude Code skill. Store quirks (columns, brands and aliases, spelling, synonyms, two-form splits, section → category, derived attributes) live in `scripts/stock-import/profiles/<vendor>.json`.
   - Matches PLU, then barcode, then brand + name + size; only a unique same-size match is suggested as an update, conflicting forms (seeds vs leaves) never match, anything else waits for review. Blank cells, staff-edited fields, existing PLUs and live prices are kept. Optional was price, multi-buy, bundles and promotions.

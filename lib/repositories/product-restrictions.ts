@@ -1,5 +1,6 @@
 import type { getPrisma, getPrismaWs } from "@/lib/db";
 import type { ProductRestriction, StockMode } from "@/lib/cart-rules";
+import { readLowStockDefault } from "@/lib/repositories/vendor";
 import {
   isHardBlock,
   planBulkAction,
@@ -308,12 +309,15 @@ export async function applyBulkAction(
     if (untrack.length > 0) {
       const untrackIds = untrack.map((e) => e.productId);
       // Products with no Inventory row get one; quantity 0 because UNTRACKED ignores it.
+      // #1572 — a new stock record starts at the store-wide low-stock default.
+      const lowStockThreshold = await readLowStockDefault(tx, vendorId);
       await tx.inventory.createMany({
         data: untrackIds.map((productId) => ({
           vendorId,
           productId,
           quantity: 0,
           stockMode: "UNTRACKED" as const,
+          lowStockThreshold,
         })),
         skipDuplicates: true,
       });

@@ -8,6 +8,8 @@ import {
   fetchVendorProfile as fetchVendorProfileRepo,
   getVendorBranding as getVendorBrandingRepo,
   getVendorConfig as getVendorConfigRepo,
+  readLowStockDefault,
+  setLowStockDefault as setLowStockDefaultRepo,
   listThemes as listThemesRepo,
   listVendorThemes as listVendorThemesRepo,
   replaceVendorFooterHours as replaceVendorFooterHoursRepo,
@@ -125,6 +127,16 @@ export async function updateVendorWhatsappQrKey(
  * the config and branding rows commit together, and the HTTP adapter cannot
  * execute one at all (#382).
  */
+/** #1572 — the store-wide low-stock default (3 for a store with no config row). */
+export async function getLowStockDefault(vendorId: string): Promise<number> {
+  return readLowStockDefault(getPrisma(), vendorId);
+}
+
+/** #1572 — WebSocket: an interactive transaction carrying an `updateMany` (#382). */
+export async function saveLowStockDefault(vendorId: string, value: number) {
+  return setLowStockDefaultRepo(getPrismaWs(), vendorId, value);
+}
+
 export async function updateVendorStorefrontConfig(
   vendorId: string,
   data: VendorStorefrontConfigInput,

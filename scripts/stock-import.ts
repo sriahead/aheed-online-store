@@ -6,6 +6,7 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 import { deriveUnitPricePenceForSort } from "../components/product/unit-price";
 import { formatPrice } from "../components/product/format-price";
 import { slugify } from "../lib/catalogue-form";
+import { readLowStockDefault } from "../lib/repositories/vendor";
 import type { CatalogueProduct } from "../lib/stock-import/match";
 import { normaliseFile, type NormalisedRow, type RowIssue } from "../lib/stock-import/normalise";
 import {
@@ -713,7 +714,14 @@ async function apply(f: Flags, profile: StockImportProfile) {
               },
             });
             await tx.inventory.create({
-              data: { vendorId, productId: id, quantity: 0, stockMode: "UNKNOWN" },
+              data: {
+                vendorId,
+                productId: id,
+                quantity: 0,
+                stockMode: "UNKNOWN",
+                // #1572 — the store-wide low-stock default.
+                lowStockThreshold: await readLowStockDefault(tx, vendorId),
+              },
             });
             return writeExtras(tx, vendorId, id, slug, row, attributeIds);
           });

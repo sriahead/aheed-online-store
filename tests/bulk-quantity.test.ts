@@ -75,6 +75,8 @@ describe("bulkSetInventoryQuantities (#1523, R14/R16)", () => {
       product: { findMany: vi.fn(async () => products), update: vi.fn(async () => ({})) },
       inventory: { upsert: vi.fn(async () => ({ id: "inv-1" })) },
       inventoryAuditLog: { create: vi.fn(async () => ({})) },
+      // #1572 — the store-wide low-stock default a new stock record starts at.
+      vendorConfig: { findUnique: vi.fn(async () => ({ lowStockThreshold: 4 })) },
     };
     const $transaction = vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx));
     return { client: { $transaction } as never, tx, $transaction };
@@ -133,7 +135,9 @@ describe("listProductsForAdminPage (#1523, R8/R9/R11/R12)", () => {
       count: vi.fn(async () => total),
       findMany: vi.fn(async () => []),
     };
-    return { client: { product } as never, product };
+    const lowStockThreshold = { modelName: "Inventory", name: "lowStockThreshold" };
+    const inventory = { fields: { lowStockThreshold } };
+    return { client: { product, inventory } as never, product, lowStockThreshold };
   }
   const base = { page: 1, perPage: 25, sort: "newest" as const };
 
@@ -199,5 +203,28 @@ describe("listProductsForAdminPage (#1523, R8/R9/R11/R12)", () => {
     expect(JSON.stringify(wheres[1])).toContain('"NEEDS_REVIEW"');
     expect(JSON.stringify(wheres[1])).toContain('"restriction":null');
     expect(wheres[2]).toMatchObject({ images: { none: {} } });
+  });
+
+  it("#1572 — low stock compares the count with the row's own threshold, tracked and above zero", async () => {
+    const { client, product, lowStockThreshold } = fakeDb(1);
+    await listProductsForAdminPage(client, "v", { ...base, needs: "low" });
+    const where = (product.count.mock.calls[0] as unknown as [{ where: unknown }])[0].where;
+    expect(where).toMatchObject({
+      inventory: { stockMode: "TRACKED", quantity: { gt: 0, lte: lowStockThreshold } },
+    });
+  });
+
+  it("#1572 — filters by brand, null meaning no brand, and sorts by brand", async () => {
+    const { client, product } = fakeDb(1);
+    await listProductsForAdminPage(client, "v", { ...base, brandId: "b1" });
+    await listProductsForAdminPage(client, "v", { ...base, brandId: null, sort: "brand" });
+    const wheres = product.count.mock.calls.map(
+      (call) => (call as unknown as [{ where: Record<string, unknown> }])[0].where,
+    );
+    expect(wheres[0]).toMatchObject({ brandId: "b1" });
+    expect(wheres[1]).toMatchObject({ brandId: null });
+    expect(
+      (product.findMany.mock.calls[1] as unknown as [{ orderBy: unknown }])[0].orderBy,
+    ).toEqual([{ brand: { name: "asc" } }, { name: "asc" }, { id: "asc" }]);
   });
 });

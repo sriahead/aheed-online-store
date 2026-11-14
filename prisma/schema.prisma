@@ -710,7 +710,11 @@ model VendorConfig {
   // #1134 — whether this store asks shoppers for marketing consent (/register, /account/data,
   // /privacy). OFF by default so it ships dark; a store admin turns it on at /staff/storefront.
   marketingConsentEnabled     Boolean            @default(false)
-  bookingWindowDays           Int                @default(14)
+  // #1572 — the store-wide low-stock default. A new stock record starts at this number and a
+  // product still on the old default moves with it when an admin changes it at /staff/products.
+  // Each Inventory row keeps its own lowStockThreshold, so a product can still differ.
+  lowStockThreshold           Int                @default(3)
+  bookingWindowDays          Int                @default(14)
   slotHoldDurationMinutes     Int                @default(15)
   // #1441 — a slot can be booked only if it starts more than this many minutes from now (in
   // `timezone`). 0 keeps booking open until the start. Set at /staff/fulfilment.
