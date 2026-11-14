@@ -228,6 +228,17 @@ describe("till words", () => {
     ).toEqual([]);
   });
 
+  it("is stable: a name that already kept till words builds to itself on the next run", () => {
+    const done = product({ name: "TRS Black Onion Seeds – 100g" });
+    const result = withTillWords(row("Trs Black seeds"), done, done.name, aheed, ["TRS"]);
+    expect(result.row.displayName).toBe(done.name);
+  });
+
+  it("apply takes till words from the product an UPDATE writes, matched or reviewed", () => {
+    const script = readFileSync("scripts/stock-import.ts", "utf8");
+    expect(script).toContain('w.decision === "UPDATE" && w.target\n          ? withTillWords(');
+  });
+
   it("uses the name an earlier run replaced", () => {
     const renamed = product({ name: "TRS Black Seeds – 100g" });
     const lookups = {
