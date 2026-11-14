@@ -15,7 +15,7 @@ import {
 
 const readJson = (path: string) => JSON.parse(readFileSync(path, "utf8"));
 const preset = (name: string) =>
-  stockImportPresetSchema.parse(readJson(`scripts/stock-import/presets/${name}.json`));
+  stockImportPresetSchema.parse(readJson(`lib/stock-import/presets/${name}.json`));
 const aheedOwn = parseProfile(readJson("scripts/stock-import/profiles/aheed-food-centre.json"));
 /** #1573 — the profile as the script loads it: its presets merged underneath. */
 const aheed = applyPresets(aheedOwn, aheedOwn.presets.map(preset));

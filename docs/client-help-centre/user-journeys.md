@@ -135,7 +135,7 @@ flowchart TD
 
 ### 2.5 Decisions, Alternative Paths, & Common Errors
 - **Error: Theme deletion refused:** Only custom themes created by your store can be deleted. Platform global presets cannot be removed.
-- **Error: Excel import fails:** Ensure file contains mandatory columns (Name, Price, Category) and that prices are formatted as numeric values (parsed to integer pence). Download the template from `/staff/products/import`.
+- **Error: Excel import finds no products:** Check **Import settings** on `/staff/products/import`: the product-name column and whether the file has a heading row must match the file.
 - **Error: Product cannot be activated:** If the product's stock status is `UNKNOWN`, the system prevents activation until a verified stock count or tracking mode is entered.
 - **Customer unable to checkout due to postcode:** Ensure outcode prefix is registered in `/staff/delivery-areas`.
 
@@ -266,7 +266,7 @@ flowchart TD
 - Scoped strictly to `vendorId` of the current tenant host. Cross-tenant access is blocked with HTTP 403.
 
 ### 2.5 Decisions, Alternative Paths, & Common Errors
-- **Error: Excel import fails:** Ensure file contains mandatory columns (Name, Price, Category) and that prices are formatted as numeric values (parsed to integer pence). Download the template from `/staff/products/import`.
+- **Error: Excel import finds no products:** Check **Import settings** on `/staff/products/import`: the product-name column and whether the file has a heading row must match the file.
 - **Customer unable to checkout due to postcode:** Ensure outcode prefix is registered in `/staff/delivery-areas`.
 
 ### 2.6 Onboarding & Completion Checklist

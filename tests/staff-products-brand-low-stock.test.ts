@@ -166,7 +166,8 @@ describe("every stock-record create path uses the store default (R10, R11)", () 
     "lib/repositories/products.ts",
     "lib/repositories/product-restrictions.ts",
     "lib/catalogue-import/apply.ts",
-    "scripts/stock-import.ts",
+    // #1578 — scripts/stock-import.ts creates through the shared repository's applyLine.
+    "lib/repositories/stock-import.ts",
   ])("%s reads the store default and has no literal 3", (path) => {
     const source = read(path);
     expect(source).not.toMatch(/lowStockThreshold: 3\b/);

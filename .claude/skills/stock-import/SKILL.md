@@ -3,13 +3,32 @@ name: stock-import
 description: Stock Data Import & Update Manager. Use when a store sends a stock or price spreadsheet (.xlsx, .xls, .csv) to load or refresh products, brands, categories, attributes or offers (was price, multi-buy, bundles, promotions) for any vendor, or asks to standardise product names and filters. It analyses the file, extends the store's profile and presets, plans against the live catalogue, has uncertain matches reviewed, applies to staging with everything hidden, verifies and reports.
 ---
 
-# Stock Data Import & Update Manager (#1570, #1573)
+# Stock Data Import & Update Manager (#1570, #1573, #1578)
 
 One reviewed path for every store's spreadsheet. Code: `scripts/stock-import.ts` (CLI) over
 `lib/stock-import/` (pure, tested in `tests/stock-import.test.ts` and
 `tests/stock-import-naming.test.ts`). Store settings: `scripts/stock-import/profiles/<vendor-slug>.json`;
-shared rule sets: `scripts/stock-import/presets/` (`general`, `spices`, `rice`, `fish`). Specs:
-`specs/2026-11-14-stock-data-import/`, `specs/2026-11-14-grocery-naming-standard/`.
+shared rule sets: `lib/stock-import/presets/` (`general`, `spices`, `rice`, `fish`). Specs:
+`specs/2026-11-14-stock-data-import/`, `specs/2026-11-14-grocery-naming-standard/`,
+`specs/2026-11-14-staff-stock-import/`.
+
+## Screen first (#1578)
+
+Stores import themselves at **`/staff/products/import`** (store admins): upload, first-time column
+setup, a review screen with a decision per line, chunked Apply, Undo, and **Import settings**. It
+runs the same library code (`lib/repositories/stock-import.ts`, `applyLine`) as this CLI, with the
+store's settings from the database. Prefer it whenever the store can decide the lines itself:
+
+- **Settings live in the database** for the screen. After changing a JSON profile, push it:
+  `npx tsx scripts/stock-import.ts settings-push --profile <p> --secrets <s> --url-key <KEY>
+  --confirm-host <host>`. Anything the settings tables do not hold (form words, word order,
+  category rules, derived attributes, flag/attribute columns) is reported: put it in a preset.
+- **Questions go to the screen, not to chat.** When a CLI run holds lines back with a question
+  (decision SKIP + a note), carry them over so the owner decides there:
+  `npx tsx scripts/stock-import.ts to-screen <files> --secrets <s> --url-key <KEY> --vendor <slug>
+  --review <dir>/review.xlsx --confirm-host <host>`. Nothing is applied by it.
+- The CLI stays for bulk work, profile development and anything the screen does not offer
+  (`--update-live-prices`, `--overwrite-edited`, `--previous-run`).
 
 ## Never
 
