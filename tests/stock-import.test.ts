@@ -335,4 +335,27 @@ describe("plan (R5–R7)", () => {
       skip: 1,
     });
   });
+
+  it("gives a product to the row that names it best, not the first row (#1578)", () => {
+    const tikka = product({
+      id: "tikka",
+      name: "TRS Chicken Tikka Masala – 100g",
+      categorySlug: "spices-masalas",
+      categoryId: "c-spice",
+    });
+    const claim = normaliseFile(
+      grid([
+        ["Trs chicken masala", "100grm", "£2.79"],
+        ["Trs chicken tikka masala", "100grm", "£2.79"],
+      ]),
+      aheed,
+    ).rows;
+    const [loose, exact] = buildPlan(claim, [tikka], aheed, ["TRS"], lookups, opts);
+    expect(exact.decision).toBe("UPDATE");
+    expect(exact.target?.id).toBe("tikka");
+    expect(loose.decision).not.toBe("UPDATE");
+    if (loose.decision === "REVIEW") expect(loose.reason).toContain("same product as");
+    // A line that loses the product keeps the list's own name (no till words from it).
+    expect(loose.row.displayName).not.toContain("Tikka");
+  });
 });

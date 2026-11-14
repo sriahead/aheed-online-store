@@ -26,3 +26,14 @@ Issue #1578. Built 2026-11-14 in worktree `E:\GitRepositories\aheed-wt-1558`, br
   6,731 tests green (`--maxWorkers=4`).
 - Not run locally: `npm run preview` (the worktree's node_modules is a junction). The screen is
   verified on AFC staging after the staging deploy applies the migration.
+
+## After the first staging deploy (fix branch `fix/1578-settings-brands-claim`)
+
+- `settings-push` to AFC staging, then reading the settings back: brands with no other spellings
+  (Heera, Shan, Laziza …) were missing, because only aliases had rows. Naming then let a longer store
+  brand ("LAZIZA ACHAR GOSHT") outrank Laziza. Each listed brand now stores a row for its own name;
+  the read hides it.
+- `to-screen` showed row 7 "Chicken Masala" taking "Laziza Chicken Tikka Masala" (0.83) from row 9,
+  which names it exactly (1.00): the first row claimed the product. The CLI did the same (an
+  existing matcher gap). The best-scoring row now keeps a product. Dry run of all three lists: only
+  rows 7 and 9 of Laziza change.

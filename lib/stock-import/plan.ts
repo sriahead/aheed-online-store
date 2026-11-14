@@ -80,6 +80,7 @@ export function buildPlan(
   const ctx = wordContext(profile);
   const index = buildIndex(catalogue, profile, knownBrands, ctx);
   const seen = new Map<string, NormalisedRow>();
+  const scores = new Map<PlanLine, number>();
   const lines: PlanLine[] = rows.map((row) => {
     const base: PlanLine = {
       row,
@@ -124,10 +125,13 @@ export function buildPlan(
             ? "REVIEW"
             : "CREATE",
     };
+    scores.set(line, match.best?.score ?? 0);
     return line;
   });
 
-  // One product, one row: a second claim on the same product needs a person.
+  // One product, one row: a second claim on the same product needs a person. #1578 — the row that
+  // names the product best keeps it, whichever comes first in the file: "Chicken Masala" (0.83)
+  // must not take "Chicken Tikka Masala" from the row that says exactly that (1.00).
   const claimed = new Map<string, PlanLine>();
   for (const line of lines) {
     if (line.decision !== "UPDATE" || !line.target) continue;
@@ -136,8 +140,11 @@ export function buildPlan(
       claimed.set(line.target.id, line);
       continue;
     }
-    line.decision = "REVIEW";
-    line.reason = `same product as ${other.row.key} — ${line.reason}`;
+    const [keep, lose] =
+      (scores.get(line) ?? 0) > (scores.get(other) ?? 0) ? [line, other] : [other, line];
+    claimed.set(line.target.id, keep);
+    lose.decision = "REVIEW";
+    lose.reason = `same product as ${keep.row.key} — ${lose.reason}`;
   }
 
   for (const line of lines) {
