@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-13T22:32:02.682Z` · commit `36702668` · `345` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-14T00:12:30.663Z` · commit `b1fb2bef` · `345` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -360,7 +360,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Store Operations Troubleshooting & Escalation Matrix](docs/client-help-centre/troubleshooting-escalation.md) | runbook | 1.0.0 | 2026-10-25 | approved | internal | Diagnostic procedures, symptoms, root causes, corrective actions, and support escalation paths for store operators and technical administrators. |
 | [Store Operations Tutorials & FAQ Management](docs/client-help-centre/tutorials-and-faqs.md) | guide | 1.0.0 | 2026-10-25 | approved | internal | Step-by-step tutorials for common operational workflows and instructions for managing customer FAQs via the in-app CMS. |
 | [Client & Role User Journey Maps](docs/client-help-centre/user-journeys.md) | guide | 1.1.0 | 2026-11-01 | approved | internal | Comprehensive end-to-end user journey maps with Mermaid flowcharts, step-by-step guides, permissions, and checklists for Platform Admin, Store Admin, Staff, and Customer. |
-| [Notification matrix — which email or alert is sent when](docs/developer-portal/notification-matrix.md) | doc | 1.5.0 | 2026-11-13 | approved | internal | Every customer email, owner email and Telegram alert the platform sends — the event that triggers it, who receives it, what stops a duplicate, and the code that sends it. The one place to answer "will anyone be told when X happens?". |
+| [Notification matrix — which email or alert is sent when](docs/developer-portal/notification-matrix.md) | doc | 1.5.1 | 2026-11-14 | approved | internal | Every customer email, owner email and Telegram alert the platform sends — the event that triggers it, who receives it, what stops a duplicate, and the code that sends it. The one place to answer "will anyone be told when X happens?". |
 | [Merqify Platform Terms of Service — Merchant Schedule & Tax Disclaimer](docs/legal/merchant-platform-terms.md) | doc | 1.0.0 | 2026-11-06 | review | internal | Contractual terms governing Merqify Ltd (Platform Provider) and merchants (Vendors), defining responsibilities for catalogue, pricing, and HMRC VAT compliance. |
 | [Operations & Fulfillment Procedures](docs/operations-research/operations-guide.md) | guide | 1.0.0 | 2026-08-22 | approved | internal | A guide for operations teams detailing the fulfillment lifecycle, stock management, and exception handling. |
 | [Order & Fulfilment Operations](docs/operations-research/order-fulfilment-core.md) | runbook | 1.1.0 | 2026-11-06 | approved | internal | Canonical rules for order status transitions, fulfilment slots, cancellations, and payment exceptions. |

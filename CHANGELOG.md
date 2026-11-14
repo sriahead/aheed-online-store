@@ -13,6 +13,7 @@ every branch merges.
 ### Added
 
 - **Store and admin emails in the new design, part 3 of 3 (#1564, 2026-11-13)**
+  - **Shipped.** Parts 1-3 promoted to production 2026-11-14 (PR #1568, `5d2bee9c`); the `EmailTemplateOverride` migration applied by CI on both production databases. Notification matrix 1.5.1 adds sanity-check step 7.
   - The owner order email and bulk digest, the Contact us message forwarded to the store, and the Client Setup test email now use the shared layout: store header, facts panel, one "Open in staff panel" button, and a staff footer line instead of a customer reason. Not editable. Inbound mail forwarded to the store is untouched.
   - Plain text for all of them (the owner emails write their own; the forwarded contact message's is derived on send).
   - Tests: owner-email link test updated (one action link; the others are the store site and Powered by), new layout cases in `tests/email-template-overrides.test.ts`.
