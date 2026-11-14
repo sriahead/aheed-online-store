@@ -130,6 +130,11 @@ export interface PlaceOrderInput {
    *  action so this stays free of request context (P3b R9a). */
   returnOrigin: string;
   fulfilmentMethod: "DELIVERY" | "COLLECTION";
+  /**
+   * Optional application / platform context identifier (e.g. "ShopLocal", "Merqify Club",
+   * "Merqify Services", "Merqify Bookings", etc.). Defaults to "ShopLocal".
+   */
+  applicationContext?: string;
 }
 
 export interface PlacedOrder {
@@ -607,6 +612,15 @@ export async function placeOrder(
       // submit safe (the second finds CART_EMPTY).
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
 
+      // Dynamic vendor branding: fetch the vendor business name from Vendor / VendorBranding
+      const vendor = tx.vendor
+        ? await tx.vendor.findUnique({
+            where: { id: vendorId },
+            select: { name: true, branding: { select: { name: true } } },
+          })
+        : null;
+      const vendorDisplayName = vendor?.branding?.name?.trim() || vendor?.name?.trim() || undefined;
+
       return {
         orderId: order.id,
         orderNumber: order.orderNumber,
@@ -616,6 +630,7 @@ export async function placeOrder(
         createdAt: order.createdAt,
         totalPence: totals.totalPence,
         currency: CURRENCY,
+        vendorDisplayName,
       };
     },
     {
@@ -635,6 +650,8 @@ export async function placeOrder(
       amountPence: created.totalPence,
       currency: created.currency,
       vendorId,
+      vendorName: created.vendorDisplayName,
+      applicationContext: input.applicationContext ?? "ShopLocal",
       returnOrigin: input.returnOrigin,
       confirmationToken: created.confirmationToken,
       // #1324 — anchored on the stored createdAt, never on this call's clock, so

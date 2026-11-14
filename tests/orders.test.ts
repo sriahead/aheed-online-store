@@ -195,6 +195,12 @@ function fakePrisma() {
         return { count: 1 };
       },
     },
+    vendor: {
+      findUnique: async () => ({
+        name: "Aheed Food Centre",
+        branding: { name: "Aheed Food Centre" },
+      }),
+    },
     vendorConfig: { findUnique: async () => state.loyaltyConfig },
     loyaltyAccount: {
       findUnique: async () => state.loyaltyAccount,
@@ -912,6 +918,22 @@ describe("placeOrder — Checkout Session lifetime (#1324 R19)", () => {
       vi.useRealTimers();
     }
     expect((paymentStub.lastInput as { expiresAt: Date }).expiresAt.getTime()).toBe(first);
+  });
+});
+
+describe("placeOrder — dynamic vendor branding & ecosystem context", () => {
+  it("passes vendor name and application context to createPayment", async () => {
+    await placeOrder(fakePrisma(), VENDOR, { ...input(), applicationContext: "ShopLocal" });
+    const sent = paymentStub.lastInput as { vendorName?: string; applicationContext?: string };
+    expect(sent.vendorName).toBe("Aheed Food Centre");
+    expect(sent.applicationContext).toBe("ShopLocal");
+  });
+
+  it("defaults applicationContext to ShopLocal when omitted", async () => {
+    await placeOrder(fakePrisma(), VENDOR, input());
+    const sent = paymentStub.lastInput as { vendorName?: string; applicationContext?: string };
+    expect(sent.vendorName).toBe("Aheed Food Centre");
+    expect(sent.applicationContext).toBe("ShopLocal");
   });
 });
 

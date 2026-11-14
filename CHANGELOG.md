@@ -12,6 +12,13 @@ every branch merges.
 
 ### Added
 
+- **Dynamic vendor branding and Merqify ecosystem identity on Stripe Checkout (#1580, 2026-11-14)**
+  - Customers on hosted Stripe Checkout dynamically see the vendor's human business name (e.g. "Aheed Food Centre", "SriMart Electronics") at the top header via `branding_settings.display_name`.
+  - Supporting identity formatted as "Part of the Merqify Ecosystem" on line items and checkout custom submit text (`custom_text[submit][message]`), without claiming Merqify is the payment processor.
+  - Sourced dynamically from database `Vendor` and `VendorBranding` models within `placeOrder`.
+  - Generic Merqify Core infrastructure in `lib/payments.ts` supports all current and future Merqify applications (`ShopLocal`, `Merqify Club`, `Merqify Services`, `Merqify Bookings`, `Merqify Events`, etc.) via `applicationContext`.
+  - Zero database migrations, preserving current single-account settlement while maintaining full compatibility with future Stripe Connect. Spec: `specs/2026-11-14-dynamic-vendor-branding/`.
+
 - **Staff stock import: upload, review and apply price lists in the staff panel (#1578, 2026-11-14)**
   - `/staff/products/import` (store admins) replaces the #1216 importer: upload Excel or CSV (2,000 rows), pick columns the first time, then review every line grouped as Needs a decision / New / Updates / Unchanged / Skipped / Applied / Failed, with the matched product's PLU, price, size and live state, the runner-up and other sizes. Decide Update (any product, by search), Create or Skip with a note; held lines show their question.
   - Apply runs in chunks from the browser, one transaction per line, each line claimed first so it is never applied twice; created products hidden with stock UNKNOWN; live prices and staff-edited fields kept; re-uploading creates nothing. Undo deletes untouched created products and restores fields still holding the import's value.
