@@ -17,7 +17,10 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const profile = await getCurrentVendorProfile();
   const name = profile?.name ?? "Aheed Food Centre";
-  return { title: `Value Bundles — ${name}` };
+  return {
+    title: `Value Bundles — ${name}`,
+    alternates: { canonical: "/bundles" },
+  };
 }
 
 /**

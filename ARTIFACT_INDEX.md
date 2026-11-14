@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-14T21:34:56.113Z` · commit `ad079596` · `351` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-14T21:47:37.474Z` · commit `6e0cef1f` · `352` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -332,6 +332,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Configurable platform branding terminology in Client Setup (plan)](specs/2026-11-14-configurable-branding/plan.md) | spec | 1.0.0 | 2026-11-14 | approved | internal | Make platform branding terminology (defaulting to Levelled Up by Merqify) configurable across the platform via Platform Admin Client Setup, reflecting dynamically across Stripe Checkout, storefront footer, emails, and credits pages. |
 | [Dynamic vendor branding and Merqify ecosystem identity on Stripe Checkout (plan)](specs/2026-11-14-dynamic-vendor-branding/plan.md) | spec | 1.0.0 | 2026-11-14 | approved | internal | Dynamic per-session vendor branding on hosted Stripe Checkout with Merqify ecosystem identity, supporting multi-application architecture and future Stripe Connect compatibility. |
 | [Grocery naming standard and category-specific attributes (plan)](specs/2026-11-14-grocery-naming-standard/plan.md) | spec | 1.0.0 | 2026-11-14 | approved | internal | Extends the stock import (#1570) with per-category word order and templates, till-word preservation, presets (general, spices, rice, fish) with category-scoped filters, and a possible-duplicates report; re-runs the AFC staging lists. |
+| [Canonical Domain (www.aheedfoodcentre.co.uk), Decommission Nocaped SEO & Structured Data (plan)](specs/2026-11-14-seo-canonical-and-structured-data/plan.md) | spec | 1.0.0 | 2026-11-14 | approved | internal | Establish https://www.aheedfoodcentre.co.uk as the single preferred indexed domain in Google Search, eliminate SEO signals on aheedfoodcentre.nocaped.com, and add Schema.org LocalBusiness and Product JSON-LD structured data. |
 | [Staff products: brand filter/sort, low stock, store-wide threshold (plan)](specs/2026-11-14-staff-products-brand-low-stock/plan.md) | spec | 1.0.0 | 2026-11-14 | approved | internal | Brand filter and sort, a Low stock filter/quick view/label and per-kg price on /staff/products, plus VendorConfig.lowStockThreshold as the store-wide default used by every stock-record create path. |
 | [Staff stock import: upload, review and apply price lists (plan)](specs/2026-11-14-staff-stock-import/plan.md) | spec | 1.0.0 | 2026-11-14 | approved | internal | Moves the stock import (#1570, #1573) into the staff panel: per-store settings in relational tables, first-time column setup, stored runs with a review screen, chunked apply with one transaction per line, undo, and a shared apply library for the CLI. |
 | [Stock Data Import & Update Manager (plan)](specs/2026-11-14-stock-data-import/plan.md) | spec | 1.0.0 | 2026-11-14 | approved | internal | Pure library lib/stock-import (profile, normalise, match, merge, plan), one Node script scripts/stock-import.ts (plan → review xlsx → apply → report), store profiles under scripts/stock-import/profiles, and the stock-import skill. |

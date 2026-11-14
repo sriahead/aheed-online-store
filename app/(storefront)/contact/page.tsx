@@ -19,6 +19,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Contact us",
+  alternates: { canonical: "/contact" },
 };
 
 const DATE = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });

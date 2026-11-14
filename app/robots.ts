@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { headers } from "next/headers";
 import { isIndexable } from "@/lib/config";
+import { splitHostPort } from "@/lib/auth-origin";
+import { isDecommissionedHost } from "@/lib/page-metadata";
 
 /**
  * robots.txt, decided by ENVIRONMENT and served for whichever host asked (#955).
@@ -35,6 +37,11 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   const host = (await headers()).get("host");
 
   if (!isIndexable() || !host) {
+    return { rules: { userAgent: "*", disallow: "/" } };
+  }
+
+  const hostname = splitHostPort(host).hostname;
+  if (isDecommissionedHost(hostname)) {
     return { rules: { userAgent: "*", disallow: "/" } };
   }
 

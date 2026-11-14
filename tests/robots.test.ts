@@ -56,6 +56,17 @@ describe("app/robots.ts (#955)", () => {
     expect(result.sitemap).toBe("https://srimart.example/sitemap.xml");
   });
 
+  it("disallows everything and publishes no sitemap on decommissioned nocaped.com hosts (#1591)", async () => {
+    mockHost.mockReturnValue("aheedfoodcentre.nocaped.com");
+    mockIndexable.mockReturnValue(true);
+
+    const result = await run();
+
+    expect(result.rules.disallow).toBe("/");
+    expect(result.rules.allow).toBeUndefined();
+    expect(result.sitemap).toBeUndefined();
+  });
+
   it("disallows everything and publishes no sitemap when not indexable (R21)", async () => {
     mockIndexable.mockReturnValue(false);
 

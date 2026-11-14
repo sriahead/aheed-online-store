@@ -24,6 +24,7 @@ function directionsHref(name: string, location: NonNullable<VendorProfile["locat
 
 export const metadata: Metadata = {
   title: "Help Centre",
+  alternates: { canonical: "/help" },
 };
 
 /**

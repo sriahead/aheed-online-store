@@ -11,6 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `Terms of Service — ${vendorName}`,
     description: `Terms and conditions governing orders, delivery, pricing, and services at ${vendorName}.`,
+    alternates: { canonical: "/terms" },
   };
 }
 

@@ -36,12 +36,38 @@ export function truncateForDescription(text: string, max: number = DESCRIPTION_M
 }
 
 /**
+ * Decommissioned legacy development domains that must never be indexed or emitted as canonical (#1591).
+ */
+export function isDecommissionedHost(host: string): boolean {
+  const h = host.toLowerCase().trim();
+  return h === "nocaped.com" || h.endsWith(".nocaped.com");
+}
+
+/**
+ * Resolves the canonical host for metadata and SEO tags (#1591).
+ *
+ * Rules:
+ * 1. An explicit, valid `canonicalHost` always wins.
+ * 2. If the request host is a decommissioned domain (e.g. `nocaped.com`), fallback to the canonical production host ("www.aheedfoodcentre.co.uk").
+ * 3. Otherwise, use `requestHost`.
+ */
+export function resolveCanonicalHost(requestHost: string, canonicalHost?: string | null): string {
+  if (canonicalHost && !isDecommissionedHost(canonicalHost)) {
+    return canonicalHost;
+  }
+  if (isDecommissionedHost(requestHost)) {
+    return "www.aheedfoodcentre.co.uk";
+  }
+  return requestHost;
+}
+
+/**
  * The metadata shape both detail routes return.
  *
  * `canonical` is ABSOLUTE, and that is a hard requirement rather than a preference: no
  * `metadataBase` is configured anywhere in this app, and in this version of Next a relative value
  * in a URL-based metadata field without `metadataBase` is a BUILD ERROR, not a silent fallback.
- * It is built from the REQUESTING host, so each vendor's pages are canonical to themselves.
+ * It is built from the canonical host (#1591), falling back to the requesting host.
  */
 export interface DetailPageMetadata {
   title: string;
@@ -59,21 +85,24 @@ export interface DetailPageMetadata {
  */
 export function buildProductMetadata({
   host,
+  canonicalHost,
   slug,
   name,
   description,
   vendorName,
 }: {
   host: string;
+  canonicalHost?: string | null;
   slug: string;
   name: string;
   description: string;
   vendorName: string;
 }): DetailPageMetadata {
+  const targetHost = resolveCanonicalHost(host, canonicalHost);
   return {
     title: `${name} — ${vendorName}`,
     description: truncateForDescription(description),
-    alternates: { canonical: `https://${host}/products/${slug}` },
+    alternates: { canonical: `https://${targetHost}/products/${slug}` },
   };
 }
 
@@ -84,19 +113,22 @@ export function buildProductMetadata({
  */
 export function buildCategoryMetadata({
   host,
+  canonicalHost,
   slug,
   name,
   vendorName,
 }: {
   host: string;
+  canonicalHost?: string | null;
   slug: string;
   name: string;
   vendorName: string;
 }): DetailPageMetadata {
+  const targetHost = resolveCanonicalHost(host, canonicalHost);
   return {
     title: `${name} — ${vendorName}`,
     description: truncateForDescription(`Browse ${name} at ${vendorName}.`),
-    alternates: { canonical: `https://${host}/categories/${slug}` },
+    alternates: { canonical: `https://${targetHost}/categories/${slug}` },
   };
 }
 

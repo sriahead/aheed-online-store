@@ -6,6 +6,16 @@ every branch merges.
 
 ## [Unreleased]
 
+### Added
+
+- **SEO Canonicalisation, Legacy Domain Decommissioning & Schema.org Structured Data (#1591, 2026-11-14)**
+  - Configured `https://www.aheedfoodcentre.co.uk` as the primary canonical indexed domain for Aheed Food Centre with root `metadataBase` in `app/layout.tsx` and default canonical alternate `"/"`.
+  - Updated `lib/page-metadata.ts` (`buildProductMetadata`, `buildCategoryMetadata`) to anchor canonical links to the vendor's canonical domain (`www.aheedfoodcentre.co.uk`) and never emit legacy `nocaped.com` addresses.
+  - Added relative canonical alternate metadata to static storefront routes (`/categories`, `/bundles`, `/contact`, `/help`, `/privacy`, `/terms`).
+  - Decommissioned `aheedfoodcentre.nocaped.com` crawlability: `app/robots.ts` immediately serves `Disallow: /` without sitemap links for any `*.nocaped.com` host, and `app/sitemap.ts` returns an empty array for decommissioned hosts.
+  - Injected Schema.org `GroceryStore` / `LocalBusiness` JSON-LD structured data on storefront layout with verified address, telephone (`01908 239130`), geo coordinates (`52.0438, -0.7513`), and opening hours.
+  - Injected Schema.org `Product` and `Offer` JSON-LD structured data with GBP pricing, stock status, and product URLs on `/products/[slug]`.
+
 ### Fixed
 
 - **Internal docs site build restored (#1558, 2026-11-13).** Bare `<you>` (#1557) and `<store>` (#1559) placeholders in `docs/developer-portal/notification-matrix.md` were parsed by MDX as unclosed HTML tags, so `deploy-docs-internal` failed on every staging push since `44f88ec5` while the app deploys stayed green. Wrapped in code spans; verified by compiling the assembled MDX (the unfixed file reproduces CI's `Expected a closing tag for <store>` error).

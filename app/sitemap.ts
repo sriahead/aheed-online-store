@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { getCurrentVendorIdOrNull } from "@/lib/tenant";
 import { getProductRepository } from "@/lib/products-service";
 import { getCategoryRepository } from "@/lib/categories-service";
+import { splitHostPort } from "@/lib/auth-origin";
+import { isDecommissionedHost } from "@/lib/page-metadata";
 
 /**
  * Per-vendor sitemap (#955).
@@ -68,6 +70,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * another place.
    */
   if (!host || !vendorId) return [];
+
+  const hostname = splitHostPort(host).hostname;
+  if (isDecommissionedHost(hostname)) return [];
 
   const base = `https://${host}`;
 

@@ -32,7 +32,10 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const profile = await getCurrentVendorProfile();
   const name = profile?.name ?? "Aheed Food Centre";
-  return { title: `Shop — ${name}` };
+  return {
+    title: `Shop — ${name}`,
+    alternates: { canonical: "/categories" },
+  };
 }
 
 export default async function CategoriesPage() {
