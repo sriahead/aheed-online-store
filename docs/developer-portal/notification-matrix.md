@@ -4,8 +4,8 @@ title: "Notification matrix — which email or alert is sent when"
 audience: [dev, platform-admin, store-admin, staff]
 type: doc
 status: approved
-version: "1.5.0"
-updated: 2026-11-13
+version: "1.5.1"
+updated: 2026-11-14
 visibility: internal
 summary: Every customer email, owner email and Telegram alert the platform sends — the event that triggers it, who receives it, what stops a duplicate, and the code that sends it. The one place to answer "will anyone be told when X happens?".
 tags: [notifications, email, telegram, operations]
@@ -125,7 +125,7 @@ address and site, why the email was sent, and "Powered by Merqify".
 | All dispatch | `lib/notifications/dispatch.ts` (send first, queue on failure) |
 | Customer email design | `lib/email/layout/`, `lib/email/templates/`, branding via `lib/email-brand-service.ts` (`#1564`) |
 
-## Sanity check after a change (`#1552`, `#1554`, `#1558`)
+## Sanity check after a change (`#1552`, `#1554`, `#1558`, `#1564`)
 
 Run on staging first, from an address on `EMAIL_ALLOWED_RECIPIENTS`, while tailing the app Worker
 (`npx wrangler tail afc-store-staging`, with `CLOUDFLARE_ACCOUNT_ID` set to the Merqify account).
@@ -138,8 +138,12 @@ Run on staging first, from an address on `EMAIL_ALLOWED_RECIPIENTS`, while taili
 | 4. On an eligible row, press **Send reminder** | The row changes to "Sent … by `<you>`"; the log shows `event=ABANDONED_CHECKOUT_REMINDER status=sent`; pressing it again is impossible. |
 | 5. With `PLATFORM_ALERT_TELEGRAM_CHAT_ID` set, wait for an error-rate breach | One "Error rate alert" in that chat, then nothing more for an hour. |
 | 6. Register again with an allowlisted address that already has an account (`#1558`) | The screen says "Check your email"; the inbox gets "`[STAGING] You already have an account with <store>`"; no account is created and no "New account" alert fires. |
+| 7. As a store admin open `/staff/email-templates`, edit a field of **Order confirmed**, press **Send test**, then **Reset to default** twice (`#1564`) | The preview updates as you type; the inbox gets "`[STAGING] [Test] …`" in the store's design with "Powered by Merqify" and a plain-text part; the list shows "Edited", then "Default" after the reset. |
 
-**Last run:** 2026-11-13, AFC staging (`#1558`). Step 1 passed earlier on Aheed staging
+**Last run:** 2026-11-14, production (`#1564`). Step 7: the owner checked the templates page on AFC
+staging and approved; after promotion (`5d2bee9c`) the `email_template_override` migration applied
+on both production databases and `/staff/email-templates` answers (redirect to login when signed
+out). Earlier, 2026-11-13, AFC staging (`#1558`): Step 1 passed earlier on Aheed staging
 (`status=sent` for both lines). Step 2 passed: a new sign-up logged `event=REGISTRATION status=sent`
 (Telegram accepted the alert). Step 3: the route answers (307 to login when signed out). Step 5:
 chat id set on staging and production 2026-11-13, no breach yet. Step 6 passed: the owner received
