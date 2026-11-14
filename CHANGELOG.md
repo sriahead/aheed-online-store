@@ -12,6 +12,12 @@ every branch merges.
 
 ### Added
 
+- **Stock Data Import & Update Manager (#1570, 2026-11-14)**
+  - A reviewed spreadsheet import for any store: `scripts/stock-import.ts` (`plan` → `review.xlsx` → `decide` → `apply`) over the pure `lib/stock-import/`, driven by the `stock-import` Claude Code skill. Store quirks (columns, brands and aliases, spelling, synonyms, two-form splits, section → category, derived attributes) live in `scripts/stock-import/profiles/<vendor>.json`.
+  - Matches PLU, then barcode, then brand + name + size; only a unique same-size match is suggested as an update, conflicting forms (seeds vs leaves) never match, anything else waits for review. Blank cells, staff-edited fields, existing PLUs and live prices are kept. Optional was price, multi-buy, bundles and promotions.
+  - **Nothing it writes is live**: created products are hidden with stock unknown; created categories, tiers, bundles and promotions inactive. Re-running a reviewed sheet changes nothing.
+  - First run on AFC staging: Aheed's spices and Shan lists, 62 products created and 62 till products updated (clean names, prices, sizes, Shan/TRS brands, Spices & Masalas), 6 rows held as questions, 2 duplicates. Spec: `specs/2026-11-14-stock-data-import/`.
+
 - **Store and admin emails in the new design, part 3 of 3 (#1564, 2026-11-13)**
   - **Shipped.** Parts 1-3 promoted to production 2026-11-14 (PR #1568, `5d2bee9c`); the `EmailTemplateOverride` migration applied by CI on both production databases. Notification matrix 1.5.1 adds sanity-check step 7.
   - The owner order email and bulk digest, the Contact us message forwarded to the store, and the Client Setup test email now use the shared layout: store header, facts panel, one "Open in staff panel" button, and a staff footer line instead of a customer reason. Not editable. Inbound mail forwarded to the store is untouched.

@@ -1,0 +1,92 @@
+{
+  "notes": "Aheed Food Centre. Owner price lists: product name (brand first), size, price; no header row; a row with only a name is a section heading. First run 2026-11-14 (#1570): spices list and Shan list. Owner decisions: clean names on matched till products; 'x / y' form rows split in two.",
+  "vendorSlug": "aheed-food-centre",
+  "headerRow": "none",
+  "columns": { "name": "A", "size": "B", "price": "C" },
+  "defaultCategory": "spices-masalas",
+  "sectionCategories": { "spices": "spices-masalas" },
+  "categoryMap": {},
+  "files": [{ "match": "shan", "brand": "Shan", "category": "spices-masalas" }],
+  "brands": [
+    { "name": "TRS", "aliases": ["tra", "t.r.s"] },
+    { "name": "Rajah", "aliases": [] },
+    { "name": "Shan", "aliases": [] },
+    { "name": "Heera", "aliases": [] },
+    { "name": "Lotus", "aliases": [] },
+    { "name": "Natco", "aliases": [] },
+    { "name": "Niru", "aliases": [] },
+    { "name": "Kasturi", "aliases": [] },
+    { "name": "Diamond", "aliases": ["diamon"] }
+  ],
+  "spelling": {
+    "powdee": "powder",
+    "peper": "pepper",
+    "cardomom": "cardamom",
+    "methis": "methi",
+    "kasmiri": "kashmiri",
+    "dalchili": "dalchini",
+    "meomi": "memoni",
+    "puren": "phoran",
+    "biriyani": "biryani",
+    "enhancement": "enhancer",
+    "blk": "black",
+    "masla": "masala"
+  },
+  "synonyms": [
+    ["jeera", "cumin"],
+    ["dhania", "coriander", "dhaniya"],
+    ["haldi", "turmeric"],
+    ["methi", "fenugreek"],
+    ["elaichi", "cardamom", "cardamon"],
+    ["ajwain", "carom", "ajwan", "lovage"],
+    ["dalchini", "cinnamon", "cassia"],
+    ["biryani", "biriyani"],
+    ["kabab", "kebab"],
+    ["chilli", "chili", "chillies"],
+    ["leaf", "leaves"],
+    ["tenderiser", "tenderizer"],
+    ["pilau", "pulao", "pilaf"],
+    ["dal", "daal", "dhal"],
+    ["chaat", "chat"],
+    ["aniseed", "anise"],
+    ["powder", "ground"]
+  ],
+  "ignoreWords": ["curry"],
+  "formWords": [
+    "whole",
+    "powder",
+    "ground",
+    "coarse",
+    "crushed",
+    "seeds",
+    "seed",
+    "leaves",
+    "black",
+    "white",
+    "hulled",
+    "natural"
+  ],
+  "conflictingForms": [
+    ["whole", "powder", "coarse", "crushed", "paste"],
+    ["seed", "leaf", "powder", "paste"],
+    ["hot", "mild"],
+    ["black", "white", "green", "red", "brown"]
+  ],
+  "preserveWords": ["TRS", "BBQ"],
+  "nameTemplate": "{brand} {name} – {size}",
+  "renameMatched": true,
+  "moveMatchedToCategory": true,
+  "derivedAttributes": [
+    {
+      "name": "Form",
+      "options": {
+        "Whole": ["whole"],
+        "Powder": ["powder", "ground"],
+        "Crushed": ["crushed", "coarse"],
+        "Seeds": ["seeds", "seed"],
+        "Leaves": ["leaves"],
+        "Spice Mix": ["masala", "mix", "seasoning"]
+      }
+    }
+  ]
+}
