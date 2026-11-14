@@ -17,6 +17,7 @@ every branch merges.
   - A confident match keeps the till's extra words when the price list is terser ("Black Seeds" → "TRS Black Onion Seeds", "Dalchini" → "TRS Cinnamon Sticks", "Keema" → "Shan Keema Curry Mix"); `--previous-run` recovers till names an earlier run replaced.
   - Presets `general`, `spices`, `rice`, `fish` (`scripts/stock-import/presets/`) for any store: Form; Variety and Grain; Species, Storage, Cut and Grade; Flavour, each only in its own categories. Dietary labels are never derived.
   - The plan report lists possible duplicates already in the catalogue and every till-word name; apply refuses if a preset or the previous-run file changed. Skill updated. Spec: `specs/2026-11-14-grocery-naming-standard/`.
+  - Applied to AFC staging: 17 names standardised, nothing created, live products unchanged (73). Fix: an UPDATE confirmed by a reviewer now also keeps till words, so a re-run no longer undoes a till-word rename ("TRS Black Onion Seeds").
 
 - **Staff products: brand filter and sort, low stock, store-wide low-stock number (#1572, 2026-11-14)**
   - `/staff/products` gains a **Brand** filter (with **No brand**), a **Brand A–Z** sort (unbranded last), and a **Low stock** worklist in Needs attention and the Quick views: tracked, at least one left, at or below the product's own number. Rows show a Low stock label, "Low at N" and the price per kg / litre / 100 g.

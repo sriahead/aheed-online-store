@@ -26,4 +26,14 @@ Issue #1573. Built 2026-11-14 in worktree `E:\GitRepositories\aheed-wt-1558`, br
 
 ## Open
 
-- Apply to AFC staging after the owner reviews the dry run (R10).
+- ~~Apply to AFC staging after the owner reviews the dry run (R10).~~ Done, see below.
+
+## Applied to AFC staging (2026-11-14, owner approved)
+
+- Batch `stock-import-202611141132`: 17 updated, 0 created, 8 skipped (6 questions, 2 duplicates),
+  0 failed. Live products still 73; every touched product hidden as before.
+- **Defect found by the second apply:** it renamed "TRS Black Onion Seeds" back to "TRS Black Seeds".
+  The longer name made "Black Seeds" as close to "TRS Black Sesame Seeds", so the fresh match was
+  REVIEW and apply used the list's name for the reviewed UPDATE. Fixed in a follow-up PR: an UPDATE
+  takes till words from the product it writes, matched or reviewed. With the fix the next apply
+  restored it (1 update) and the one after changed nothing (0 updated, 124 unchanged).

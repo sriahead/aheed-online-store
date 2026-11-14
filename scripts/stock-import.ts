@@ -21,6 +21,7 @@ import {
   type PlanLookups,
 } from "../lib/stock-import/plan";
 import { computeChanges, unitLabelFor, type MergeOptions } from "../lib/stock-import/merge";
+import { withTillWords } from "../lib/stock-import/naming";
 import {
   applyPresets,
   parseProfile,
@@ -586,6 +587,7 @@ async function apply(f: Flags, profile: StockImportProfile) {
     const knownBrands = store.brands.map((b) => b.name);
     const { rows } = readRows(f.files, profile, knownBrands);
     const lookups = lookupsFor(profile, store);
+    const tillNames = loadTillNames(f.previousRun);
     const fresh = buildPlan(
       rows,
       store.catalogue,
@@ -593,7 +595,7 @@ async function apply(f: Flags, profile: StockImportProfile) {
       knownBrands,
       lookups,
       f.options,
-      loadTillNames(f.previousRun),
+      tillNames,
     );
     const byId = new Map(store.catalogue.map((c) => [c.id, c]));
 
@@ -692,10 +694,20 @@ async function apply(f: Flags, profile: StockImportProfile) {
 
     for (const w of work) {
       const { line } = w;
-      // #1573 — till words belong to the product the plan matched; a reviewer who picked another
-      // product (or chose CREATE) gets the list's own name.
+      // #1573 — an UPDATE takes till words from the product it updates, whether the plan matched
+      // it or a reviewer confirmed it. A till-word name can make the next run's match uncertain
+      // ("Black Seeds" is as close to "Black Sesame Seeds" as to "Black Onion Seeds"), and building
+      // from the list's name then would undo the rename. A CREATE gets the list's own name.
       const row =
-        w.target && line.target && w.target.id === line.target.id ? line.row : line.listRow;
+        w.decision === "UPDATE" && w.target
+          ? withTillWords(
+              line.listRow,
+              w.target,
+              tillNames.get(w.target.id) ?? w.target.name,
+              profile,
+              knownBrands,
+            ).row
+          : line.listRow;
       if (w.decision !== "UPDATE" && w.decision !== "CREATE") {
         outcomes.push({
           key: row.key,
