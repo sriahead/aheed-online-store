@@ -11,7 +11,7 @@
 
 # Artifact Index
 
-_Generated from front-matter across the repo. Last build: `2026-11-14T00:12:30.663Z` · commit `b1fb2bef` · `345` artifacts._
+_Generated from front-matter across the repo. Last build: `2026-11-14T00:55:16.229Z` · commit `94b9afb7` · `346` artifacts._
 
 **Legend** — Status: `draft` → `review` → `approved` → `deprecated` ·
 Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre).
@@ -329,6 +329,7 @@ Visibility: `internal` (dev/staff site, behind Access) · `public` (help centre)
 | [Email design system and admin-editable templates (plan)](specs/2026-11-13-email-design-system/plan.md) | spec | 1.0.0 | 2026-11-13 | approved | internal | One branded, responsive, Outlook-safe email layout with plain text for every email; the 14 customer emails become registered templates whose wording fields store admins can edit (layout, links and legal lines locked); store and admin emails adopt the layout. |
 | [Sign-up with an existing email: tell the account holder by email (plan)](specs/2026-11-13-existing-account-signup/plan.md) | spec | 1.0.0 | 2026-11-13 | approved | internal | Wires Better Auth's onExistingUserSignUp hook so a sign-up with an already-registered email sends that inbox a 'you already have an account' email (sign in, forgot password or Google), while the screen and HTTP response stay neutral to prevent account enumeration. |
 | [Notification gaps: payment failed, contact acknowledgement, registration and error alerts (plan)](specs/2026-11-13-notification-gaps/plan.md) | spec | 1.0.0 | 2026-11-13 | approved | internal | Fills four notification gaps: payment failed (customer email, owner alert), a contact acknowledgement email, a New account Telegram alert, and an hourly-capped error-rate Telegram alert. Reuses the #1435 dispatcher and outbox; no migration. |
+| [Stock Data Import & Update Manager (plan)](specs/2026-11-14-stock-data-import/plan.md) | spec | 1.0.0 | 2026-11-14 | approved | internal | Pure library lib/stock-import (profile, normalise, match, merge, plan), one Node script scripts/stock-import.ts (plan → review xlsx → apply → report), store profiles under scripts/stock-import/profiles, and the stock-import skill. |
 | [System Architecture — Merqify Platform](specs/architecture.md) | doc | 1.49.0 | 2026-11-12 | approved | internal | The technical source of truth for infrastructure and Clean Architecture layering — Cloudflare Workers + Neon + S3-compatible storage, vendor-agnostic and multi-tenant (vendor-scoped) by design. |
 | [ADR-001 — Hosting, Database & Egress](specs/decisions/ADR-001-hosting.md) | adr | 2.0.0 | 2026-08-06 | approved | internal | Revised hosting decision — Cloudflare Workers + Neon Serverless Postgres + R2, superseding the original GCP Cloud Run + Cloud SQL design, for a vendor-agnostic serverless origin. |
 | [ADR-002 — Authentication Library](specs/decisions/ADR-002-auth-library.md) | adr | 1.0.0 | 2026-08-06 | approved | internal | Decision to use Better Auth (self-hosted, bearer tokens, RBAC) for email/password and Google Sign-In, rejecting hosted IdPs like Clerk/Auth0 for the MVP. |
