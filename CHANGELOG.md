@@ -18,6 +18,7 @@ every branch merges.
   - Presets `general`, `spices`, `rice`, `fish` (`scripts/stock-import/presets/`) for any store: Form; Variety and Grain; Species, Storage, Cut and Grade; Flavour, each only in its own categories. Dietary labels are never derived.
   - The plan report lists possible duplicates already in the catalogue and every till-word name; apply refuses if a preset or the previous-run file changed. Skill updated. Spec: `specs/2026-11-14-grocery-naming-standard/`.
   - Applied to AFC staging: 17 names standardised, nothing created, live products unchanged (73). Fix: an UPDATE confirmed by a reviewer now also keeps till words, so a re-run no longer undoes a till-word rename ("TRS Black Onion Seeds").
+  - Laziza price list (#1570): the Aheed profile gains the Laziza brand and file rule, the list's typos (biriuani, sinshi, masal) and synonyms (keema/qeema, behari/bihari, chargha/charga, korma/qorma). Applied to AFC staging: 3 created hidden, 5 updated, 10 held back for the owner; re-run 0 changes; live products unchanged (73).
 
 - **Staff products: brand filter and sort, low stock, store-wide low-stock number (#1572, 2026-11-14)**
   - `/staff/products` gains a **Brand** filter (with **No brand**), a **Brand A–Z** sort (unbranded last), and a **Low stock** worklist in Needs attention and the Quick views: tracked, at least one left, at or below the product's own number. Rows show a Low stock label, "Low at N" and the price per kg / litre / 100 g.
