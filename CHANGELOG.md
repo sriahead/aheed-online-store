@@ -12,6 +12,10 @@ every branch merges.
 
 ### Added
 
+- **Storefront footer branding highlight and tagline cleanup (2026-11-14)**
+  - Removed trailing vendor/platform tagline (`· Independent Quality Groceries`) from the platform branding attribution line in `StorefrontFooter.tsx`.
+  - Highlighted the platform branding terminology (`Levelled Up by Merqify`) as a prominent pill badge with an emerald status indicator and high-contrast styling.
+
 - **Configurable platform branding terminology in Client Setup (#1585, 2026-11-14)**
   - Platform administrators can dynamically configure the ecosystem branding terminology (defaulting to "Levelled Up by Merqify") from `/staff/platform/client-setup` per store or batch-applied across all client stores in one action.
   - Terminology dynamically propagates to:

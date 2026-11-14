@@ -313,16 +313,16 @@ export function StorefrontFooter({
               ))}
             </p>
             {platformBrandingTerminology ? (
-              <p>
+              <p className="pt-0.5">
                 <a
                   href={platformUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:underline"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white border border-white/15 shadow-sm transition hover:bg-white/20 hover:border-white/30"
                 >
-                  {platformBrandingTerminology}
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
+                  <span>{platformBrandingTerminology}</span>
                 </a>
-                {platformTagline && <span> · {platformTagline}</span>}
               </p>
             ) : platformName ? (
               <p>
