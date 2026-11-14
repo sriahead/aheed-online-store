@@ -139,10 +139,10 @@ describe("Icon Credits & Cart Tooltip Polish (#1257)", () => {
     });
     expect(generatedHeading).toBeTruthy();
 
-    // "Powered by" badge exists
+    // Platform branding badge exists
     const poweredBadge = screen.getByTestId("platform-powered-badge");
     expect(poweredBadge).toBeTruthy();
-    expect(poweredBadge.textContent).toContain("Powered by");
+    expect(poweredBadge.textContent).toMatch(/Levelled Up by Merqify|Powered by/);
 
     // Raw licences link
     const rawLicencesLink = container.querySelector('a[href="/third-party-icon-licenses.txt"]');

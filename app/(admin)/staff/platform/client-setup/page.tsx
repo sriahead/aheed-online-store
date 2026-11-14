@@ -4,6 +4,7 @@ import Link from "next/link";
 import { requireVendorRole } from "@/lib/auth-rbac";
 import {
   getEmailSectionData,
+  getBrandingSectionData,
   listClientSetupVendors,
   toClientSetupFacts,
 } from "@/lib/client-setup-service";
@@ -38,6 +39,7 @@ import {
   RemoveOrderAlertRecipientButton,
   TestOrderAlertButton,
 } from "@/components/staff/client-setup/OrderAlertForms";
+import { PlatformBrandingForm } from "@/components/staff/client-setup/PlatformBrandingForm";
 
 export const dynamic = "force-dynamic";
 
@@ -164,9 +166,10 @@ async function ClientSetupSections({
   vendorId: string;
   adminEmail: string;
 }) {
-  const [email, alertRecipients] = await Promise.all([
+  const [email, alertRecipients, branding] = await Promise.all([
     getEmailSectionData(vendorId),
     listOrderAlertRecipientsForVendor(vendorId),
+    getBrandingSectionData(vendorId),
   ]);
   const facts = toClientSetupFacts(email);
   const botTokenSet = isTelegramBotTokenSet();
@@ -471,6 +474,17 @@ async function ClientSetupSections({
                   >
                     Cloudflare&apos;s limits page <Icon name="external-link" className="h-3 w-3" />
                   </a>
+                </Card>
+              </div>
+
+              <div className="lg:col-span-2">
+                <Card title="Platform Branding & Ecosystem Identity">
+                  <PlatformBrandingForm
+                    vendorId={vendorId}
+                    currentTerminology={branding.platformBrandingTerminology}
+                    customTerminology={branding.customTerminology}
+                    defaultTerminology={branding.defaultTerminology}
+                  />
                 </Card>
               </div>
             </div>

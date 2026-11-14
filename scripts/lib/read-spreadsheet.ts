@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { extname } from "node:path";
 import * as XLSX from "@e965/xlsx";
 
@@ -59,4 +59,40 @@ export function readSourceGrid(path: string): SourceGrid {
     firstRowNumber: range ? range.s.r + 1 : 1,
     sheetName,
   };
+}
+
+/** Every sheet of a workbook as grids of strings (the review sheet carries two). */
+export function readWorkbookSheets(path: string): Map<string, string[][]> {
+  const workbook = XLSX.read(readFileSync(path), { type: "buffer" });
+  const sheets = new Map<string, string[][]>();
+  for (const name of workbook.SheetNames) {
+    const grid = XLSX.utils.sheet_to_json<string[]>(workbook.Sheets[name], {
+      header: 1,
+      raw: false,
+      defval: "",
+    });
+    sheets.set(
+      name,
+      grid.map((row) => row.map((cell) => String(cell ?? ""))),
+    );
+  }
+  return sheets;
+}
+
+/**
+ * #1570 — write a workbook of plain-text sheets (the stock import's review sheet). Kept here so
+ * this stays the one file that imports the spreadsheet package.
+ */
+export function writeWorkbook(
+  path: string,
+  sheets: { name: string; rows: (string | number)[][]; widths?: number[] }[],
+): void {
+  const workbook = XLSX.utils.book_new();
+  for (const sheet of sheets) {
+    const ws = XLSX.utils.aoa_to_sheet(sheet.rows);
+    if (sheet.widths) ws["!cols"] = sheet.widths.map((wch) => ({ wch }));
+    if (sheet.rows.length > 1) ws["!autofilter"] = { ref: ws["!ref"] as string };
+    XLSX.utils.book_append_sheet(workbook, ws, sheet.name);
+  }
+  writeFileSync(path, XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
 }

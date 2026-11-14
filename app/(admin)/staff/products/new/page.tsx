@@ -6,7 +6,7 @@ import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { getBrandRepository } from "@/lib/brands-service";
 import { PanelRefusal } from "@/components/staff/PanelRefusal";
 import { ProductForm } from "@/components/staff/ProductForm";
-import { fetchVendorProfile } from "@/lib/vendor-service";
+import { fetchVendorProfile, getLowStockDefault } from "@/lib/vendor-service";
 import { labelSettingsFromProfile } from "@/lib/product-label-settings";
 import { listAttributeDefinitions } from "@/lib/attributes-service";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -38,11 +38,12 @@ export default async function NewProductPage() {
     );
   }
 
-  const [categories, brands, profile, attributes] = await Promise.all([
+  const [categories, brands, profile, attributes, lowStockDefault] = await Promise.all([
     listCategoriesForAdmin(auth.vendorId),
     getBrandRepository().listSummaries(),
     fetchVendorProfile(auth.vendorId),
     listAttributeDefinitions(auth.vendorId),
+    getLowStockDefault(auth.vendorId),
   ]);
 
   return (
@@ -72,6 +73,7 @@ export default async function NewProductPage() {
           imageUrls={[]}
           labels={labelSettingsFromProfile(profile)}
           attributes={attributes}
+          defaultLowStockThreshold={lowStockDefault}
         />
       )}
     </PageContainer>

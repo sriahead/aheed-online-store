@@ -1,0 +1,72 @@
+{
+  "notes": "Fish and seafood (category slugs containing fish, seafood or prawn). Name order: brand, species, cut, grade, then Fresh or Frozen, size: 'Rohu Steaks Frozen – 1kg'. Filters: Species, Storage (Fresh/Frozen), Cut and Grade, set only when the name says so.",
+  "synonyms": [
+    ["prawn", "shrimp"],
+    ["hilsa", "ilish"],
+    ["kingfish", "king fish"]
+  ],
+  "categoryRules": [
+    {
+      "categories": ["fish", "seafood", "prawn"],
+      "wordOrder": { "leading": [], "trailing": ["fresh", "frozen"] }
+    }
+  ],
+  "derivedAttributes": [
+    {
+      "name": "Species",
+      "categories": ["fish", "seafood", "prawn"],
+      "options": {
+        "Sea Bass": ["sea bass", "seabass"],
+        "Sea Bream": ["sea bream", "bream"],
+        "Kingfish": ["kingfish", "king fish"],
+        "Rohu": ["rohu", "rui"],
+        "Catla": ["catla", "katla"],
+        "Tilapia": ["tilapia"],
+        "Pomfret": ["pomfret", "rupchanda"],
+        "Hilsa": ["hilsa", "ilish"],
+        "Salmon": ["salmon"],
+        "Mackerel": ["mackerel"],
+        "Tuna": ["tuna"],
+        "Basa": ["basa"],
+        "Cod": ["cod"],
+        "Haddock": ["haddock"],
+        "Trout": ["trout"],
+        "Sardines": ["sardine", "sardines"],
+        "Boal": ["boal"],
+        "Ayre": ["ayre", "aire"],
+        "Pabda": ["pabda"],
+        "Squid": ["squid"],
+        "Mussels": ["mussel", "mussels"],
+        "Crab": ["crab"],
+        "Prawns": ["prawn", "prawns", "shrimp"]
+      }
+    },
+    {
+      "name": "Storage",
+      "categories": ["fish", "seafood", "prawn"],
+      "options": { "Frozen": ["frozen"], "Fresh": ["fresh", "chilled"] }
+    },
+    {
+      "name": "Cut",
+      "categories": ["fish", "seafood", "prawn"],
+      "options": {
+        "Curry Cut": ["curry cut"],
+        "Steaks": ["steak", "steaks"],
+        "Fillet": ["fillet", "fillets"],
+        "Cleaned": ["cleaned", "gutted"],
+        "Head": ["head"],
+        "Whole": ["whole"]
+      }
+    },
+    {
+      "name": "Grade",
+      "categories": ["fish", "seafood", "prawn"],
+      "options": {
+        "Jumbo": ["jumbo"],
+        "Large": ["large"],
+        "Medium": ["medium"],
+        "Small": ["small"]
+      }
+    }
+  ]
+}

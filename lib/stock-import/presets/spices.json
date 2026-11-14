@@ -1,0 +1,79 @@
+{
+  "notes": "Spices, masalas and seasonings (category slugs containing spice, masala or seasoning). Name order: brand, heat or colour, product, form, size: 'TRS Extra Hot Chilli Powder – 100g', 'TRS Black Sesame Seeds – 100g', 'TRS Cloves Whole – 100g'. Form filter: Whole, Powder, Crushed, Seeds, Leaves, Spice Mix.",
+  "spelling": {
+    "tumeric": "turmeric",
+    "corriander": "coriander",
+    "chillie": "chilli",
+    "chilly": "chilli"
+  },
+  "categoryRules": [
+    {
+      "categories": ["spice", "masala", "seasoning"],
+      "wordOrder": {
+        "leading": [
+          "extra hot",
+          "hot",
+          "medium",
+          "mild",
+          "black",
+          "white",
+          "green",
+          "red",
+          "brown",
+          "yellow"
+        ],
+        "trailing": ["whole", "coarse", "powder"]
+      }
+    }
+  ],
+  "derivedAttributes": [
+    {
+      "name": "Form",
+      "categories": ["spice", "masala", "seasoning"],
+      "options": {
+        "Whole": ["whole"],
+        "Powder": ["powder", "ground"],
+        "Crushed": ["crushed", "coarse"],
+        "Seeds": ["seeds", "seed"],
+        "Leaves": ["leaves"],
+        "Spice Mix": ["masala", "mix", "seasoning"]
+      }
+    }
+  ],
+  "synonyms": [
+    ["jeera", "cumin"],
+    ["dhania", "coriander", "dhaniya"],
+    ["haldi", "turmeric"],
+    ["methi", "fenugreek"],
+    ["elaichi", "cardamom", "cardamon"],
+    ["ajwain", "carom", "ajwan", "lovage"],
+    ["dalchini", "cinnamon", "cassia"],
+    ["tenderiser", "tenderizer"],
+    ["chaat", "chat"],
+    ["aniseed", "anise"],
+    ["powder", "ground"],
+    ["behari", "bihari"],
+    ["chargha", "charga"]
+  ],
+  "ignoreWords": ["curry"],
+  "formWords": [
+    "whole",
+    "powder",
+    "ground",
+    "coarse",
+    "crushed",
+    "seeds",
+    "seed",
+    "leaves",
+    "black",
+    "white",
+    "hulled",
+    "natural"
+  ],
+  "conflictingForms": [
+    ["whole", "powder", "coarse", "crushed", "paste"],
+    ["seed", "leaf", "powder", "paste"],
+    ["hot", "mild"],
+    ["black", "white", "green", "red", "brown"]
+  ]
+}

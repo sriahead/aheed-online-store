@@ -162,6 +162,7 @@ describe("Stripe adapter — session payload", () => {
     expect((init.headers as Record<string, string>)["content-type"]).toBe(
       "application/x-www-form-urlencoded",
     );
+    expect((init.headers as Record<string, string>)["Stripe-Version"]).toBe("2025-09-30.clover");
   });
 
   it("throws on a non-OK Stripe response so the caller can compensate", async () => {
@@ -182,6 +183,136 @@ describe("Stripe adapter — session payload", () => {
     await expect(createStripePaymentService("sk_test_123").createPayment(INPUT)).rejects.toThrow(
       PaymentProviderError,
     );
+  });
+});
+
+describe("Stripe adapter — dynamic vendor branding & Merqify ecosystem identity", () => {
+  function mockStripeOk() {
+    const fetchMock = vi.fn(async () =>
+      Response.json({ id: "cs_test_1", url: "https://checkout.stripe.com/pay/cs_test_1" }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  function bodyOf(fetchMock: ReturnType<typeof vi.fn>): URLSearchParams {
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    return new URLSearchParams(init.body as string);
+  }
+
+  it("sets dynamic vendor display name and Merqify ecosystem description when vendorName is provided", async () => {
+    const fetchMock = mockStripeOk();
+    await createStripePaymentService("sk_test_123").createPayment({
+      ...INPUT,
+      vendorName: "Aheed Food Centre",
+      applicationContext: "ShopLocal",
+    });
+    const body = bodyOf(fetchMock);
+
+    // Header display name
+    expect(body.get("branding_settings[display_name]")).toBe("Aheed Food Centre");
+
+    // Line items branding & order identity with single clean ecosystem description
+    expect(body.get("line_items[0][price_data][product_data][name]")).toBe(
+      `Order ${INPUT.orderNumber} · Aheed Food Centre`,
+    );
+    expect(body.get("line_items[0][price_data][product_data][description]")).toBe(
+      "Levelled Up by Merqify",
+    );
+
+    // Duplicate custom_text occurrences removed to avoid repetitive checkout copy
+    expect(body.get("custom_text[submit][message]")).toBeNull();
+    expect(body.get("custom_text[after_submit][message]")).toBeNull();
+
+    // Metadata traceability
+    expect(body.get("metadata[vendorName]")).toBe("Aheed Food Centre");
+    expect(body.get("metadata[applicationContext]")).toBe("ShopLocal");
+  });
+
+  it("supports configurable branding terminology via brandingTerminology input (#1585)", async () => {
+    const fetchMock = mockStripeOk();
+    await createStripePaymentService("sk_test_123").createPayment({
+      ...INPUT,
+      vendorName: "Aheed Food Centre",
+      brandingTerminology: "Part of the Merqify Ecosystem",
+      applicationContext: "ShopLocal",
+    });
+    const body = bodyOf(fetchMock);
+
+    expect(body.get("line_items[0][price_data][product_data][description]")).toBe(
+      "Part of the Merqify Ecosystem",
+    );
+    expect(body.get("metadata[brandingTerminology]")).toBe("Part of the Merqify Ecosystem");
+  });
+
+  it("dynamically adjusts to any independent vendor without leakage (e.g. SriMart)", async () => {
+    const fetchMock = mockStripeOk();
+    await createStripePaymentService("sk_test_123").createPayment({
+      ...INPUT,
+      vendorId: "v-srimart",
+      vendorName: "SriMart Electronics",
+      applicationContext: "Merqify Services",
+    });
+    const body = bodyOf(fetchMock);
+
+    expect(body.get("branding_settings[display_name]")).toBe("SriMart Electronics");
+    expect(body.get("line_items[0][price_data][product_data][name]")).toBe(
+      `Order ${INPUT.orderNumber} · SriMart Electronics`,
+    );
+    expect(body.get("line_items[0][price_data][product_data][description]")).toBe(
+      "Levelled Up by Merqify",
+    );
+    expect(body.get("custom_text[submit][message]")).toBeNull();
+    expect(body.get("metadata[vendorId]")).toBe("v-srimart");
+    expect(body.get("metadata[vendorName]")).toBe("SriMart Electronics");
+    expect(body.get("metadata[applicationContext]")).toBe("Merqify Services");
+  });
+
+  it("gracefully falls back when vendorName is omitted", async () => {
+    const fetchMock = mockStripeOk();
+    await createStripePaymentService("sk_test_123").createPayment(INPUT);
+    const body = bodyOf(fetchMock);
+
+    // display_name is not overridden when vendorName is absent
+    expect(body.get("branding_settings[display_name]")).toBeNull();
+    expect(body.get("line_items[0][price_data][product_data][name]")).toBe(
+      `Order ${INPUT.orderNumber}`,
+    );
+    expect(body.get("line_items[0][price_data][product_data][description]")).toBe(
+      "Levelled Up by Merqify",
+    );
+    expect(body.get("custom_text[submit][message]")).toBeNull();
+    expect(body.get("custom_text[after_submit][message]")).toBeNull();
+    expect(body.get("metadata[vendorName]")).toBeNull();
+  });
+
+  it("supports future Merqify applications (e.g. Merqify Club, Merqify Bookings)", async () => {
+    const apps = [
+      "ShopLocal",
+      "Merqify Club",
+      "Merqify Services",
+      "Merqify Bookings",
+      "Merqify Charity",
+      "Merqify Learn",
+      "Merqify Events",
+      "Merqify Property",
+    ];
+
+    for (const app of apps) {
+      const fetchMock = mockStripeOk();
+      await createStripePaymentService("sk_test_123").createPayment({
+        ...INPUT,
+        vendorName: "Community Hub",
+        applicationContext: app,
+      });
+      const body = bodyOf(fetchMock);
+      expect(body.get("metadata[applicationContext]")).toBe(app);
+      expect(body.get("branding_settings[display_name]")).toBe("Community Hub");
+      expect(body.get("line_items[0][price_data][product_data][description]")).toBe(
+        "Levelled Up by Merqify",
+      );
+      expect(body.get("custom_text[submit][message]")).toBeNull();
+    }
   });
 });
 

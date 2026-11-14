@@ -4,6 +4,8 @@ import { DEFAULT_PRODUCT_GRID_DENSITY, type ProductGridDensity } from "@/lib/pro
 import { orderPaymentBadges, type PaymentBadgeMethodName } from "@/lib/payment-badges";
 import type { HoursOverrideRow, WeeklyHoursRow } from "@/lib/footer-hours";
 import { calendarDayToUtcMidnight } from "@/lib/local-datetime";
+import { DEFAULT_LOW_STOCK_THRESHOLD } from "@/lib/low-stock";
+import { DEFAULT_PLATFORM_BRANDING_TERMINOLOGY } from "@/lib/platform-defaults";
 
 /**
  * Re-exported so the app/UI/feature layers can type a prop against the real
@@ -171,6 +173,11 @@ export interface VendorProfile {
   paymentBadges: PaymentBadgeMethodName[];
   /** #1023's gate, reused by the footer's Rewards link. */
   loyaltyEnabled: boolean;
+  /**
+   * #1585 — platform branding terminology ("Levelled Up by Merqify"), set from Client Setup.
+   * Defaults to DEFAULT_PLATFORM_BRANDING_TERMINOLOGY when unset or null in database.
+   */
+  platformBrandingTerminology: string;
 }
 
 // Fallbacks = the Aheed defaults already in design-system/tokens/tokens.css, so a
@@ -263,6 +270,7 @@ export async function fetchVendorProfile(
           registeredOffice: true,
           openingHoursNote: true,
           showSecureCheckoutNote: true,
+          platformBrandingTerminology: true,
         },
       },
       location: {
@@ -378,6 +386,8 @@ export async function fetchVendorProfile(
     })),
     paymentBadges: orderPaymentBadges((vendor?.paymentBadges ?? []).map((b) => b.method)),
     loyaltyEnabled: vendor?.config?.loyaltyEnabled ?? false,
+    platformBrandingTerminology:
+      vendor?.config?.platformBrandingTerminology?.trim() || DEFAULT_PLATFORM_BRANDING_TERMINOLOGY,
   };
 }
 
@@ -959,4 +969,93 @@ export async function listVendorHosts(
     select: { host: true, isCanonical: true },
     orderBy: { host: "asc" },
   });
+}
+
+/**
+ * #1572 — the one read of the store-wide low-stock default, structural so an interactive
+ * transaction (`tx`), either real client, and the spreadsheet import's narrowed client type can all
+ * pass it. A store with no config row reads the schema default.
+ */
+export interface LowStockDefaultReader {
+  vendorConfig: {
+    findUnique(args: {
+      where: { vendorId: string };
+      select: { lowStockThreshold: true };
+    }): PromiseLike<{ lowStockThreshold: number } | null>;
+  };
+}
+
+export async function readLowStockDefault(
+  db: LowStockDefaultReader,
+  vendorId: string,
+): Promise<number> {
+  const row = await db.vendorConfig.findUnique({
+    where: { vendorId },
+    select: { lowStockThreshold: true },
+  });
+  return row?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
+}
+
+/**
+ * #1572 — change the store-wide low-stock default, and move every product still on the OLD default
+ * to the new one, so "the default" means the same thing before and after. A product with its own
+ * number keeps it. One interactive transaction over the WebSocket client: the inventory change is
+ * an `updateMany`, which crashes over `getPrisma()` (#382).
+ *
+ * Returns how many products moved, or null for a store with no config row (nothing written).
+ */
+export async function setLowStockDefault(
+  prismaWs: ReturnType<typeof getPrismaWs>,
+  vendorId: string,
+  value: number,
+): Promise<{ previous: number; moved: number } | null> {
+  return prismaWs.$transaction(async (tx) => {
+    const existing = await tx.vendorConfig.findUnique({
+      where: { vendorId },
+      select: { lowStockThreshold: true },
+    });
+    if (!existing) return null;
+    const previous = existing.lowStockThreshold;
+    if (previous === value) return { previous, moved: 0 };
+    await tx.vendorConfig.update({ where: { vendorId }, data: { lowStockThreshold: value } });
+    const moved = await tx.inventory.updateMany({
+      where: { vendorId, lowStockThreshold: previous },
+      data: { lowStockThreshold: value },
+    });
+    return { previous, moved: moved.count };
+  });
+}
+
+/**
+ * #1585 — the vendor's platform branding terminology ("Levelled Up by Merqify"), set from the
+ * platform admin's Client Setup dashboard. Nullable; null falls back to the default platform branding.
+ */
+export async function updateVendorPlatformBranding(
+  prisma: ReturnType<typeof getPrisma>,
+  vendorId: string,
+  platformBrandingTerminology: string | null,
+): Promise<boolean> {
+  const existing = await prisma.vendorConfig.findUnique({
+    where: { vendorId },
+    select: { vendorId: true },
+  });
+  if (!existing) return false;
+  await prisma.vendorConfig.update({
+    where: { vendorId },
+    data: { platformBrandingTerminology: platformBrandingTerminology?.trim() || null },
+  });
+  return true;
+}
+
+/**
+ * #1585 — batch update the platform branding terminology across all client stores in Client Setup.
+ */
+export async function applyPlatformBrandingToAllVendors(
+  prisma: ReturnType<typeof getPrisma>,
+  platformBrandingTerminology: string | null,
+): Promise<number> {
+  const result = await prisma.vendorConfig.updateMany({
+    data: { platformBrandingTerminology: platformBrandingTerminology?.trim() || null },
+  });
+  return result.count;
 }

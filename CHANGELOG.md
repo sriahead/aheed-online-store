@@ -12,7 +12,56 @@ every branch merges.
 
 ### Added
 
+- **Storefront footer branding highlight and tagline cleanup (2026-11-14)**
+  - Removed trailing vendor/platform tagline (`· Independent Quality Groceries`) from the platform branding attribution line in `StorefrontFooter.tsx`.
+  - Highlighted the platform branding terminology (`Levelled Up by Merqify`) as a prominent pill badge with an emerald status indicator and high-contrast styling.
+
+- **Configurable platform branding terminology in Client Setup (#1585, 2026-11-14)**
+  - Platform administrators can dynamically configure the ecosystem branding terminology (defaulting to "Levelled Up by Merqify") from `/staff/platform/client-setup` per store or batch-applied across all client stores in one action.
+  - Terminology dynamically propagates to:
+    - **Stripe Checkout**: Line-item description uses the configured terminology (or platform default) alongside the dynamic vendor header.
+    - **Storefront Footer**: Platform attribution line displays the branding terminology linked to `https://merqify.com`.
+    - **Transactional Email Footers**: HTML and plain-text email footers render the branding terminology with its link.
+    - **Third-Party Credits & Licences** (`/icon-credits`): Generated icons section renders the branding terminology.
+  - Added nullable `VendorConfig.platformBrandingTerminology` column with fallback to `DEFAULT_PLATFORM_BRANDING_TERMINOLOGY = "Levelled Up by Merqify"`. Spec: `specs/2026-11-14-configurable-branding/`.
+
+- **Dynamic vendor branding and Merqify ecosystem identity on Stripe Checkout (#1580, 2026-11-14)**
+  - Customers on hosted Stripe Checkout dynamically see the vendor's human business name (e.g. "Aheed Food Centre", "SriMart Electronics") at the top header via `branding_settings.display_name`.
+  - Supporting identity formatted cleanly as "Merqify Ecosystem" on line item description under the order header; redundant custom submit text duplicate occurrences removed to keep the checkout experience focused.
+  - Sourced dynamically from database `Vendor` and `VendorBranding` models within `placeOrder`.
+  - Generic Merqify Core infrastructure in `lib/payments.ts` supports all current and future Merqify applications (`ShopLocal`, `Merqify Club`, `Merqify Services`, `Merqify Bookings`, `Merqify Events`, etc.) via `applicationContext`.
+  - Zero database migrations, preserving current single-account settlement while maintaining full compatibility with future Stripe Connect. Spec: `specs/2026-11-14-dynamic-vendor-branding/`.
+
+- **Staff stock import: upload, review and apply price lists in the staff panel (#1578, 2026-11-14)**
+  - `/staff/products/import` (store admins) replaces the #1216 importer: upload Excel or CSV (2,000 rows), pick columns the first time, then review every line grouped as Needs a decision / New / Updates / Unchanged / Skipped / Applied / Failed, with the matched product's PLU, price, size and live state, the runner-up and other sizes. Decide Update (any product, by search), Create or Skip with a note; held lines show their question.
+  - Apply runs in chunks from the browser, one transaction per line, each line claimed first so it is never applied twice; created products hidden with stock UNKNOWN; live prices and staff-edited fields kept; re-uploading creates nothing. Undo deletes untouched created products and restores fields still holding the import's value.
+  - Import settings per store in relational tables (migration `20261114150000_staff_stock_import`, 13 `StockImport*` models) with a settings screen; a settings change requires "Refresh plan". The CLI applies through the same `applyLine`, gains `settings-push` and `to-screen`; presets moved to `lib/stock-import/presets/` and took the generic rules from Aheed's profile (plans unchanged: 150 lines compared). Spec: `specs/2026-11-14-staff-stock-import/`.
+  - Fix: a brand with no other spellings stays in the stored settings (it outranks a longer store brand such as "LAZIZA ACHAR GOSHT" when naming), and when two rows claim one product the row that names it best keeps it ("Chicken Masala" no longer takes "Chicken Tikka Masala" from the exact row). Dry run of the three owner lists: only those two Laziza lines change.
+  - Aheed's import settings: "shanker" is a spelling of Shankar (brand clean-up 2026-11-14, AFC staging: 146 → 121 brands, 15 Shanker products linked).
+  - Aheed's import settings: TS / T S / T/S / T.S are Tropical Sun and Suryaa is Surya (owner, 2026-11-14; brand clean-up on AFC staging linked 158 products and split AL into its real brands).
+
+- **Grocery naming standard and category-specific filters for the stock import (#1573, 2026-11-14)**
+  - Clean names: Title Case with brand styling kept, sizes as g/kg/ml/L, and word order by category (spices: heat and colour first, form last; rice: grain length first, "Rice" last; fish: Fresh/Frozen last). Words are moved, never invented.
+  - A confident match keeps the till's extra words when the price list is terser ("Black Seeds" → "TRS Black Onion Seeds", "Dalchini" → "TRS Cinnamon Sticks", "Keema" → "Shan Keema Curry Mix"); `--previous-run` recovers till names an earlier run replaced.
+  - Presets `general`, `spices`, `rice`, `fish` (`scripts/stock-import/presets/`) for any store: Form; Variety and Grain; Species, Storage, Cut and Grade; Flavour, each only in its own categories. Dietary labels are never derived.
+  - The plan report lists possible duplicates already in the catalogue and every till-word name; apply refuses if a preset or the previous-run file changed. Skill updated. Spec: `specs/2026-11-14-grocery-naming-standard/`.
+  - Applied to AFC staging: 17 names standardised, nothing created, live products unchanged (73). Fix: an UPDATE confirmed by a reviewer now also keeps till words, so a re-run no longer undoes a till-word rename ("TRS Black Onion Seeds").
+  - Laziza price list (#1570): the Aheed profile gains the Laziza brand and file rule, the list's typos (biriuani, sinshi, masal) and synonyms (keema/qeema, behari/bihari, chargha/charga, korma/qorma). Applied to AFC staging: 3 created hidden, 5 updated, 10 held back for the owner; re-run 0 changes; live products unchanged (73).
+
+- **Staff products: brand filter and sort, low stock, store-wide low-stock number (#1572, 2026-11-14)**
+  - `/staff/products` gains a **Brand** filter (with **No brand**), a **Brand A–Z** sort (unbranded last), and a **Low stock** worklist in Needs attention and the Quick views: tracked, at least one left, at or below the product's own number. Rows show a Low stock label, "Low at N" and the price per kg / litre / 100 g.
+  - `VendorConfig.lowStockThreshold` (default 3, additive migration `20261114110000_vendor_low_stock_threshold`) is the store-wide default, set by store admins above the list. Saving moves every product still on the old number in one transaction; products with their own number keep it.
+  - Every path that creates a stock record (new product form, quick and bulk stock counts, the spreadsheet import, "mark untracked", `scripts/stock-import.ts`) starts at the store default instead of a literal 3; the inventory page's fallback was 5 and is now 3.
+  - The low-stock filter is a Prisma field reference (no raw SQL), checked on AFC staging over the HTTP adapter against the in-memory rule. Spec: `specs/2026-11-14-staff-products-brand-low-stock/`.
+
+- **Stock Data Import & Update Manager (#1570, 2026-11-14)**
+  - A reviewed spreadsheet import for any store: `scripts/stock-import.ts` (`plan` → `review.xlsx` → `decide` → `apply`) over the pure `lib/stock-import/`, driven by the `stock-import` Claude Code skill. Store quirks (columns, brands and aliases, spelling, synonyms, two-form splits, section → category, derived attributes) live in `scripts/stock-import/profiles/<vendor>.json`.
+  - Matches PLU, then barcode, then brand + name + size; only a unique same-size match is suggested as an update, conflicting forms (seeds vs leaves) never match, anything else waits for review. Blank cells, staff-edited fields, existing PLUs and live prices are kept. Optional was price, multi-buy, bundles and promotions.
+  - **Nothing it writes is live**: created products are hidden with stock unknown; created categories, tiers, bundles and promotions inactive. Re-running a reviewed sheet changes nothing.
+  - First run on AFC staging: Aheed's spices and Shan lists, 62 products created and 62 till products updated (clean names, prices, sizes, Shan/TRS brands, Spices & Masalas), 6 rows held as questions, 2 duplicates. Spec: `specs/2026-11-14-stock-data-import/`.
+
 - **Store and admin emails in the new design, part 3 of 3 (#1564, 2026-11-13)**
+  - **Shipped.** Parts 1-3 promoted to production 2026-11-14 (PR #1568, `5d2bee9c`); the `EmailTemplateOverride` migration applied by CI on both production databases. Notification matrix 1.5.1 adds sanity-check step 7.
   - The owner order email and bulk digest, the Contact us message forwarded to the store, and the Client Setup test email now use the shared layout: store header, facts panel, one "Open in staff panel" button, and a staff footer line instead of a customer reason. Not editable. Inbound mail forwarded to the store is untouched.
   - Plain text for all of them (the owner emails write their own; the forwarded contact message's is derived on send).
   - Tests: owner-email link test updated (one action link; the others are the store site and Powered by), new layout cases in `tests/email-template-overrides.test.ts`.

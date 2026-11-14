@@ -11,6 +11,7 @@ import { contactChannels } from "@/lib/contact-channels";
 import { FooterContactChannels } from "@/components/layout/FooterContactChannels";
 import { Icon } from "@/components/icons/Icon";
 import { contactMailtoHref } from "@/lib/contact/mailto";
+import { DEFAULT_PLATFORM_URL } from "@/lib/platform-defaults";
 
 /**
  * The storefront footer (#1055) — three columns on desktop, stacked on mobile, then a bottom bar.
@@ -60,13 +61,18 @@ export function StorefrontFooter({
   profile,
   platformName,
   platformTagline,
+  platformBrandingTerminology,
+  platformUrl = DEFAULT_PLATFORM_URL,
   assistantAvailable,
   ownDomain,
 }: {
   profile: VendorProfile;
-  platformName: string | undefined;
+  platformName?: string;
   /** Shown after the name on the "Powered by" line; ignored when there is no name. */
   platformTagline?: string;
+  /** #1585 — configurable platform branding terminology (e.g. "Levelled Up by Merqify"). */
+  platformBrandingTerminology?: string;
+  platformUrl?: string;
   /** #1015 — the same value `StorefrontChrome` gives `FloatingContact`, so both list one set. */
   assistantAvailable: boolean;
   /**
@@ -306,12 +312,24 @@ export function StorefrontFooter({
                 <span key={part}> · {part}</span>
               ))}
             </p>
-            {platformName && (
+            {platformBrandingTerminology ? (
+              <p className="pt-0.5">
+                <a
+                  href={platformUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white border border-white/15 shadow-sm transition hover:bg-white/20 hover:border-white/30"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
+                  <span>{platformBrandingTerminology}</span>
+                </a>
+              </p>
+            ) : platformName ? (
               <p>
                 Powered by {platformName}
                 {platformTagline && <span> · {platformTagline}</span>}
               </p>
-            )}
+            ) : null}
             {/* #1223 R67 — attribution for third-party libraries (icon sets and their licences).
                 Platform attribution rather than vendor copy, so unlike the elements above it is
                 never hidden (#239 is about vendor fields). The route keeps its original path. */}

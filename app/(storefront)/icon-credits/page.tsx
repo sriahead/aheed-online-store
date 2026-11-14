@@ -116,7 +116,11 @@ const GENERATED_ICONS = [
 export default async function IconCreditsPage() {
   const profile = await getCurrentVendorProfile();
   const vendorName = profile?.name ?? "Aheed Food Centre";
-  const { PLATFORM_NAME: platformName } = getPlatformBrandingEnv();
+  const {
+    PLATFORM_NAME: platformName,
+    PLATFORM_BRANDING_TERMINOLOGY: platformBrandingTerminology,
+  } = getPlatformBrandingEnv();
+  const brandingTerminology = profile?.platformBrandingTerminology || platformBrandingTerminology;
 
   return (
     <PageContainer width="standard" className="text-primary">
@@ -148,14 +152,14 @@ export default async function IconCreditsPage() {
               data-testid="platform-powered-badge"
               className="inline-flex items-center gap-1.5 rounded-full bg-action/10 px-3 py-1 text-xs font-semibold text-action"
             >
-              Powered by {platformName}
+              {brandingTerminology}
             </span>
           </div>
 
           <p className="text-sm text-primary-muted leading-relaxed">
             All 3D storefront illustrations, interactive hub controls, and animated vector icons are
             custom-engineered vector assets rendered via inline theme-aware SVGs and{" "}
-            <strong>Powered by {platformName}</strong>.
+            <strong>{brandingTerminology}</strong>.
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">

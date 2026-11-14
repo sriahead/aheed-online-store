@@ -74,39 +74,41 @@ enum VendorRole {
 }
 
 model User {
-  id                  String                       @id
-  name                String
-  email               String                       @unique
-  emailVerified       Boolean                      @default(false)
-  image               String?
-  role                Role                         @default(CUSTOMER)
-  createdAt           DateTime                     @default(now())
-  updatedAt           DateTime                     @updatedAt
-  sessions            Session[]
-  accounts            Account[]
-  reviews             Review[]
-  memberships         VendorMembership[]
-  carts               Cart[]
-  addresses           Address[]
-  orders              Order[]
-  statusChanges       OrderStatusEvent[]           @relation("OrderStatusEventActor")
-  loyaltyAccounts     LoyaltyAccount[]
-  loyaltyEntries      LoyaltyLedgerEntry[]
-  marketingConsents   MarketingConsentEvent[]
-  discountUses        DiscountRedemption[]
+  id                   String                       @id
+  name                 String
+  email                String                       @unique
+  emailVerified        Boolean                      @default(false)
+  image                String?
+  role                 Role                         @default(CUSTOMER)
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+  sessions             Session[]
+  accounts             Account[]
+  reviews              Review[]
+  memberships          VendorMembership[]
+  carts                Cart[]
+  addresses            Address[]
+  orders               Order[]
+  statusChanges        OrderStatusEvent[]           @relation("OrderStatusEventActor")
+  loyaltyAccounts      LoyaltyAccount[]
+  loyaltyEntries       LoyaltyLedgerEntry[]
+  marketingConsents    MarketingConsentEvent[]
+  discountUses         DiscountRedemption[]
   /// #987 — the referral codes this user owns, at most one per vendor.
-  referralCodes       DiscountCode[]               @relation("ReferralCodeOwner")
-  roleChangesTargeted VendorRoleAuditLog[]         @relation("TargetUser")
-  roleChangesActedOn  VendorRoleAuditLog[]         @relation("ActorUser")
-  restrictionChanges  ProductRestrictionAuditLog[]
-  customerAddresses   CustomerAddress[]
-  shoppingLists       ShoppingList[]
-  feedback            CustomerFeedback[]
-  feedbackModerated   CustomerFeedback[]           @relation("FeedbackModerator")
-  netContentReviews   NetContentSuggestion[]       @relation("NetContentReviewer")
-  favourites          Favourite[]
-  remindersSent       AbandonedCheckoutReminder[]
+  referralCodes        DiscountCode[]               @relation("ReferralCodeOwner")
+  roleChangesTargeted  VendorRoleAuditLog[]         @relation("TargetUser")
+  roleChangesActedOn   VendorRoleAuditLog[]         @relation("ActorUser")
+  restrictionChanges   ProductRestrictionAuditLog[]
+  customerAddresses    CustomerAddress[]
+  shoppingLists        ShoppingList[]
+  feedback             CustomerFeedback[]
+  feedbackModerated    CustomerFeedback[]           @relation("FeedbackModerator")
+  netContentReviews    NetContentSuggestion[]       @relation("NetContentReviewer")
+  favourites           Favourite[]
+  remindersSent        AbandonedCheckoutReminder[]
   emailTemplatesEdited EmailTemplateOverride[]
+  stockImportRuns      StockImportRun[]
+  stockImportDecisions StockImportLine[]            @relation("StockImportDecider")
 }
 
 model Session {
@@ -235,6 +237,15 @@ model Vendor {
   categoryAssets            CategoryAsset[]
   abandonedReminders        AbandonedCheckoutReminder[]
   emailTemplateOverrides    EmailTemplateOverride[]
+  stockImportSettings       StockImportSettings?
+  stockImportBrandAliases   StockImportBrandAlias[]
+  stockImportSpellings      StockImportSpelling[]
+  stockImportSynonymGroups  StockImportSynonymGroup[]
+  stockImportWords          StockImportWord[]
+  stockImportCategoryTexts  StockImportCategoryText[]
+  stockImportFileRules      StockImportFileRule[]
+  stockImportRuns           StockImportRun[]
+  stockImportLines          StockImportLine[]
 }
 
 // P2.6 slice 6 (#569) — a product's brand, as a model rather than a denormalised
@@ -261,7 +272,9 @@ model Brand {
   /// adds no upload pipeline, only the ability to set the key.
   imageKey String?
 
-  products Product[]
+  products             Product[]
+  stockImportAliases   StockImportBrandAlias[]
+  stockImportFileRules StockImportFileRule[]
 
   @@unique([vendorId, slug])
   @@index([vendorId, name])
@@ -686,6 +699,9 @@ model VendorConfig {
   registeredOffice            String?
   openingHoursNote            String? // line under the opening hours
   showSecureCheckoutNote      Boolean            @default(false) // "Secure checkout powered by Stripe"
+  // #1585 — configurable platform branding terminology ("Levelled Up by Merqify").
+  // Nullable; null falls back to DEFAULT_PLATFORM_BRANDING_TERMINOLOGY in lib/platform-defaults.ts.
+  platformBrandingTerminology String?
   // P3a — delivery rules are vendor data, never constants (the AI Studio mockup hardcoded a
   // £30 threshold). Prisma-level defaults mean a newly-inserted vendor is valid without the
   // seed supplying values. P3a reads only the threshold (cart banner); applying the fee and
@@ -710,6 +726,10 @@ model VendorConfig {
   // #1134 — whether this store asks shoppers for marketing consent (/register, /account/data,
   // /privacy). OFF by default so it ships dark; a store admin turns it on at /staff/storefront.
   marketingConsentEnabled     Boolean            @default(false)
+  // #1572 — the store-wide low-stock default. A new stock record starts at this number and a
+  // product still on the old default moves with it when an admin changes it at /staff/products.
+  // Each Inventory row keeps its own lowStockThreshold, so a product can still differ.
+  lowStockThreshold           Int                @default(3)
   bookingWindowDays           Int                @default(14)
   slotHoldDurationMinutes     Int                @default(15)
   // #1441 — a slot can be booked only if it starts more than this many minutes from now (in
@@ -830,24 +850,27 @@ model VendorLocation {
 // P2a — catalogue browsing (specs/2026-08-07-p2a-catalogue-browsing/). Matches the
 // representative schema already designed in specs/architecture.md §3.2.
 model Category {
-  id               String              @id @default(uuid())
-  vendorId         String
-  vendor           Vendor              @relation(fields: [vendorId], references: [id])
-  slug             String
-  name             String
-  parentId         String?
-  parent           Category?           @relation("Sub", fields: [parentId], references: [id])
-  children         Category[]          @relation("Sub")
-  sortOrder        Int                 @default(0)
-  isActive         Boolean             @default(true)
+  id                    String                    @id @default(uuid())
+  vendorId              String
+  vendor                Vendor                    @relation(fields: [vendorId], references: [id])
+  slug                  String
+  name                  String
+  parentId              String?
+  parent                Category?                 @relation("Sub", fields: [parentId], references: [id])
+  children              Category[]                @relation("Sub")
+  sortOrder             Int                       @default(0)
+  isActive              Boolean                   @default(true)
   // #1135 — shoppers may attach a note to a basket line for products in this category (and its
   // sub-categories). Decided by lib/custom-note.ts's productAcceptsNote, nowhere else.
-  allowsCustomNote Boolean             @default(false)
+  allowsCustomNote      Boolean                   @default(false)
   // #1278 — relative storage key for realistic category photography (ADR-003; never a URL)
-  imageKey         String?
-  products         Product[]
-  promotions       Promotion[]
-  assets           CategoryAsset[]
+  imageKey              String?
+  products              Product[]
+  promotions            Promotion[]
+  assets                CategoryAsset[]
+  stockImportDefaultFor StockImportSettings[]
+  stockImportTexts      StockImportCategoryText[]
+  stockImportFileRules  StockImportFileRule[]
 
   @@unique([vendorId, slug])
   @@unique([id, vendorId])
@@ -872,9 +895,9 @@ enum PromotionChannel {
 // department, bundle, or discount-code promotions with priority ranking,
 // audience targeting, active toggle, and date scheduling.
 model Promotion {
-  id               String          @id @default(uuid())
+  id               String           @id @default(uuid())
   vendorId         String
-  vendor           Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendor           Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   headline         String
   subtitle         String?
   badgeText        String?
@@ -882,10 +905,10 @@ model Promotion {
   imageKey         String? // RELATIVE key only (ADR-003) — never a URL
   altText          String? // required by jsx-a11y whenever imageKey is set
   // #1535 — set when the image was AI-generated, cleared by Approve, a new upload or Remove.
-  imageNeedsReview Boolean         @default(false)
+  imageNeedsReview Boolean          @default(false)
   linkUrl          String? // relative path only, e.g. "/categories/household?isOffer=true"
-  priority         Int             @default(0)
-  isActive         Boolean         @default(true)
+  priority         Int              @default(0)
+  isActive         Boolean          @default(true)
   startsAt         DateTime?
   endsAt           DateTime?
   audienceSegment  AudienceSegment  @default(ALL)
@@ -894,14 +917,14 @@ model Promotion {
   updatedAt        DateTime         @updatedAt
 
   // Optional target associations (mutually exclusive or all null for store-wide)
-  categoryId       String?
-  category         Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  bundleId         String?
-  bundle           Bundle?          @relation(fields: [bundleId], references: [id], onDelete: SetNull)
-  discountCodeId   String?
-  discountCode     DiscountCode?    @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
-  productId        String?
-  product          Product?         @relation(fields: [productId], references: [id], onDelete: SetNull)
+  categoryId     String?
+  category       Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  bundleId       String?
+  bundle         Bundle?       @relation(fields: [bundleId], references: [id], onDelete: SetNull)
+  discountCodeId String?
+  discountCode   DiscountCode? @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
+  productId      String?
+  product        Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@index([vendorId, isActive, priority])
   @@index([vendorId, categoryId])
@@ -917,9 +940,9 @@ model CategoryAsset {
   vendor     Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  slot       String?   // e.g. "delivery-van", "storefront", "quick-shop", "user-profile", "cart-floating", etc.
-  storageKey String    // relative key in R2
-  style      String    // "photo" | "3d-icon"
+  slot       String? // e.g. "delivery-van", "storefront", "quick-shop", "user-profile", "cart-floating", etc.
+  storageKey String // relative key in R2
+  style      String // "photo" | "3d-icon"
   isSelected Boolean   @default(false)
   createdAt  DateTime  @default(now())
 
@@ -943,22 +966,22 @@ model CategoryAsset {
 // NOT built. Until it is, the storefront shows the derived total and makes no
 // savings claim at all rather than render a number with nothing behind it.
 model Bundle {
-  id        String       @id @default(uuid())
-  vendorId  String
-  vendor    Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  slug      String
-  name      String
-  tagline   String?
-  imageKey  String? // RELATIVE key only (ADR-003) — never a URL
-  altText   String? // required by jsx-a11y whenever imageKey is set
+  id               String       @id @default(uuid())
+  vendorId         String
+  vendor           Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  slug             String
+  name             String
+  tagline          String?
+  imageKey         String? // RELATIVE key only (ADR-003) — never a URL
+  altText          String? // required by jsx-a11y whenever imageKey is set
   // #1535 — set when the image was AI-generated, cleared by Approve, a new upload or Remove.
-  imageNeedsReview Boolean @default(false)
-  isActive  Boolean      @default(true)
-  sortOrder Int          @default(0)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  items     BundleItem[]
-  promotions Promotion[]
+  imageNeedsReview Boolean      @default(false)
+  isActive         Boolean      @default(true)
+  sortOrder        Int          @default(0)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  items            BundleItem[]
+  promotions       Promotion[]
 
   @@unique([vendorId, slug])
   @@index([vendorId, isActive])
@@ -1045,6 +1068,10 @@ model Product {
   promotions                Promotion[]
   priceTier                 ProductPriceTier?
   attributeValues           ProductAttributeValue[]
+  stockImportTargets        StockImportLine[]            @relation("StockImportTarget")
+  stockImportRunnerUps      StockImportLine[]            @relation("StockImportRunnerUp")
+  stockImportResults        StockImportLine[]            @relation("StockImportResult")
+  stockImportChanges        StockImportFieldChange[]
   averageRating             Float                        @default(0) // denormalized, recomputed on every review write
   reviewCount               Int                          @default(0)
   // P2.5b1 — visual redesign foundation (specs/2026-08-07-p2-5b1-visual-foundation/).
@@ -1280,13 +1307,13 @@ model NetContentSuggestion {
 }
 
 model Inventory {
-  id                  String    @id @default(uuid())
+  id                  String              @id @default(uuid())
   vendorId            String
-  vendor              Vendor    @relation(fields: [vendorId], references: [id])
-  productId           String    @unique
-  product             Product   @relation(fields: [productId], references: [id])
-  quantity            Int       @default(0)
-  lowStockThreshold   Int       @default(3)
+  vendor              Vendor              @relation(fields: [vendorId], references: [id])
+  productId           String              @unique
+  product             Product             @relation(fields: [productId], references: [id])
+  quantity            Int                 @default(0)
+  lowStockThreshold   Int                 @default(3)
   // #876 — a CALENDAR DAY, not an instant: the UTC midnight of the vendor-local day staff expect
   // the product back, the same convention as Order.fulfilmentDate (#811). Read and write it only
   // through lib/local-datetime.ts's calendar-day helpers. Null = no expected date.
@@ -1316,24 +1343,24 @@ enum InventoryAuditSource {
 }
 
 model InventoryAuditLog {
-  id                 String               @id @default(uuid())
-  vendorId           String
-  vendor             Vendor               @relation(fields: [vendorId], references: [id])
-  productId          String
-  product            Product              @relation(fields: [productId], references: [id])
-  inventoryId        String
-  inventory          Inventory            @relation(fields: [inventoryId], references: [id])
-  previousQuantity   Int
-  newQuantity        Int
-  changeAmount       Int
-  previousStockMode  StockMode
-  newStockMode       StockMode
-  source             InventoryAuditSource
-  reason             String?
-  actorId            String?
-  actorType          String               @default("STAFF")
-  batchId            String?
-  createdAt          DateTime             @default(now())
+  id                String               @id @default(uuid())
+  vendorId          String
+  vendor            Vendor               @relation(fields: [vendorId], references: [id])
+  productId         String
+  product           Product              @relation(fields: [productId], references: [id])
+  inventoryId       String
+  inventory         Inventory            @relation(fields: [inventoryId], references: [id])
+  previousQuantity  Int
+  newQuantity       Int
+  changeAmount      Int
+  previousStockMode StockMode
+  newStockMode      StockMode
+  source            InventoryAuditSource
+  reason            String?
+  actorId           String?
+  actorType         String               @default("STAFF")
+  batchId           String?
+  createdAt         DateTime             @default(now())
 
   @@index([vendorId, productId, createdAt])
   @@index([vendorId, batchId])
@@ -1701,44 +1728,44 @@ model Address {
 // carries the full rationale. Consequence: `prisma migrate diff` may report drift
 // that is not drift, and `prisma migrate dev` may propose DROPPING them. Keep them.
 model Order {
-  id                   String                  @id @default(uuid())
+  id                   String                     @id @default(uuid())
   vendorId             String
-  vendor               Vendor                  @relation(fields: [vendorId], references: [id])
-  orderNumber          String                  @unique
+  vendor               Vendor                     @relation(fields: [vendorId], references: [id])
+  orderNumber          String                     @unique
   // P9.1 (#427/#428) — a guest order's actual credential. The order number is
   // NOT one: it appears in emails, shared links, browser history and support
   // threads, so knowing it must not return a name and a residential address.
   // Nullable because every order placed before this migration has none; those
   // guests fall back to /orders/lookup (order number + email). Never selected
   // into OrderSummary — see findOrderForViewer.
-  confirmationToken    String?                 @unique
+  confirmationToken    String?                    @unique
   userId               String?
-  user                 User?                   @relation(fields: [userId], references: [id])
+  user                 User?                      @relation(fields: [userId], references: [id])
   guestEmail           String?
   addressId            String
-  address              Address                 @relation(fields: [addressId], references: [id])
-  fulfilmentMethod     FulfilmentMethod        @default(DELIVERY)
+  address              Address                    @relation(fields: [addressId], references: [id])
+  fulfilmentMethod     FulfilmentMethod           @default(DELIVERY)
   fulfilmentSlotId     String?
-  fulfilmentSlot       VendorFulfilmentSlot?   @relation(fields: [fulfilmentSlotId], references: [id])
+  fulfilmentSlot       VendorFulfilmentSlot?      @relation(fields: [fulfilmentSlotId], references: [id])
   fulfilmentDate       DateTime?
-  isExpress            Boolean                 @default(false)
-  targetFulfilmentTime DateTime?               @db.Timestamptz(3)
-  status               OrderStatus             @default(PENDING_PAYMENT)
-  currency             String                  @default("GBP")
+  isExpress            Boolean                    @default(false)
+  targetFulfilmentTime DateTime?                  @db.Timestamptz(3)
+  status               OrderStatus                @default(PENDING_PAYMENT)
+  currency             String                     @default("GBP")
   subtotalPence        Int
   // P5a (#135) — a GENERIC discount column, not a points-specific one: P5b's
   // discount codes reduce the same total and must not need a second column and a
   // second arithmetic rule. The order money identity is
   // subtotalPence - discountPence + deliveryFeePence = totalPence.
-  discountPence        Int                     @default(0)
+  discountPence        Int                        @default(0)
   deliveryFeePence     Int
   totalPence           Int
   // VAT breakdown (pence) snapshot at checkout
-  vatTotalPence        Int                     @default(0)
-  vatStandardPence     Int                     @default(0)
-  vatZeroPence         Int                     @default(0)
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
+  vatTotalPence        Int                        @default(0)
+  vatStandardPence     Int                        @default(0)
+  vatZeroPence         Int                        @default(0)
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
   items                OrderItem[]
   payment              Payment?
   statusEvents         OrderStatusEvent[]
@@ -2632,4 +2659,300 @@ model EmailTemplateOverride {
   createdAt       DateTime @default(now())
 
   @@unique([vendorId, templateKey])
+}
+
+// #1578 — the staff stock import (`/staff/products/import`). A store's import SETTINGS (what its
+// spreadsheets look like and how its names are cleaned) and each import RUN (the uploaded grid, the
+// plan, every reviewer decision and every result). Relational on purpose (no Json columns): the
+// settings screen edits rows, and undo reads field-level changes. Pure logic: lib/stock-import/.
+
+enum StockImportHeaderRow {
+  AUTO
+  NONE
+}
+
+/// Shared rule sets in lib/stock-import/presets/<name>.json.
+enum StockImportPreset {
+  GENERAL
+  SPICES
+  RICE
+  FISH
+}
+
+enum StockImportWordKind {
+  /// Filler ignored when matching ("curry").
+  IGNORE
+  /// Till clutter that never counts as a product word ("pkt").
+  NOISE
+  /// Kept exactly as written in a clean name ("TRS").
+  PRESERVE
+}
+
+enum StockImportCategoryTextKind {
+  /// A section-heading row's text.
+  SECTION
+  /// A category column's text.
+  COLUMN
+}
+
+model StockImportSettings {
+  id                    String               @id @default(uuid())
+  vendorId              String               @unique
+  vendor                Vendor               @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  headerRow             StockImportHeaderRow @default(NONE)
+  /// A column letter ("A") when headerRow is NONE, header text otherwise.
+  nameColumn            String
+  sizeColumn            String?
+  priceColumn           String?
+  pluColumn             String?
+  barcodeColumn         String?
+  brandColumn           String?
+  categoryColumn        String?
+  descriptionColumn     String?
+  wasPriceColumn        String?
+  multiBuyColumn        String?
+  bundleColumn          String?
+  bundleQuantityColumn  String?
+  promotionColumn       String?
+  vatColumn             String?
+  originColumn          String?
+  defaultCategoryId     String
+  defaultCategory       Category             @relation(fields: [defaultCategoryId], references: [id])
+  nameTemplate          String               @default("{brand} {name} – {size}")
+  keepTillWords         Boolean              @default(true)
+  renameMatched         Boolean              @default(true)
+  moveMatchedToCategory Boolean              @default(true)
+  notes                 String               @default("")
+  createdAt             DateTime             @default(now())
+  /// The settings version: a run planned under an older one must be re-planned before apply.
+  updatedAt             DateTime             @updatedAt
+
+  presets StockImportSettingsPreset[]
+}
+
+model StockImportSettingsPreset {
+  settingsId String
+  settings   StockImportSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+  preset     StockImportPreset
+
+  @@id([settingsId, preset])
+}
+
+/// Another spelling of a brand in the store's sheets ("tra" means TRS).
+model StockImportBrandAlias {
+  id       String @id @default(uuid())
+  vendorId String
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  brandId  String
+  brand    Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  alias    String
+
+  @@unique([vendorId, alias])
+}
+
+/// A whole-word spelling fix applied to names ("powdee" becomes "powder").
+model StockImportSpelling {
+  id          String @id @default(uuid())
+  vendorId    String
+  vendor      Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  wrong       String
+  replacement String
+
+  @@unique([vendorId, wrong])
+}
+
+/// Words that mean the same product when matching (jeera = cumin).
+model StockImportSynonymGroup {
+  id        String                   @id @default(uuid())
+  vendorId  String
+  vendor    Vendor                   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  sortOrder Int                      @default(0)
+  words     StockImportSynonymWord[]
+
+  @@index([vendorId])
+}
+
+model StockImportSynonymWord {
+  id      String                  @id @default(uuid())
+  groupId String
+  group   StockImportSynonymGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  word    String
+
+  @@unique([groupId, word])
+}
+
+model StockImportWord {
+  id       String              @id @default(uuid())
+  vendorId String
+  vendor   Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  kind     StockImportWordKind
+  word     String
+
+  @@unique([vendorId, kind, word])
+}
+
+/// Sheet text that places a row in a category: a section heading or a category column value.
+model StockImportCategoryText {
+  id         String                      @id @default(uuid())
+  vendorId   String
+  vendor     Vendor                      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  kind       StockImportCategoryTextKind
+  text       String
+  categoryId String
+  category   Category                    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, kind, text])
+}
+
+/// Defaults for a file whose name matches `pattern` (case-insensitive regular expression).
+model StockImportFileRule {
+  id         String    @id @default(uuid())
+  vendorId   String
+  vendor     Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  pattern    String
+  brandId    String?
+  brand      Brand?    @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  sortOrder  Int       @default(0)
+
+  @@index([vendorId])
+}
+
+enum StockImportRunStatus {
+  OPEN
+  UNDONE
+}
+
+enum StockImportDecision {
+  UPDATE
+  CREATE
+  REVIEW
+  SKIP
+  DUPLICATE
+  /// Held with a question for the store (`question`); not applied until someone decides.
+  HOLD
+}
+
+enum StockImportConfidence {
+  HIGH
+  MEDIUM
+  LOW
+  NONE
+}
+
+enum StockImportLineStatus {
+  OPEN
+  /// Claimed by an apply in progress; never applied twice.
+  APPLYING
+  APPLIED
+  FAILED
+  UNDONE
+}
+
+enum StockImportResult {
+  CREATED
+  UPDATED
+  UNCHANGED
+}
+
+model StockImportRun {
+  id              String               @id @default(uuid())
+  vendorId        String
+  vendor          Vendor               @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  fileName        String
+  fileSha256      String
+  /// Rows in the uploaded grid, so trailing empty rows keep their numbers.
+  rowCount        Int
+  status          StockImportRunStatus @default(OPEN)
+  /// `importBatchId` on every product this run creates.
+  batchId         String               @unique
+  /// StockImportSettings.updatedAt when planned (R7).
+  settingsVersion DateTime
+  createdByUserId String?
+  createdBy       User?                @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  cells StockImportCell[]
+  lines StockImportLine[]
+
+  @@index([vendorId, createdAt])
+}
+
+/// One non-empty cell of the uploaded grid (0-based row and column).
+model StockImportCell {
+  runId       String
+  run         StockImportRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  rowIndex    Int
+  columnIndex Int
+  value       String
+
+  @@id([runId, rowIndex, columnIndex])
+}
+
+model StockImportLine {
+  id                String                @id @default(uuid())
+  runId             String
+  run               StockImportRun        @relation(fields: [runId], references: [id], onDelete: Cascade)
+  vendorId          String
+  vendor            Vendor                @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  /// `<file>#<row>` plus a suffix for a split row; stable across re-plans.
+  key               String
+  position          Int
+  rowNumber         Int
+  sourceText        String
+  suggestion        StockImportDecision
+  decision          StockImportDecision
+  confidence        StockImportConfidence
+  reason            String                @default("")
+  cleanName         String
+  brandName         String?
+  categoryName      String
+  sizeLabel         String?
+  pricePence        Int?
+  targetProductId   String?
+  targetProduct     Product?              @relation("StockImportTarget", fields: [targetProductId], references: [id], onDelete: SetNull)
+  runnerUpProductId String?
+  runnerUpProduct   Product?              @relation("StockImportRunnerUp", fields: [runnerUpProductId], references: [id], onDelete: SetNull)
+  /// Display text written at plan time: other sizes, the planned changes, till words kept, issues.
+  otherSizes        String                @default("")
+  changeSummary     String                @default("")
+  tillWords         String                @default("")
+  issues            String                @default("")
+  note              String                @default("")
+  question          String                @default("")
+  decidedByUserId   String?
+  decidedBy         User?                 @relation("StockImportDecider", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+  decidedAt         DateTime?
+  status            StockImportLineStatus @default(OPEN)
+  /// When an apply claimed the line; a claim older than 10 minutes is a crashed chunk and may be retaken.
+  claimedAt         DateTime?
+  result            StockImportResult?
+  resultProductId   String?
+  resultProduct     Product?              @relation("StockImportResult", fields: [resultProductId], references: [id], onDelete: SetNull)
+  resultDetail      String                @default("")
+  appliedAt         DateTime?
+
+  changes StockImportFieldChange[]
+
+  @@unique([runId, key])
+  @@index([runId, position])
+  @@index([vendorId, status])
+}
+
+/// One product field an applied line changed, for undo (R8). Values are encoded by
+/// lib/stock-import/field-change.ts; null means the field was empty.
+model StockImportFieldChange {
+  id            String          @id @default(uuid())
+  lineId        String
+  line          StockImportLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  field         String
+  previousValue String?
+  newValue      String?
+  restoredAt    DateTime?
+
+  @@index([lineId])
 }

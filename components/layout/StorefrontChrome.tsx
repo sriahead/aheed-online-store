@@ -72,6 +72,10 @@ export async function StorefrontChrome({
                 profile={profile}
                 platformName={platformBranding.PLATFORM_NAME}
                 platformTagline={platformBranding.PLATFORM_TAGLINE}
+                platformBrandingTerminology={
+                  profile.platformBrandingTerminology ||
+                  platformBranding.PLATFORM_BRANDING_TERMINOLOGY
+                }
                 assistantAvailable={assistantAvailable}
                 ownDomain={ownDomain}
               />

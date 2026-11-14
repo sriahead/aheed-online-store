@@ -15,7 +15,9 @@ import { getCurrentVendorIdOrNull } from "@/lib/tenant";
  * (CDN base, platform name) degrades to the neutral brand rather than costing the email.
  */
 export function buildEmailBrand(
-  profile: Pick<VendorProfile, "senderName" | "markStorageKey" | "primitives">,
+  profile: Pick<VendorProfile, "senderName" | "markStorageKey" | "primitives"> & {
+    platformBrandingTerminology?: string;
+  },
   location: Parameters<typeof emailBrandFrom>[0]["location"],
   siteUrl: string | null,
 ): EmailBrand {
@@ -32,6 +34,7 @@ export function buildEmailBrand(
       // store's name (wrangler.toml), which would make the footer read "Powered by <store>".
       platformName: DEFAULT_PLATFORM_NAME,
       platformUrl: DEFAULT_PLATFORM_URL,
+      platformBrandingTerminology: profile.platformBrandingTerminology,
     });
   } catch {
     return fallbackBrand(profile.senderName, siteUrl);

@@ -59,12 +59,13 @@ export const DEFAULT_PER_PAGE = 25;
  * #1523 — list order. `newest` is the default and is the order the list always had
  * (`createdAt desc, id desc`), so an absent or unknown value changes nothing.
  */
-export const SORT_OPTIONS = ["newest", "name", "price-asc", "price-desc"] as const;
+export const SORT_OPTIONS = ["newest", "name", "brand", "price-asc", "price-desc"] as const;
 export type StaffProductsSort = (typeof SORT_OPTIONS)[number];
 export const DEFAULT_SORT: StaffProductsSort = "newest";
 export const SORT_LABELS: Record<StaffProductsSort, string> = {
   newest: "Newest first",
   name: "Name A–Z",
+  brand: "Brand A–Z",
   "price-asc": "Price: low to high",
   "price-desc": "Price: high to low",
 };
@@ -72,16 +73,30 @@ export const SORT_LABELS: Record<StaffProductsSort, string> = {
 /**
  * #1523 — "needs attention" worklists: the next job, one click away. `price` = priced at £0 (cannot
  * be switched on); `ready` = hidden, priced and unrestricted (could be switched on now); `image` =
- * no photo.
+ * no photo. #1572 added `low`: stock tracked, above zero and at or below the product's own threshold
+ * (lib/low-stock.ts).
  */
 export const NEEDS_ALL = "all";
-export const NEEDS_FILTERS = ["price", "ready", "image"] as const;
+export const NEEDS_FILTERS = ["price", "ready", "image", "low"] as const;
 export type NeedsFilter = (typeof NEEDS_FILTERS)[number];
 export const NEEDS_LABELS: Record<NeedsFilter, string> = {
   price: "Price needed (£0)",
   ready: "Ready to switch on",
   image: "No photo",
+  low: "Low stock",
 };
+
+/**
+ * #1572 — the brand filter. `all` (the default) is no filter, `none` is products with no brand (the
+ * import worklist), anything else must be one of this store's brand ids.
+ */
+export const BRAND_ALL = "all";
+export const BRAND_NONE = "none";
+
+/** A brand as the parser needs it: only its id. */
+export interface BrandChoice {
+  id: string;
+}
 
 /**
  * The shape of a category this module needs to resolve a filter — an id and its
@@ -147,6 +162,13 @@ export interface StaffProductsQuery {
   needsFilter: string;
   /** #1523 — the repository argument: undefined means no filter. */
   needs: NeedsFilter | undefined;
+  /** #1572 — the normalised brand selection: BRAND_ALL, BRAND_NONE or one of this store's brand ids. */
+  brand: string;
+  /**
+   * #1572 — the repository argument: undefined is no filter, null is "no brand", a string is that
+   * brand's id.
+   */
+  brandId: string | null | undefined;
   /**
    * #1523 — the REQUESTED 1-based page: a positive integer, else 1. Not clamped to the last page
    * here, because the page count is only known after the count query — see clampPage().
@@ -170,6 +192,7 @@ export function staffProductsHref(query: StaffProductsQuery, page?: number | nul
   if (query.perPage !== DEFAULT_PER_PAGE) params.set("perPage", String(query.perPage));
   if (query.sort !== DEFAULT_SORT) params.set("sort", query.sort);
   if (query.needs) params.set("needs", query.needs);
+  if (query.brand && query.brand !== BRAND_ALL) params.set("brand", query.brand);
   if (page && page > 1) params.set("page", String(page));
   const qs = params.toString();
   return qs ? `/staff/products?${qs}` : "/staff/products";
@@ -206,9 +229,16 @@ export function parseStaffProductsQuery(
     perPage?: string;
     sort?: string;
     needs?: string;
+    brand?: string;
     page?: string;
   },
   categories: readonly CategoryChoice[],
+  /**
+   * #1572 — this store's brands. Optional only because the parser predates the brand filter: with
+   * no list, a brand id resolves to no filter (never to another store's brand), and `none` still
+   * works because it names no row.
+   */
+  brands: readonly BrandChoice[] = [],
 ): StaffProductsQuery {
   const rawStatus = (input.status ?? "").trim().toLowerCase();
   const rawSearch = (input.q ?? "").trim();
@@ -276,6 +306,17 @@ export function parseStaffProductsQuery(
   const needs = (NEEDS_FILTERS as readonly string[]).includes(rawNeeds)
     ? (rawNeeds as NeedsFilter)
     : undefined;
+  // #1572 — same rule as the category filter: only this store's own brand ids count.
+  const rawBrand = (input.brand ?? "").trim();
+  let brand = BRAND_ALL;
+  let brandId: string | null | undefined;
+  if (rawBrand === BRAND_NONE) {
+    brand = BRAND_NONE;
+    brandId = null;
+  } else if (rawBrand !== "" && brands.some((b) => b.id === rawBrand)) {
+    brand = rawBrand;
+    brandId = rawBrand;
+  }
   // Digits only: "2abc", "1.5", "-3" and "1e3" are all page 1, not a parseInt guess.
   const rawPage = (input.page ?? "").trim();
   const page = /^[0-9]{1,6}$/.test(rawPage) && Number(rawPage) >= 1 ? Number(rawPage) : 1;
@@ -294,6 +335,8 @@ export function parseStaffProductsQuery(
     sort,
     needsFilter: needs ?? NEEDS_ALL,
     needs,
+    brand,
+    brandId,
     page,
   };
 }

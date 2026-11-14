@@ -785,19 +785,43 @@ twice is safe and will not double-charge or double-confirm anything.
 
 ## Import stock file — `/staff/products/import`
 
-**Purpose:** Bulk import product lines, departments, and initial prices from client stock spreadsheets (`.csv`, `.xlsx`, `.xls`) without manual per-item data entry.
+**Purpose:** Load or refresh products from your own price or stock list (`.xlsx`, `.xls`, `.csv`): new
+products, new prices and sizes, and clean product names, without typing each one in (#1578).
 
 **Who can access:** Store admins only
 
-**What you can do:** Upload stock files up to 10,000 rows. View an in-memory preview of candidate additions, categories, matching existing records, duplicate rejects, and ADR-007 restriction classifications before any database write. Confirm and commit verified changes.
+**What you can do:** Upload a file of up to 2,000 rows. Every row is checked against your products
+and becomes a line on a review screen (`/staff/products/import/<import>`), grouped as **Needs a
+decision**, **New products**, **Updates**, **Unchanged**, **Skipped**, **Applied** and **Failed**.
+For each line you see the clean name, size and price from your file next to the product in your shop
+it matches (PLU, price, size, live or hidden), the next-closest product and other sizes. Press
+**Decide** (or **Change**) to choose **Update a product** (a suggested one, or any product found by
+name, PLU or barcode), **Create new (hidden)** or **Skip**, with a note. **Apply** writes the lines
+decided as Update or Create; **Undo this import** removes the products it created that nobody has
+touched since and puts back fields it changed. **Import settings**
+(`/staff/products/import/settings`) holds which column is which, the default category, the naming and
+filter rules (general grocery, spices, rice, fish), brand spellings, spelling fixes, words that mean
+the same product, section headings, category-column text and file-name rules.
 
-**Typical workflow:** Select or drop a `.csv`, `.xlsx`, or `.xls` stock sheet. Inspect the preview metrics and rejection table to ensure columns and rows mapped correctly. Once satisfied, click "Confirm & Apply Changes". Review the execution receipt, then navigate to `/staff/products` to review and publish lines.
+**Typical workflow:** Choose the file. The first time, pick which column holds the name (required),
+size, price, PLU, barcode, brand and category, the category for rows that don't say, and the rules
+that fit what you sell; this is saved as your import settings. Open **Needs a decision** and decide
+each line (held lines show the question). Check **New products** and **Updates**, then press
+**Apply**. Switch new products on in `/staff/products` once they have images and stock.
 
-**Important fields and filters:** The file must include columns for item code/PLU, description/name, retail price, and department. Sub-department and VAT rate columns are optional. Payloads exceeding 10,000 rows are refused.
+**Important fields and filters:** Only lines decided as Update or Create are written. Lines that
+still need a decision wait, and the import stays open: decide them later and press Apply again.
 
-**Common mistakes and limitations:** Imported stock quantities and negative EPOS till numbers are never imported as live inventory. All imported products are created hidden (`isActive: false`) with stock mode `UNKNOWN` and quantity 0. You must manually publish products and set tracked stock. Re-importing existing products will never overwrite existing prices, manual descriptions, or unhide inactive products; it will only tighten restrictions.
+**Common mistakes and limitations:** A line is only suggested as an update when the brand, size and
+name clearly match; anything uncertain needs your decision, and a different size is never the same
+product. New products are created **hidden**, stock unknown. A live product's price is not changed,
+fields staff edited by hand and blank cells in the file are kept, and existing PLUs are never
+replaced. After you save import settings, an open import needs **Refresh plan** before it can be
+applied. Uploading the same file again after applying creates nothing new. Images are not imported.
 
-**What happens after changes are saved:** Products and categories are created inside per-department interactive transactions. Restrictions are logged to the immutable `ProductRestrictionAuditLog`. New products appear immediately in the `/staff/products` admin catalogue list under the Hidden filter, ready for staff review and activation.
+**What happens after changes are saved:** Each line is written in its own transaction, so one bad
+line does not stop the rest, and a line is never applied twice even if Apply is pressed in two tabs.
+Results show per line. New products appear in `/staff/products` under the Hidden filter.
 
 
 

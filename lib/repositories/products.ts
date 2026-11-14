@@ -43,6 +43,8 @@ import type { ProductTier } from "@/lib/tier-pricing";
 import { NOTE_ACCEPTANCE_SELECT, productAcceptsNote } from "@/lib/custom-note";
 import type { AttributeValueWrite } from "@/lib/product-attribute-form";
 import { formatAttributeNumber } from "@/lib/attribute-number";
+import { DEFAULT_LOW_STOCK_THRESHOLD } from "@/lib/low-stock";
+import { readLowStockDefault } from "@/lib/repositories/vendor";
 import {
   deleteProductTier,
   getTierForProduct,
@@ -139,11 +141,10 @@ export interface ProductSummary {
   cardSpecifications: { name: string; value: string }[];
 }
 
-/**
- * Mirrors `Inventory.lowStockThreshold`'s schema default. Used only when a
- * product has no inventory row; see ProductSummary's note.
+/*
+ * `DEFAULT_LOW_STOCK_THRESHOLD` (lib/low-stock.ts) mirrors `Inventory.lowStockThreshold`'s schema
+ * default. Readers use it only when a product has no inventory row; see ProductSummary's note.
  */
-const DEFAULT_LOW_STOCK_THRESHOLD = 3;
 
 export interface ProductDetail extends ProductSummary {
   description: string;
@@ -2273,7 +2274,8 @@ export async function listInventoryForStaff(
     items: page.map((row) => {
       const quantity = row.inventory?.quantity ?? 0;
       const stockMode = stockModeOf(row.inventory);
-      const threshold = row.inventory?.lowStockThreshold ?? 5;
+      // #1572 — the schema default, like every other reader (this said 5).
+      const threshold = row.inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
       const latestAudit = row.inventoryAuditLogs?.[0];
       const previousQuantity = latestAudit ? latestAudit.previousQuantity : quantity;
       const isRestockNeeded = stockMode === "TRACKED" && quantity === 0 && previousQuantity > 0;
@@ -2447,6 +2449,8 @@ export async function listProductsForAdmin(
 export interface AdminProductListRow extends AdminProductRow {
   originalPrice: number | null;
   plu: string | null;
+  /** #1572 — this product's own low-stock number (the schema default when it has no stock record). */
+  lowStockThreshold: number;
   /** The multi-buy tier, or null. Shaped for lib/tier-pricing.ts's ProductTier. */
   tier: { groupQuantity: number; groupPricePence: number; isActive: boolean } | null;
 }
@@ -2462,9 +2466,11 @@ export interface AdminProductNumberedPage {
 
 /** #1523 — the staff list's sort as an orderBy. `id` breaks every tie, so paging is stable. */
 function adminProductOrderBy(
-  sort: "newest" | "name" | "price-asc" | "price-desc",
+  sort: "newest" | "name" | "brand" | "price-asc" | "price-desc",
 ): Prisma.ProductOrderByWithRelationInput[] {
   if (sort === "name") return [{ name: "asc" }, { id: "asc" }];
+  // #1572 — products with no brand sort last on Postgres's ascending default (NULLS LAST).
+  if (sort === "brand") return [{ brand: { name: "asc" } }, { name: "asc" }, { id: "asc" }];
   if (sort === "price-asc") return [{ basePrice: "asc" }, { name: "asc" }, { id: "asc" }];
   if (sort === "price-desc") return [{ basePrice: "desc" }, { name: "asc" }, { id: "asc" }];
   return [{ createdAt: "desc" }, { id: "desc" }];
@@ -2490,11 +2496,27 @@ function adminProductSearchWhere(search: string | null | undefined): Prisma.Prod
   };
 }
 
-/** #1523 — the "needs attention" worklists (see NEEDS_FILTERS in lib/staff-products-query.ts). */
-function adminNeedsWhere(needs: "price" | "ready" | "image" | undefined): Prisma.ProductWhereInput {
+/**
+ * #1523 — the "needs attention" worklists (see NEEDS_FILTERS in lib/staff-products-query.ts).
+ *
+ * #1572 — `low` compares two columns of the same Inventory row (count ≤ that row's own threshold).
+ * Prisma expresses that with a FIELD REFERENCE, so the database does the comparison: no raw SQL and
+ * no in-memory id list. `lowStockThreshold` returns `prisma.inventory.fields.lowStockThreshold`; it
+ * is a function, read only for `low`, because this helper has no client of its own. Same split as
+ * lib/low-stock.ts's isLowStock.
+ */
+function adminNeedsWhere(
+  needs: "price" | "ready" | "image" | "low" | undefined,
+  lowStockThreshold: () => Prisma.FieldRef<"Inventory", "Int">,
+): Prisma.ProductWhereInput {
   if (needs === "price") return { basePrice: { lte: 0 } };
   if (needs === "ready") return { isActive: false, basePrice: { gt: 0 }, restriction: null };
   if (needs === "image") return { images: { none: {} } };
+  if (needs === "low") {
+    return {
+      inventory: { stockMode: "TRACKED", quantity: { gt: 0, lte: lowStockThreshold() } },
+    };
+  }
   return {};
 }
 
@@ -2527,16 +2549,19 @@ export async function listProductsForAdminPage(
     restriction,
     stockMode,
     needs,
+    brandId,
   }: {
     page: number;
     perPage: number;
-    sort: "newest" | "name" | "price-asc" | "price-desc";
+    sort: "newest" | "name" | "brand" | "price-asc" | "price-desc";
     search?: string | null;
     isActive?: boolean;
     categoryIds?: readonly string[];
     restriction?: "any" | "none" | ProductRestriction;
     stockMode?: StockMode;
-    needs?: "price" | "ready" | "image";
+    needs?: "price" | "ready" | "image" | "low";
+    /** #1572 — undefined is no filter, null is "no brand". */
+    brandId?: string | null;
   },
 ): Promise<AdminProductNumberedPage> {
   const take = Math.min(Math.max(1, Math.trunc(perPage) || 25), 100);
@@ -2546,7 +2571,8 @@ export async function listProductsForAdminPage(
     categoryIds && categoryIds.length > 0 ? { categoryId: { in: [...categoryIds] } } : undefined,
     restrictionWhere(restriction),
     stockModeWhere(stockMode),
-    adminNeedsWhere(needs),
+    adminNeedsWhere(needs, () => prisma.inventory.fields.lowStockThreshold),
+    brandId === undefined ? undefined : { brandId },
     adminProductSearchWhere(search),
   );
 
@@ -2574,7 +2600,7 @@ export async function listProductsForAdminPage(
       brand: { select: { name: true } },
       netContentAmount: true,
       netContentUnit: true,
-      inventory: { select: { quantity: true, stockMode: true } },
+      inventory: { select: { quantity: true, stockMode: true, lowStockThreshold: true } },
       priceTier: { select: { groupQuantity: true, groupPricePence: true, isActive: true } },
     },
   });
@@ -2596,6 +2622,7 @@ export async function listProductsForAdminPage(
       imageNeedsReview: row.imageNeedsReview,
       restriction: row.restriction,
       stockMode: stockModeOf(row.inventory),
+      lowStockThreshold: row.inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
       tier: row.priceTier ?? null,
     })),
     total,
@@ -2665,7 +2692,7 @@ export async function getProductForAdmin(
     // shows zeroes and the first save creates it (see updateProductForVendor).
     quantity: inventory?.quantity ?? 0,
     stockMode: stockModeOf(inventory),
-    lowStockThreshold: inventory?.lowStockThreshold ?? 3,
+    lowStockThreshold: inventory?.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
     expectedRestockDay: restockDayFromStored(inventory?.expectedRestockDate),
     tier,
     attributeValues: Object.fromEntries(
@@ -3408,7 +3435,10 @@ export async function quickUpdateInventory(
             quantity: data.quantity,
             // Staff entering a count (including 0) transitions UNKNOWN -> TRACKED
             stockMode: newMode,
-            lowStockThreshold: 3,
+            // #1572 — a new stock record starts at the store-wide default (read only when there is none).
+            lowStockThreshold: existing.inventory
+              ? existing.inventory.lowStockThreshold
+              : await readLowStockDefault(tx, vendorId),
             version: 1,
           },
           update: {
@@ -3487,6 +3517,8 @@ export async function bulkSetInventoryQuantities(
       });
       const byId = new Map(products.map((p) => [p.id, p]));
       const result: BulkQuantityResult = { updated: 0, unchanged: 0, missing: [] };
+      // #1572 — read once: a product with no stock record gets one at the store-wide default.
+      const lowStockDefault = await readLowStockDefault(tx, vendorId);
 
       for (const { productId, quantity } of updates) {
         const existing = byId.get(productId);
@@ -3518,7 +3550,8 @@ export async function bulkSetInventoryQuantities(
             productId,
             quantity,
             stockMode: "TRACKED",
-            lowStockThreshold: 3,
+            // #1572 — a new stock record starts at the store-wide default.
+            lowStockThreshold: lowStockDefault,
             version: 1,
           },
           update: { quantity, stockMode: "TRACKED", version: { increment: 1 } },

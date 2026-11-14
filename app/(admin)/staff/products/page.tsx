@@ -5,7 +5,14 @@ import { requireVendorRole } from "@/lib/auth-rbac";
 import { listProductsForAdminPage } from "@/lib/products-service";
 import { listCategoriesForAdmin } from "@/lib/categories-service";
 import { toCategoryOptionGroups } from "@/lib/catalogue-form";
+import { getBrandRepository } from "@/lib/brands-service";
+import { getLowStockDefault } from "@/lib/vendor-service";
+import { isLowStock } from "@/lib/low-stock";
+import { LowStockDefaultForm } from "@/components/staff/LowStockDefaultForm";
+import { deriveUnitPriceLabel } from "@/components/product/unit-price";
 import {
+  BRAND_ALL,
+  BRAND_NONE,
   CATEGORY_ALL,
   NEEDS_ALL,
   NEEDS_FILTERS,
@@ -95,7 +102,14 @@ export default async function StaffProductsPage({
   // are not independent (#503). Validating the selected id and expanding a
   // department to its subcategories both need this vendor's real category list,
   // and the product `where` depends on the result, so the calls are ordered.
-  const categories = await listCategoriesForAdmin(auth.vendorId);
+  // #1572 — brands and the store-wide low-stock default are independent of the category list, so
+  // the three load together.
+  const [categories, brands, lowStockDefault] = await Promise.all([
+    listCategoriesForAdmin(auth.vendorId),
+    getBrandRepository().listSummaries(),
+    getLowStockDefault(auth.vendorId),
+  ]);
+  const isStoreAdmin = auth.via !== "STAFF";
   const query = parseStaffProductsQuery(
     {
       status: one(params.status),
@@ -106,9 +120,11 @@ export default async function StaffProductsPage({
       perPage: one(params.perPage),
       sort: one(params.sort),
       needs: one(params.needs),
+      brand: one(params.brand),
       page: one(params.page),
     },
     categories,
+    brands,
   );
 
   const { items, total, page, pageCount } = await listProductsForAdminPage(auth.vendorId, {
@@ -121,6 +137,7 @@ export default async function StaffProductsPage({
     restriction: query.restriction,
     stockMode: query.stockMode,
     needs: query.needs,
+    brandId: query.brandId,
   });
 
   const isFiltered =
@@ -129,7 +146,8 @@ export default async function StaffProductsPage({
     query.category !== CATEGORY_ALL ||
     query.restriction !== undefined ||
     query.stockMode !== undefined ||
-    query.needs !== undefined;
+    query.needs !== undefined ||
+    query.brandId !== undefined;
 
   return (
     <PageContainer width="wide">
@@ -182,6 +200,20 @@ export default async function StaffProductsPage({
                     </option>
                   ))}
                 </optgroup>
+              ))}
+            </select>
+          </label>
+
+          {/* #1572 — brand, with "No brand" as the import worklist. */}
+          <label className={labelClass}>
+            Brand
+            <select name="brand" defaultValue={query.brand} className={selectClass}>
+              <option value={BRAND_ALL}>All brands</option>
+              <option value={BRAND_NONE}>No brand</option>
+              {brands.map((brand) => (
+                <option key={brand.id} value={brand.id}>
+                  {brand.name}
+                </option>
               ))}
             </select>
           </label>
@@ -323,6 +355,18 @@ export default async function StaffProductsPage({
         })}
       </div>
 
+      {/* #1572 — the store-wide low-stock default. Admins change it; staff see it. */}
+      <div className="mb-6 rounded-2xl border border-black/10 bg-white p-4">
+        {isStoreAdmin ? (
+          <LowStockDefaultForm current={lowStockDefault} />
+        ) : (
+          <p className="text-sm text-primary-muted">
+            Products show as low stock at or below {lowStockDefault} unless they have their own
+            number. A store admin can change this.
+          </p>
+        )}
+      </div>
+
       {items.length > 0 && <BulkProductActions />}
       {items.length > 0 && <BulkQuantityBar />}
 
@@ -356,6 +400,15 @@ export default async function StaffProductsPage({
             const tierLabel = multiBuyLabel(product.basePrice, product.tier);
             const tracked = product.stockMode === "TRACKED";
             const currentQty = tracked ? String(product.quantity) : "";
+            const low = isLowStock(product);
+            // #1572 — derived from price and net content every time, never the stored sort key.
+            const unitPrice =
+              product.netContentAmount && product.netContentUnit
+                ? deriveUnitPriceLabel(product.basePrice, {
+                    amount: product.netContentAmount,
+                    unit: product.netContentUnit,
+                  })
+                : null;
             return (
               <li key={product.id} className="rounded-2xl border border-black/10 bg-white p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3 sm:flex-nowrap">
@@ -394,6 +447,11 @@ export default async function StaffProductsPage({
                       {tracked && product.quantity <= 0 && (
                         <span className="rounded-full bg-danger-tint px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-danger">
                           Out of stock
+                        </span>
+                      )}
+                      {low && (
+                        <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-700">
+                          Low stock
                         </span>
                       )}
                       {product.stockMode === "UNKNOWN" && (
@@ -459,8 +517,11 @@ export default async function StaffProductsPage({
                       {tierLabel && (
                         <p className="text-[11px] font-semibold text-action">{tierLabel}</p>
                       )}
+                      {unitPrice && <p className="text-[11px] text-primary-muted">{unitPrice}</p>}
                       <p className="text-xs text-primary-muted">
-                        {tracked ? "Tracked" : STOCK_MODE_LABELS[product.stockMode]}
+                        {tracked
+                          ? `Tracked · Low at ${product.lowStockThreshold}`
+                          : STOCK_MODE_LABELS[product.stockMode]}
                       </p>
                     </div>
                     {/* #1523 — the row's stock count, bound to the bulk quantity form. Blank for

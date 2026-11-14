@@ -1,4 +1,5 @@
 import { getPaymentEnv } from "./config";
+import { DEFAULT_PLATFORM_BRANDING_TERMINOLOGY } from "./platform-defaults";
 
 /**
  * PaymentService port (P3b, #96) with the real Stripe adapter (P3c, #99).
@@ -38,6 +39,22 @@ export interface CreatePaymentInput {
    *  vendor settles into the single platform account, so adapters may ignore it;
    *  it exists so adding Stripe Connect later is additive, not a rewrite. */
   vendorId: string;
+  /**
+   * The business name of the vendor (e.g. "Aheed Food Centre", "SriMart").
+   * Sourced dynamically from the database. When provided, configures Checkout Session
+   * dynamic branding: branding_settings.display_name, line items, and custom_text.
+   */
+  vendorName?: string;
+  /**
+   * #1585 — platform branding terminology configured via Client Setup (defaulting to
+   * DEFAULT_PLATFORM_BRANDING_TERMINOLOGY = "Levelled Up by Merqify").
+   */
+  brandingTerminology?: string;
+  /**
+   * Application / platform context (e.g. "ShopLocal", "Merqify Club", "Merqify Services", etc.).
+   * Merqify Core shared infrastructure parameter, carried in metadata for traceability.
+   */
+  applicationContext?: string;
   /** Absolute origin to return the shopper to, e.g. https://staging.aheed…. Passed
    *  in rather than read from request context, so the order transaction stays
    *  free of `headers()` and remains testable from a plain script (P3b R9a). */
@@ -178,14 +195,37 @@ export function createStripePaymentService(secretKey: string): PaymentService {
         // another currency must not require a code change.
         "line_items[0][price_data][currency]": input.currency.toLowerCase(),
         "line_items[0][price_data][unit_amount]": String(input.amountPence),
-        "line_items[0][price_data][product_data][name]": `Order ${input.orderNumber}`,
+        "line_items[0][price_data][product_data][name]": input.vendorName
+          ? `Order ${input.orderNumber} · ${input.vendorName}`
+          : `Order ${input.orderNumber}`,
+        "line_items[0][price_data][product_data][description]":
+          input.brandingTerminology?.trim() || DEFAULT_PLATFORM_BRANDING_TERMINOLOGY,
       });
+
+      // Dynamic vendor branding & Merqify Ecosystem identity:
+      // - Header displays the vendor's human business name via branding_settings.display_name
+      // - Line item description carries the configured ecosystem attribution (default "Levelled Up by Merqify")
+      // - Redundant custom_text occurrences removed to keep checkout clean and focused
+      // - Stripe's native "Powered by Stripe" attribution remains intact in the checkout footer
+      if (input.vendorName) {
+        body.set("metadata[vendorName]", input.vendorName);
+        body.set("branding_settings[display_name]", input.vendorName);
+      }
+
+      if (input.brandingTerminology?.trim()) {
+        body.set("metadata[brandingTerminology]", input.brandingTerminology.trim());
+      }
+
+      if (input.applicationContext) {
+        body.set("metadata[applicationContext]", input.applicationContext);
+      }
 
       const response = await fetch(STRIPE_SESSIONS_URL, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${secretKey}`,
           "content-type": "application/x-www-form-urlencoded",
+          "Stripe-Version": "2025-09-30.clover",
           // Stripe dedupes retries of the same order server-side.
           "Idempotency-Key": `order-${input.orderNumber}`,
         },
@@ -216,7 +256,10 @@ export function createStripePaymentService(secretKey: string): PaymentService {
       // createPayment above. Path-encoded because the id lands in the URL.
       const response = await fetch(`${STRIPE_SESSIONS_URL}/${encodeURIComponent(sessionId)}`, {
         method: "GET",
-        headers: { Authorization: `Bearer ${secretKey}` },
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+          "Stripe-Version": "2025-09-30.clover",
+        },
       });
 
       if (!response.ok) {

@@ -109,6 +109,24 @@ describe("StorefrontFooter (#1055)", () => {
     );
   });
 
+  it("renders configurable platform branding terminology when provided (#1585)", () => {
+    render(
+      <StorefrontFooter
+        profile={BARE as unknown as VendorProfile}
+        platformName="Merqify"
+        platformBrandingTerminology="Levelled Up by Merqify"
+        platformTagline="Your Merchandise, Digitised Quickly"
+        assistantAvailable={false}
+        ownDomain={false}
+      />,
+    );
+    const content = screen.getByRole("contentinfo");
+    expect(content.textContent).toContain("Levelled Up by Merqify");
+    expect(content.textContent).not.toContain("Your Merchandise, Digitised Quickly");
+    const link = within(content).getByRole("link", { name: "Levelled Up by Merqify" });
+    expect(link.getAttribute("href")).toBe("https://merqify.com");
+  });
+
   it("builds the directions link from name and address", () => {
     const footer = renderFooter(SEEDED);
     const links = within(footer).getAllByRole("link", { name: /get directions/i });
