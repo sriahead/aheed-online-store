@@ -1,5 +1,5 @@
 {
-  "notes": "Aheed Food Centre. Owner price lists: product name (brand first), size, price; no header row; a row with only a name is a section heading. First run 2026-11-14 (#1570): spices list and Shan list. Owner decisions: clean names on matched till products; 'x / y' form rows split in two. #1573 (2026-11-14): presets general, spices, rice and fish supply the naming order and the Form, Variety, Grain, Species, Storage, Cut, Grade and Flavour filters; till words the list drops are kept.",
+  "notes": "Aheed Food Centre. Owner price lists: product name (brand first), size, price; no header row; a row with only a name is a section heading. First run 2026-11-14 (#1570): spices list and Shan list. Owner decisions: clean names on matched till products; 'x / y' form rows split in two. #1573 (2026-11-14): presets general, spices, rice and fish supply the naming order and the Form, Variety, Grain, Species, Storage, Cut, Grade and Flavour filters; till words the list drops are kept. Laziza list (2026-11-14): file rule brand Laziza; list typos biriuani, sinshi, masal fixed by spelling.",
   "vendorSlug": "aheed-food-centre",
   "presets": ["general", "spices", "rice", "fish"],
   "headerRow": "none",
@@ -17,6 +17,11 @@
     {
       "match": "shan",
       "brand": "Shan",
+      "category": "spices-masalas"
+    },
+    {
+      "match": "laziza",
+      "brand": "Laziza",
       "category": "spices-masalas"
     }
   ],
@@ -56,6 +61,10 @@
     {
       "name": "Diamond",
       "aliases": ["diamon"]
+    },
+    {
+      "name": "Laziza",
+      "aliases": []
     }
   ],
   "spelling": {
@@ -70,7 +79,10 @@
     "biriyani": "biryani",
     "enhancement": "enhancer",
     "blk": "black",
-    "masla": "masala"
+    "masla": "masala",
+    "biriuani": "biryani",
+    "sinshi": "sindhi",
+    "masal": "masala"
   },
   "synonyms": [
     ["jeera", "cumin"],
@@ -89,7 +101,11 @@
     ["dal", "daal", "dhal"],
     ["chaat", "chat"],
     ["aniseed", "anise"],
-    ["powder", "ground"]
+    ["powder", "ground"],
+    ["keema", "qeema", "kima"],
+    ["behari", "bihari"],
+    ["chargha", "charga"],
+    ["korma", "qorma"]
   ],
   "ignoreWords": ["curry"],
   "formWords": [
