@@ -12,8 +12,12 @@ vi.mock("@opennextjs/cloudflare", () => ({
   },
 }));
 
-const { getPlatformBrandingEnv, DEFAULT_PLATFORM_NAME, DEFAULT_PLATFORM_TAGLINE } =
-  await import("@/lib/config");
+const {
+  getPlatformBrandingEnv,
+  DEFAULT_PLATFORM_NAME,
+  DEFAULT_PLATFORM_TAGLINE,
+  DEFAULT_PLATFORM_BRANDING_TERMINOLOGY,
+} = await import("@/lib/config");
 
 describe("getPlatformBrandingEnv", () => {
   afterEach(() => {
@@ -23,18 +27,22 @@ describe("getPlatformBrandingEnv", () => {
   it("defaults to Merqify and its tagline when unset or blank", () => {
     vi.stubEnv("PLATFORM_NAME", "");
     vi.stubEnv("PLATFORM_TAGLINE", "   ");
+    vi.stubEnv("PLATFORM_BRANDING_TERMINOLOGY", "");
     expect(getPlatformBrandingEnv()).toEqual({
       PLATFORM_NAME: "Merqify",
       PLATFORM_TAGLINE: "Your Merchandise, Digitised Quickly",
+      PLATFORM_BRANDING_TERMINOLOGY: DEFAULT_PLATFORM_BRANDING_TERMINOLOGY,
     });
   });
 
   it("uses configured values, trimmed", () => {
     vi.stubEnv("PLATFORM_NAME", " Other ");
     vi.stubEnv("PLATFORM_TAGLINE", "A line");
+    vi.stubEnv("PLATFORM_BRANDING_TERMINOLOGY", " Custom Term ");
     expect(getPlatformBrandingEnv()).toEqual({
       PLATFORM_NAME: "Other",
       PLATFORM_TAGLINE: "A line",
+      PLATFORM_BRANDING_TERMINOLOGY: "Custom Term",
     });
   });
 

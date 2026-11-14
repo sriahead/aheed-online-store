@@ -124,6 +124,10 @@ const ALLOWED = new Map<string, string>([
     "platform-admin.ts:getPlatformOverviewMetrics",
     "Platform-admin-wide metrics (#1269): aggregates platform-wide tenant counts, catalogue totals, and active users for platform administration overview (/staff/platform/settings). Gated strictly on requirePlatformAdmin() server-side.",
   ],
+  [
+    "vendor.ts:applyPlatformBrandingToAllVendors",
+    "Platform-admin bulk action (#1585): applies platform branding terminology across all client stores from /staff/platform/client-setup. Gated strictly on requirePlatformAdmin() server-side.",
+  ],
 ]);
 
 /** A parameter that carries a tenant id, whatever it is called. */
